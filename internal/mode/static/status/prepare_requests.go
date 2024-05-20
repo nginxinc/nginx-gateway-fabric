@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -25,74 +26,108 @@ type NginxReloadResult struct {
 
 // PrepareRouteRequests prepares status UpdateRequests for the given Routes.
 func PrepareRouteRequests(
-	routes map[types.NamespacedName]*graph.Route,
+	routes map[graph.RouteKey]*graph.L7Route,
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
 	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
-	for nsname, r := range routes {
-		parents := make([]v1.RouteParentStatus, 0, len(r.ParentRefs))
+	for routeKey, r := range routes {
 
-		defaultConds := staticConds.NewDefaultRouteConditions()
+		routeStatus := prepareRouteStatus(
+			gatewayCtlrName,
+			r.ParentRefs,
+			r.Conditions,
+			nginxReloadRes,
+			transitionTime,
+			r.Source.GetGeneration(),
+		)
 
-		for _, ref := range r.ParentRefs {
-			failedAttachmentCondCount := 0
-			if ref.Attachment != nil && !ref.Attachment.Attached {
-				failedAttachmentCondCount = 1
-			}
-			allConds := make([]conditions.Condition, 0, len(r.Conditions)+len(defaultConds)+failedAttachmentCondCount)
-
-			// We add defaultConds first, so that any additional conditions will override them, which is
-			// ensured by DeduplicateConditions.
-			allConds = append(allConds, defaultConds...)
-			allConds = append(allConds, r.Conditions...)
-			if failedAttachmentCondCount == 1 {
-				allConds = append(allConds, ref.Attachment.FailedCondition)
+		if r.RouteType == graph.RouteTypeHTTP {
+			status := v1.HTTPRouteStatus{
+				RouteStatus: routeStatus,
 			}
 
-			if nginxReloadRes.Error != nil {
-				allConds = append(
-					allConds,
-					staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
-				)
+			req := frameworkStatus.UpdateRequest{
+				NsName:       routeKey.NamespacedName,
+				ResourceType: &v1.HTTPRoute{},
+				Setter:       newHTTPRouteStatusSetter(status, gatewayCtlrName),
 			}
 
-			routeRef := r.Source.Spec.ParentRefs[ref.Idx]
-
-			conds := conditions.DeduplicateConditions(allConds)
-			apiConds := conditions.ConvertConditions(conds, r.Source.Generation, transitionTime)
-
-			ps := v1.RouteParentStatus{
-				ParentRef: v1.ParentReference{
-					Namespace:   helpers.GetPointer(v1.Namespace(ref.Gateway.Namespace)),
-					Name:        v1.ObjectName(ref.Gateway.Name),
-					SectionName: routeRef.SectionName,
-				},
-				ControllerName: v1.GatewayController(gatewayCtlrName),
-				Conditions:     apiConds,
+			reqs = append(reqs, req)
+		} else if r.RouteType == graph.RouteTypeGRPC {
+			status := v1.GRPCRouteStatus{
+				RouteStatus: routeStatus,
 			}
 
-			parents = append(parents, ps)
+			req := frameworkStatus.UpdateRequest{
+				NsName:       routeKey.NamespacedName,
+				ResourceType: &v1.GRPCRoute{},
+				Setter:       newGRPCRouteStatusSetter(status, gatewayCtlrName),
+			}
+
+			reqs = append(reqs, req)
+		} else {
+			panic(fmt.Sprintf("Unknown route type: %s", r.RouteType))
 		}
 
-		status := v1.HTTPRouteStatus{
-			RouteStatus: v1.RouteStatus{
-				Parents: parents,
-			},
-		}
-
-		req := frameworkStatus.UpdateRequest{
-			NsName:       nsname,
-			ResourceType: &v1.HTTPRoute{},
-			Setter:       newHTTPRouteStatusSetter(status, gatewayCtlrName),
-		}
-
-		reqs = append(reqs, req)
 	}
 
 	return reqs
+}
+
+func prepareRouteStatus(
+	gatewayCtlrName string,
+	parentRefs []graph.ParentRef,
+	conds []conditions.Condition,
+	nginxReloadRes NginxReloadResult,
+	transitionTime metav1.Time,
+	srcGeneration int64,
+) v1.RouteStatus {
+	parents := make([]v1.RouteParentStatus, 0, len(parentRefs))
+
+	defaultConds := staticConds.NewDefaultRouteConditions()
+
+	for _, ref := range parentRefs {
+		failedAttachmentCondCount := 0
+		if ref.Attachment != nil && !ref.Attachment.Attached {
+			failedAttachmentCondCount = 1
+		}
+		allConds := make([]conditions.Condition, 0, len(conds)+len(defaultConds)+failedAttachmentCondCount)
+
+		// We add defaultConds first, so that any additional conditions will override them, which is
+		// ensured by DeduplicateConditions.
+		allConds = append(allConds, defaultConds...)
+		allConds = append(allConds, conds...)
+		if failedAttachmentCondCount == 1 {
+			allConds = append(allConds, ref.Attachment.FailedCondition)
+		}
+
+		if nginxReloadRes.Error != nil {
+			allConds = append(
+				allConds,
+				staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
+			)
+		}
+
+		conds := conditions.DeduplicateConditions(allConds)
+		apiConds := conditions.ConvertConditions(conds, srcGeneration, transitionTime)
+
+		ps := v1.RouteParentStatus{
+			ParentRef: v1.ParentReference{
+				Namespace:   helpers.GetPointer(v1.Namespace(ref.Gateway.Namespace)),
+				Name:        v1.ObjectName(ref.Gateway.Name),
+				SectionName: ref.SectionName,
+			},
+			ControllerName: v1.GatewayController(gatewayCtlrName),
+			Conditions:     apiConds,
+		}
+
+		parents = append(parents, ps)
+	}
+
+	return v1.RouteStatus{Parents: parents}
 }
 
 // PrepareGatewayClassRequests prepares status UpdateRequests for the given GatewayClasses.
@@ -293,7 +328,7 @@ func PrepareBackendTLSPolicyRequests(
 
 		reqs = append(reqs, frameworkStatus.UpdateRequest{
 			NsName:       nsname,
-			ResourceType: &v1alpha2.BackendTLSPolicy{},
+			ResourceType: &v1alpha3.BackendTLSPolicy{},
 			Setter:       newBackendTLSPolicyStatusSetter(status, gatewayCtlrName),
 		})
 	}

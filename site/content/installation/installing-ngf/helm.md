@@ -19,15 +19,11 @@ To complete this guide, you'll need to install:
   1. Alternatively, pull an NGINX Gateway Fabric image with NGINX Plus and push it to your private registry by following the instructions from [here]({{<relref "installation/ngf-images/pulling-ngf-image.md">}}).
   1. Update the `nginxGateway.image.repository` field of the `values.yaml` accordingly.
 
-
 ## Deploy NGINX Gateway Fabric
 
 ### Installing the Gateway API resources
 
-
 {{<include "installation/install-gateway-api-resources.md" >}}
-
-
 
 ### Install from the OCI registry
 
@@ -35,40 +31,40 @@ To install the latest stable release of NGINX Gateway Fabric in the **nginx-gate
 
 ##### For NGINX
 
-   ```shell
-   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
-   ```
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
+```
 
 ##### For NGINX Plus
 
-  {{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+{{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
-  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
+{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
 
-   ```shell
-   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
-   ```
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
+```
 
-   `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
 
-   If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
+If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
 
-   You can also use the certificate and key from the MyF5 portal and the Docker registry API to list the available image tags for NGINX Plus, for example:
+You can also use the certificate and key from the MyF5 portal and the Docker registry API to list the available image tags for NGINX Plus, for example:
 
-   ```shell
-      $ curl https://private-registry.nginx.com/v2/nginx-gateway-fabric/nginx-plus/tags/list --key <path-to-client.key> --cert <path-to-client.cert> | jq
+```shell
+   $ curl https://private-registry.nginx.com/v2/nginx-gateway-fabric/nginx-plus/tags/list --key <path-to-client.key> --cert <path-to-client.cert> | jq
 
-      {
-      "name": "nginx-gateway-fabric/nginx-plus",
-      "tags": ["edge"]
-      }
-   ```
+   {
+   "name": "nginx-gateway-fabric/nginx-plus",
+   "tags": ["edge"]
+   }
+```
 
-   To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
+To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
-   ```shell
-   kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
-   ```
+```shell
+kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+```
 
 ### Install from sources {#install-from-sources}
 
@@ -98,16 +94,15 @@ By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
 
 To use a NodePort Service instead:
 
-   ```shell
-   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
-   ```
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+```
 
 To disable the creation of a Service:
 
-   ```shell
-   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
-   ```
-
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+```
 
 #### Experimental features
 
@@ -131,18 +126,18 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 To upgrade your Gateway API resources, take the following steps:
 
 - Verify the Gateway API resources are compatible with your NGINX Gateway Fabric version. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
-- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.0.0) for any important upgrade-specific information.
+- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.1.0) for any important upgrade-specific information.
 - To upgrade the Gateway API resources, run:
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-   ```
+  ```shell
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+  ```
 
-   or, if you installed the from the experimental channel:
+  or, if you installed the from the experimental channel:
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
-   ```
+  ```shell
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
+  ```
 
 ### Upgrade NGINX Gateway Fabric CRDs
 
@@ -154,15 +149,15 @@ To upgrade the CRDs, take the following steps:
 
 2. Upgrade the CRDs:
 
-      ```shell
-      kubectl apply -f crds/
-      ```
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+   ```
 
-      {{<note>}}Ignore the following warning, as it is expected.{{</note>}}
+   {{<note>}}Ignore the following warning, as it is expected.{{</note>}}
 
-      ``` text
-      Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
-      ```
+   ```text
+   Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
+   ```
 
 ### Upgrade NGINX Gateway Fabric release
 
@@ -170,11 +165,11 @@ To upgrade the CRDs, take the following steps:
 
 - To upgrade to the latest stable release of NGINX Gateway Fabric, run:
 
-   ```shell
-   helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
-   ```
+  ```shell
+  helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+  ```
 
-   If needed, replace `ngf` with your chosen release name.
+  If needed, replace `ngf` with your chosen release name.
 
 #### Upgrade from sources
 
@@ -200,26 +195,26 @@ Follow these steps to configure delayed pod termination:
 
    - In the `values.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
 
-      ```yaml
-       nginxGateway:
-       <...>
-       lifecycle:
-           preStop:
-           exec:
-               command:
-               - /usr/bin/gateway
-               - sleep
-               - --duration=40s # This flag is optional, the default is 30s
+     ```yaml
+      nginxGateway:
+      <...>
+      lifecycle:
+          preStop:
+          exec:
+              command:
+              - /usr/bin/gateway
+              - sleep
+              - --duration=40s # This flag is optional, the default is 30s
 
-       nginx:
-       <...>
-       lifecycle:
-           preStop:
-           exec:
-               command:
-               - /bin/sleep
-               - "40"
-      ```
+      nginx:
+      <...>
+      lifecycle:
+          preStop:
+          exec:
+              command:
+              - /bin/sleep
+              - "40"
+     ```
 
 1. **Set the termination grace period**:
 
@@ -235,7 +230,6 @@ For additional information on configuring and understanding the behavior of cont
 
 {{</see-also>}}
 
-
 ## Uninstall NGINX Gateway Fabric
 
 Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your Kubernetes cluster:
@@ -244,20 +238,20 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
    - To uninstall NGINX Gateway Fabric, run:
 
-      ```shell
-      helm uninstall ngf -n nginx-gateway
-      ```
+     ```shell
+     helm uninstall ngf -n nginx-gateway
+     ```
 
-      If needed, replace `ngf` with your chosen release name.
+     If needed, replace `ngf` with your chosen release name.
 
 2. **Remove namespace and CRDs:**
 
    - To remove the **nginx-gateway** namespace and its custom resource definitions (CRDs), run:
 
-      ```shell
-      kubectl delete ns nginx-gateway
-      kubectl delete crd nginxgateways.gateway.nginx.org
-      ```
+     ```shell
+     kubectl delete ns nginx-gateway
+     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+     ```
 
 3. **Remove the Gateway API resources:**
 

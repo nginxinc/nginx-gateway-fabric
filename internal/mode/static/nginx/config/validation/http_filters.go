@@ -14,9 +14,9 @@ type HTTPRedirectValidator struct{}
 // HTTPURLRewriteValidator validates values for a URL rewrite.
 type HTTPURLRewriteValidator struct{}
 
-// HTTPRequestHeaderValidator validates values for request headers,
+// HTTPHeaderValidator validates values for request headers,
 // which in NGINX is done with the proxy_set_header directive.
-type HTTPRequestHeaderValidator struct{}
+type HTTPHeaderValidator struct{}
 
 var supportedRedirectSchemes = map[string]struct{}{
 	"http":  {},
@@ -72,13 +72,13 @@ func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
 	return nil
 }
 
-func (HTTPRequestHeaderValidator) ValidateRequestHeaderName(name string) error {
+func (HTTPHeaderValidator) ValidateFilterHeaderName(name string) error {
 	return validateHeaderName(name)
 }
 
 var requestHeaderValueExamples = []string{"my-header-value", "example/12345=="}
 
-func (HTTPRequestHeaderValidator) ValidateRequestHeaderValue(value string) error {
+func (HTTPHeaderValidator) ValidateFilterHeaderValue(value string) error {
 	// Variables in header values are supported by NGINX but not required by the Gateway API.
 	return validateEscapedStringNoVarExpansion(value, requestHeaderValueExamples)
 }

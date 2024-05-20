@@ -28,13 +28,15 @@ jobs:
       contents: write # needed for uploading release artifacts
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
 
-      - name: Fetch Cached Artifacts
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      - name: Setup Golang Environment
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
-          path: ${{ github.workspace }}/dist
-          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
+          go-version: stable
+
+      - name: Set GOPATH
+        run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
@@ -71,6 +73,15 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make update-ngf-manifest${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
+
+      - name: Build binary
+        uses: goreleaser/goreleaser-action@5742e2a039330cbb23ebf35f046f814d4c6ff811 # v5.1.0
+        with:
+          version: latest
+          args: build --snapshot --clean
+        env:
+          TELEMETRY_ENDPOINT: "" # disables sending telemetry
+          TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Build NGF Docker Image
         uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
@@ -142,5 +153,5 @@ jobs:
         if: ${{ inputs.k8s-version == 'latest' && startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.ref_name }} conformance-profile.yaml
+        run: gh release upload ${{ github.ref_name }} conformance-profile.yaml --clobber
         working-directory: ./conformance

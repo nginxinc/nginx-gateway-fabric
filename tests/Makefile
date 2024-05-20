@@ -5,7 +5,7 @@ NGINX_PLUS_PREFIX = $(PREFIX)/nginx-plus
 PLUS_ENABLED=false
 PULL_POLICY=Never
 GW_API_PREV_VERSION ?= 1.0.0 ## Supported Gateway API version from previous NGF release
-GW_API_VERSION ?= 1.0.0 ## Supported Gateway API version for NGF under test
+GW_API_VERSION ?= 1.1.0 ## Supported Gateway API version for NGF under test
 K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
 GW_SERVICE_TYPE=NodePort
 GW_SVC_GKE_INTERNAL=false
@@ -14,7 +14,7 @@ GINKGO_FLAGS=
 NGF_VERSION=
 CI=false
 TELEMETRY_ENDPOINT=
-TELEMETRY_ENDPOINT_INSECURE=
+TELEMETRY_ENDPOINT_INSECURE=false
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
@@ -107,7 +107,7 @@ test: ## Runs the functional tests on your default k8s cluster
 		--label-filter "functional" $(GINKGO_FLAGS) ./suite -- \
 		--gateway-api-version=$(GW_API_VERSION) --gateway-api-prev-version=$(GW_API_PREV_VERSION) \
 		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
-		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 

@@ -22,7 +22,7 @@ headers to the request.
    GW_PORT=<port number>
    ```
 
-## 2. Deploy the Cafe Application
+## 2. Deploy the Headers Application
 
 1. Create the headers Deployment and Service:
 

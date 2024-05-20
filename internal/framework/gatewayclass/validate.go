@@ -13,7 +13,7 @@ const (
 	// BundleVersionAnnotation is the annotation on Gateway API CRDs that contains the installed version.
 	BundleVersionAnnotation = "gateway.networking.k8s.io/bundle-version"
 	// SupportedVersion is the supported version of the Gateway API CRDs.
-	SupportedVersion = "v1.0.0"
+	SupportedVersion = "v1.1.0"
 )
 
 var gatewayCRDs = map[string]apiVersion{
@@ -22,6 +22,7 @@ var gatewayCRDs = map[string]apiVersion{
 	"httproutes.gateway.networking.k8s.io":         {},
 	"referencegrants.gateway.networking.k8s.io":    {},
 	"backendtlspolicies.gateway.networking.k8s.io": {},
+	"grpcroutes.gateway.networking.k8s.io":         {},
 }
 
 type apiVersion struct {

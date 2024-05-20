@@ -33,6 +33,10 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	// Telemetry holds the Otel configuration.
+	Telemetry Telemetry
+	// BaseHTTPConfig holds the configuration options at the http context.
+	BaseHTTPConfig BaseHTTPConfig
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -94,6 +98,8 @@ type PathRule struct {
 	PathType PathType
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
+	// GRPC indicates if this is a gRPC rule
+	GRPC bool
 }
 
 // InvalidHTTPFilter is a special filter for handling the case when configured filters are invalid.
@@ -110,6 +116,8 @@ type HTTPFilters struct {
 	RequestURLRewrite *HTTPURLRewriteFilter
 	// RequestHeaderModifiers holds the HTTPHeaderFilter.
 	RequestHeaderModifiers *HTTPHeaderFilter
+	// ResponseHeaderModifiers holds the HTTPHeaderFilter.
+	ResponseHeaderModifiers *HTTPHeaderFilter
 }
 
 // HTTPHeader represents an HTTP header.
@@ -248,4 +256,34 @@ type VerifyTLS struct {
 	CertBundleID CertBundleID
 	Hostname     string
 	RootCAPath   string
+}
+
+// Telemetry represents Otel configuration for the dataplane.
+type Telemetry struct {
+	// Endpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.
+	Endpoint string
+	// ServiceName is the “service.name” attribute of the OTel resource.
+	ServiceName string
+	// Interval specifies the export interval.
+	Interval string
+	// SpanAttributes are custom key/value attributes that are added to each span.
+	SpanAttributes []SpanAttribute
+	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
+	BatchSize int32
+	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
+	BatchCount int32
+}
+
+// SpanAttribute is a key value pair to be added to a tracing span.
+type SpanAttribute struct {
+	// Key is the key for a span attribute.
+	Key string
+	// Value is the value for a span attribute.
+	Value string
+}
+
+// BaseHTTPConfig holds the configuration options at the http context.
+type BaseHTTPConfig struct {
+	// HTTP2 specifies whether http2 should be enabled for all servers.
+	HTTP2 bool
 }

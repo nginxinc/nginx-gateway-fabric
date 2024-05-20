@@ -85,7 +85,7 @@ Metrics specific to NGINX Gateway Fabric include:
 - `nginx_reloads_total`: Counts successful NGINX reloads.
 - `nginx_reload_errors_total`: Counts NGINX reload failures.
 - `nginx_stale_config`: Indicates if NGINX Gateway Fabric couldn't update NGINX with the latest configuration, resulting in a stale version.
-- `nginx_last_reload_milliseconds`: Time in milliseconds for NGINX reloads.
+- `nginx_reloads_milliseconds`: Time in milliseconds for NGINX reloads.
 - `event_batch_processing_milliseconds`: Time in milliseconds to process batches of Kubernetes events.
 
 All these metrics are under the `nginx_gateway_fabric` namespace and include a `class` label set to the Gateway class of NGINX Gateway Fabric. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.

@@ -7,7 +7,7 @@ import (
 )
 
 func sortMatchRules(matchRules []MatchRule) {
-	// stable sort is used so that the order of matches (as defined in each HTTPRoute rule) is preserved
+	// stable sort is used so that the order of matches (as defined in each Route rule) is preserved
 	// this is important, because the winning match is the first match to win.
 	sort.SliceStable(
 		matchRules, func(i, j int) bool {
@@ -21,12 +21,20 @@ Returns true if rule1 has a higher priority than rule2.
 
 From the spec:
 Precedence must be given to the Rule with the largest number of (Continuing on ties):
+(HTTPRoute)
 - Characters in a matching non-wildcard hostname.
 - Characters in a matching hostname.
 - Characters in a matching path.
 - Method match.
 - Header matches.
 - Query param matches.
+or
+(GRPCRoute)
+- Characters in a matching non-wildcard hostname.
+- Characters in a matching hostname.
+- Characters in a matching service.
+- Characters in a matching method.
+- Header matches.
 
 If ties still exist across multiple Routes, matching precedence MUST be determined in order of the following criteria,
 continuing on ties:
@@ -38,6 +46,8 @@ matching precedence MUST be granted to the first matching rule meeting the above
 
 higherPriority will determine precedence by comparing len(headers), len(query parameters), creation timestamp,
 and namespace name. It gives higher priority to rules with a method match. The other criteria are handled by NGINX.
+For GRPCRoute rules, match.Method and match.QueryParams are always nil/ 0 len. Our representation combines service
+and method into a path so that we perform "characters in a matching path" for GRPCRoute.
 */
 func higherPriority(rule1, rule2 MatchRule) bool {
 	// Compare if a method exists on one of the matches but not the other.

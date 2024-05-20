@@ -64,13 +64,8 @@ milestones:
 snapshot:
   name_template: "edge"
 
-before:
-  hooks:
-    - make crds-release-file
-
 release:
   extra_files:
-    - glob: ./build/out/crds.yaml
     - glob: ./deploy/manifests/nginx-gateway.yaml
     - glob: ./deploy/manifests/nginx-plus-gateway.yaml
     - glob: ./deploy/manifests/nginx-gateway-experimental.yaml

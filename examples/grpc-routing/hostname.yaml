@@ -1,0 +1,49 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: grpcroute-listener-hostname-matching
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: listener-1
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+      kinds:
+      - kind: GRPCRoute
+    hostname: bar.com
+  - name: listener-2
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: foo.bar.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: backend-v1
+spec:
+  parentRefs:
+  - name: grpcroute-listener-hostname-matching
+    sectionName: listener-1
+  rules:
+  - backendRefs:
+    - name: grpc-infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: backend-v2
+spec:
+  parentRefs:
+  - name: grpcroute-listener-hostname-matching
+    sectionName: listener-2
+  rules:
+  - backendRefs:
+    - name: grpc-infra-backend-v2
+      port: 8080

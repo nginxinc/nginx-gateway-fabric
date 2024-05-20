@@ -15,7 +15,8 @@ TELEMETRY_REPORT_PERIOD = 24h
 TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
 TELEMETRY_ENDPOINT_INSECURE = false
 
-GW_API_VERSION = 1.0.0
+GW_API_VERSION = 1.1.0
+ENABLE_EXPERIMENTAL = false
 NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
@@ -100,6 +101,7 @@ generate: ## Run go generate
 .PHONY: generate-crds
 generate-crds: ## Generate CRDs and Go types using kubebuilder
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
+	kubectl kustomize config/crd >deploy/crds.yaml
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
@@ -111,10 +113,6 @@ generate-manifests: ## Generate manifests using Helm.
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
-
-.PHONY: crds-release-file
-crds-release-file: ## Generate combined crds file for releases
-	scripts/combine-crds.sh
 
 .PHONY: clean
 clean: ## Clean the build
@@ -192,13 +190,13 @@ install-ngf-local-build-with-plus: build-images-with-plus load-images-with-plus 
 
 .PHONY: helm-install-local
 helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build.
-	./conformance/scripts/install-gateway.sh $(GW_API_VERSION)
-	helm install dev $(CHART_DIR) --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	helm install dev $(CHART_DIR) --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway
 
 .PHONY: helm-install-local-with-plus
 helm-install-local-with-plus: ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
-	./conformance/scripts/install-gateway.sh $(GW_API_VERSION)
-	helm install dev $(CHART_DIR) --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	helm install dev $(CHART_DIR) --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway
 
 # Debug Targets
 .PHONY: debug-build

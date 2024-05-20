@@ -1,7 +1,7 @@
 # Enhancement Proposal-1775: Gateway Settings
 
 - Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1775
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 
@@ -93,7 +93,7 @@ type Telemetry struct {
     // SpanAttributes are custom key/value attributes that are added to each span.
     //
     // +optional
-    SpanAttributes map[string]string `json:"spanAttributes,omitempty"`
+    SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
 }
 
 // TelemetryExporter specifies OpenTelemetry export parameters.
@@ -122,6 +122,15 @@ type TelemetryExporter struct {
 // The format is a subset of the syntax parsed by Golang time.ParseDuration.
 // Examples: 1h, 12m, 30s, 150ms.
 type Duration string
+
+// SpanAttribute is a key value pair to be added to a tracing span.
+type SpanAttribute struct {
+	// Key is the key for a span attribute.
+	Key string `json:"key"`
+
+	// Value is the value for a span attribute.
+	Value string `json:"value"`
+}
 ```
 
 ### Status

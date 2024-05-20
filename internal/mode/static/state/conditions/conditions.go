@@ -31,11 +31,11 @@ const (
 
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
-	RouteReasonBackendRefUnsupportedValue = "UnsupportedValue"
+	RouteReasonBackendRefUnsupportedValue v1.RouteConditionReason = "UnsupportedValue"
 
 	// RouteReasonInvalidGateway is used with the "Accepted" (false) condition when the Gateway the Route
 	// references is invalid.
-	RouteReasonInvalidGateway = "InvalidGateway"
+	RouteReasonInvalidGateway v1.RouteConditionReason = "InvalidGateway"
 
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1.RouteConditionReason = "InvalidListener"
@@ -43,6 +43,10 @@ const (
 	// RouteReasonGatewayNotProgrammed is used when the associated Gateway is not programmed.
 	// Used with Accepted (false).
 	RouteReasonGatewayNotProgrammed v1.RouteConditionReason = "GatewayNotProgrammed"
+
+	// RouteReasonUnsupportedConfiguration is used when the associated Gateway does not support the Route.
+	// Used with Accepted (false).
+	RouteReasonUnsupportedConfiguration v1.RouteConditionReason = "UnsupportedConfiguration"
 
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
@@ -64,8 +68,19 @@ const (
 	// RouteMessageFailedNginxReload is a message used with RouteReasonGatewayNotProgrammed
 	// when nginx fails to reload.
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
-		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
+		"for this Route. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
+
+	// GatewayClassResolvedRefs condition indicates whether the controller was able to resolve the
+	// parametersRef on the GatewayClass.
+	GatewayClassResolvedRefs v1.GatewayClassConditionType = "ResolvedRefs"
+
+	// GatewayClassReasonResolvedRefs is used with the "GatewayClassResolvedRefs" condition when the condition is true.
+	GatewayClassReasonResolvedRefs v1.GatewayClassConditionReason = "ResolvedRefs"
+
+	// GatewayClassReasonParamsRefNotFound is used with the "GatewayClassResolvedRefs" condition when the
+	// parametersRef resource does not exist.
+	GatewayClassReasonParamsRefNotFound v1.GatewayClassConditionReason = "ParametersRefNotFound"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
@@ -78,7 +93,7 @@ func NewTODO(msg string) conditions.Condition {
 	}
 }
 
-// NewDefaultRouteConditions returns the default conditions that must be present in the status of an HTTPRoute.
+// NewDefaultRouteConditions returns the default conditions that must be present in the status of a Route.
 func NewDefaultRouteConditions() []conditions.Condition {
 	return []conditions.Condition{
 		NewRouteAccepted(),
@@ -86,29 +101,29 @@ func NewDefaultRouteConditions() []conditions.Condition {
 	}
 }
 
-// NewRouteNotAllowedByListeners returns a Condition that indicates that the HTTPRoute is not allowed by
+// NewRouteNotAllowedByListeners returns a Condition that indicates that the Route is not allowed by
 // any listener.
 func NewRouteNotAllowedByListeners() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1.RouteReasonNotAllowedByListeners),
-		Message: "HTTPRoute is not allowed by any listener",
+		Message: "Route is not allowed by any listener",
 	}
 }
 
 // NewRouteNoMatchingListenerHostname returns a Condition that indicates that the hostname of the listener
-// does not match the hostnames of the HTTPRoute.
+// does not match the hostnames of the Route.
 func NewRouteNoMatchingListenerHostname() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1.RouteReasonNoMatchingListenerHostname),
-		Message: "Listener hostname does not match the HTTPRoute hostnames",
+		Message: "Listener hostname does not match the Route hostnames",
 	}
 }
 
-// NewRouteAccepted returns a Condition that indicates that the HTTPRoute is accepted.
+// NewRouteAccepted returns a Condition that indicates that the Route is accepted.
 func NewRouteAccepted() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
@@ -118,7 +133,7 @@ func NewRouteAccepted() conditions.Condition {
 	}
 }
 
-// NewRouteUnsupportedValue returns a Condition that indicates that the HTTPRoute includes an unsupported value.
+// NewRouteUnsupportedValue returns a Condition that indicates that the Route includes an unsupported value.
 func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
@@ -128,7 +143,7 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	}
 }
 
-// NewRoutePartiallyInvalid returns a Condition that indicates that the HTTPRoute contains a combination
+// NewRoutePartiallyInvalid returns a Condition that indicates that the Route contains a combination
 // of both valid and invalid rules.
 //
 // // nolint:lll
@@ -143,7 +158,7 @@ func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 	}
 }
 
-// NewRouteInvalidListener returns a Condition that indicates that the HTTPRoute is not accepted because of an
+// NewRouteInvalidListener returns a Condition that indicates that the Route is not accepted because of an
 // invalid listener.
 func NewRouteInvalidListener() conditions.Condition {
 	return conditions.Condition{
@@ -203,7 +218,7 @@ func NewRouteBackendRefUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
-		Reason:  RouteReasonBackendRefUnsupportedValue,
+		Reason:  string(RouteReasonBackendRefUnsupportedValue),
 		Message: msg,
 	}
 }
@@ -214,7 +229,7 @@ func NewRouteInvalidGateway() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  RouteReasonInvalidGateway,
+		Reason:  string(RouteReasonInvalidGateway),
 		Message: "Gateway is invalid",
 	}
 }
@@ -230,8 +245,19 @@ func NewRouteNoMatchingParent() conditions.Condition {
 	}
 }
 
+// NewRouteUnsupportedConfiguration returns a Condition that indicates that the Route is not Accepted because
+// it is incompatible with the Gateway's configuration.
+func NewRouteUnsupportedConfiguration(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonUnsupportedConfiguration),
+		Message: msg,
+	}
+}
+
 // NewRouteGatewayNotProgrammed returns a Condition that indicates that the Gateway it references is not programmed,
-// which does not guarantee that the HTTPRoute has been configured.
+// which does not guarantee that the Route has been configured.
 func NewRouteGatewayNotProgrammed(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
@@ -402,13 +428,37 @@ func NewListenerRefNotPermitted(msg string) []conditions.Condition {
 	}
 }
 
+// NewGatewayClassResolvedRefs returns a Condition that indicates that the parametersRef
+// on the GatewayClass is resolved.
+func NewGatewayClassResolvedRefs() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(GatewayClassResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(GatewayClassReasonResolvedRefs),
+		Message: "parametersRef resource is resolved",
+	}
+}
+
+// NewGatewayClassRefNotFound returns a Condition that indicates that the parametersRef
+// on the GatewayClass could not be resolved.
+func NewGatewayClassRefNotFound() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(GatewayClassResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayClassReasonParamsRefNotFound),
+		Message: "parametersRef resource could not be found",
+	}
+}
+
 // NewGatewayClassInvalidParameters returns a Condition that indicates that the GatewayClass has invalid parameters.
+// We are allowing Accepted to still be true to prevent nullifying the entire config tree if a parametersRef
+// is updated to something invalid.
 func NewGatewayClassInvalidParameters(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.GatewayClassConditionStatusAccepted),
-		Status:  metav1.ConditionFalse,
+		Status:  metav1.ConditionTrue,
 		Reason:  string(v1.GatewayClassReasonInvalidParameters),
-		Message: msg,
+		Message: fmt.Sprintf("GatewayClass is accepted, but parametersRef is ignored due to an error: %s", msg),
 	}
 }
 

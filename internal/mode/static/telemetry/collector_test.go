@@ -278,10 +278,12 @@ var _ = Describe("Collector", Ordered, func() {
 						{Name: "ignoredGw1"}: {},
 						{Name: "ignoredGw2"}: {},
 					},
-					Routes: map[types.NamespacedName]*graph.Route{
-						{Namespace: "test", Name: "hr-1"}: {},
-						{Namespace: "test", Name: "hr-2"}: {},
-						{Namespace: "test", Name: "hr-3"}: {},
+					Routes: map[graph.RouteKey]*graph.L7Route{
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-2"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-1"}}: {RouteType: graph.RouteTypeGRPC},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-2"}}: {RouteType: graph.RouteTypeGRPC},
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 						client.ObjectKeyFromObject(secret1): {
@@ -296,6 +298,11 @@ var _ = Describe("Collector", Ordered, func() {
 						client.ObjectKeyFromObject(svc1):   {},
 						client.ObjectKeyFromObject(svc2):   {},
 						client.ObjectKeyFromObject(nilsvc): {},
+					},
+					BackendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
+						{Namespace: "test", Name: "backendTLSPolicy-1"}: {},
+						{Namespace: "test", Name: "backendTLSPolicy-2"}: {},
+						{Namespace: "test", Name: "backendTLSPolicy-3"}: {},
 					},
 				}
 
@@ -335,12 +342,14 @@ var _ = Describe("Collector", Ordered, func() {
 
 				expData.ClusterNodeCount = 3
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:      3,
-					GatewayClassCount: 3,
-					HTTPRouteCount:    3,
-					SecretCount:       3,
-					ServiceCount:      3,
-					EndpointCount:     4,
+					GatewayCount:          3,
+					GatewayClassCount:     3,
+					HTTPRouteCount:        3,
+					SecretCount:           3,
+					ServiceCount:          3,
+					EndpointCount:         4,
+					GRPCRouteCount:        2,
+					BackendTLSPolicyCount: 3,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
@@ -475,8 +484,8 @@ var _ = Describe("Collector", Ordered, func() {
 			graph1 = &graph.Graph{
 				GatewayClass: &graph.GatewayClass{},
 				Gateway:      &graph.Gateway{},
-				Routes: map[types.NamespacedName]*graph.Route{
-					{Namespace: "test", Name: "hr-1"}: {},
+				Routes: map[graph.RouteKey]*graph.L7Route{
+					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {RouteType: graph.RouteTypeHTTP},
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					client.ObjectKeyFromObject(secret): {
@@ -566,12 +575,14 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:      0,
-					GatewayClassCount: 0,
-					HTTPRouteCount:    0,
-					SecretCount:       0,
-					ServiceCount:      0,
-					EndpointCount:     0,
+					GatewayCount:          0,
+					GatewayClassCount:     0,
+					HTTPRouteCount:        0,
+					SecretCount:           0,
+					ServiceCount:          0,
+					EndpointCount:         0,
+					GRPCRouteCount:        0,
+					BackendTLSPolicyCount: 0,
 				}
 
 				data, err := dataCollector.Collect(ctx)

@@ -1,15 +1,19 @@
 package graph
 
 import (
+	"errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 // GatewayClass represents the GatewayClass resource.
@@ -60,13 +64,15 @@ func processGatewayClasses(
 
 func buildGatewayClass(
 	gc *v1.GatewayClass,
+	npCfg *ngfAPI.NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+	validator validation.GenericValidator,
 ) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
-	conds, valid := validateGatewayClass(gc, crdVersions)
+	conds, valid := validateGatewayClass(gc, npCfg, crdVersions, validator)
 
 	return &GatewayClass{
 		Source:     gc,
@@ -77,20 +83,39 @@ func buildGatewayClass(
 
 func validateGatewayClass(
 	gc *v1.GatewayClass,
+	npCfg *ngfAPI.NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+	validator validation.GenericValidator,
 ) ([]conditions.Condition, bool) {
 	var conds []conditions.Condition
 
-	valid := true
-
 	if gc.Spec.ParametersRef != nil {
+		var err error
 		path := field.NewPath("spec").Child("parametersRef")
-		err := field.Forbidden(path, "parametersRef is not supported")
-		conds = append(conds, staticConds.NewGatewayClassInvalidParameters(err.Error()))
-		valid = false
+		if _, ok := supportedParamKinds[string(gc.Spec.ParametersRef.Kind)]; !ok {
+			err = field.NotSupported(path.Child("kind"), string(gc.Spec.ParametersRef.Kind), []string{"NginxProxy"})
+		} else if npCfg == nil {
+			err = field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
+			conds = append(conds, staticConds.NewGatewayClassRefNotFound())
+		} else {
+			nginxProxyErrs := validateNginxProxy(validator, npCfg)
+			if len(nginxProxyErrs) > 0 {
+				err = errors.New(nginxProxyErrs.ToAggregate().Error())
+			}
+		}
+
+		if err != nil {
+			conds = append(conds, staticConds.NewGatewayClassInvalidParameters(err.Error()))
+		} else {
+			conds = append(conds, staticConds.NewGatewayClassResolvedRefs())
+		}
 	}
 
 	supportedVersionConds, versionsValid := gatewayclass.ValidateCRDVersions(crdVersions)
 
-	return append(conds, supportedVersionConds...), valid && versionsValid
+	return append(conds, supportedVersionConds...), versionsValid
+}
+
+var supportedParamKinds = map[string]struct{}{
+	"NginxProxy": {},
 }

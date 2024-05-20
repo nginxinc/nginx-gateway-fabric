@@ -32,6 +32,11 @@ type NginxProxySpec struct {
 	//
 	// +optional
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
+	// DisableHTTP2 defines if http2 should be disabled for all servers.
+	// Default is false, meaning http2 will be enabled for all servers.
+	//
+	// +optional
+	DisableHTTP2 bool `json:"disableHTTP2,omitempty"`
 }
 
 // Telemetry specifies the OpenTelemetry configuration.

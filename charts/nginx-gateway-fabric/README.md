@@ -39,9 +39,9 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > they are the correct version as supported by the NGINX Gateway Fabric -
 > [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
-  ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-  ```
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+```
 
 ## Installing the Chart
 
@@ -128,7 +128,7 @@ Gateway Fabric - [see the Technical Specifications](../../README.md#technical-sp
 To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 ```
 
 ### Upgrading the CRDs
@@ -224,7 +224,7 @@ To uninstall/delete the release `ngf`:
 ```shell
 helm uninstall ngf -n nginx-gateway
 kubectl delete ns nginx-gateway
-kubectl delete crd nginxgateways.gateway.nginx.org
+kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/deploy/crds.yaml
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.
@@ -232,13 +232,13 @@ These commands remove all the Kubernetes components associated with the release 
 ### Uninstalling the Gateway Resources
 
 > **Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
-Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
-running in the cluster!**
+> Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
+> running in the cluster!**
 
 To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 ```
 
 ## Configuration
@@ -246,14 +246,12 @@ kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/downlo
 The following tables lists the configurable parameters of the NGINX Gateway Fabric chart and their default values.
 
 | Parameter                                               | Description                                                                                                                                                                                              | Default Value                                                                                                   |
-|---------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `nginxGatewayCustomAnnotations`                         | Set of custom annotations                                                                                                                                                                                | {}                                                                                                              |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `nginxGateway.image.repository`                         | The repository for the NGINX Gateway Fabric image.                                                                                                                                                       | ghcr.io/nginxinc/nginx-gateway-fabric                                                                           |
 | `nginxGateway.image.tag`                                | The tag for the NGINX Gateway Fabric image.                                                                                                                                                              | edge                                                                                                            |
 | `nginxGateway.image.pullPolicy`                         | The `imagePullPolicy` for the NGINX Gateway Fabric image.                                                                                                                                                | Always                                                                                                          |
 | `nginxGateway.lifecycle`                                | The `lifecycle` of the nginx-gateway container.                                                                                                                                                          | {}                                                                                                              |
 | `nginxGateway.extraVolumeMounts`                        | Extra `volumeMounts` for the nginxGateway container.                                                                                                                                                     | {}                                                                                                              |
-| `nginxGateway.gatewayClassCustomAnnotations`            | Set of custom annotations for GatewayClass objects                                                                                                                                                       | {}                                                                                                              |
 | `nginxGateway.gatewayClassName`                         | The name of the GatewayClass for the NGINX Gateway Fabric deployment.                                                                                                                                    | nginx                                                                                                           |
 | `nginxGateway.gatewayControllerName`                    | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org.                                                                  | gateway.nginx.org/nginx-gateway-controller                                                                      |
 | `nginxGateway.kind`                                     | The kind of the NGINX Gateway Fabric installation - currently, only Deployment is supported.                                                                                                             | deployment                                                                                                      |
@@ -271,6 +269,7 @@ The following tables lists the configurable parameters of the NGINX Gateway Fabr
 | `nginx.image.tag`                                       | The tag for the NGINX image.                                                                                                                                                                             | edge                                                                                                            |
 | `nginx.image.pullPolicy`                                | The `imagePullPolicy` for the NGINX image.                                                                                                                                                               | Always                                                                                                          |
 | `nginx.plus`                                            | Is NGINX Plus image being used                                                                                                                                                                           | false                                                                                                           |
+| `nginx.config`                                          | The configuration for the data plane that is contained in the NginxProxy resource.                                                                                                                       | [See nginx.config section](values.yaml)                                                                         |
 | `nginx.usage.secretName`                                | The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.                                                                                                              |                                                                                                                 |
 | `nginx.usage.serverURL`                                 | The base server URL of the NGINX Plus usage reporting server.                                                                                                                                            |                                                                                                                 |
 | `nginx.usage.clusterName`                               | The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.                                                                                                                     |                                                                                                                 |

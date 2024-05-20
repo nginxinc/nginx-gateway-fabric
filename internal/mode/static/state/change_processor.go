@@ -16,9 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -103,8 +104,10 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		ReferenceGrants:    make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
 		Secrets:            make(map[types.NamespacedName]*apiv1.Secret),
 		CRDMetadata:        make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
-		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha2.BackendTLSPolicy),
+		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha3.BackendTLSPolicy),
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
+		NginxProxies:       make(map[types.NamespacedName]*ngfAPI.NginxProxy),
+		GRPCRoutes:         make(map[types.NamespacedName]*v1.GRPCRoute),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -148,8 +151,13 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1alpha2.BackendTLSPolicy{}),
+				gvk:       extractGVK(&v1alpha3.BackendTLSPolicy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.BackendTLSPolicies),
+				predicate: nil,
+			},
+			{
+				gvk:       extractGVK(&v1.GRPCRoute{}),
+				store:     newObjectStoreMapAdapter(clusterStore.GRPCRoutes),
 				predicate: nil,
 			},
 			{
@@ -181,6 +189,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),
 				store:     newObjectStoreMapAdapter(clusterStore.CRDMetadata),
 				predicate: annotationChangedPredicate{annotation: gatewayclass.BundleVersionAnnotation},
+			},
+			{
+				gvk:       extractGVK(&ngfAPI.NginxProxy{}),
+				store:     newObjectStoreMapAdapter(clusterStore.NginxProxies),
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 		},
 	)

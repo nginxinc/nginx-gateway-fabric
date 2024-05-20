@@ -9,17 +9,18 @@ docs: "DOCS-1412"
 ## Summary
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-| ------------------------------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Not supported                         | v1          |
-| [Gateway](#gateway)                   | Supported          | Not supported          | Not supported                         | v1          |
-| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          |
-| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     |
-| [TLSRoute](#tlsroute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha2    |
-| [Custom policies](#custom-policies)   | Not supported      | N/A                    | Not supported                         | N/A         |
+| Resource                              | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
+| ------------------------------------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
+| [GatewayClass](#gatewayclass)         | Supported           | Not supported          | Not supported                         | v1          |
+| [Gateway](#gateway)                   | Supported           | Not supported          | Not supported                         | v1          |
+| [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
+| [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
+| [GRPCRoute](#grpcroute)               | Partially Supported | Not supported          | Not supported                         | v1          |
+| [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha3    |
+| [Custom policies](#custom-policies)   | Not supported       | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -58,7 +59,7 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
 
 - `spec`
   - `controllerName` - supported.
-  - `parametersRef` - not supported.
+  - `parametersRef` - NginxProxy resource supported.
   - `description` - supported.
 - `status`
   - `conditions` - supported (Condition/Status/Reason):
@@ -157,7 +158,8 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `requestRedirect`: Supported except for the experimental `path` field. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `urlRewrite`.
       - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
       - `urlRewrite`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `requestRedirect`.
-      - `responseHeaderModifier`, `requestMirror`, `extensionRef`: Not supported.
+      - `responseHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
+      - `requestMirror`, `extensionRef`: Not supported.
     - `backendRefs`: Partially supported. Backend ref `filters` are not supported.
 - `status`
   - `parents`
@@ -176,6 +178,50 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/RefNotPermitted`
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef with an unsupported value.
+      - `PartiallyInvalid/True/UnsupportedValue`
+
+---
+
+### GRPCRoute
+
+{{< bootstrap-table "table table-striped table-bordered" >}}
+| Resource  | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
+| --------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
+| GRPCRoute | Supported           | Not supported          | Not supported                         | v1          |
+{{< /bootstrap-table >}}
+
+**Fields**:
+
+- `spec`
+  - `parentRefs`: Partially supported. Port not supported.
+  - `hostnames`: Supported.
+  - `rules`
+    - `matches`
+      - `method`: Partially supported. Only `Exact` type with both `method.service` and `method.method` specified.
+      - `headers`: Partially supported. Only `Exact` type.
+    - `filters`
+      - `type`: Supported.
+      - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
+      - `responseHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
+      - `requestMirror`, `extensionRef`: Not supported.
+    - `backendRefs`: Partially supported. Backend ref `filters` are not supported.
+- `status`
+  - `parents`
+    - `parentRef`: Supported.
+    - `controllerName`: Supported.
+    - `conditions`: Partially supported. Supported (Condition/Status/Reason):
+      - `Accepted/True/Accepted`
+      - `Accepted/False/NoMatchingListenerHostname`
+      - `Accepted/False/NoMatchingParent`
+      - `Accepted/False/NotAllowedByListeners`
+      - `Accepted/False/UnsupportedValue`: Custom reason for when the GRPCRoute includes an invalid or unsupported value.
+      - `Accepted/False/InvalidListener`: Custom reason for when the GRPCRoute references an invalid listener.
+      - `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. GRPCRoute can be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
+      - `ResolvedRefs/True/ResolvedRefs`
+      - `ResolvedRefs/False/InvalidKind`
+      - `ResolvedRefs/False/RefNotPermitted`
+      - `ResolvedRefs/False/BackendNotFound`
+      - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the GRPCRoute rules has a backendRef with an unsupported value.
       - `PartiallyInvalid/True/UnsupportedValue`
 
 ---
@@ -237,24 +283,23 @@ Fields:
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource         | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 | ---------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha2    |
+| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha3    |
 {{< /bootstrap-table >}}
 
 Fields:
 
 - `spec`
-  - `targetRef`
+  - `targetRefs`
     - `group` - supported.
     - `kind` - supports `Service`.
     - `name` - supported.
-    - `namespace` - supported.
-  - `tls`
-    - `caCertRefs` - supports single reference to a `ConfigMap`, with the CA certificate in a key named `ca.crt`.
+  - `validation`
+    - `caCertificateRefs` - supports single reference to a `ConfigMap`, with the CA certificate in a key named `ca.crt`.
       - `name`- supported.
       - `group` - supported.
       - `kind` - supports `ConfigMap`.
     - `hostname` - supported.
-    - `wellKnownCerts` - supports `System`. This will set the CA certificate to the Alpine system root CA path `/etc/ssl/cert.pem`. NB: This option will only work if the NGINX image used is Alpine based. The NGF NGINX images are Alpine based by default.
+    - `wellKnownCertificates` - supports `System`. This will set the CA certificate to the Alpine system root CA path `/etc/ssl/cert.pem`. NB: This option will only work if the NGINX image used is Alpine based. The NGF NGINX images are Alpine based by default.
 - `status`
   - `ancestors`
     - `ancestorRef` - supported.

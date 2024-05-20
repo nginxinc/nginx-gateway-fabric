@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -34,16 +35,16 @@ func getModifiedRef(mod func(ref gatewayv1.BackendRef) gatewayv1.BackendRef) gat
 	return mod(getNormalRef())
 }
 
-func TestValidateHTTPBackendRef(t *testing.T) {
+func TestValidateRouteBackendRef(t *testing.T) {
 	tests := []struct {
 		expectedCondition conditions.Condition
 		name              string
-		ref               gatewayv1.HTTPBackendRef
+		ref               RouteBackendRef
 		expectedValid     bool
 	}{
 		{
 			name: "normal case",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getNormalRef(),
 				Filters:    nil,
 			},
@@ -51,11 +52,13 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 		},
 		{
 			name: "filters not supported",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getNormalRef(),
-				Filters: []gatewayv1.HTTPRouteFilter{
-					{
-						Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				Filters: []any{
+					[]gatewayv1.HTTPRouteFilter{
+						{
+							Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+						},
 					},
 				},
 			},
@@ -66,7 +69,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 		},
 		{
 			name: "invalid base ref",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
 					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
 					return backend
@@ -84,7 +87,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 
-			valid, cond := validateHTTPBackendRef(test.ref, "test", resolver, field.NewPath("test"))
+			valid, cond := validateRouteBackendRef(test.ref, "test", resolver, field.NewPath("test"))
 
 			g.Expect(valid).To(Equal(test.expectedValid))
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -332,21 +335,34 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
+	sectionNameRefs := []ParentRef{
+		{
+			Idx:     0,
+			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
+		},
+	}
 	createRoute := func(
 		name string,
 		kind gatewayv1.Kind,
 		refsPerBackend int,
 		serviceNames ...string,
-	) *gatewayv1.HTTPRoute {
-		hr := &gatewayv1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
+	) *L7Route {
+		hr := &L7Route{
+			Source: &gatewayv1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      name,
+				},
 			},
+			ParentRefs: sectionNameRefs,
+			Valid:      true,
 		}
 
-		createHTTPBackendRef := func(svcName string, port gatewayv1.PortNumber, weight *int32) gatewayv1.HTTPBackendRef {
-			return gatewayv1.HTTPBackendRef{
+		createRouteBackendRef := func(svcName string, port gatewayv1.PortNumber, weight *int32) RouteBackendRef {
+			return RouteBackendRef{
 				BackendRef: gatewayv1.BackendRef{
 					BackendObjectReference: gatewayv1.BackendObjectReference{
 						Kind:      helpers.GetPointer(kind),
@@ -359,48 +375,26 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			}
 		}
 
-		hr.Spec.Rules = make([]gatewayv1.HTTPRouteRule, len(serviceNames))
+		hr.Spec.Rules = make([]RouteRule, len(serviceNames))
 
 		for idx, svcName := range serviceNames {
-			refs := []gatewayv1.HTTPBackendRef{
-				createHTTPBackendRef(svcName, 80, nil),
+			refs := []RouteBackendRef{
+				createRouteBackendRef(svcName, 80, nil),
 			}
 			if refsPerBackend == 2 {
-				refs = append(refs, createHTTPBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
+				refs = append(refs, createRouteBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
 			}
 			if refsPerBackend != 1 && refsPerBackend != 2 {
 				panic("invalid refsPerBackend")
 			}
 
-			hr.Spec.Rules[idx] = gatewayv1.HTTPRouteRule{
-				BackendRefs: refs,
+			hr.Spec.Rules[idx] = RouteRule{
+				RouteBackendRefs: refs,
+				ValidMatches:     true,
+				ValidFilters:     true,
 			}
 		}
 		return hr
-	}
-
-	const (
-		allValid   = true
-		allInvalid = false
-	)
-
-	createRules := func(hr *gatewayv1.HTTPRoute, validMatches, validFilters bool) []Rule {
-		rules := make([]Rule, len(hr.Spec.Rules))
-		for i := range rules {
-			rules[i].ValidMatches = validMatches
-			rules[i].ValidFilters = validFilters
-		}
-		return rules
-	}
-
-	sectionNameRefs := []ParentRef{
-		{
-			Idx:     0,
-			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			Attachment: &ParentRefAttachmentStatus{
-				Attached: true,
-			},
-		},
 	}
 
 	hrWithOneBackend := createRoute("hr1", "Service", 1, "svc1")
@@ -408,8 +402,17 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	hrWithTwoDiffBackends := createRoute("hr2", "Service", 2, "svc1")
 	hrWithInvalidRule := createRoute("hr3", "NotService", 1, "svc1")
 	hrWithZeroBackendRefs := createRoute("hr4", "Service", 1, "svc1")
-	hrWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
-	hrWithTwoDiffBackends.Spec.Rules[0].BackendRefs[1].Name = "svc2"
+	hrWithZeroBackendRefs.Spec.Rules[0].RouteBackendRefs = nil
+	hrWithTwoDiffBackends.Spec.Rules[0].RouteBackendRefs[1].Name = "svc2"
+
+	hrWithOneBackendInvalid := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalid.Valid = false
+
+	hrWithOneBackendInvalidMatches := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalidMatches.Spec.Rules[0].ValidMatches = false
+
+	hrWithOneBackendInvalidFilters := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalidFilters.Spec.Rules[0].ValidFilters = false
 
 	getSvc := func(name string) *v1.Service {
 		return &v1.Service{
@@ -450,23 +453,24 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	getPolicy := func(name, svcName, cmName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
 			Valid: true,
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  gatewayv1.ObjectName(svcName),
+							},
 						},
 					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -490,20 +494,21 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 
 	getBtp := func(name string, svcName string, cmName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test"},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  gatewayv1.ObjectName(svcName),
+							},
 						},
 					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -538,19 +543,14 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	)
 
 	tests := []struct {
-		route               *Route
+		route               *L7Route
 		policies            map[types.NamespacedName]*BackendTLSPolicy
 		name                string
 		expectedBackendRefs []BackendRef
 		expectedConditions  []conditions.Condition
 	}{
 		{
-			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allValid),
-			},
+			route: hrWithOneBackend,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -564,12 +564,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with one backend",
 		},
 		{
-			route: &Route{
-				Source:     hrWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
-			},
+			route: hrWithTwoBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -589,12 +584,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends",
 		},
 		{
-			route: &Route{
-				Source:     hrWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
-			},
+			route: hrWithTwoBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -616,47 +606,28 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends and matching policies",
 		},
 		{
-			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      false,
-			},
+			route:               hrWithOneBackendInvalid,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid route",
 		},
 		{
-			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
-			},
+			route:               hrWithOneBackendInvalidMatches,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid matches",
 		},
 		{
-			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
-			},
+			route:               hrWithOneBackendInvalidFilters,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid filters",
 		},
 		{
-			route: &Route{
-				Source:     hrWithInvalidRule,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
-			},
+			route: hrWithInvalidRule,
 			expectedBackendRefs: []BackendRef{
 				{
 					Weight: 1,
@@ -671,12 +642,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef",
 		},
 		{
-			route: &Route{
-				Source:     hrWithTwoDiffBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoDiffBackends, allValid, allValid),
-			},
+			route: hrWithTwoDiffBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -702,12 +668,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef - backend TLS policies do not match for all backends",
 		},
 		{
-			route: &Route{
-				Source:     hrWithZeroBackendRefs,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
-			},
+			route:               hrWithZeroBackendRefs,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			name:                "zero backendRefs",
@@ -721,8 +682,8 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			addBackendRefsToRules(test.route, resolver, services, test.policies)
 
 			var actual []BackendRef
-			if test.route.Rules != nil {
-				actual = test.route.Rules[0].BackendRefs
+			if test.route.Spec.Rules != nil {
+				actual = test.route.Spec.Rules[0].BackendRefs
 			}
 
 			g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
@@ -755,23 +716,24 @@ func TestCreateBackend(t *testing.T) {
 	svc3NamespacedName := types.NamespacedName{Namespace: "test", Name: "service3"}
 
 	btp := BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "service2",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "service2",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					Hostname:         "foo.example.com",
-					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					Hostname:                "foo.example.com",
+					WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesSystem)),
 				},
 			},
 		},
@@ -779,23 +741,24 @@ func TestCreateBackend(t *testing.T) {
 	}
 
 	btp2 := BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp2",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "service3",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "service3",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					Hostname:         "foo.example.com",
-					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					Hostname:                "foo.example.com",
+					WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesType("unknown"))),
 				},
 			},
 		},
@@ -938,7 +901,7 @@ func TestCreateBackend(t *testing.T) {
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				staticConds.NewRouteBackendRefUnsupportedValue(
-					"The backend TLS policy is invalid: unsupported value",
+					"the backend TLS policy is invalid: unsupported value",
 				),
 			),
 			name: "invalid policy",
@@ -964,8 +927,13 @@ func TestCreateBackend(t *testing.T) {
 			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
+
+			rbr := RouteBackendRef{
+				test.ref.BackendRef,
+				[]any{},
+			}
 			backend, cond := createBackendRef(
-				test.ref,
+				rbr,
 				sourceNamespace,
 				resolver,
 				services,
@@ -1015,15 +983,15 @@ func TestGetServicePort(t *testing.T) {
 func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
 	getBtp := func(name, caCertName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -1119,19 +1087,20 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 	getBtp := func(name string, timestamp metav1.Time) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
 			Valid: true,
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              name,
 					Namespace:         "test",
 					CreationTimestamp: timestamp,
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      "svc1",
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  "svc1",
+							},
 						},
 					},
 				},
@@ -1180,7 +1149,7 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref, "test")
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref.Namespace, string(ref.Name), "test")
 
 			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
 			g.Expect(err).ToNot(HaveOccurred())

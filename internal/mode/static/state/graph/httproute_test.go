@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,10 +86,11 @@ func addFilterToPath(hr *gatewayv1.HTTPRoute, path string, filter gatewayv1.HTTP
 	}
 }
 
-func TestBuildRoutes(t *testing.T) {
+func TestBuildHTTPRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	hr := createHTTPRoute("hr-1", gwNsName.Name, "example.com", "/")
+
 	hrWrongGateway := createHTTPRoute("hr-2", "some-gateway", "example.com", "/")
 
 	hrRoutes := map[types.NamespacedName]*gatewayv1.HTTPRoute{
@@ -100,27 +99,34 @@ func TestBuildRoutes(t *testing.T) {
 	}
 
 	tests := []struct {
-		expected  map[types.NamespacedName]*Route
+		expected  map[RouteKey]*L7Route
 		name      string
 		gwNsNames []types.NamespacedName
 	}{
 		{
 			gwNsNames: []types.NamespacedName{gwNsName},
-			expected: map[types.NamespacedName]*Route{
-				client.ObjectKeyFromObject(hr): {
-					Source: hr,
+			expected: map[RouteKey]*L7Route{
+				CreateRouteKey(hr): {
+					Source:    hr,
+					RouteType: RouteTypeHTTP,
 					ParentRefs: []ParentRef{
 						{
-							Idx:     0,
-							Gateway: gwNsName,
+							Idx:         0,
+							Gateway:     gwNsName,
+							SectionName: hr.Spec.ParentRefs[0].SectionName,
 						},
 					},
 					Valid:      true,
 					Attachable: true,
-					Rules: []Rule{
-						{
-							ValidMatches: true,
-							ValidFilters: true,
+					Spec: L7RouteSpec{
+						Hostnames: hr.Spec.Hostnames,
+						Rules: []RouteRule{
+							{
+								ValidMatches:     true,
+								ValidFilters:     true,
+								Matches:          hr.Spec.Rules[0].Matches,
+								RouteBackendRefs: []RouteBackendRef{},
+							},
 						},
 					},
 				},
@@ -139,209 +145,19 @@ func TestBuildRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildRoutesForGateways(validator, hrRoutes, test.gwNsNames)
+			routes := buildRoutesForGateways(
+				validator,
+				hrRoutes,
+				map[types.NamespacedName]*gatewayv1.GRPCRoute{},
+				test.gwNsNames,
+				nil,
+			)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
 }
 
-func TestBuildSectionNameRefs(t *testing.T) {
-	const routeNamespace = "test"
-
-	gwNsName1 := types.NamespacedName{Namespace: routeNamespace, Name: "gateway-1"}
-	gwNsName2 := types.NamespacedName{Namespace: routeNamespace, Name: "gateway-2"}
-
-	parentRefs := []gatewayv1.ParentReference{
-		{
-			Name:        gatewayv1.ObjectName(gwNsName1.Name),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("one"),
-		},
-		{
-			Name:        gatewayv1.ObjectName("some-other-gateway"),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("two"),
-		},
-		{
-			Name:        gatewayv1.ObjectName(gwNsName2.Name),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("three"),
-		},
-		{
-			Name:        gatewayv1.ObjectName(gwNsName1.Name),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("same-name"),
-		},
-		{
-			Name:        gatewayv1.ObjectName(gwNsName2.Name),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("same-name"),
-		},
-		{
-			Name:        gatewayv1.ObjectName("some-other-gateway"),
-			SectionName: helpers.GetPointer[gatewayv1.SectionName]("same-name"),
-		},
-	}
-
-	gwNsNames := []types.NamespacedName{gwNsName1, gwNsName2}
-
-	expected := []ParentRef{
-		{
-			Idx:     0,
-			Gateway: gwNsName1,
-		},
-		{
-			Idx:     2,
-			Gateway: gwNsName2,
-		},
-		{
-			Idx:     3,
-			Gateway: gwNsName1,
-		},
-		{
-			Idx:     4,
-			Gateway: gwNsName2,
-		},
-	}
-
-	tests := []struct {
-		expectedError error
-		name          string
-		parentRefs    []gatewayv1.ParentReference
-		expectedRefs  []ParentRef
-	}{
-		{
-			name:          "normal case",
-			parentRefs:    parentRefs,
-			expectedRefs:  expected,
-			expectedError: nil,
-		},
-		{
-			parentRefs: []gatewayv1.ParentReference{
-				{
-					Name:        gatewayv1.ObjectName(gwNsName1.Name),
-					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
-				},
-				{
-					Name:        gatewayv1.ObjectName(gwNsName1.Name),
-					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
-				},
-			},
-			name:          "duplicate sectionNames",
-			expectedError: errors.New("duplicate section name \"http\" for Gateway test/gateway-1"),
-		},
-		{
-			parentRefs: []gatewayv1.ParentReference{
-				{
-					Name:        gatewayv1.ObjectName(gwNsName1.Name),
-					SectionName: nil,
-				},
-				{
-					Name:        gatewayv1.ObjectName(gwNsName1.Name),
-					SectionName: nil,
-				},
-			},
-			name:          "nil sectionNames",
-			expectedError: errors.New("duplicate section name \"\" for Gateway test/gateway-1"),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
-			g.Expect(result).To(Equal(test.expectedRefs))
-			if test.expectedError != nil {
-				g.Expect(err).To(Equal(test.expectedError))
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-			}
-		})
-	}
-}
-
-func TestFindGatewayForParentRef(t *testing.T) {
-	gwNsName1 := types.NamespacedName{Namespace: "test-1", Name: "gateway-1"}
-	gwNsName2 := types.NamespacedName{Namespace: "test-2", Name: "gateway-2"}
-
-	tests := []struct {
-		ref              gatewayv1.ParentReference
-		expectedGwNsName types.NamespacedName
-		name             string
-		expectedFound    bool
-	}{
-		{
-			ref: gatewayv1.ParentReference{
-				Namespace: helpers.GetPointer(gatewayv1.Namespace(gwNsName1.Namespace)),
-				Name:      gatewayv1.ObjectName(gwNsName1.Name),
-			},
-			expectedFound:    true,
-			expectedGwNsName: gwNsName1,
-			name:             "found",
-		},
-		{
-			ref: gatewayv1.ParentReference{
-				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind]("Gateway"),
-				Namespace: helpers.GetPointer(gatewayv1.Namespace(gwNsName1.Namespace)),
-				Name:      gatewayv1.ObjectName(gwNsName1.Name),
-			},
-			expectedFound:    true,
-			expectedGwNsName: gwNsName1,
-			name:             "found with explicit group and kind",
-		},
-		{
-			ref: gatewayv1.ParentReference{
-				Name: gatewayv1.ObjectName(gwNsName2.Name),
-			},
-			expectedFound:    true,
-			expectedGwNsName: gwNsName2,
-			name:             "found with implicit namespace",
-		},
-		{
-			ref: gatewayv1.ParentReference{
-				Kind: helpers.GetPointer[gatewayv1.Kind]("NotGateway"),
-				Name: gatewayv1.ObjectName(gwNsName2.Name),
-			},
-			expectedFound:    false,
-			expectedGwNsName: types.NamespacedName{},
-			name:             "wrong kind",
-		},
-		{
-			ref: gatewayv1.ParentReference{
-				Group: helpers.GetPointer[gatewayv1.Group]("wrong-group"),
-				Name:  gatewayv1.ObjectName(gwNsName2.Name),
-			},
-			expectedFound:    false,
-			expectedGwNsName: types.NamespacedName{},
-			name:             "wrong group",
-		},
-		{
-			ref: gatewayv1.ParentReference{
-				Namespace: helpers.GetPointer(gatewayv1.Namespace(gwNsName1.Namespace)),
-				Name:      "some-gateway",
-			},
-			expectedFound:    false,
-			expectedGwNsName: types.NamespacedName{},
-			name:             "not found",
-		},
-	}
-
-	routeNamespace := "test-2"
-
-	gwNsNames := []types.NamespacedName{
-		gwNsName1,
-		gwNsName2,
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
-			g.Expect(found).To(Equal(test.expectedFound))
-			g.Expect(gw).To(Equal(test.expectedGwNsName))
-		})
-	}
-}
-
-func TestBuildRoute(t *testing.T) {
+func TestBuildHTTPRoute(t *testing.T) {
 	const (
 		invalidPath             = "/invalid"
 		invalidRedirectHostname = "invalid.example.com"
@@ -410,30 +226,40 @@ func TestBuildRoute(t *testing.T) {
 	tests := []struct {
 		validator *validationfakes.FakeHTTPFieldsValidator
 		hr        *gatewayv1.HTTPRoute
-		expected  *Route
+		expected  *L7Route
 		name      string
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hr,
-			expected: &Route{
-				Source: hr,
+			expected: &L7Route{
+				RouteType: RouteTypeHTTP,
+				Source:    hr,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hr.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Valid:      true,
 				Attachable: true,
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          hr.Spec.Rules[0].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          hr.Spec.Rules[1].Matches,
+							Filters:          hr.Spec.Rules[1].Filters,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -442,14 +268,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathType,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrInvalidMatchesEmptyPathType,
 				Valid:      false,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatchesEmptyPathType.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -457,10 +285,15 @@ func TestBuildRoute(t *testing.T) {
 						`All rules are invalid: spec.rules[0].matches[0].path.type: Required value: path type cannot be nil`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hrInvalidMatchesEmptyPathType.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							RouteBackendRefs: []RouteBackendRef{},
+							Matches:          hrInvalidMatchesEmptyPathType.Spec.Rules[0].Matches,
+						},
 					},
 				},
 			},
@@ -469,22 +302,25 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrDuplicateSectionName,
-			expected: &Route{
-				Source: hrDuplicateSectionName,
+			expected: &L7Route{
+				RouteType: RouteTypeHTTP,
+				Source:    hrDuplicateSectionName,
 			},
 			name: "invalid route with duplicate sectionName",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathValue,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrInvalidMatchesEmptyPathValue,
 				Valid:      false,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatchesEmptyPathValue.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -492,10 +328,15 @@ func TestBuildRoute(t *testing.T) {
 						`All rules are invalid: spec.rules[0].matches[0].path.value: Required value: path value cannot be nil`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							RouteBackendRefs: []RouteBackendRef{},
+							Matches:          hrInvalidMatchesEmptyPathValue.Spec.Rules[0].Matches,
+						},
 					},
 				},
 			},
@@ -510,14 +351,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidHostname,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrInvalidHostname,
 				Valid:      false,
 				Attachable: false,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidHostname.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -531,14 +374,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidMatches,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrInvalidMatches,
 				Valid:      false,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatches.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -546,10 +391,15 @@ func TestBuildRoute(t *testing.T) {
 						`All rules are invalid: spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          hrInvalidMatches.Spec.Rules[0].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -558,14 +408,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidFilters,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrInvalidFilters,
 				Valid:      false,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -574,10 +426,16 @@ func TestBuildRoute(t *testing.T) {
 							`Invalid value: "invalid.example.com": invalid hostname`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: false,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     false,
+							Matches:          hrInvalidFilters.Spec.Rules[0].Matches,
+							Filters:          hrInvalidFilters.Spec.Rules[0].Filters,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -586,14 +444,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatches,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrDroppedInvalidMatches,
 				Valid:      true,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidMatches.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -601,14 +461,21 @@ func TestBuildRoute(t *testing.T) {
 						`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          hrDroppedInvalidMatches.Spec.Rules[0].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          hrDroppedInvalidMatches.Spec.Rules[1].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -618,14 +485,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrDroppedInvalidMatchesAndInvalidFilters,
 				Valid:      true,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidMatchesAndInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -635,18 +504,28 @@ func TestBuildRoute(t *testing.T) {
 							`"invalid.example.com": invalid hostname]`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: false,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[0].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     false,
+							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Matches,
+							Filters:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Filters,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[2].Matches,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -655,14 +534,16 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidFilters,
-			expected: &Route{
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
 				Source:     hrDroppedInvalidFilters,
 				Valid:      true,
 				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -671,14 +552,23 @@ func TestBuildRoute(t *testing.T) {
 							`"invalid.example.com": invalid hostname`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: false,
+				Spec: L7RouteSpec{
+					Hostnames: hr.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          hrDroppedInvalidFilters.Spec.Rules[0].Matches,
+							Filters:          hrDroppedInvalidFilters.Spec.Rules[0].Filters,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     false,
+							Matches:          hrDroppedInvalidFilters.Spec.Rules[1].Matches,
+							Filters:          hrDroppedInvalidFilters.Spec.Rules[1].Filters,
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -692,986 +582,8 @@ func TestBuildRoute(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			route := buildRoute(test.validator, test.hr, gatewayNsNames)
+			route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
-		})
-	}
-}
-
-func TestBindRouteToListeners(t *testing.T) {
-	// we create a new listener each time because the function under test can modify it
-	createListener := func(name string) *Listener {
-		return &Listener{
-			Name: name,
-			Source: gatewayv1.Listener{
-				Name:     gatewayv1.SectionName(name),
-				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
-			},
-			Valid:      true,
-			Attachable: true,
-			Routes:     map[types.NamespacedName]*Route{},
-		}
-	}
-	createModifiedListener := func(name string, m func(*Listener)) *Listener {
-		l := createListener(name)
-		m(l)
-		return l
-	}
-
-	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "gateway",
-		},
-	}
-	gwDiffNamespace := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "diff-namespace",
-			Name:      "gateway",
-		},
-	}
-
-	createHTTPRouteWithSectionNameAndPort := func(
-		sectionName *gatewayv1.SectionName,
-		port *gatewayv1.PortNumber,
-	) *gatewayv1.HTTPRoute {
-		return &gatewayv1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "hr",
-			},
-			Spec: gatewayv1.HTTPRouteSpec{
-				CommonRouteSpec: gatewayv1.CommonRouteSpec{
-					ParentRefs: []gatewayv1.ParentReference{
-						{
-							Name:        gatewayv1.ObjectName(gw.Name),
-							SectionName: sectionName,
-							Port:        port,
-						},
-					},
-				},
-				Hostnames: []gatewayv1.Hostname{
-					"foo.example.com",
-				},
-			},
-		}
-	}
-
-	hr := createHTTPRouteWithSectionNameAndPort(helpers.GetPointer[gatewayv1.SectionName]("listener-80-1"), nil)
-	hrWithNilSectionName := createHTTPRouteWithSectionNameAndPort(nil, nil)
-	hrWithEmptySectionName := createHTTPRouteWithSectionNameAndPort(helpers.GetPointer[gatewayv1.SectionName](""), nil)
-	hrWithPort := createHTTPRouteWithSectionNameAndPort(
-		helpers.GetPointer[gatewayv1.SectionName]("listener-80-1"),
-		helpers.GetPointer[gatewayv1.PortNumber](80),
-	)
-	hrWithNonExistingListener := createHTTPRouteWithSectionNameAndPort(
-		helpers.GetPointer[gatewayv1.SectionName]("listener-80-2"),
-		nil,
-	)
-
-	var normalRoute *Route
-	createNormalRoute := func(gateway *gatewayv1.Gateway) *Route {
-		normalRoute = &Route{
-			Source:     hr,
-			Valid:      true,
-			Attachable: true,
-			ParentRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gateway),
-				},
-			},
-		}
-		return normalRoute
-	}
-	getLastNormalRoute := func() *Route {
-		return normalRoute
-	}
-
-	invalidAttachableRoute1 := &Route{
-		Source:     hr,
-		Valid:      false,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	invalidAttachableRoute2 := &Route{
-		Source:     hr,
-		Valid:      false,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-
-	routeWithMissingSectionName := &Route{
-		Source:     hrWithNilSectionName,
-		Valid:      true,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	routeWithEmptySectionName := &Route{
-		Source:     hrWithEmptySectionName,
-		Valid:      true,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	routeWithNonExistingListener := &Route{
-		Source:     hrWithNonExistingListener,
-		Valid:      true,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	routeWithPort := &Route{
-		Source:     hrWithPort,
-		Valid:      true,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
-	routeWithIgnoredGateway := &Route{
-		Source:     hr,
-		Valid:      true,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: ignoredGwNsName,
-			},
-		},
-	}
-	invalidRoute := &Route{
-		Valid: false,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-
-	invalidNotAttachableListener := createModifiedListener("listener-80-1", func(l *Listener) {
-		l.Valid = false
-		l.Attachable = false
-	})
-	nonMatchingHostnameListener := createModifiedListener("listener-80-1", func(l *Listener) {
-		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
-	})
-
-	tests := []struct {
-		route                    *Route
-		gateway                  *Gateway
-		expectedGatewayListeners []*Listener
-		name                     string
-		expectedSectionNameRefs  []ParentRef
-		expectedConditions       []conditions.Condition
-	}{
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
-					}
-				}),
-			},
-			name: "normal case",
-		},
-		{
-			route: routeWithMissingSectionName,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): routeWithMissingSectionName,
-					}
-				}),
-			},
-			name: "section name is nil",
-		},
-		{
-			route: routeWithEmptySectionName,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80"),
-					createListener("listener-8080"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80":   {"foo.example.com"},
-							"listener-8080": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
-					}
-				}),
-				createModifiedListener("listener-8080", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
-					}
-				}),
-			},
-			name: "section name is empty; bind to multiple listeners",
-		},
-		{
-			route: routeWithEmptySectionName,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					invalidNotAttachableListener,
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteInvalidListener(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				invalidNotAttachableListener,
-			},
-			name: "empty section name with no valid and attachable listeners",
-		},
-		{
-			route: routeWithPort,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: false,
-						FailedCondition: staticConds.NewRouteUnsupportedValue(
-							`spec.parentRefs[0].port: Forbidden: cannot be set`,
-						),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createListener("listener-80-1"),
-			},
-			name: "port is configured",
-		},
-		{
-			route: routeWithNonExistingListener,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteNoMatchingParent(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createListener("listener-80-1"),
-			},
-			name: "listener doesn't exist",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					invalidNotAttachableListener,
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteInvalidListener(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				invalidNotAttachableListener,
-			},
-			name: "listener isn't valid and attachable",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					nonMatchingHostnameListener,
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteNoMatchingListenerHostname(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				nonMatchingHostnameListener,
-			},
-			name: "no matching listener hostname",
-		},
-		{
-			route: routeWithIgnoredGateway,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: ignoredGwNsName,
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createListener("listener-80-1"),
-			},
-			name: "gateway is ignored",
-		},
-		{
-			route: invalidRoute,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:        0,
-					Gateway:    client.ObjectKeyFromObject(gw),
-					Attachment: nil,
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createListener("listener-80-1"),
-			},
-			name: "route isn't valid",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  false,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteInvalidGateway(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createListener("listener-80-1"),
-			},
-			name: "invalid gateway",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Valid = false
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Valid = false
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
-					}
-				}),
-			},
-			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
-			name:               "invalid attachable listener",
-		},
-		{
-			route: invalidAttachableRoute1,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): invalidAttachableRoute1,
-					}
-				}),
-			},
-			name: "invalid attachable route",
-		},
-		{
-			route: invalidAttachableRoute2,
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Valid = false
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Valid = false
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): invalidAttachableRoute2,
-					}
-				}),
-			},
-			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
-			name:               "invalid attachable listener with invalid attachable route",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-							},
-						}
-						allowedLabels := map[string]string{"app": "not-allowed"}
-						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-						},
-					}
-					allowedLabels := map[string]string{"app": "not-allowed"}
-					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-				}),
-			},
-			name: "route not allowed via labels",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-							},
-						}
-						allowedLabels := map[string]string{"app": "allowed"}
-						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					allowedLabels := map[string]string{"app": "allowed"}
-					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-						},
-					}
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
-					}
-				}),
-			},
-			name: "route allowed via labels",
-		},
-		{
-			route: createNormalRoute(gwDiffNamespace),
-			gateway: &Gateway{
-				Source: gwDiffNamespace,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-							},
-						}
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-						},
-					}
-				}),
-			},
-			name: "route not allowed via same namespace",
-		},
-		{
-			route: createNormalRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-							},
-						}
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-						},
-					}
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
-					}
-				}),
-			},
-			name: "route allowed via same namespace",
-		},
-		{
-			route: createNormalRoute(gwDiffNamespace),
-			gateway: &Gateway{
-				Source: gwDiffNamespace,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
-							},
-						}
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
-						},
-					}
-					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
-					}
-				}),
-			},
-			name: "route allowed via all namespaces",
-		},
-	}
-
-	namespaces := map[types.NamespacedName]*v1.Namespace{
-		{Name: "test"}: {
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "test",
-				Labels: map[string]string{"app": "allowed"},
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			bindRouteToListeners(test.route, test.gateway, namespaces)
-
-			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
-			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
-			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
-		})
-	}
-}
-
-func TestFindAcceptedHostnames(t *testing.T) {
-	var listenerHostnameFoo gatewayv1.Hostname = "foo.example.com"
-	var listenerHostnameCafe gatewayv1.Hostname = "cafe.example.com"
-	var listenerHostnameWildcard gatewayv1.Hostname = "*.example.com"
-	routeHostnames := []gatewayv1.Hostname{"foo.example.com", "bar.example.com"}
-
-	tests := []struct {
-		listenerHostname *gatewayv1.Hostname
-		msg              string
-		routeHostnames   []gatewayv1.Hostname
-		expected         []string
-	}{
-		{
-			listenerHostname: &listenerHostnameFoo,
-			routeHostnames:   routeHostnames,
-			expected:         []string{"foo.example.com"},
-			msg:              "one match",
-		},
-		{
-			listenerHostname: &listenerHostnameCafe,
-			routeHostnames:   routeHostnames,
-			expected:         nil,
-			msg:              "no match",
-		},
-		{
-			listenerHostname: nil,
-			routeHostnames:   routeHostnames,
-			expected:         []string{"foo.example.com", "bar.example.com"},
-			msg:              "nil listener hostname",
-		},
-		{
-			listenerHostname: &listenerHostnameFoo,
-			routeHostnames:   nil,
-			expected:         []string{"foo.example.com"},
-			msg:              "route has empty hostnames",
-		},
-		{
-			listenerHostname: nil,
-			routeHostnames:   nil,
-			expected:         []string{wildcardHostname},
-			msg:              "both listener and route have empty hostnames",
-		},
-		{
-			listenerHostname: &listenerHostnameWildcard,
-			routeHostnames:   routeHostnames,
-			expected:         []string{"foo.example.com", "bar.example.com"},
-			msg:              "listener wildcard hostname",
-		},
-		{
-			listenerHostname: &listenerHostnameFoo,
-			routeHostnames:   []gatewayv1.Hostname{"*.example.com"},
-			expected:         []string{"foo.example.com"},
-			msg:              "route wildcard hostname; specific listener hostname",
-		},
-		{
-			listenerHostname: &listenerHostnameWildcard,
-			routeHostnames:   nil,
-			expected:         []string{"*.example.com"},
-			msg:              "listener wildcard hostname; nil route hostname",
-		},
-		{
-			listenerHostname: nil,
-			routeHostnames:   []gatewayv1.Hostname{"*.example.com"},
-			expected:         []string{"*.example.com"},
-			msg:              "route wildcard hostname; nil listener hostname",
-		},
-		{
-			listenerHostname: &listenerHostnameWildcard,
-			routeHostnames:   []gatewayv1.Hostname{"*.bar.example.com"},
-			expected:         []string{"*.bar.example.com"},
-			msg:              "route and listener wildcard hostnames",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			g := NewWithT(t)
-			result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
-			g.Expect(result).To(Equal(test.expected))
-		})
-	}
-}
-
-func TestGetHostname(t *testing.T) {
-	var emptyHostname gatewayv1.Hostname
-	var hostname gatewayv1.Hostname = "example.com"
-
-	tests := []struct {
-		h        *gatewayv1.Hostname
-		expected string
-		msg      string
-	}{
-		{
-			h:        nil,
-			expected: "",
-			msg:      "nil hostname",
-		},
-		{
-			h:        &emptyHostname,
-			expected: "",
-			msg:      "empty hostname",
-		},
-		{
-			h:        &hostname,
-			expected: string(hostname),
-			msg:      "normal hostname",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			g := NewWithT(t)
-			result := getHostname(test.h)
-			g.Expect(result).To(Equal(test.expected))
-		})
-	}
-}
-
-func TestValidateHostnames(t *testing.T) {
-	const validHostname = "example.com"
-
-	tests := []struct {
-		name      string
-		hostnames []gatewayv1.Hostname
-		expectErr bool
-	}{
-		{
-			hostnames: []gatewayv1.Hostname{
-				validHostname,
-				"example.org",
-				"foo.example.net",
-			},
-			expectErr: false,
-			name:      "multiple valid",
-		},
-		{
-			hostnames: []gatewayv1.Hostname{
-				validHostname,
-				"",
-			},
-			expectErr: true,
-			name:      "valid and invalid",
-		},
-	}
-
-	path := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			err := validateHostnames(test.hostnames, path)
-
-			if test.expectErr {
-				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-			}
 		})
 	}
 }
@@ -1960,6 +872,14 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
+				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid response header modifiers filter",
+		},
+		{
+			filter: gatewayv1.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestMirror,
 			},
 			expectErrCount: 1,
@@ -1989,42 +909,33 @@ func TestValidateFilterRedirect(t *testing.T) {
 	}
 
 	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
+		requestRedirect *gatewayv1.HTTPRequestRedirectFilter
+		validator       *validationfakes.FakeHTTPFieldsValidator
+		name            string
+		expectErrCount  int
 	}{
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: nil,
-			},
-			name:           "nil filter",
-			expectErrCount: 1,
+			validator:       &validationfakes.FakeHTTPFieldsValidator{},
+			requestRedirect: nil,
+			name:            "nil filter",
+			expectErrCount:  1,
 		},
 		{
 			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme:     helpers.GetPointer("http"),
-					Hostname:   helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
-					Port:       helpers.GetPointer[gatewayv1.PortNumber](80),
-					StatusCode: helpers.GetPointer(301),
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("http"),
+				Hostname:   helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
+				Port:       helpers.GetPointer[gatewayv1.PortNumber](80),
+				StatusCode: helpers.GetPointer(301),
 			},
 			expectErrCount: 0,
 			name:           "valid redirect filter",
 		},
 		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
-			},
-			expectErrCount: 0,
-			name:           "valid redirect filter with no fields set",
+			validator:       createAllValidValidator(),
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
+			expectErrCount:  0,
+			name:            "valid redirect filter with no fields set",
 		},
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
@@ -2032,11 +943,8 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectSchemeReturns(false, []string{"valid-scheme"})
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme: helpers.GetPointer("http"), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Scheme: helpers.GetPointer("http"), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid scheme",
@@ -2047,13 +955,10 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid hostname",
@@ -2064,22 +969,16 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Port: helpers.GetPointer[gatewayv1.PortNumber](80), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Port: helpers.GetPointer[gatewayv1.PortNumber](80), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid port",
 		},
 		{
 			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Path: &gatewayv1.HTTPPathModifier{},
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Path: &gatewayv1.HTTPPathModifier{},
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with unsupported path modifier",
@@ -2090,11 +989,8 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectStatusCodeReturns(false, []string{"200"})
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					StatusCode: helpers.GetPointer(301), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				StatusCode: helpers.GetPointer(301), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid status code",
@@ -2106,16 +1002,13 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-					Port: helpers.GetPointer[gatewayv1.PortNumber](
-						80,
-					), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
+				Port: helpers.GetPointer[gatewayv1.PortNumber](
+					80,
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 2,
 			name:           "redirect filter with multiple errors",
@@ -2128,7 +1021,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
+			allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
@@ -2136,41 +1029,32 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 func TestValidateFilterRewrite(t *testing.T) {
 	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
+		urlRewrite     *gatewayv1.HTTPURLRewriteFilter
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
 	}{
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: nil,
-			},
+			validator:      &validationfakes.FakeHTTPFieldsValidator{},
+			urlRewrite:     nil,
 			name:           "nil filter",
 			expectErrCount: 1,
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: helpers.GetPointer("/path"),
-					},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:            gatewayv1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
 				},
 			},
 			expectErrCount: 0,
 			name:           "valid rewrite filter",
 		},
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{},
-			},
+			validator:      &validationfakes.FakeHTTPFieldsValidator{},
+			urlRewrite:     &gatewayv1.HTTPURLRewriteFilter{},
 			expectErrCount: 0,
 			name:           "valid rewrite filter with no fields set",
 		},
@@ -2180,25 +1064,19 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid hostname",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type: "bad-type",
-					},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type: "bad-type",
 				},
 			},
 			expectErrCount: 1,
@@ -2210,14 +1088,11 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path value"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:            gatewayv1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid full path",
@@ -2228,14 +1103,11 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid prefix path",
@@ -2247,17 +1119,14 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 2,
 			name:           "rewrite filter with multiple errors",
@@ -2269,149 +1138,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			allErrs := validateFilterRewrite(test.validator, test.filter, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
-	}
-}
-
-func TestValidateFilterRequestHeaderModifier(t *testing.T) {
-	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
-		v := &validationfakes.FakeHTTPFieldsValidator{}
-		return v
-	}
-
-	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
-	}{
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control"},
-				},
-			},
-			expectErrCount: 0,
-			name:           "valid request header modifier filter",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: nil,
-			},
-			expectErrCount: 1,
-			name:           "nil request header modifier filter",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "$var_name", Value: "gzip"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid add",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Remove: []string{"$var-name"},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid remove",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "yhu$"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid header value",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "Host", Value: "my_host"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "}90yh&$", Value: "gzip$"},
-						{Name: "}67yh&$", Value: "compress$"},
-					},
-					Remove: []string{"Cache-Control$}"},
-				},
-			},
-			expectErrCount: 7,
-			name:           "request header modifier filter all fields invalid",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-						{Name: "mYbespokeHEader", Value: "duplicate"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-						{Name: "accept-encodING", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control", "cache-control"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "request header modifier filter not unique names",
-		},
-	}
-
-	filterPath := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-			allErrs := validateFilterHeaderModifier(test.validator, test.filter, filterPath)
+			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}

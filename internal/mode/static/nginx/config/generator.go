@@ -15,6 +15,10 @@ const (
 
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
+
+	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
+	modulesIncludesFolder = configFolder + "/module-includes"
+
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
 
@@ -23,10 +27,16 @@ const (
 
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
+
+	// httpMatchVarsFile is the path to the http_match pairs configuration file.
+	httpMatchVarsFile = httpFolder + "/matches.json"
+
+	// loadModulesFile is the path to the file containing any load_module directives.
+	loadModulesFile = modulesIncludesFolder + "/load-modules.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, modulesIncludesFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -52,8 +62,13 @@ func NewGeneratorImpl(plus bool) GeneratorImpl {
 	return GeneratorImpl{plus: plus}
 }
 
+type executeResult struct {
+	dest string
+	data []byte
+}
+
 // executeFunc is a function that generates NGINX configuration from internal representation.
-type executeFunc func(configuration dataplane.Configuration) []byte
+type executeFunc func(configuration dataplane.Configuration) []executeResult
 
 // Generate generates NGINX configuration files from internal representation.
 // It is the responsibility of the caller to validate the configuration before calling this function.
@@ -66,13 +81,15 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, g.generateHTTPConfig(conf))
+	files = append(files, g.generateHTTPConfig(conf)...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
 	for id, bundle := range conf.CertBundles {
 		files = append(files, generateCertBundle(id, bundle))
 	}
+
+	files = append(files, generateLoadModulesConf(conf))
 
 	return files
 }
@@ -106,25 +123,36 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {
-	var c []byte
+func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
+	fileBytes := make(map[string][]byte)
+
 	for _, execute := range g.getExecuteFuncs() {
-		c = append(c, execute(conf)...)
+		results := execute(conf)
+		for _, res := range results {
+			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
+		}
 	}
 
-	return file.File{
-		Content: c,
-		Path:    httpConfigFile,
-		Type:    file.TypeRegular,
+	files := make([]file.File, 0, len(fileBytes))
+	for filepath, bytes := range fileBytes {
+		files = append(files, file.File{
+			Path:    filepath,
+			Content: bytes,
+			Type:    file.TypeRegular,
+		})
 	}
+
+	return files
 }
 
 func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
+		executeBaseHTTPConfig,
+		executeServers,
 		g.executeUpstreams,
 		executeSplitClients,
-		executeServers,
 		executeMaps,
+		executeTelemetry,
 	}
 }
 
@@ -135,6 +163,19 @@ func generateConfigVersion(configVersion int) file.File {
 	return file.File{
 		Content: c,
 		Path:    configVersionFile,
+		Type:    file.TypeRegular,
+	}
+}
+
+func generateLoadModulesConf(conf dataplane.Configuration) file.File {
+	var c []byte
+	if conf.Telemetry.Endpoint != "" {
+		c = []byte("load_module modules/ngx_otel_module.so;")
+	}
+
+	return file.File{
+		Content: c,
+		Path:    loadModulesFile,
 		Type:    file.TypeRegular,
 	}
 }

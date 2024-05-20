@@ -1,6 +1,7 @@
 package config
 
-var serversTemplateText = `
+const serversTemplateText = `
+js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
 server {
@@ -41,25 +42,46 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchVar }}
-        set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
+        {{- if $l.HTTPMatchKey }}
+        set $match_key {{ $l.HTTPMatchKey }};
         js_content httpmatches.redirect;
+        {{- end }}
+
+        {{ $proxyOrGRPC := "proxy" }}{{ if $l.GRPC }}{{ $proxyOrGRPC = "grpc" }}{{ end }}
+
+        {{- if $l.GRPC }}
+        include /etc/nginx/grpc-error-pages.conf;
         {{- end }}
 
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}
-        proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
+        {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
+            {{- end }}
+        {{ $proxyOrGRPC }}_pass {{ $l.ProxyPass }};
+            {{ range $h := $l.ResponseHeaders.Add }}
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.ResponseHeaders.Set }}
+        proxy_hide_header {{ $h.Name }};
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.ResponseHeaders.Remove }}
+        proxy_hide_header {{ $h }};
             {{- end }}
         proxy_http_version 1.1;
-        proxy_pass {{ $l.ProxyPass }};
             {{- if $l.ProxySSLVerify }}
-        proxy_ssl_verify on;
-        proxy_ssl_name {{ $l.ProxySSLVerify.Name }};
-        proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
+        {{ $proxyOrGRPC }}_ssl_server_name on;
+        {{ $proxyOrGRPC }}_ssl_verify on;
+        {{ $proxyOrGRPC }}_ssl_name {{ $l.ProxySSLVerify.Name }};
+        {{ $proxyOrGRPC }}_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
             {{- end }}
         {{- end }}
     }
         {{ end }}
+
+        {{- if $s.GRPC }}
+        include /etc/nginx/grpc-error-locations.conf;
+        {{- end }}
 }
     {{- end }}
 {{ end }}
