@@ -19,7 +19,7 @@ Global Flags:
 https://github.com/nginxinc/nginx-gateway-fabric/issues/634). However, it can be used in the Gateway API conformance
 tests, which expect a Gateway API implementation to provision an independent data plane per Gateway.
 >
-> Note: Provisioner uses [this manifest](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/conformance/provisioner/static-deployment.yaml)
+> Note: Provisioner uses [this manifest](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/config/tests/static-deployment.yaml)
 to create an NGF static mode Deployment.
 > This manifest gets included into the NGF binary during the NGF build. To customize the Deployment, modify the
 manifest and **re-build** NGF.
@@ -31,7 +31,7 @@ How to deploy:
 1. Deploy provisioner:
 
    ```shell
-   kubectl apply -f conformance/provisioner/provisioner.yaml
+   kubectl apply -f provisioner.yaml
    ```
 
 1. Confirm the provisioner is running in nginx-gateway namespace:

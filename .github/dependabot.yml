@@ -15,7 +15,8 @@ updates:
   - package-ecosystem: docker
     directories:
       - /build
-      - /conformance/tests
+      - /tests
+      - /tests/conformance
     schedule:
       interval: daily
 

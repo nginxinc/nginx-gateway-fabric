@@ -1,58 +1,72 @@
-TAG = edge
-PREFIX = nginx-gateway-fabric
-NGINX_PREFIX = $(PREFIX)/nginx
-NGINX_PLUS_PREFIX = $(PREFIX)/nginx-plus
-PLUS_ENABLED=false
-PULL_POLICY=Never
-GW_API_PREV_VERSION ?= 1.0.0 ## Supported Gateway API version from previous NGF release
-GW_API_VERSION ?= 1.1.0 ## Supported Gateway API version for NGF under test
-K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
-GW_SERVICE_TYPE=NodePort
-GW_SVC_GKE_INTERNAL=false
-GINKGO_LABEL=
-GINKGO_FLAGS=
-NGF_VERSION=
 CI=false
-TELEMETRY_ENDPOINT=
-TELEMETRY_ENDPOINT_INSECURE=false
+CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
+CONFORMANCE_TAG = latest## Tag for the conformance test runner image
+GATEWAY_CLASS = nginx## Gateway class to use
+GINKGO_FLAGS =
+GINKGO_LABEL =
+GW_API_PREV_VERSION ?= 1.0.0## Supported Gateway API version from previous NGF release
+GW_SERVICE_TYPE=NodePort## Service type to use for the gateway
+GW_SVC_GKE_INTERNAL=false
+K8S_VERSION ?= latest## Kubernetes version to use. Expected format: 1.24 (major.minor) or latest
+NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
+PULL_POLICY=Never## Pull policy for the images
+PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
+SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
 endif
+
+.PHONY: update-go-modules
+update-go-modules: ## Update the gateway-api go modules to latest main version
+	go get -u sigs.k8s.io/gateway-api@main
+	go mod tidy
+
+.PHONY: build-test-runner-image
+build-test-runner-image: ## Build conformance test runner image
+	docker build -t $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) -f conformance/Dockerfile .
+
+.PHONY: run-conformance-tests
+run-conformance-tests: ## Run conformance tests
+	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG)
+	kubectl apply -f conformance/conformance-rbac.yaml
+	kubectl run -i conformance \
+		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
+		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
+		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
+						        --supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
+								--report-output=output.txt; cat output.txt" | tee output.txt
+	bash scripts/check-pod-exit-code.sh
+	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
+	rm output.txt
+	grpc_core_result=`yq '.profiles[0].core.result' conformance-profile.yaml`; \
+	http_core_result=`yq '.profiles[1].core.result' conformance-profile.yaml`; \
+	http_extended_result=`yq '.profiles[1].extended.result' conformance-profile.yaml`; \
+	if [ "$$grpc_core_result" != "failure" ] && [ "$$http_core_result" != "failure" ] && [ "$$http_extended_result" != "failure" ] ; then \
+		exit 0; \
+	else \
+		exit 2; \
+	fi
+
+.PHONY: cleanup-conformance-tests
+cleanup-conformance-tests: ## Clean up conformance tests fixtures
+	kubectl delete pod conformance
+	kubectl delete -f tests/conformance-rbac.yaml
+
+.PHONY: build
+build: generate-static-deployment
+
+.PHONY: reset-go-modules
+reset-go-modules: ## Reset the go modules changes
+	git checkout -- ../go.mod ../go.sum
+
+-include ../Makefile
 
 # Check if PLUS_ENABLED is true
 ifeq ($(PLUS_ENABLED),true)
     # If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
     NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
 endif
-
-.PHONY: help
-help: Makefile ## Display this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-.PHONY: create-kind-cluster
-create-kind-cluster: ## Create a kind cluster
-	cd .. && make create-kind-cluster
-
-.PHONY: delete-kind-cluster
-delete-kind-cluster: ## Delete kind cluster
-	kind delete cluster
-
-.PHONY: build-images
-build-images: ## Build NGF and NGINX images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images
-
-.PHONY: build-images-with-plus
-build-images-with-plus: ## Build NGF and NGINX Plus images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images-with-plus
-
-.PHONY: load-images
-load-images: ## Load NGF and NGINX images on configured kind cluster
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images
-
-.PHONY: load-images-with-plus
-load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
 
 .PHONY: setup-gcp-and-run-tests
 setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the functional tests
@@ -85,12 +99,12 @@ nfr-test: ## Run the NFR tests on a GCP VM
 	NFR=true bash scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
-start-longevity-test: ## Start the longevity test to run for 4 days in GKE
-	START_LONGEVITY=true $(MAKE) nfr-test
+start-longevity-test: START_LONGEVITY=true
+start-longevity-test: nfr-test ## Start the longevity test to run for 4 days in GKE
 
 .PHONY: stop-longevity-test
-stop-longevity-test: ## Stops the longevity test and collects results
-	STOP_LONGEVITY=true $(MAKE) nfr-test
+stop-longevity-test: STOP_LONGEVITY=true
+stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
 .PHONY: .vm-nfr-test
 .vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
@@ -112,8 +126,8 @@ test: ## Runs the functional tests on your default k8s cluster
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: test-with-plus
-test-with-plus: ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
-	make test PLUS_ENABLED=true
+test-with-plus: PLUS_ENABLED=true
+test-with-plus: test ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
 
 .PHONY: cleanup-gcp
 cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
@@ -133,3 +147,39 @@ delete-gke-cluster: ## Delete the GKE cluster
 .PHONY: add-local-ip-to-cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
 	bash scripts/add-local-ip-auth-networks.sh
+
+HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
+
+.PHONY: deploy-updated-provisioner
+deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster
+	yq '(select(di != 3))' $(PROVISIONER_MANIFEST) | kubectl apply -f -
+	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(PREFIX):$(TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' $(PROVISIONER_MANIFEST) | kubectl apply -f -
+
+.PHONY: generate-static-deployment
+generate-static-deployment:
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false --set nginxGateway.productTelemetry.enable=false -n nginx-gateway -s templates/deployment.yaml --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) --set nginx.plus=$(PLUS_ENABLED) > $(SELF_DIR)config/tests/static-deployment.yaml
+
+.PHONY: install-ngf-local-build
+install-ngf-local-build: deploy-updated-provisioner
+
+.PHONY: install-ngf-local-no-build
+install-ngf-local-no-build: load-images helm-install-local deploy-updated-provisioner ## Install NGF from local build with provisioner on configured kind cluster but do not build the NGF image
+
+.PHONY: install-ngf-local-build-with-plus
+install-ngf-local-build-with-plus: deploy-updated-provisioner
+
+.PHONY: install-ngf-local-no-build-with-plus
+install-ngf-local-no-build-with-plus: load-images-with-plus helm-install-local-with-plus deploy-updated-provisioner ## Install NGF with Plus from local build with provisioner on configured kind cluster but do not build the NGF image
+
+.PHONY: install-ngf-edge
+install-ngf-edge: load-images helm-install-local ## Install NGF with provisioner from edge on configured kind cluster
+	kubectl apply -f $(PROVISIONER_MANIFEST)
+
+.PHONY: uninstall-ngf
+uninstall-ngf: ## Uninstall NGF on configured kind cluster and undo manifest changes
+	-helm uninstall nginx-gateway -n nginx-gateway
+	-make uninstall-gateway-crds
+	-kubectl delete clusterrole nginx-gateway-provisioner
+	-kubectl delete clusterrolebinding nginx-gateway-provisioner
+	-kubectl delete namespace nginx-gateway
+	-kubectl kustomize ../config/crd | kubectl delete -f -
