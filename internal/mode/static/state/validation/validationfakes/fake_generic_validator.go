@@ -41,6 +41,17 @@ type FakeGenericValidator struct {
 	validateNginxDurationReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ValidateNginxSizeStub        func(string) error
+	validateNginxSizeMutex       sync.RWMutex
+	validateNginxSizeArgsForCall []struct {
+		arg1 string
+	}
+	validateNginxSizeReturns struct {
+		result1 error
+	}
+	validateNginxSizeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ValidateServiceNameStub        func(string) error
 	validateServiceNameMutex       sync.RWMutex
 	validateServiceNameArgsForCall []struct {
@@ -239,6 +250,67 @@ func (fake *FakeGenericValidator) ValidateNginxDurationReturnsOnCall(i int, resu
 	}{result1}
 }
 
+func (fake *FakeGenericValidator) ValidateNginxSize(arg1 string) error {
+	fake.validateNginxSizeMutex.Lock()
+	ret, specificReturn := fake.validateNginxSizeReturnsOnCall[len(fake.validateNginxSizeArgsForCall)]
+	fake.validateNginxSizeArgsForCall = append(fake.validateNginxSizeArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateNginxSizeStub
+	fakeReturns := fake.validateNginxSizeReturns
+	fake.recordInvocation("ValidateNginxSize", []interface{}{arg1})
+	fake.validateNginxSizeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGenericValidator) ValidateNginxSizeCallCount() int {
+	fake.validateNginxSizeMutex.RLock()
+	defer fake.validateNginxSizeMutex.RUnlock()
+	return len(fake.validateNginxSizeArgsForCall)
+}
+
+func (fake *FakeGenericValidator) ValidateNginxSizeCalls(stub func(string) error) {
+	fake.validateNginxSizeMutex.Lock()
+	defer fake.validateNginxSizeMutex.Unlock()
+	fake.ValidateNginxSizeStub = stub
+}
+
+func (fake *FakeGenericValidator) ValidateNginxSizeArgsForCall(i int) string {
+	fake.validateNginxSizeMutex.RLock()
+	defer fake.validateNginxSizeMutex.RUnlock()
+	argsForCall := fake.validateNginxSizeArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenericValidator) ValidateNginxSizeReturns(result1 error) {
+	fake.validateNginxSizeMutex.Lock()
+	defer fake.validateNginxSizeMutex.Unlock()
+	fake.ValidateNginxSizeStub = nil
+	fake.validateNginxSizeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGenericValidator) ValidateNginxSizeReturnsOnCall(i int, result1 error) {
+	fake.validateNginxSizeMutex.Lock()
+	defer fake.validateNginxSizeMutex.Unlock()
+	fake.ValidateNginxSizeStub = nil
+	if fake.validateNginxSizeReturnsOnCall == nil {
+		fake.validateNginxSizeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateNginxSizeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGenericValidator) ValidateServiceName(arg1 string) error {
 	fake.validateServiceNameMutex.Lock()
 	ret, specificReturn := fake.validateServiceNameReturnsOnCall[len(fake.validateServiceNameArgsForCall)]
@@ -309,6 +381,8 @@ func (fake *FakeGenericValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateEscapedStringNoVarExpansionMutex.RUnlock()
 	fake.validateNginxDurationMutex.RLock()
 	defer fake.validateNginxDurationMutex.RUnlock()
+	fake.validateNginxSizeMutex.RLock()
+	defer fake.validateNginxSizeMutex.RUnlock()
 	fake.validateServiceNameMutex.RLock()
 	defer fake.validateServiceNameMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

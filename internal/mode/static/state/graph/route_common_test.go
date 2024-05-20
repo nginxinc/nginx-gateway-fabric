@@ -15,6 +15,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
@@ -156,7 +157,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		{
 			ref: gatewayv1.ParentReference{
 				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind]("Gateway"),
+				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
 				Namespace: helpers.GetPointer(gatewayv1.Namespace(gwNsName1.Namespace)),
 				Name:      gatewayv1.ObjectName(gwNsName1.Name),
 			},
@@ -1564,4 +1565,22 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
+}
+
+func TestRouteKeyForKind(t *testing.T) {
+	nsname := types.NamespacedName{Namespace: testNs, Name: "route"}
+
+	g := NewWithT(t)
+
+	key := routeKeyForKind(kinds.HTTPRoute, nsname)
+	g.Expect(key).To(Equal(RouteKey{RouteType: RouteTypeHTTP, NamespacedName: nsname}))
+
+	key = routeKeyForKind(kinds.GRPCRoute, nsname)
+	g.Expect(key).To(Equal(RouteKey{RouteType: RouteTypeGRPC, NamespacedName: nsname}))
+
+	rk := func() {
+		_ = routeKeyForKind(kinds.Gateway, nsname)
+	}
+
+	g.Expect(rk).To(Panic())
 }

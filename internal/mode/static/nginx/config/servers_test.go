@@ -28,6 +28,12 @@ func TestExecuteServers(t *testing.T) {
 			{
 				Hostname: "cafe.example.com",
 				Port:     8080,
+				Additions: []dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1",
+					},
+				},
 			},
 		},
 		SSLServers: []dataplane.VirtualServer{
@@ -74,6 +80,16 @@ func TestExecuteServers(t *testing.T) {
 						},
 					},
 				},
+				Additions: []dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1", // duplicate
+					},
+					{
+						Bytes:      []byte("addition-2"),
+						Identifier: "addition-2",
+					},
+				},
 			},
 		},
 	}
@@ -89,14 +105,35 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 		"proxy_ssl_server_name on;":                                1,
 	}
+
+	type assertion func(g *WithT, data string)
+
+	expectedResults := map[string]assertion{
+		httpConfigFile: func(g *WithT, data string) {
+			for expSubStr, expCount := range expSubStrings {
+				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
+			}
+		},
+		httpMatchVarsFile: func(g *WithT, data string) {
+			g.Expect(data).To(Equal("{}"))
+		},
+		includesFolder + "/addition-1.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-1"))
+		},
+		includesFolder + "/addition-2.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-2"))
+		},
+	}
 	g := NewWithT(t)
-	serverResults := executeServers(conf)
-	g.Expect(serverResults).To(HaveLen(2))
-	serverConf := string(serverResults[0].data)
-	httpMatchConf := string(serverResults[1].data)
-	g.Expect(httpMatchConf).To(Equal("{}"))
-	for expSubStr, expCount := range expSubStrings {
-		g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+
+	results := executeServers(conf)
+	g.Expect(results).To(HaveLen(len(expectedResults)))
+
+	for _, res := range results {
+		g.Expect(expectedResults).To(HaveKey(res.dest), "executeServers returned unexpected result destination")
+
+		assertData := expectedResults[res.dest]
+		assertData(g, string(res.data))
 	}
 }
 
@@ -546,6 +583,40 @@ func TestCreateServers(t *testing.T) {
 			},
 			GRPC: true,
 		},
+		{
+			Path:     "/addition-path-only-match",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: fooGroup,
+					Additions: []dataplane.Addition{
+						{
+							Bytes:      []byte("path-only-match-addition"),
+							Identifier: "path-only-match-addition",
+						},
+					},
+				},
+			},
+		},
+		{
+			Path:     "/addition-header-match",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("GET"),
+					},
+					BackendGroup: fooGroup,
+					Additions: []dataplane.Addition{
+						{
+							Bytes:      []byte("match-addition"),
+							Identifier: "match-addition",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	httpServers := []dataplane.VirtualServer{
@@ -557,6 +628,16 @@ func TestCreateServers(t *testing.T) {
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
 			Port:      8080,
+			Additions: []dataplane.Addition{
+				{
+					Bytes:      []byte("server-addition-1"),
+					Identifier: "server-addition-1",
+				},
+				{
+					Bytes:      []byte("server-addition-2"),
+					Identifier: "server-addition-2",
+				},
+			},
 		},
 	}
 
@@ -570,6 +651,16 @@ func TestCreateServers(t *testing.T) {
 			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
 			PathRules: cafePathRules,
 			Port:      8443,
+			Additions: []dataplane.Addition{
+				{
+					Bytes:      []byte("server-addition-1"),
+					Identifier: "server-addition-1",
+				},
+				{
+					Bytes:      []byte("server-addition-3"),
+					Identifier: "server-addition-3",
+				},
+			},
 		},
 	}
 
@@ -609,6 +700,12 @@ func TestCreateServers(t *testing.T) {
 				Headers:      nil,
 				QueryParams:  nil,
 				Any:          false,
+			},
+		},
+		"1_17": {
+			{
+				Method:       "GET",
+				RedirectPath: "@rule17-route0",
 			},
 		},
 	}
@@ -899,6 +996,26 @@ func TestCreateServers(t *testing.T) {
 				GRPC:            true,
 				ProxySetHeaders: grpcBaseHeaders,
 			},
+			{
+				Path:            "= /addition-path-only-match",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Includes: []string{
+					includesFolder + "/path-only-match-addition.conf",
+				},
+			},
+			{
+				Path:            "@rule17-route0",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Includes: []string{
+					includesFolder + "/match-addition.conf",
+				},
+			},
+			{
+				Path:         "= /addition-header-match",
+				HTTPMatchKey: ssl + "1_17",
+			},
 		}
 	}
 
@@ -914,6 +1031,10 @@ func TestCreateServers(t *testing.T) {
 			Locations:  getExpectedLocations(false),
 			Port:       8080,
 			GRPC:       true,
+			Includes: []string{
+				includesFolder + "/server-addition-1.conf",
+				includesFolder + "/server-addition-2.conf",
+			},
 		},
 		{
 			IsDefaultSSL: true,
@@ -928,6 +1049,10 @@ func TestCreateServers(t *testing.T) {
 			Locations: getExpectedLocations(true),
 			Port:      8443,
 			GRPC:      true,
+			Includes: []string{
+				includesFolder + "/server-addition-1.conf",
+				includesFolder + "/server-addition-3.conf",
+			},
 		},
 	}
 
@@ -2219,4 +2344,174 @@ func TestGenerateResponseHeaders(t *testing.T) {
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
 		})
 	}
+}
+
+func TestCreateIncludes(t *testing.T) {
+	tests := []struct {
+		name      string
+		additions []dataplane.Addition
+		includes  []string
+	}{
+		{
+			name:      "no additions",
+			additions: nil,
+			includes:  nil,
+		},
+		{
+			name: "additions",
+			additions: []dataplane.Addition{
+				{
+					Bytes:      []byte("one"),
+					Identifier: "one",
+				},
+				{
+					Bytes:      []byte("two"),
+					Identifier: "two",
+				},
+				{
+					Bytes:      []byte("three"),
+					Identifier: "three",
+				},
+			},
+			includes: []string{
+				includesFolder + "/one.conf",
+				includesFolder + "/two.conf",
+				includesFolder + "/three.conf",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			includes := createIncludes(test.additions)
+			g.Expect(includes).To(Equal(test.includes))
+		})
+	}
+}
+
+func TestCreateAdditionFileResults(t *testing.T) {
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				Additions: []dataplane.Addition{
+					{
+						Identifier: "include-1",
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2",
+						Bytes:      []byte("include-2"),
+					},
+				},
+				PathRules: []dataplane.PathRule{
+					{
+						MatchRules: []dataplane.MatchRule{
+							{
+								Additions: []dataplane.Addition{
+									{
+										Identifier: "include-3",
+										Bytes:      []byte("include-3"),
+									},
+									{
+										Identifier: "include-4",
+										Bytes:      []byte("include-4"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Additions: []dataplane.Addition{
+					{
+						Identifier: "include-1", // dupe
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2", // dupe
+						Bytes:      []byte("include-2"),
+					},
+				},
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Additions: []dataplane.Addition{
+					{
+						Identifier: "include-1", // dupe
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2", // dupe
+						Bytes:      []byte("include-2"),
+					},
+				},
+				PathRules: []dataplane.PathRule{
+					{
+						MatchRules: []dataplane.MatchRule{
+							{
+								Additions: []dataplane.Addition{
+									{
+										Identifier: "include-3",
+										Bytes:      []byte("include-3"), // dupe
+									},
+									{
+										Identifier: "include-5",
+										Bytes:      []byte("include-5"), // dupe
+									},
+									{
+										Identifier: "include-6",
+										Bytes:      []byte("include-6"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	results := createAdditionFileResults(conf)
+
+	expResults := []executeResult{
+		{
+			dest: includesFolder + "/" + "include-1.conf",
+			data: []byte("include-1"),
+		},
+		{
+			dest: includesFolder + "/" + "include-2.conf",
+			data: []byte("include-2"),
+		},
+		{
+			dest: includesFolder + "/" + "include-3.conf",
+			data: []byte("include-3"),
+		},
+		{
+			dest: includesFolder + "/" + "include-4.conf",
+			data: []byte("include-4"),
+		},
+		{
+			dest: includesFolder + "/" + "include-5.conf",
+			data: []byte("include-5"),
+		},
+		{
+			dest: includesFolder + "/" + "include-6.conf",
+			data: []byte("include-6"),
+		},
+	}
+
+	g := NewWithT(t)
+
+	g.Expect(results).To(ConsistOf(expResults))
+}
+
+func TestAdditionFilename(t *testing.T) {
+	g := NewWithT(t)
+
+	name := createAdditionFileName(dataplane.Addition{Identifier: "my-addition"})
+	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
 }

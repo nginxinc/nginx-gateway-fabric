@@ -60,6 +60,29 @@ func (GenericValidator) ValidateNginxDuration(duration string) error {
 }
 
 const (
+	sizeStringFmt    = `^\d{1,4}(k|m|g)?$`
+	sizeStringErrMsg = "must contain a number. May be followed by 'k', 'm', or 'g', otherwise bytes are assumed"
+)
+
+var sizeStringFmtRegexp = regexp.MustCompile("^" + sizeStringFmt + "$")
+
+// ValidateNginxSize validates a size string that nginx can understand.
+func (GenericValidator) ValidateNginxSize(size string) error {
+	if !sizeStringFmtRegexp.MatchString(size) {
+		examples := []string{
+			"1024",
+			"8k",
+			"20m",
+			"1g",
+		}
+
+		return errors.New(k8svalidation.RegexError(sizeStringFmt, sizeStringErrMsg, examples...))
+	}
+
+	return nil
+}
+
+const (
 	//nolint:lll
 	endpointStringFmt    = `(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?`
 	endpointStringErrMsg = "must be an alphanumeric hostname with optional http scheme and optional port"

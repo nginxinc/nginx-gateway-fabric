@@ -7,6 +7,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
 // Updater updates the cluster state.
@@ -17,9 +21,59 @@ type Updater interface {
 
 // objectStore is a store of client.Object
 type objectStore interface {
-	get(nsname types.NamespacedName) client.Object
+	get(objType client.Object, nsname types.NamespacedName) client.Object
 	upsert(obj client.Object)
-	delete(nsname types.NamespacedName)
+	delete(objType client.Object, nsname types.NamespacedName)
+}
+
+// ngfPolicyObjectStore is a store of policies.Policy.
+// A single store should be used to store all types of policies.Policy.
+type ngfPolicyObjectStore struct {
+	policies       map[graph.PolicyKey]policies.Policy
+	extractGVKFunc kinds.MustExtractGVK
+}
+
+// newNGFPolicyObjectStore returns a new ngfPolicyObjectStore.
+func newNGFPolicyObjectStore(
+	policies map[graph.PolicyKey]policies.Policy,
+	gvkFunc kinds.MustExtractGVK,
+) *ngfPolicyObjectStore {
+	return &ngfPolicyObjectStore{
+		policies:       policies,
+		extractGVKFunc: gvkFunc,
+	}
+}
+
+func (p *ngfPolicyObjectStore) get(objType client.Object, nsname types.NamespacedName) client.Object {
+	key := graph.PolicyKey{
+		NsName: nsname,
+		GVK:    p.extractGVKFunc(objType),
+	}
+
+	return p.policies[key]
+}
+
+func (p *ngfPolicyObjectStore) upsert(obj client.Object) {
+	key := graph.PolicyKey{
+		NsName: client.ObjectKeyFromObject(obj),
+		GVK:    p.extractGVKFunc(obj),
+	}
+
+	pol, ok := obj.(policies.Policy)
+	if !ok {
+		panic(fmt.Sprintf("expected NGF Policy, got %T", obj))
+	}
+
+	p.policies[key] = pol
+}
+
+func (p *ngfPolicyObjectStore) delete(objType client.Object, nsname types.NamespacedName) {
+	key := graph.PolicyKey{
+		NsName: nsname,
+		GVK:    p.extractGVKFunc(objType),
+	}
+
+	delete(p.policies, key)
 }
 
 // objectStoreMapAdapter wraps maps of types.NamespacedName to Kubernetes resources
@@ -34,7 +88,7 @@ func newObjectStoreMapAdapter[T client.Object](objects map[types.NamespacedName]
 	}
 }
 
-func (m *objectStoreMapAdapter[T]) get(nsname types.NamespacedName) client.Object {
+func (m *objectStoreMapAdapter[T]) get(_ client.Object, nsname types.NamespacedName) client.Object {
 	obj, exist := m.objects[nsname]
 	if !exist {
 		return nil
@@ -51,7 +105,7 @@ func (m *objectStoreMapAdapter[T]) upsert(obj client.Object) {
 	m.objects[client.ObjectKeyFromObject(obj)] = t
 }
 
-func (m *objectStoreMapAdapter[T]) delete(nsname types.NamespacedName) {
+func (m *objectStoreMapAdapter[T]) delete(_ client.Object, nsname types.NamespacedName) {
 	delete(m.objects, nsname)
 }
 
@@ -69,13 +123,13 @@ func (list gvkList) contains(gvk schema.GroupVersionKind) bool {
 
 type multiObjectStore struct {
 	stores        map[schema.GroupVersionKind]objectStore
-	extractGVK    extractGVKFunc
+	extractGVK    kinds.MustExtractGVK
 	persistedGVKs gvkList
 }
 
 func newMultiObjectStore(
 	stores map[schema.GroupVersionKind]objectStore,
-	extractGVK extractGVKFunc,
+	extractGVK kinds.MustExtractGVK,
 	persistedGVKs gvkList,
 ) *multiObjectStore {
 	return &multiObjectStore{
@@ -97,7 +151,7 @@ func (m *multiObjectStore) mustFindStoreForObj(obj client.Object) objectStore {
 }
 
 func (m *multiObjectStore) get(objType client.Object, nsname types.NamespacedName) client.Object {
-	return m.mustFindStoreForObj(objType).get(nsname)
+	return m.mustFindStoreForObj(objType).get(objType, nsname)
 }
 
 func (m *multiObjectStore) upsert(obj client.Object) {
@@ -105,7 +159,7 @@ func (m *multiObjectStore) upsert(obj client.Object) {
 }
 
 func (m *multiObjectStore) delete(objType client.Object, nsname types.NamespacedName) {
-	m.mustFindStoreForObj(objType).delete(nsname)
+	m.mustFindStoreForObj(objType).delete(objType, nsname)
 }
 
 func (m *multiObjectStore) persists(objTypeGVK schema.GroupVersionKind) bool {
@@ -130,14 +184,14 @@ type changeTrackingUpdater struct {
 	store                  *multiObjectStore
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
 
-	extractGVK    extractGVKFunc
+	extractGVK    kinds.MustExtractGVK
 	supportedGVKs gvkList
 
 	changeType ChangeType
 }
 
 func newChangeTrackingUpdater(
-	extractGVK extractGVKFunc,
+	extractGVK kinds.MustExtractGVK,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
 	var (

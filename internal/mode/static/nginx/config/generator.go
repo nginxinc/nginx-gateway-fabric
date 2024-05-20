@@ -23,6 +23,9 @@ const (
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
 
+	// includesFolder is the folder where are all include files are stored.
+	includesFolder = configFolder + "/includes"
+
 	// httpConfigFile is the path to the configuration file with HTTP configuration.
 	httpConfigFile = httpFolder + "/http.conf"
 
@@ -37,7 +40,7 @@ const (
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder, modulesIncludesFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.

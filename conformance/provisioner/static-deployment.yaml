@@ -76,6 +76,8 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
       - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
         imagePullPolicy: Always
         name: nginx
@@ -106,6 +108,8 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
       terminationGracePeriodSeconds: 30
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
@@ -124,4 +128,6 @@ spec:
       - name: nginx-cache
         emptyDir: {}
       - name: nginx-lib
+        emptyDir: {}
+      - name: nginx-includes
         emptyDir: {}

@@ -11,14 +11,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
-// BackendTLSPolicyConditionType is a type of condition associated with a BackendTLSPolicy.
-// This type should be used with the BackendTLSPolicyStatus.Conditions field.
-type BackendTLSPolicyConditionType string
-
-// BackendTLSPolicyConditionReason defines the set of reasons that explain why a particular BackendTLSPolicy condition
-// type has been raised.
-type BackendTLSPolicyConditionReason string
-
 const (
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
@@ -605,23 +597,45 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 	}
 }
 
-// NewBackendTLSPolicyAccepted returns a Condition that indicates that the BackendTLSPolicy config is valid and accepted
-// by the Gateway.
-func NewBackendTLSPolicyAccepted() conditions.Condition {
+// NewPolicyAccepted returns a Condition that indicates that the Policy is accepted.
+func NewPolicyAccepted() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(v1alpha2.PolicyReasonAccepted),
-		Message: "BackendTLSPolicy is accepted by the Gateway",
+		Message: "Policy is accepted",
 	}
 }
 
-// NewBackendTLSPolicyInvalid returns a Condition that indicates that the BackendTLSPolicy config is invalid.
-func NewBackendTLSPolicyInvalid(msg string) conditions.Condition {
+// NewPolicyInvalid returns a Condition that indicates that the Policy is not accepted because it is semantically or
+// syntactically invalid.
+func NewPolicyInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1alpha2.PolicyReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewPolicyConflicted returns a Condition that indicates that the Policy is not accepted because it conflicts with
+// another Policy and a merge is not possible.
+func NewPolicyConflicted(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1alpha2.PolicyReasonConflicted),
+		Message: msg,
+	}
+}
+
+// NewPolicyTargetNotFound returns a Condition that indicates that the Policy is not accepted because the target
+// resource does not exist or can not be attached to.
+func NewPolicyTargetNotFound(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1alpha2.PolicyReasonTargetNotFound),
 		Message: msg,
 	}
 }

@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -17,16 +18,63 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
 )
+
+func createFakePolicy(name string, kind string) policies.Policy {
+	fakeKind := &policiesfakes.FakeObjectKind{
+		GroupVersionKindStub: func() schema.GroupVersionKind {
+			return schema.GroupVersionKind{Kind: kind}
+		},
+	}
+
+	return &policiesfakes.FakePolicy{
+		GetNameStub: func() string {
+			return name
+		},
+		GetNamespaceStub: func() string {
+			return "default"
+		},
+		GetObjectKindStub: func() schema.ObjectKind {
+			return fakeKind
+		},
+	}
+}
 
 func TestBuildConfiguration(t *testing.T) {
 	const (
 		invalidMatchesPath = "/not-valid-matches"
 		invalidFiltersPath = "/not-valid-filters"
 	)
+
+	gwPolicy1 := &graph.Policy{
+		Source: createFakePolicy("attach-gw", "ApplePolicy"),
+		Valid:  true,
+	}
+
+	gwPolicy2 := &graph.Policy{
+		Source: createFakePolicy("attach-gw", "OrangePolicy"),
+		Valid:  true,
+	}
+
+	hrPolicy1 := &graph.Policy{
+		Source: createFakePolicy("attach-hr", "LemonPolicy"),
+		Valid:  true,
+	}
+
+	hrPolicy2 := &graph.Policy{
+		Source: createFakePolicy("attach-hr", "LimePolicy"),
+		Valid:  true,
+	}
+
+	invalidPolicy := &graph.Policy{
+		Source: createFakePolicy("invalid", "LimePolicy"),
+		Valid:  false,
+	}
 
 	createRoute := func(name string) *v1.HTTPRoute {
 		return &v1.HTTPRoute{
@@ -407,6 +455,30 @@ func TestBuildConfiguration(t *testing.T) {
 		CertBundleID: generateCertBundleID(types.NamespacedName{Namespace: "test", Name: "configmap-2"}),
 		Hostname:     "foo.example.com",
 	}
+
+	hrWithPolicy, expHRWithPolicyGroups, l7RouteWithPolicy := createTestResources(
+		"hr-with-policy",
+		"policy.com",
+		"listener-80-1",
+		pathAndType{
+			path:     "/",
+			pathType: prefix,
+		},
+	)
+
+	l7RouteWithPolicy.Policies = []*graph.Policy{hrPolicy1, invalidPolicy}
+
+	httpsHRWithPolicy, expHTTPSHRWithPolicyGroups, l7HTTPSRouteWithPolicy := createTestResources(
+		"https-hr-with-policy",
+		"policy.com",
+		"listener-443-1",
+		pathAndType{
+			path:     "/",
+			pathType: prefix,
+		},
+	)
+
+	l7HTTPSRouteWithPolicy.Policies = []*graph.Policy{hrPolicy2, invalidPolicy}
 
 	secret1NsName := types.NamespacedName{Namespace: "test", Name: "secret-1"}
 	secret1 := &graph.Secret{
@@ -1999,13 +2071,204 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			msg: "NginxProxy with tracing config and http2 disabled",
 		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{
+								graph.CreateRouteKey(hrWithPolicy): l7RouteWithPolicy,
+							},
+						},
+						{
+							Name:   "listener-443",
+							Source: listener443,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{
+								graph.CreateRouteKey(httpsHRWithPolicy): l7HTTPSRouteWithPolicy,
+							},
+							ResolvedSecret: &secret1NsName,
+						},
+					},
+					Policies: []*graph.Policy{gwPolicy1, gwPolicy2},
+				},
+				Routes: map[graph.RouteKey]*graph.L7Route{
+					graph.CreateRouteKey(hrWithPolicy):      l7RouteWithPolicy,
+					graph.CreateRouteKey(httpsHRWithPolicy): l7HTTPSRouteWithPolicy,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
+			},
+			expConf: Configuration{
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+				},
+				CertBundles: map[CertBundleID]CertBundle{},
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+					{
+						Hostname: "policy.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										Source:       &hrWithPolicy.ObjectMeta,
+										BackendGroup: expHRWithPolicyGroups[0],
+										Additions: []Addition{
+											{
+												Bytes:      []byte("lemon"),
+												Identifier: "LemonPolicy_default_attach-hr",
+											},
+										},
+									},
+								},
+							},
+						},
+						Port: 80,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+				},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+					{
+						Hostname: "policy.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: expHTTPSHRWithPolicyGroups[0],
+										Source:       &httpsHRWithPolicy.ObjectMeta,
+										Additions: []Addition{
+											{
+												Bytes:      []byte("lime"),
+												Identifier: "LimePolicy_default_attach-hr",
+											},
+										},
+									},
+								},
+							},
+						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port: 443,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+				},
+				Upstreams: []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{
+					expHRWithPolicyGroups[0],
+					expHTTPSHRWithPolicyGroups[0],
+				},
+				BaseHTTPConfig: BaseHTTPConfig{
+					HTTP2: true,
+				},
+			},
+			msg: "Simple Gateway and HTTPRoute with policies attached",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver, 1)
+			fakeGenerator := &policiesfakes.FakeConfigGenerator{
+				GenerateStub: func(p policies.Policy) []byte {
+					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
+					case "ApplePolicy":
+						return []byte("apple")
+					case "OrangePolicy":
+						return []byte("orange")
+					case "LemonPolicy":
+						return []byte("lemon")
+					case "LimePolicy":
+						return []byte("lime")
+					default:
+						panic(fmt.Sprintf("unknown policy kind: %s", kind))
+					}
+				},
+			}
+
+			result := BuildConfiguration(
+				context.TODO(),
+				test.graph,
+				fakeResolver,
+				fakeGenerator,
+				1,
+			)
 
 			g.Expect(result.BackendGroups).To(ConsistOf(test.expConf.BackendGroups))
 			g.Expect(result.Upstreams).To(ConsistOf(test.expConf.Upstreams))
@@ -2765,6 +3028,94 @@ func TestBuildTelemetry(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(buildTelemetry(tc.g)).To(Equal(tc.expTelemetry))
+		})
+	}
+}
+
+func TestBuildAdditions(t *testing.T) {
+	getPolicy := func(kind, name string) policies.Policy {
+		return &policiesfakes.FakePolicy{
+			GetNameStub: func() string {
+				return name
+			},
+			GetNamespaceStub: func() string {
+				return "test"
+			},
+			GetObjectKindStub: func() schema.ObjectKind {
+				objKind := &policiesfakes.FakeObjectKind{
+					GroupVersionKindStub: func() schema.GroupVersionKind {
+						return schema.GroupVersionKind{Kind: kind}
+					},
+				}
+
+				return objKind
+			},
+		}
+	}
+
+	tests := []struct {
+		name         string
+		policies     []*graph.Policy
+		expAdditions []Addition
+	}{
+		{
+			name:         "nil policies",
+			policies:     nil,
+			expAdditions: nil,
+		},
+		{
+			name: "mix of valid and invalid policies",
+			policies: []*graph.Policy{
+				{
+					Source: getPolicy("Kind1", "valid1"),
+					Valid:  true,
+				},
+				{
+					Source: getPolicy("Kind2", "valid2"),
+					Valid:  true,
+				},
+				{
+					Source: getPolicy("Kind1", "invalid1"),
+					Valid:  false,
+				},
+				{
+					Source: getPolicy("Kind2", "invalid2"),
+					Valid:  false,
+				},
+				{
+					Source: getPolicy("Kind3", "valid3"),
+					Valid:  true,
+				},
+			},
+			expAdditions: []Addition{
+				{
+					Identifier: "Kind1_test_valid1",
+					Bytes:      []byte("valid1"),
+				},
+				{
+					Identifier: "Kind2_test_valid2",
+					Bytes:      []byte("valid2"),
+				},
+				{
+					Identifier: "Kind3_test_valid3",
+					Bytes:      []byte("valid3"),
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			generator := &policiesfakes.FakeConfigGenerator{
+				GenerateStub: func(policy policies.Policy) []byte {
+					return []byte(policy.GetName())
+				},
+			}
+
+			additions := buildAdditions(test.policies, generator)
+			g.Expect(additions).To(BeEquivalentTo(test.expAdditions))
 		})
 	}
 }

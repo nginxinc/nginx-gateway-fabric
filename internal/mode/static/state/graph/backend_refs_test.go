@@ -16,6 +16,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -107,7 +108,7 @@ func TestValidateBackendRef(t *testing.T) {
 			From: []v1beta1.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1.GroupName,
-					Kind:      "HTTPRoute",
+					Kind:      kinds.HTTPRoute,
 					Namespace: "test",
 				},
 			},
@@ -523,7 +524,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 					Type:    "Accepted",
 					Status:  "True",
 					Reason:  "Accepted",
-					Message: "BackendTLSPolicy is accepted by the Gateway",
+					Message: "Policy is accepted",
 				},
 			},
 			Valid:        true,
@@ -538,7 +539,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		Type:    "Accepted",
 		Status:  "True",
 		Reason:  "Accepted",
-		Message: "BackendTLSPolicy is accepted by the Gateway",
+		Message: "Policy is accepted",
 	},
 	)
 
@@ -764,7 +765,7 @@ func TestCreateBackend(t *testing.T) {
 		},
 		Valid: false,
 		Conditions: []conditions.Condition{
-			staticConds.NewBackendTLSPolicyInvalid("unsupported value"),
+			staticConds.NewPolicyInvalid("unsupported value"),
 		},
 	}
 

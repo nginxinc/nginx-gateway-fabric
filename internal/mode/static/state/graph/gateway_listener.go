@@ -11,6 +11,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -230,7 +231,7 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Kinds == nil {
 		return nil, []v1.RouteGroupKind{
 			{
-				Kind: "HTTPRoute",
+				Kind: kinds.HTTPRoute,
 			},
 		}
 	}
@@ -239,7 +240,7 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	supportedKinds := make([]v1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
 
 	validHTTPProtocolRouteKind := func(kind v1.RouteGroupKind) bool {
-		if kind.Kind != v1.Kind("HTTPRoute") && kind.Kind != v1.Kind("GRPCRoute") {
+		if kind.Kind != v1.Kind(kinds.HTTPRoute) && kind.Kind != v1.Kind(kinds.GRPCRoute) {
 			return false
 		}
 		if kind.Group == nil || *kind.Group != v1.GroupName {

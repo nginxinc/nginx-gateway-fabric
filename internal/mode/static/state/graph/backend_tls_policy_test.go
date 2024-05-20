@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
@@ -129,6 +130,8 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			AncestorRef: gatewayv1.ParentReference{
 				Name:      gatewayv1.ObjectName(parentName),
 				Namespace: helpers.GetPointer(gatewayv1.Namespace("test")),
+				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
 			},
 		}
 	}
@@ -152,7 +155,9 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		getAncestorRef("not-us", "not-us"),
 	}
 
-	ancestorsWithUs := append(ancestors, getAncestorRef("test", "gateway"))
+	ancestorsWithUs := make([]v1alpha2.PolicyAncestorStatus, len(ancestors))
+	copy(ancestorsWithUs, ancestors)
+	ancestorsWithUs[0] = getAncestorRef("test", "gateway")
 
 	tests := []struct {
 		tlsPolicy *v1alpha3.BackendTLSPolicy
@@ -392,16 +397,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			gateway := &Gateway{
-				Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
-			}
-
-			valid, ignored, conds := validateBackendTLSPolicy(
-				test.tlsPolicy,
-				configMapResolver,
-				"test",
-				gateway,
-			)
+			valid, ignored, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test")
 
 			g.Expect(valid).To(Equal(test.isValid))
 			g.Expect(ignored).To(Equal(test.ignored))

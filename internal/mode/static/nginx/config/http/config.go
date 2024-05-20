@@ -5,10 +5,11 @@ type Server struct {
 	SSL           *SSL
 	ServerName    string
 	Locations     []Location
+	Includes      []string
+	Port          int32
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
-	Port          int32
 }
 
 // Location holds all configuration for an HTTP location.
@@ -17,11 +18,12 @@ type Location struct {
 	ProxyPass       string
 	HTTPMatchKey    string
 	HTTPMatchVar    string
-	Rewrites        []string
 	ProxySetHeaders []Header
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
 	ResponseHeaders ResponseHeaders
+	Rewrites        []string
+	Includes        []string
 	GRPC            bool
 }
 

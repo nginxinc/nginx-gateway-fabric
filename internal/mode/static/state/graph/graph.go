@@ -4,14 +4,18 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -29,6 +33,7 @@ type ClusterState struct {
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
 	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
 	GRPCRoutes         map[types.NamespacedName]*gatewayv1.GRPCRoute
+	NGFPolicies        map[PolicyKey]policies.Policy
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -63,6 +68,8 @@ type Graph struct {
 	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
 	// NginxProxy holds the NginxProxy config for the GatewayClass.
 	NginxProxy *ngfAPI.NginxProxy
+	// NGFPolicies holds all NGF Policies.
+	NGFPolicies map[PolicyKey]*Policy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -112,6 +119,54 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 	}
 }
 
+// IsNGFPolicyRelevant returns whether the NGF Policy is a part of the Graph, or targets a resource in the Graph.
+func (g *Graph) IsNGFPolicyRelevant(
+	policy policies.Policy,
+	gvk schema.GroupVersionKind,
+	nsname types.NamespacedName,
+) bool {
+	key := PolicyKey{
+		NsName: nsname,
+		GVK:    gvk,
+	}
+
+	if _, exists := g.NGFPolicies[key]; exists {
+		return true
+	}
+
+	if policy == nil {
+		panic("policy cannot be nil")
+	}
+
+	ref := policy.GetTargetRef()
+
+	switch ref.Group {
+	case gatewayv1.GroupName:
+		return g.gatewayAPIResourceExist(ref, policy.GetNamespace())
+	default:
+		return false
+	}
+}
+
+func (g *Graph) gatewayAPIResourceExist(ref v1alpha2.LocalPolicyTargetReference, policyNs string) bool {
+	refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policyNs}
+
+	switch kind := ref.Kind; kind {
+	case kinds.Gateway:
+		if g.Gateway == nil {
+			return false
+		}
+
+		return gatewayExists(refNsName, g.Gateway.Source, g.IgnoredGateways)
+	case kinds.HTTPRoute, kinds.GRPCRoute:
+		_, exists := g.Routes[routeKeyForKind(kind, refNsName)]
+		return exists
+
+	default:
+		return false
+	}
+}
+
 // BuildGraph builds a Graph from a state.
 func BuildGraph(
 	state ClusterState,
@@ -135,6 +190,7 @@ func BuildGraph(
 	processedGws := processGateways(state.Gateways, gcName)
 
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
+
 	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)
 
 	processedBackendTLSPolicies := processBackendTLSPolicies(
@@ -151,12 +207,15 @@ func BuildGraph(
 		processedGws.GetAllNsNames(),
 		npCfg,
 	)
+
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
 	referencedServices := buildReferencedServices(routes)
+
+	processedPolicies := processPolicies(state.NGFPolicies, validators.PolicyValidator, processedGws, routes)
 
 	g := &Graph{
 		GatewayClass:               gc,
@@ -170,7 +229,28 @@ func BuildGraph(
 		ReferencedCaCertConfigMaps: configMapResolver.getResolvedConfigMaps(),
 		BackendTLSPolicies:         processedBackendTLSPolicies,
 		NginxProxy:                 npCfg,
+		NGFPolicies:                processedPolicies,
 	}
 
+	g.attachPolicies(controllerName)
+
 	return g
+}
+
+func gatewayExists(
+	gwNsName types.NamespacedName,
+	winner *gatewayv1.Gateway,
+	ignored map[types.NamespacedName]*gatewayv1.Gateway,
+) bool {
+	if winner == nil {
+		return false
+	}
+
+	if client.ObjectKeyFromObject(winner) == gwNsName {
+		return true
+	}
+
+	_, exists := ignored[gwNsName]
+
+	return exists
 }

@@ -3,6 +3,7 @@ package config
 import (
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -11,7 +12,7 @@ var baseHTTPTemplate = gotemplate.Must(gotemplate.New("baseHttp").Parse(baseHTTP
 func executeBaseHTTPConfig(conf dataplane.Configuration) []executeResult {
 	result := executeResult{
 		dest: httpConfigFile,
-		data: execute(baseHTTPTemplate, conf.BaseHTTPConfig),
+		data: helpers.MustExecuteTemplate(baseHTTPTemplate, conf.BaseHTTPConfig),
 	}
 
 	return []executeResult{result}

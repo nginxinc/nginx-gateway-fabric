@@ -23,6 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 func TestRegister(t *testing.T) {
@@ -54,7 +55,7 @@ func TestRegister(t *testing.T) {
 
 	objectTypeWithGVK := &v1.HTTPRoute{}
 	objectTypeWithGVK.SetGroupVersionKind(
-		schema.GroupVersionKind{Group: v1.GroupName, Version: "v1", Kind: "HTTPRoute"},
+		schema.GroupVersionKind{Group: v1.GroupName, Version: "v1", Kind: kinds.HTTPRoute},
 	)
 
 	objectTypeNoGVK := &v1.HTTPRoute{}

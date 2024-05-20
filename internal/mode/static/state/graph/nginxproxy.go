@@ -6,6 +6,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -30,7 +31,7 @@ func isNginxProxyReferenced(npNSName types.NamespacedName, gc *GatewayClass) boo
 func gcReferencesAnyNginxProxy(gc *v1.GatewayClass) bool {
 	if gc != nil {
 		ref := gc.Spec.ParametersRef
-		return ref != nil && ref.Group == ngfAPI.GroupName && ref.Kind == v1.Kind("NginxProxy")
+		return ref != nil && ref.Group == ngfAPI.GroupName && ref.Kind == v1.Kind(kinds.NginxProxy)
 	}
 
 	return false
@@ -49,7 +50,10 @@ func validateNginxProxy(
 		telPath := spec.Child("telemetry")
 		if telemetry.ServiceName != nil {
 			if err := validator.ValidateServiceName(*telemetry.ServiceName); err != nil {
-				allErrs = append(allErrs, field.Invalid(telPath.Child("serviceName"), *telemetry.ServiceName, err.Error()))
+				allErrs = append(
+					allErrs,
+					field.Invalid(telPath.Child("serviceName"), *telemetry.ServiceName, err.Error()),
+				)
 			}
 		}
 

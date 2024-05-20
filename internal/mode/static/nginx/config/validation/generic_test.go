@@ -64,6 +64,27 @@ func TestValidateNginxDuration(t *testing.T) {
 	)
 }
 
+func TestValidateNginxSize(t *testing.T) {
+	validator := GenericValidator{}
+
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateNginxSize,
+		`1024`,
+		`10k`,
+		`123m`,
+		`4096g`,
+	)
+
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator.ValidateNginxSize,
+		`test`,
+		`12345`,
+		`5b`,
+	)
+}
+
 func TestValidateEndpoint(t *testing.T) {
 	validator := GenericValidator{}
 
