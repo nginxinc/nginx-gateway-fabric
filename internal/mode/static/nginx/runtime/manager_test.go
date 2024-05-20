@@ -28,7 +28,6 @@ var _ = Describe("NGINX Runtime Manager", func() {
 	var (
 		manager         runtime.Manager
 		upstreamServers []ngxclient.UpstreamServer
-		upstreamServer  ngxclient.UpstreamServer
 		ngxPlusClient   *runtimefakes.FakeNginxPlusClient
 		process         *runtimefakes.FakeProcessHandler
 
@@ -37,12 +36,9 @@ var _ = Describe("NGINX Runtime Manager", func() {
 	)
 
 	BeforeEach(func() {
-		upstreamServer = ngxclient.UpstreamServer{}
-
 		upstreamServers = []ngxclient.UpstreamServer{
-			upstreamServer,
+			ngxclient.UpstreamServer{},
 		}
-
 	})
 
 	Context("Reload", func() {
@@ -98,7 +94,6 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		})
 
 		It("sucessfully updates HTTP server upstream", func() {
-
 			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
 		})
 
@@ -226,7 +221,6 @@ func TestFindMainProcess(t *testing.T) {
 			g := NewWithT(t)
 			p := runtime.ProcessHandlerImpl{}
 			result, err := p.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
-			//result, err := runtime.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
 			if test.expectError {
 				g.Expect(err).To(HaveOccurred())
