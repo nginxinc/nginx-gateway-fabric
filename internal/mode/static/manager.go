@@ -68,6 +68,7 @@ const (
 )
 
 var scheme = runtime.NewScheme()
+var proccesHandler = &ngxruntime.ProcessHandlerImpl{}
 
 func init() {
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
@@ -145,7 +146,7 @@ func StartManager(cfg config.Config) error {
 	}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := ngxruntime.EnsureNginxRunning(ctx, &ngxruntime.ProcessHandlerImpl{}); err != nil {
+	if err := proccesHandler.EnsureNginxRunning(ctx); err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
@@ -222,7 +223,7 @@ func StartManager(cfg config.Config) error {
 			ngxPlusClient,
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
-			&ngxruntime.ProcessHandlerImpl{},
+			proccesHandler,
 			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
 		),
 		statusUpdater:                 groupStatusUpdater,

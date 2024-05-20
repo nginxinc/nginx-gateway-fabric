@@ -38,12 +38,13 @@ type nginxPlusClient interface {
 	GetUpstreams() (*ngxclient.Upstreams, error)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . processHandler
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ProcessHandler
 
 type ProcessHandler interface {
 	FindMainProcess(ctx context.Context, checkFile CheckFileFunc, readFile ReadFileFunc, timeout time.Duration) (int, error)
 	ReadFile(file string) ([]byte, error)
 	Kill(pid int, signum syscall.Signal) error
+	EnsureNginxRunning(ctx context.Context) error
 }
 
 type ProcessHandlerImpl struct {
@@ -178,8 +179,8 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 }
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
-func EnsureNginxRunning(ctx context.Context, processHandler ProcessHandler) error {
-	if _, err := processHandler.FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
+func (p *ProcessHandlerImpl) EnsureNginxRunning(ctx context.Context) error {
+	if _, err := p.FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 	return nil
