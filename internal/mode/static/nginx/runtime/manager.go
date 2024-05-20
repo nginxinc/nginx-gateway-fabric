@@ -227,19 +227,9 @@ func (p *ProcessHandlerImpl) FindMainProcess(
 }
 
 func (p *ProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
-	content, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return content, nil
+	return os.ReadFile(file)
 }
 
 func (p *ProcessHandlerImpl) Kill(pid int, signum syscall.Signal) error {
-	err := syscall.Kill(pid, syscall.SIGHUP)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return syscall.Kill(pid, syscall.SIGHUP)
 }
