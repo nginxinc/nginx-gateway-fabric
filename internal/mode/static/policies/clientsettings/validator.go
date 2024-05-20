@@ -67,6 +67,7 @@ func conflicts(a, b ngfAPI.ClientSettingsPolicySpec) bool {
 		if a.KeepAlive.Timeout != nil && b.KeepAlive.Timeout != nil {
 			return true
 		}
+
 	}
 
 	return false
@@ -172,6 +173,22 @@ func (v *Validator) validateClientKeepAlive(keepAlive ngfAPI.ClientKeepAlive, fi
 					field.Invalid(path, *keepAlive.Timeout.Header, err.Error()),
 				)
 			}
+		}
+
+		// This is a special case. The keepalive_timeout directive takes two parameters:
+		// keepalive_timeout server [header], where header is optional. If header is provided and server is not,
+		// we can't properly configure the directive.
+		if keepAlive.Timeout.Header != nil && keepAlive.Timeout.Server == nil {
+			path := fieldPath.Child("timeout")
+
+			allErrs = append(
+				allErrs,
+				field.Invalid(
+					path,
+					nil,
+					"server timeout must be set if header timeout is set",
+				),
+			)
 		}
 	}
 

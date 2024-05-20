@@ -97,6 +97,14 @@ func TestValidator_Validate(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid keepalive timeout; header provided without server",
+			policy: createModifiedPolicy(func(p *ngfAPI.ClientSettingsPolicy) *ngfAPI.ClientSettingsPolicy {
+				p.Spec.KeepAlive.Timeout.Server = nil
+				return p
+			}),
+			expErrSubstrings: []string{"spec.keepAlive.timeout"},
+		},
+		{
 			name:             "valid",
 			policy:           createValidPolicy(),
 			expErrSubstrings: nil,
