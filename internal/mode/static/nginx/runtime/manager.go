@@ -47,8 +47,7 @@ type ProcessHandler interface {
 	EnsureNginxRunning(ctx context.Context) error
 }
 
-type ProcessHandlerImpl struct {
-}
+type ProcessHandlerImpl struct{}
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 

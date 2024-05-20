@@ -67,8 +67,10 @@ const (
 	clusterTimeout = 10 * time.Second
 )
 
-var scheme = runtime.NewScheme()
-var processHandler = &ngxruntime.ProcessHandlerImpl{}
+var (
+	scheme         = runtime.NewScheme()
+	processHandler = &ngxruntime.ProcessHandlerImpl{}
+)
 
 func init() {
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
