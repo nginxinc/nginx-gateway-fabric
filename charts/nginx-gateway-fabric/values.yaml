@@ -1,18 +1,14 @@
 nginxGateway:
-  ## Set of custom annotations for GatewayClass objects, e.g:
-  ## gatewayClassCustomAnnotations:
-  ##  someKey: someValue
-  gatewayClassCustomAnnotations: {}
-  ## Set of custom annotations for NginxGateway objects, e.g:
-  ## nginxGatewayCustomAnnotations:
-  ##  someKey: someValue
-  nginxGatewayCustomAnnotations: {}
   ## The kind of the NGINX Gateway Fabric installation - currently, only deployment is supported.
   kind: deployment
   ## gatewayClassName is the name of the GatewayClass that will be created as part of this release. Every NGINX Gateway
   ## Fabric must have a unique corresponding GatewayClass resource. NGINX Gateway Fabric only processes resources that
   ## belong to its class - i.e. have the "gatewayClassName" field resource equal to the class.
   gatewayClassName: nginx
+  ## Set of custom annotations for GatewayClass objects, e.g:
+  ## gatewayClassAnnotations:
+  ##  someKey: someValue
+  gatewayClassAnnotations: {}
   ## The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain
   ## is gateway.nginx.org.
   gatewayControllerName: gateway.nginx.org/nginx-gateway-controller
@@ -21,6 +17,10 @@ nginxGateway:
     logging:
       ## Log level. Supported values "info", "debug", "error".
       level: info
+  ## Set of custom annotations for NginxGateway objects, e.g:
+  ## configAnnotations:
+  ##  someKey: someValue
+  configAnnotations: {}
   ## The number of replicas of the NGINX Gateway Fabric Deployment.
   replicaCount: 1
   ## The configuration for leader election.
