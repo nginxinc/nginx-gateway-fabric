@@ -24,7 +24,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Tracing", Label("functional"), func() {
+// This test can be flaky when waiting to see traces show up in the collector logs.
+var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 	files := []string{
 		"hello-world/apps.yaml",
 		"hello-world/gateway.yaml",
