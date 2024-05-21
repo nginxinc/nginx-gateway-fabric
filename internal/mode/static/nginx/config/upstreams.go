@@ -4,6 +4,7 @@ import (
 	"fmt"
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -28,8 +29,9 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 
 	result := executeResult{
 		dest: httpConfigFile,
-		data: execute(upstreamsTemplate, upstreams),
+		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),
 	}
+
 	return []executeResult{result}
 }
 

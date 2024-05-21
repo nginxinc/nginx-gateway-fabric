@@ -8,6 +8,7 @@ import (
 	"strings"
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -61,7 +62,7 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 
 	serverResult := executeResult{
 		dest: httpConfigFile,
-		data: execute(serversTemplate, servers),
+		data: helpers.MustExecuteTemplate(serversTemplate, servers),
 	}
 
 	// create httpMatchPair conf
@@ -76,7 +77,68 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 		data: httpMatchConf,
 	}
 
-	return []executeResult{serverResult, httpMatchResult}
+	additionFileResults := createAdditionFileResults(conf)
+
+	allResults := make([]executeResult, 0, len(additionFileResults)+2)
+	allResults = append(allResults, additionFileResults...)
+	allResults = append(allResults, serverResult, httpMatchResult)
+
+	return allResults
+}
+
+func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
+	uniqueAdditions := make(map[string][]byte)
+
+	findUniqueAdditionsForServer := func(server dataplane.VirtualServer) {
+		for _, add := range server.Additions {
+			uniqueAdditions[createAdditionFileName(add)] = add.Bytes
+		}
+
+		for _, pr := range server.PathRules {
+			for _, mr := range pr.MatchRules {
+				for _, add := range mr.Additions {
+					uniqueAdditions[createAdditionFileName(add)] = add.Bytes
+				}
+			}
+		}
+	}
+
+	for _, s := range conf.HTTPServers {
+		findUniqueAdditionsForServer(s)
+	}
+
+	for _, s := range conf.SSLServers {
+		findUniqueAdditionsForServer(s)
+	}
+
+	results := make([]executeResult, 0, len(uniqueAdditions))
+
+	for filename, contents := range uniqueAdditions {
+		results = append(results, executeResult{
+			dest: filename,
+			data: contents,
+		})
+	}
+
+	return results
+}
+
+func createAdditionFileName(addition dataplane.Addition) string {
+	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)
+}
+
+func createIncludes(additions []dataplane.Addition) []string {
+	if len(additions) == 0 {
+		return nil
+	}
+
+	includes := make([]string, 0, len(additions))
+
+	for _, addition := range additions {
+		includes = append(includes, createAdditionFileName(addition))
+	}
+
+	return includes
 }
 
 func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Server, httpMatchPairs) {
@@ -117,6 +179,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		Locations: locs,
 		Port:      virtualServer.Port,
 		GRPC:      grpc,
+		Includes:  createIncludes(virtualServer.Additions),
 	}, matchPairs
 }
 
@@ -135,6 +198,7 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 		Locations:  locs,
 		Port:       virtualServer.Port,
 		GRPC:       grpc,
+		Includes:   createIncludes(virtualServer.Additions),
 	}, matchPairs
 }
 
@@ -169,12 +233,20 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
+
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
 				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
 			}
 
+			includes := createIncludes(r.Additions)
+
+			// buildLocations will either contain the extLocations OR the intLocation.
+			// If it contains the intLocation, the extLocations will be added to the final locations after we loop
+			// through all the MatchRules.
+			// It is safe to modify the buildLocations here by adding includes and filters.
+			buildLocations = updateLocationsForIncludes(buildLocations, includes)
 			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, server.Port, rule.Path, rule.GRPC)
 			locs = append(locs, buildLocations...)
 		}
@@ -201,6 +273,14 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	}
 
 	return locs, matchPairs, grpc
+}
+
+func updateLocationsForIncludes(locations []http.Location, includes []string) []http.Location {
+	for i := range locations {
+		locations[i].Includes = includes
+	}
+
+	return locations
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path

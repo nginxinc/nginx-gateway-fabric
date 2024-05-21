@@ -14,6 +14,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 func createGC(name string) *v1.GatewayClass {
@@ -22,7 +23,7 @@ func createGC(name string) *v1.GatewayClass {
 			Name: name,
 		},
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "GatewayClass",
+			Kind:       kinds.GatewayClass,
 			APIVersion: "gateway.networking.k8s.io/v1",
 		},
 	}

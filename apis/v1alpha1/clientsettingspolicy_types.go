@@ -48,8 +48,11 @@ type ClientSettingsPolicySpec struct {
 
 	// TargetRef identifies an API object to apply the policy to.
 	// Object must be in the same namespace as the policy.
+	// Support: Gateway, HTTPRoute, GRPCRoute.
 	//
-	// Support: Gateway, HTTPRoute
+	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be one of: Gateway, HTTPRoute, or GRPCRoute",rule="(self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')"
+	// +kubebuilder:validation:XValidation:message="TargetRef Group must be gateway.networking.k8s.io.",rule="(self.group=='gateway.networking.k8s.io')"
+	//nolint:lll
 	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 }
 
@@ -95,7 +98,11 @@ type ClientKeepAlive struct {
 
 	// Timeout defines the keep-alive timeouts for clients.
 	//
+	// +kubebuilder:validation:XValidation:message="header can only be specified if server is specified",rule="!(has(self.header) && !has(self.server))"
+	//
+	//
 	// +optional
+	//nolint:lll
 	Timeout *ClientKeepAliveTimeout `json:"timeout,omitempty"`
 }
 

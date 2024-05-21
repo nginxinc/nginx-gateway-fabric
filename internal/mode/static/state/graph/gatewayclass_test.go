@@ -14,6 +14,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
@@ -129,7 +130,7 @@ func TestBuildGatewayClass(t *testing.T) {
 	gcWithParams := &v1.GatewayClass{
 		Spec: v1.GatewayClassSpec{
 			ParametersRef: &v1.ParametersReference{
-				Kind:      v1.Kind("NginxProxy"),
+				Kind:      v1.Kind(kinds.NginxProxy),
 				Namespace: helpers.GetPointer(v1.Namespace("test")),
 				Name:      "nginx-proxy",
 			},
@@ -207,7 +208,7 @@ func TestBuildGatewayClass(t *testing.T) {
 			gc: gcWithParams,
 			np: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: "NginxProxy",
+					Kind: kinds.NginxProxy,
 				},
 				Spec: ngfAPI.NginxProxySpec{
 					Telemetry: &ngfAPI.Telemetry{
@@ -227,7 +228,7 @@ func TestBuildGatewayClass(t *testing.T) {
 			gc: gcWithInvalidKind,
 			np: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: "NginxProxy",
+					Kind: kinds.NginxProxy,
 				},
 			},
 			expected: &GatewayClass{
@@ -259,7 +260,7 @@ func TestBuildGatewayClass(t *testing.T) {
 			gc: gcWithParams,
 			np: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: "NginxProxy",
+					Kind: kinds.NginxProxy,
 				},
 				Spec: ngfAPI.NginxProxySpec{
 					Telemetry: &ngfAPI.Telemetry{

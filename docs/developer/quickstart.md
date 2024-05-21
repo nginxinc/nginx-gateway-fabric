@@ -195,7 +195,7 @@ For more details on testing, see the [testing](/docs/developer/testing.md) docum
 
 ## Gateway API Conformance Testing
 
-To run Gateway API conformance tests, please follow the instructions on [this](/conformance/README.md) page.
+To run Gateway API conformance tests, please follow the instructions on [this](/tests/README.md#conformance-testing) page.
 
 ## Run the Linter
 

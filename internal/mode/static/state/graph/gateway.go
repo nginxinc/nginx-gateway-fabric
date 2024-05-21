@@ -21,6 +21,8 @@ type Gateway struct {
 	Listeners []*Listener
 	// Conditions holds the conditions for the Gateway.
 	Conditions []conditions.Condition
+	// Policies holds the policies attached to the Gateway.
+	Policies []*Policy
 	// Valid indicates whether the Gateway Spec is valid.
 	Valid bool
 }
@@ -75,7 +77,7 @@ func processGateways(
 	}
 
 	sort.Slice(referencedGws, func(i, j int) bool {
-		return ngfsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
+		return ngfsort.LessClientObject(referencedGws[i], referencedGws[j])
 	})
 
 	ignoredGws := make(map[types.NamespacedName]*v1.Gateway)

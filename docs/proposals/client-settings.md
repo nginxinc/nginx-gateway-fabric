@@ -1,7 +1,7 @@
 # Enhancement Proposal-1632: Client Settings Policy
 
 - Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1632
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 

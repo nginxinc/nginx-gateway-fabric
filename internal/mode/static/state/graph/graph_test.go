@@ -9,6 +9,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -20,6 +21,9 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
@@ -30,6 +34,8 @@ func TestBuildGraph(t *testing.T) {
 		gcName         = "my-class"
 		controllerName = "my.controller"
 	)
+
+	testNs := "test"
 
 	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",
@@ -47,9 +53,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	btpAcceptedConds := []conditions.Condition{
-		staticConds.NewBackendTLSPolicyAccepted(),
-		staticConds.NewBackendTLSPolicyAccepted(),
-		staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewPolicyAccepted(),
+		staticConds.NewPolicyAccepted(),
+		staticConds.NewPolicyAccepted(),
 	}
 
 	btp := BackendTLSPolicy{
@@ -82,7 +88,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		Valid:        true,
 		IsReferenced: true,
-		Gateway:      types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+		Gateway:      types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
 		Conditions:   btpAcceptedConds,
 		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
 	}
@@ -132,14 +138,14 @@ func TestBuildGraph(t *testing.T) {
 	createRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
 		return &gatewayv1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
+				Namespace: testNs,
 				Name:      name,
 			},
 			Spec: gatewayv1.HTTPRouteSpec{
 				CommonRouteSpec: gatewayv1.CommonRouteSpec{
 					ParentRefs: []gatewayv1.ParentReference{
 						{
-							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer(testNs)),
 							Name:        gatewayv1.ObjectName(gatewayName),
 							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
 						},
@@ -168,14 +174,14 @@ func TestBuildGraph(t *testing.T) {
 
 	gr := &gatewayv1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "gr",
 		},
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
 					{
-						Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer(testNs)),
 						Name:        gatewayv1.ObjectName("gateway-1"),
 						SectionName: (*gatewayv1.SectionName)(helpers.GetPointer("listener-80-1")),
 					},
@@ -198,7 +204,7 @@ func TestBuildGraph(t *testing.T) {
 
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "secret",
 		},
 		Data: map[string][]byte{
@@ -210,7 +216,7 @@ func TestBuildGraph(t *testing.T) {
 
 	ns := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
+			Name: testNs,
 			Labels: map[string]string{
 				"app": "allowed",
 			},
@@ -220,7 +226,7 @@ func TestBuildGraph(t *testing.T) {
 	createGateway := func(name string) *gatewayv1.Gateway {
 		return &gatewayv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
+				Namespace: testNs,
 				Name:      name,
 			},
 			Spec: gatewayv1.GatewaySpec{
@@ -289,8 +295,8 @@ func TestBuildGraph(t *testing.T) {
 			From: []v1beta1.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1.GroupName,
-					Kind:      "Gateway",
-					Namespace: "test",
+					Kind:      kinds.Gateway,
+					Namespace: gatewayv1.Namespace(testNs),
 				},
 			},
 			To: []v1beta1.ReferenceGrantTo{
@@ -310,8 +316,8 @@ func TestBuildGraph(t *testing.T) {
 			From: []v1beta1.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1.GroupName,
-					Kind:      "HTTPRoute",
-					Namespace: "test",
+					Kind:      kinds.HTTPRoute,
+					Namespace: gatewayv1.Namespace(testNs),
 				},
 			},
 			To: []v1beta1.ReferenceGrantTo{
@@ -337,6 +343,70 @@ func TestBuildGraph(t *testing.T) {
 				ServiceName: helpers.GetPointer("my-svc"),
 			},
 		},
+	}
+
+	// NGF Policies
+	//
+	// We have to use real policies here instead of a mocks because the Diff function we use in the test fails when
+	// using a mock because the mock has unexported fields.
+	// Testing one type of policy per attachment point should suffice.
+	polGVK := schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy}
+	hrPolicyKey := PolicyKey{GVK: polGVK, NsName: types.NamespacedName{Namespace: testNs, Name: "hrPolicy"}}
+	hrPolicy := &ngfAPI.ClientSettingsPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hrPolicy",
+			Namespace: testNs,
+		},
+		TypeMeta: metav1.TypeMeta{Kind: kinds.ClientSettingsPolicy},
+		Spec: ngfAPI.ClientSettingsPolicySpec{
+			TargetRef: createTestRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr-1"),
+		},
+	}
+	processedRoutePolicy := &Policy{
+		Source: hrPolicy,
+		Ancestor: &PolicyAncestor{
+			Ancestor: gatewayv1.ParentReference{
+				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
+				Namespace: (*gatewayv1.Namespace)(&testNs),
+				Name:      "hr-1",
+			},
+		},
+		TargetRef: PolicyTargetRef{
+			Kind:   kinds.HTTPRoute,
+			Group:  gatewayv1.GroupName,
+			Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-1"},
+		},
+		Valid: true,
+	}
+
+	gwPolicyKey := PolicyKey{GVK: polGVK, NsName: types.NamespacedName{Namespace: testNs, Name: "gwPolicy"}}
+	gwPolicy := &ngfAPI.ClientSettingsPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gwPolicy",
+			Namespace: testNs,
+		},
+		TypeMeta: metav1.TypeMeta{Kind: kinds.ClientSettingsPolicy},
+		Spec: ngfAPI.ClientSettingsPolicySpec{
+			TargetRef: createTestRef(kinds.Gateway, gatewayv1.GroupName, "gateway-1"),
+		},
+	}
+	processedGwPolicy := &Policy{
+		Source: gwPolicy,
+		Ancestor: &PolicyAncestor{
+			Ancestor: gatewayv1.ParentReference{
+				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
+				Namespace: (*gatewayv1.Namespace)(&testNs),
+				Name:      "gateway-1",
+			},
+		},
+		TargetRef: PolicyTargetRef{
+			Kind:   kinds.Gateway,
+			Group:  gatewayv1.GroupName,
+			Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
+		},
+		Valid: true,
 	}
 
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
@@ -378,6 +448,10 @@ func TestBuildGraph(t *testing.T) {
 			NginxProxies: map[types.NamespacedName]*ngfAPI.NginxProxy{
 				client.ObjectKeyFromObject(proxy): proxy,
 			},
+			NGFPolicies: map[PolicyKey]policies.Policy{
+				hrPolicyKey: hrPolicy,
+				gwPolicyKey: gwPolicy,
+			},
 		}
 	}
 
@@ -401,6 +475,7 @@ func TestBuildGraph(t *testing.T) {
 			Hostnames: hr1.Spec.Hostnames,
 			Rules:     []RouteRule{createValidRuleWithBackendRefs(routeMatches)},
 		},
+		Policies: []*Policy{processedRoutePolicy},
 	}
 
 	routeGR := &L7Route{
@@ -468,7 +543,7 @@ func TestBuildGraph(t *testing.T) {
 							CreateRouteKey(hr1): routeHR1,
 							CreateRouteKey(gr):  routeGR,
 						},
-						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
 					{
@@ -478,13 +553,14 @@ func TestBuildGraph(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{CreateRouteKey(hr3): routeHR3},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
-						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
 					},
 				},
-				Valid: true,
+				Valid:    true,
+				Policies: []*Policy{processedGwPolicy},
 			},
 			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
-				{Namespace: "test", Name: "gateway-2"}: gw2,
+				{Namespace: testNs, Name: "gateway-2"}: gw2,
 			},
 			Routes: map[RouteKey]*L7Route{
 				CreateRouteKey(hr1): routeHR1,
@@ -512,6 +588,10 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(btp.Source): &btp,
 			},
 			NginxProxy: proxy,
+			NGFPolicies: map[PolicyKey]*Policy{
+				hrPolicyKey: processedRoutePolicy,
+				gwPolicyKey: processedGwPolicy,
+			},
 		}
 	}
 
@@ -523,7 +603,7 @@ func TestBuildGraph(t *testing.T) {
 			ControllerName: controllerName,
 			ParametersRef: &gatewayv1.ParametersReference{
 				Group: gatewayv1.Group("gateway.nginx.org"),
-				Kind:  gatewayv1.Kind("NginxProxy"),
+				Kind:  gatewayv1.Kind(kinds.NginxProxy),
 				Name:  "nginx-proxy",
 			},
 		},
@@ -565,6 +645,7 @@ func TestBuildGraph(t *testing.T) {
 				validation.Validators{
 					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
 					GenericValidator:    &validationfakes.FakeGenericValidator{},
+					PolicyValidator:     &validationfakes.FakePolicyValidator{},
 				},
 				protectedPorts,
 			)
@@ -577,13 +658,13 @@ func TestBuildGraph(t *testing.T) {
 func TestIsReferenced(t *testing.T) {
 	baseSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "secret",
 		},
 	}
 	sameNamespaceDifferentNameSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "secret-different-name",
 		},
 	}
@@ -596,7 +677,7 @@ func TestIsReferenced(t *testing.T) {
 
 	nsInGraph := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
+			Name: testNs,
 			Labels: map[string]string{
 				"app": "allowed",
 			},
@@ -666,13 +747,13 @@ func TestIsReferenced(t *testing.T) {
 
 	baseConfigMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "configmap",
 		},
 	}
 	sameNamespaceDifferentNameConfigMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
+			Namespace: testNs,
 			Name:      "configmap-different-name",
 		},
 	}
@@ -688,7 +769,7 @@ func TestIsReferenced(t *testing.T) {
 			Spec: gatewayv1.GatewayClassSpec{
 				ParametersRef: &gatewayv1.ParametersReference{
 					Group: ngfAPI.GroupName,
-					Kind:  gatewayv1.Kind("NginxProxy"),
+					Kind:  gatewayv1.Kind(kinds.NginxProxy),
 					Name:  "nginx-proxy-in-gc",
 				},
 			},
@@ -875,4 +956,168 @@ func TestIsReferenced(t *testing.T) {
 			g.Expect(result).To(Equal(test.expected))
 		})
 	}
+}
+
+func TestIsNGFPolicyRelevant(t *testing.T) {
+	policyGVK := schema.GroupVersionKind{Kind: "MyKind"}
+	existingPolicyNsName := types.NamespacedName{Namespace: "test", Name: "pol"}
+
+	hrKey := RouteKey{RouteType: RouteTypeHTTP, NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr"}}
+	grKey := RouteKey{RouteType: RouteTypeGRPC, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr"}}
+
+	getGraph := func() *Graph {
+		return &Graph{
+			Gateway: &Gateway{
+				Source: &gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw",
+						Namespace: "test",
+					},
+				},
+			},
+			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
+				{Namespace: "test", Name: "ignored"}: {},
+			},
+			Routes: map[RouteKey]*L7Route{
+				hrKey: {},
+				grKey: {},
+			},
+			NGFPolicies: map[PolicyKey]*Policy{
+				{GVK: policyGVK, NsName: existingPolicyNsName}: {
+					Source: &policiesfakes.FakePolicy{},
+				},
+			},
+		}
+	}
+
+	type modFunc func(g *Graph) *Graph
+
+	getModifiedGraph := func(mod modFunc) *Graph {
+		return mod(getGraph())
+	}
+
+	getPolicy := func(ref v1alpha2.LocalPolicyTargetReference) policies.Policy {
+		return &policiesfakes.FakePolicy{
+			GetNamespaceStub: func() string {
+				return testNs
+			},
+			GetTargetRefStub: func() v1alpha2.LocalPolicyTargetReference {
+				return ref
+			},
+		}
+	}
+
+	tests := []struct {
+		name        string
+		graph       *Graph
+		policy      policies.Policy
+		nsname      types.NamespacedName
+		expRelevant bool
+	}{
+		{
+			name:        "relevant; policy exists in graph",
+			graph:       getGraph(),
+			policy:      &policiesfakes.FakePolicy{},
+			nsname:      existingPolicyNsName,
+			expRelevant: true,
+		},
+		{
+			name:        "irrelevant; policy does not exist in graph and is empty (delete event)",
+			graph:       getGraph(),
+			policy:      &policiesfakes.FakePolicy{},
+			nsname:      types.NamespacedName{Namespace: "diff", Name: "diff"},
+			expRelevant: false,
+		},
+		{
+			name:        "relevant; policy references the winning gateway",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "gw")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-gw"},
+			expRelevant: true,
+		},
+		{
+			name:        "relevant; policy references an ignored gateway",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "ignored")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-ignored"},
+			expRelevant: true,
+		},
+		{
+			name:        "relevant; policy references an httproute in the graph",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-hr"},
+			expRelevant: true,
+		},
+		{
+			name:        "relevant; policy references a grpcroute in the graph",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.GRPCRoute, gatewayv1.GroupName, "gr")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-gr"},
+			expRelevant: true,
+		},
+		{
+			name:        "irrelevant; policy does not reference a relevant gw or route in the graph",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "not-relevant"},
+			expRelevant: false,
+		},
+		{
+			name:        "irrelevant; policy references an unsupported kind in the Gateway group",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef("GatewayClass", gatewayv1.GroupName, "diff")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "unsupported-kind"},
+			expRelevant: false,
+		},
+		{
+			name:        "irrelevant; policy references an unsupported group",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Gateway, "SomeGroup", "diff")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "unsupported-group"},
+			expRelevant: false,
+		},
+		{
+			name: "irrelevant; policy references a Gateway, but the graph's Gateway is nil",
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.Gateway = nil
+				return g
+			}),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw"},
+			expRelevant: false,
+		},
+		{
+			name: "irrelevant; policy references a Gateway, but the graph's Gateway.Source is nil",
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.Gateway.Source = nil
+				return g
+			}),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw-source"},
+			expRelevant: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
+			g.Expect(relevant).To(Equal(test.expRelevant))
+		})
+	}
+}
+
+func TestIsNGFPolicyRelevantPanics(t *testing.T) {
+	g := NewWithT(t)
+	graph := &Graph{}
+	nsname := types.NamespacedName{Namespace: "test", Name: "pol"}
+	gvk := schema.GroupVersionKind{Kind: "MyKind"}
+
+	isRelevant := func() {
+		_ = graph.IsNGFPolicyRelevant(nil, gvk, nsname)
+	}
+
+	g.Expect(isRelevant).To(Panic())
 }

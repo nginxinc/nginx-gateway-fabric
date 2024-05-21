@@ -36,7 +36,7 @@ To create a new release, follow these steps:
 6. If a compatibility issue is found, add a note to the release notes explaining that the previous version is not supported.
 7. Create a release branch following the `release-X.Y` naming convention.
 8. Run the [Release PR](./../../.github/workflows/release-pr.yml) workflow to update the repo files for the release. Then there are a few manual steps to complete:
-   1. Update the tag of NGF container images used in the [provisioner manifest](/conformance/provisioner/provisioner.yaml).
+   1. Update the tag of NGF container images used in the [provisioner manifest](/tests/conformance/provisioner/provisioner.yaml).
    2. Update any installation instructions to ensure that the supported Gateway API is correct.
       Specifically, helm README and `site/content/includes/installation/install-gateway-api-resources.md`.
    3. Update the [README](/README.md) to include information about the release.

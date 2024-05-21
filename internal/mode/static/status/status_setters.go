@@ -6,11 +6,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 )
 
 func newNginxGatewayStatusSetter(status ngfAPI.NginxGatewayStatus) frameworkStatus.Setter {
@@ -41,7 +43,7 @@ func newGatewayStatusSetter(status gatewayv1.GatewayStatus) frameworkStatus.Sett
 
 func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 	addressesEqual := slices.EqualFunc(prev.Addresses, cur.Addresses, func(a1, a2 gatewayv1.GatewayStatusAddress) bool {
-		if !equalPointers[gatewayv1.AddressType](a1.Type, a2.Type) {
+		if !helpers.EqualPointers[gatewayv1.AddressType](a1.Type, a2.Type) {
 			return false
 		}
 
@@ -74,7 +76,7 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 				return false
 			}
 
-			return equalPointers(k1.Group, k2.Group)
+			return helpers.EqualPointers(k1.Group, k2.Group)
 		})
 	})
 }
@@ -164,11 +166,11 @@ func routeParentStatusEqual(p1, p2 gatewayv1.RouteParentStatus) bool {
 		return false
 	}
 
-	if !equalPointers(p1.ParentRef.Namespace, p2.ParentRef.Namespace) {
+	if !helpers.EqualPointers(p1.ParentRef.Namespace, p2.ParentRef.Namespace) {
 		return false
 	}
 
-	if !equalPointers(p1.ParentRef.SectionName, p2.ParentRef.SectionName) {
+	if !helpers.EqualPointers(p1.ParentRef.SectionName, p2.ParentRef.SectionName) {
 		return false
 	}
 
@@ -212,7 +214,7 @@ func newBackendTLSPolicyStatusSetter(
 		ancestors = append(ancestors, status.Ancestors...)
 		status.Ancestors = ancestors
 
-		if btpStatusEqual(gatewayCtlrName, btp.Status, status) {
+		if policyStatusEqual(gatewayCtlrName, btp.Status, status) {
 			return false
 		}
 
@@ -221,8 +223,40 @@ func newBackendTLSPolicyStatusSetter(
 	}
 }
 
-func btpStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) bool {
-	// Since other controllers may update BackendTLSPolicy status we can't assume anything about the order of the
+func newNGFPolicyStatusSetter(
+	status gatewayv1alpha2.PolicyStatus,
+	gatewayCtlrName string,
+) frameworkStatus.Setter {
+	return func(object client.Object) (wasSet bool) {
+		policy := helpers.MustCastObject[policies.Policy](object)
+		prevStatus := policy.GetPolicyStatus()
+
+		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
+		// ancestor statuses.
+		maxAncestors := len(status.Ancestors) + len(prevStatus.Ancestors)
+		ancestors := make([]gatewayv1alpha2.PolicyAncestorStatus, 0, maxAncestors)
+
+		// keep all the ancestor statuses that belong to other controllers
+		for _, as := range prevStatus.Ancestors {
+			if string(as.ControllerName) != gatewayCtlrName {
+				ancestors = append(ancestors, as)
+			}
+		}
+
+		ancestors = append(ancestors, status.Ancestors...)
+		status.Ancestors = ancestors
+
+		if policyStatusEqual(gatewayCtlrName, prevStatus, status) {
+			return false
+		}
+
+		policy.SetPolicyStatus(status)
+		return true
+	}
+}
+
+func policyStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+	// Since other controllers may update Policy status we can't assume anything about the order of the
 	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
@@ -233,7 +267,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) boo
 		}
 
 		exists := slices.ContainsFunc(cur.Ancestors, func(curAncestor v1alpha2.PolicyAncestorStatus) bool {
-			return btpAncestorStatusEqual(prevAncestor, curAncestor)
+			return ancestorStatusEqual(prevAncestor, curAncestor)
 		})
 
 		if !exists {
@@ -244,7 +278,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) boo
 	// Then, we check if the cur status has any PolicyAncestorStatuses that are no longer present in the prev status.
 	for _, curParent := range cur.Ancestors {
 		exists := slices.ContainsFunc(prev.Ancestors, func(prevAncestor v1alpha2.PolicyAncestorStatus) bool {
-			return btpAncestorStatusEqual(curParent, prevAncestor)
+			return ancestorStatusEqual(curParent, prevAncestor)
 		})
 
 		if !exists {
@@ -255,7 +289,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) boo
 	return true
 }
 
-func btpAncestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
+func ancestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
 	if p1.ControllerName != p2.ControllerName {
 		return false
 	}
@@ -264,34 +298,18 @@ func btpAncestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
 		return false
 	}
 
-	if !equalPointers(p1.AncestorRef.Namespace, p2.AncestorRef.Namespace) {
+	if !helpers.EqualPointers(p1.AncestorRef.Namespace, p2.AncestorRef.Namespace) {
 		return false
 	}
 
+	if !helpers.EqualPointers(p1.AncestorRef.Group, p2.AncestorRef.Group) {
+		return false
+	}
+
+	if !helpers.EqualPointers(p1.AncestorRef.Kind, p2.AncestorRef.Kind) {
+		return false
+	}
 	// we ignore the rest of the AncestorRef fields because we do not set them
 
 	return frameworkStatus.ConditionsEqual(p1.Conditions, p2.Conditions)
-}
-
-// equalPointers returns whether two pointers are equal.
-// Pointers are considered equal if one of the following is true:
-// - They are both nil.
-// - One is nil and the other is empty (e.g. nil string and "").
-// - They are both non-nil, and their values are the same.
-func equalPointers[T comparable](p1, p2 *T) bool {
-	if p1 == nil && p2 == nil {
-		return true
-	}
-
-	var p1Val, p2Val T
-
-	if p1 != nil {
-		p1Val = *p1
-	}
-
-	if p2 != nil {
-		p2Val = *p2
-	}
-
-	return p1Val == p2Val
 }

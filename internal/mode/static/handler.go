@@ -25,6 +25,7 @@ import (
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -36,7 +37,8 @@ type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . secretStorer
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . secretStorer
 
 // secretStorer should store the usage Secret that contains the credentials for NGINX Plus usage reporting.
 type secretStorer interface {
@@ -48,14 +50,14 @@ type secretStorer interface {
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
-	// gatewayCtlrName is the name of the NGF controller.
-	gatewayCtlrName string
-	// k8sClient is a Kubernetes API client
-	k8sClient client.Client
-	// gatewayPodConfig contains information about this Pod.
-	gatewayPodConfig ngfConfig.GatewayPodConfig
-	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
-	usageReportConfig *config.UsageReportConfig
+	// nginxFileMgr is the file Manager for nginx.
+	nginxFileMgr file.Manager
+	// metricsCollector collects metrics for this controller.
+	metricsCollector handlerMetricsCollector
+	// nginxRuntimeMgr manages nginx runtime.
+	nginxRuntimeMgr runtime.Manager
+	// statusUpdater updates statuses on Kubernetes resources.
+	statusUpdater frameworkStatus.GroupUpdater
 	// usageSecret contains the Secret for the NGINX Plus reporting credentials.
 	usageSecret secretStorer
 	// processor is the state ChangeProcessor.
@@ -64,22 +66,24 @@ type eventHandlerConfig struct {
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
 	generator ngxConfig.Generator
-	// nginxFileMgr is the file Manager for nginx.
-	nginxFileMgr file.Manager
-	// nginxRuntimeMgr manages nginx runtime.
-	nginxRuntimeMgr runtime.Manager
-	// statusUpdater updates statuses on Kubernetes resources.
-	statusUpdater frameworkStatus.GroupUpdater
-	// eventRecorder records events for Kubernetes resources.
-	eventRecorder record.EventRecorder
+	// policyConfigGenerator is the config generator for NGF policies.
+	policyConfigGenerator policies.ConfigGenerator
+	// k8sClient is a Kubernetes API client
+	k8sClient client.Client
 	// logLevelSetter is used to update the logging level.
 	logLevelSetter logLevelSetter
-	// metricsCollector collects metrics for this controller.
-	metricsCollector handlerMetricsCollector
+	// eventRecorder records events for Kubernetes resources.
+	eventRecorder record.EventRecorder
+	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
+	usageReportConfig *config.UsageReportConfig
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
+	// gatewayPodConfig contains information about this Pod.
+	gatewayPodConfig ngfConfig.GatewayPodConfig
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
+	// gatewayCtlrName is the name of the NGF controller.
+	gatewayCtlrName string
 	// updateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	updateGatewayClassStatus bool
 }
@@ -193,7 +197,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		return
 	case state.EndpointsOnlyChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -204,7 +208,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		)
 	case state.ClusterStateChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -253,11 +257,13 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 	)
 
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
+	ngfPolReqs := status.PrepareNGFPolicyRequests(graph.NGFPolicies, transitionTime, h.cfg.gatewayCtlrName)
 
-	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs))
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs)+len(ngfPolReqs))
 	reqs = append(reqs, gcReqs...)
 	reqs = append(reqs, routeReqs...)
 	reqs = append(reqs, polReqs...)
+	reqs = append(reqs, ngfPolReqs...)
 
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupAllExceptGateways, reqs...)
 

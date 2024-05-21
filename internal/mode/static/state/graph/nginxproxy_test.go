@@ -11,6 +11,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
@@ -35,7 +36,7 @@ func TestGetNginxProxy(t *testing.T) {
 				Spec: v1.GatewayClassSpec{
 					ParametersRef: &v1.ParametersReference{
 						Group: ngfAPI.GroupName,
-						Kind:  v1.Kind("NginxProxy"),
+						Kind:  v1.Kind(kinds.NginxProxy),
 						Name:  "np1",
 					},
 				},
@@ -60,7 +61,7 @@ func TestGetNginxProxy(t *testing.T) {
 				Spec: v1.GatewayClassSpec{
 					ParametersRef: &v1.ParametersReference{
 						Group: ngfAPI.GroupName,
-						Kind:  v1.Kind("NginxProxy"),
+						Kind:  v1.Kind(kinds.NginxProxy),
 						Name:  "np2",
 					},
 				},
@@ -96,7 +97,7 @@ func TestIsNginxProxyReferenced(t *testing.T) {
 					Spec: v1.GatewayClassSpec{
 						ParametersRef: &v1.ParametersReference{
 							Group: ngfAPI.GroupName,
-							Kind:  v1.Kind("NginxProxy"),
+							Kind:  v1.Kind(kinds.NginxProxy),
 							Name:  "nginx-proxy",
 						},
 					},
@@ -126,7 +127,7 @@ func TestIsNginxProxyReferenced(t *testing.T) {
 					Spec: v1.GatewayClassSpec{
 						ParametersRef: &v1.ParametersReference{
 							Group: ngfAPI.GroupName,
-							Kind:  v1.Kind("NginxProxy"),
+							Kind:  v1.Kind(kinds.NginxProxy),
 							Name:  "nginx-proxy",
 						},
 					},
@@ -170,7 +171,7 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 				Spec: v1.GatewayClassSpec{
 					ParametersRef: &v1.ParametersReference{
 						Group: v1.Group("wrong-group"),
-						Kind:  v1.Kind("NginxProxy"),
+						Kind:  v1.Kind(kinds.NginxProxy),
 						Name:  "wrong-group",
 					},
 				},
@@ -196,7 +197,7 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 				Spec: v1.GatewayClassSpec{
 					ParametersRef: &v1.ParametersReference{
 						Group: ngfAPI.GroupName,
-						Kind:  v1.Kind("NginxProxy"),
+						Kind:  v1.Kind(kinds.NginxProxy),
 						Name:  "nginx-proxy",
 					},
 				},
@@ -297,7 +298,9 @@ func TestValidateNginxProxy(t *testing.T) {
 				Spec: ngfAPI.NginxProxySpec{
 					Telemetry: &ngfAPI.Telemetry{
 						Exporter: &ngfAPI.TelemetryExporter{
-							Interval: helpers.GetPointer[ngfAPI.Duration]("my-interval"), // any value is invalid by the validator
+							Interval: helpers.GetPointer[ngfAPI.Duration](
+								"my-interval",
+							), // any value is invalid by the validator
 						},
 					},
 				},

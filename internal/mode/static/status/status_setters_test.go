@@ -11,6 +11,8 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
 )
 
 func TestNewNginxGatewayStatusSetter(t *testing.T) {
@@ -665,6 +667,153 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 	}
 }
 
+func TestNewNGFPolicyStatusSetter(t *testing.T) {
+	const (
+		controllerName      = "controller"
+		otherControllerName = "other-controller"
+	)
+
+	tests := []struct {
+		name                         string
+		status, newStatus, expStatus v1alpha2.PolicyStatus
+		expStatusSet                 bool
+	}{
+		{
+			name: "Policy has no status",
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "Policy has old status",
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+					},
+				},
+			},
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "Policy has old status and other controller status",
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+					},
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+				},
+			},
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "Policy has same status",
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			expStatusSet: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newNGFPolicyStatusSetter(test.newStatus, controllerName)
+			obj := &policiesfakes.FakePolicy{
+				GetPolicyStatusStub: func() v1alpha2.PolicyStatus {
+					return test.status
+				},
+			}
+
+			statusSet := setter(obj)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+
+			if statusSet {
+				g.Expect(obj.SetPolicyStatusArgsForCall(0)).To(Equal(test.expStatus))
+			}
+		})
+	}
+}
+
 func TestGWStatusEqual(t *testing.T) {
 	getDefaultStatus := func() gatewayv1.GatewayStatus {
 		return gatewayv1.GatewayStatus{
@@ -689,7 +838,7 @@ func TestGWStatusEqual(t *testing.T) {
 					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
 							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-							Kind:  "HTTPRoute",
+							Kind:  kinds.HTTPRoute,
 						},
 						{
 							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
@@ -708,7 +857,7 @@ func TestGWStatusEqual(t *testing.T) {
 					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
 							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-							Kind:  "HTTPRoute",
+							Kind:  kinds.HTTPRoute,
 						},
 					},
 					AttachedRoutes: 1,
@@ -723,7 +872,7 @@ func TestGWStatusEqual(t *testing.T) {
 					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
 							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-							Kind:  "HTTPRoute",
+							Kind:  kinds.HTTPRoute,
 						},
 					},
 					AttachedRoutes: 1,
@@ -1091,87 +1240,51 @@ func TestRouteParentStatusEqual(t *testing.T) {
 	}
 }
 
-func TestEqualPointers(t *testing.T) {
-	tests := []struct {
-		p1       *string
-		p2       *string
-		name     string
-		expEqual bool
-	}{
-		{
-			name:     "first pointer nil; second has non-empty value",
-			p1:       nil,
-			p2:       helpers.GetPointer("test"),
-			expEqual: false,
-		},
-		{
-			name:     "second pointer nil; first has non-empty value",
-			p1:       helpers.GetPointer("test"),
-			p2:       nil,
-			expEqual: false,
-		},
-		{
-			name:     "different values",
-			p1:       helpers.GetPointer("test"),
-			p2:       helpers.GetPointer("different"),
-			expEqual: false,
-		},
-		{
-			name:     "both pointers nil",
-			p1:       nil,
-			p2:       nil,
-			expEqual: true,
-		},
-		{
-			name:     "first pointer nil; second empty",
-			p1:       nil,
-			p2:       helpers.GetPointer(""),
-			expEqual: true,
-		},
-		{
-			name:     "second pointer nil; first empty",
-			p1:       helpers.GetPointer(""),
-			p2:       nil,
-			expEqual: true,
-		},
-		{
-			name:     "same value",
-			p1:       helpers.GetPointer("test"),
-			p2:       helpers.GetPointer("test"),
-			expEqual: true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			val := equalPointers(test.p1, test.p2)
-			g.Expect(val).To(Equal(test.expEqual))
-		})
-	}
-}
-
-func TestBtpStatusEqual(t *testing.T) {
-	getPolicyStatus := func(ancestorName, ancestorNs, ctlrName string) v1alpha2.PolicyStatus {
+func TestPolicyStatusEqual(t *testing.T) {
+	getPolicyStatus := func() v1alpha2.PolicyStatus {
 		return v1alpha2.PolicyStatus{
 			Ancestors: []v1alpha2.PolicyAncestorStatus{
 				{
 					AncestorRef: gatewayv1.ParentReference{
-						Namespace: helpers.GetPointer[gatewayv1.Namespace]((gatewayv1.Namespace)(ancestorNs)),
-						Name:      v1alpha2.ObjectName(ancestorName),
+						Namespace: helpers.GetPointer[gatewayv1.Namespace]("ns1"),
+						Name:      "ancestor1",
+						Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+						Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
 					},
-					ControllerName: v1alpha2.GatewayController(ctlrName),
+					ControllerName: "ctlr1",
 					Conditions:     []metav1.Condition{{Type: "otherType", Status: "otherStatus"}},
 				},
 			},
 		}
 	}
-	prevMultiple := getPolicyStatus("ancestor1", "ns1", "ctlr1")
-	prevMultiple.Ancestors = append(prevMultiple.Ancestors, getPolicyStatus("ancestor2", "ns2", "ctlr2").Ancestors...)
 
-	currMultiple := getPolicyStatus("ancestor1", "ns1", "ctlr1")
-	currMultiple.Ancestors = append(currMultiple.Ancestors, getPolicyStatus("ancestor3", "ns3", "ctlr2").Ancestors...)
+	type modFunc func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus
+
+	getModifiedPolicyStatus := func(mod modFunc) v1alpha2.PolicyStatus {
+		return mod(getPolicyStatus())
+	}
+
+	prevMultiple := getPolicyStatus()
+	prevMultiple.Ancestors = append(
+		prevMultiple.Ancestors,
+		getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+			ns := "ns2"
+			s.Ancestors[0].AncestorRef.Name = "ancestor2"
+			s.Ancestors[0].AncestorRef.Namespace = (*gatewayv1.Namespace)(&ns)
+			s.Ancestors[0].ControllerName = "ctlr2"
+			return s
+		}).Ancestors...)
+
+	currMultiple := getPolicyStatus()
+	currMultiple.Ancestors = append(
+		currMultiple.Ancestors,
+		getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+			ns := "ns3"
+			s.Ancestors[0].AncestorRef.Name = "ancestor3"
+			s.Ancestors[0].AncestorRef.Namespace = (*gatewayv1.Namespace)(&ns)
+			s.Ancestors[0].ControllerName = "ctlr3"
+			return s
+		}).Ancestors...)
 
 	tests := []struct {
 		name           string
@@ -1182,36 +1295,79 @@ func TestBtpStatusEqual(t *testing.T) {
 	}{
 		{
 			name:           "status equal",
-			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr1"),
-			current:        getPolicyStatus("ancestor1", "ns1", "ctlr1"),
+			previous:       getPolicyStatus(),
+			current:        getPolicyStatus(),
 			controllerName: "ctlr1",
 			expEqual:       true,
 		},
 		{
-			name:           "status not equal, different ancestor name",
-			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr1"),
-			current:        getPolicyStatus("ancestor2", "ns1", "ctlr1"),
+			name:     "status not equal, different ancestor name",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].AncestorRef.Name = "diff"
+				return s
+			}),
 			controllerName: "ctlr1",
 			expEqual:       false,
 		},
 		{
-			name:           "status not equal, different ancestor namespace",
-			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr1"),
-			current:        getPolicyStatus("ancestor1", "ns2", "ctlr1"),
+			name:     "status not equal, different ancestor namespace",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				ns := "diff"
+				s.Ancestors[0].AncestorRef.Namespace = (*gatewayv1.Namespace)(&ns)
+				return s
+			}),
 			controllerName: "ctlr1",
 			expEqual:       false,
 		},
 		{
-			name:           "status not equal, different controller name on current",
-			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr1"),
-			current:        getPolicyStatus("ancestor1", "ns1", "ctlr2"),
+			name:     "status not equal, different ancestor kind",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].AncestorRef.Kind = helpers.GetPointer[gatewayv1.Kind]("diff")
+				return s
+			}),
 			controllerName: "ctlr1",
 			expEqual:       false,
 		},
 		{
-			name:           "status not equal, different controller name on previous",
-			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr2"),
-			current:        getPolicyStatus("ancestor1", "ns1", "ctlr1"),
+			name:     "status not equal, different ancestor group",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].AncestorRef.Group = helpers.GetPointer[gatewayv1.Group]("diff")
+				return s
+			}),
+			controllerName: "ctlr1",
+			expEqual:       false,
+		},
+		{
+			name:     "status not equal, different controller name on current",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].ControllerName = "diff"
+				return s
+			}),
+			controllerName: "ctlr1",
+			expEqual:       false,
+		},
+		{
+			name:     "status not equal, different conds",
+			previous: getPolicyStatus(),
+			current: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].Conditions = nil
+				return s
+			}),
+			controllerName: "ctlr1",
+			expEqual:       false,
+		},
+		{
+			name: "status not equal, different controller name on previous",
+			previous: getModifiedPolicyStatus(func(s v1alpha2.PolicyStatus) v1alpha2.PolicyStatus {
+				s.Ancestors[0].ControllerName = "diff"
+				return s
+			}),
+			current:        getPolicyStatus(),
 			controllerName: "ctlr1",
 			expEqual:       false,
 		},
@@ -1227,7 +1383,7 @@ func TestBtpStatusEqual(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			equal := btpStatusEqual(test.controllerName, test.previous, test.current)
+			equal := policyStatusEqual(test.controllerName, test.previous, test.current)
 			g.Expect(equal).To(Equal(test.expEqual))
 		})
 	}
