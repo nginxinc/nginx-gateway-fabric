@@ -124,6 +124,8 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
         {{- with .Values.nginxGateway.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
@@ -161,6 +163,8 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
         {{- with .Values.nginx.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
@@ -194,6 +198,8 @@ spec:
       - name: nginx-cache
         emptyDir: {}
       - name: nginx-lib
+        emptyDir: {}
+      - name: nginx-includes
         emptyDir: {}
       {{- with .Values.extraVolumes -}}
       {{ toYaml . | nindent 6 }}

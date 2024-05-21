@@ -1,16 +1,13 @@
 package graph
 
 import (
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -44,12 +41,8 @@ func processBackendTLSPolicies(
 	processedBackendTLSPolicies := make(map[types.NamespacedName]*BackendTLSPolicy, len(backendTLSPolicies))
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
 		var caCertRef types.NamespacedName
-		valid, ignored, conds := validateBackendTLSPolicy(
-			backendTLSPolicy,
-			configMapResolver,
-			ctlrName,
-			gateway,
-		)
+
+		valid, ignored, conds := validateBackendTLSPolicy(backendTLSPolicy, configMapResolver, ctlrName)
 
 		if valid && !ignored && backendTLSPolicy.Spec.Validation.CACertificateRefs != nil {
 			caCertRef = types.NamespacedName{
@@ -76,17 +69,19 @@ func validateBackendTLSPolicy(
 	backendTLSPolicy *v1alpha3.BackendTLSPolicy,
 	configMapResolver *configMapResolver,
 	ctlrName string,
-	gateway *Gateway,
 ) (valid, ignored bool, conds []conditions.Condition) {
 	valid = true
 	ignored = false
-	if err := validateAncestorMaxCount(backendTLSPolicy, ctlrName, gateway); err != nil {
+
+	// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
+	if ancestorsFull(backendTLSPolicy.Status.Ancestors, ctlrName) {
 		valid = false
 		ignored = true
 	}
+
 	if err := validateBackendTLSHostname(backendTLSPolicy); err != nil {
 		valid = false
-		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(fmt.Sprintf("invalid hostname: %s", err.Error())))
+		conds = append(conds, staticConds.NewPolicyInvalid(fmt.Sprintf("invalid hostname: %s", err.Error())))
 	}
 
 	caCertRefs := backendTLSPolicy.Spec.Validation.CACertificateRefs
@@ -94,47 +89,24 @@ func validateBackendTLSPolicy(
 	if len(caCertRefs) > 0 && wellKnownCerts != nil {
 		valid = false
 		msg := "CACertificateRefs and WellKnownCACertificates are mutually exclusive"
-		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(msg))
+		conds = append(conds, staticConds.NewPolicyInvalid(msg))
 	} else if len(caCertRefs) > 0 {
 		if err := validateBackendTLSCACertRef(backendTLSPolicy, configMapResolver); err != nil {
 			valid = false
-			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
+			conds = append(conds, staticConds.NewPolicyInvalid(
 				fmt.Sprintf("invalid CACertificateRef: %s", err.Error())))
 		}
 	} else if wellKnownCerts != nil {
 		if err := validateBackendTLSWellKnownCACerts(backendTLSPolicy); err != nil {
 			valid = false
-			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
+			conds = append(conds, staticConds.NewPolicyInvalid(
 				fmt.Sprintf("invalid WellKnownCACertificates: %s", err.Error())))
 		}
 	} else {
 		valid = false
-		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
+		conds = append(conds, staticConds.NewPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
 	}
 	return valid, ignored, conds
-}
-
-func validateAncestorMaxCount(backendTLSPolicy *v1alpha3.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {
-	var err error
-	if len(backendTLSPolicy.Status.Ancestors) >= 16 {
-		// check if we already are an ancestor on this policy. If we are, we are safe to continue.
-		ancestorRef := v1.ParentReference{
-			Namespace: helpers.GetPointer((v1.Namespace)(gateway.Source.Namespace)),
-			Name:      v1.ObjectName(gateway.Source.Name),
-		}
-		var alreadyAncestor bool
-		for _, ancestor := range backendTLSPolicy.Status.Ancestors {
-			if string(ancestor.ControllerName) == ctlrName && ancestor.AncestorRef.Name == ancestorRef.Name &&
-				ancestor.AncestorRef.Namespace != nil && *ancestor.AncestorRef.Namespace == *ancestorRef.Namespace {
-				alreadyAncestor = true
-				break
-			}
-		}
-		if !alreadyAncestor {
-			err = errors.New("too many ancestors, cannot attach a new Gateway")
-		}
-	}
-	return err
 }
 
 func validateBackendTLSHostname(btp *v1alpha3.BackendTLSPolicy) error {
@@ -159,12 +131,16 @@ func validateBackendTLSCACertRef(btp *v1alpha3.BackendTLSPolicy, configMapResolv
 		valErr := field.NotSupported(path, btp.Spec.Validation.CACertificateRefs[0].Kind, []string{"ConfigMap"})
 		return valErr
 	}
-	if btp.Spec.Validation.CACertificateRefs[0].Group != "" && btp.Spec.Validation.CACertificateRefs[0].Group != "core" {
+	if btp.Spec.Validation.CACertificateRefs[0].Group != "" &&
+		btp.Spec.Validation.CACertificateRefs[0].Group != "core" {
 		path := field.NewPath("tls.cacertrefs[0].group")
 		valErr := field.NotSupported(path, btp.Spec.Validation.CACertificateRefs[0].Group, []string{"", "core"})
 		return valErr
 	}
-	nsName := types.NamespacedName{Namespace: btp.Namespace, Name: string(btp.Spec.Validation.CACertificateRefs[0].Name)}
+	nsName := types.NamespacedName{
+		Namespace: btp.Namespace,
+		Name:      string(btp.Spec.Validation.CACertificateRefs[0].Name),
+	}
 	if err := configMapResolver.resolve(nsName); err != nil {
 		path := field.NewPath("tls.cacertrefs[0]")
 		return field.Invalid(path, btp.Spec.Validation.CACertificateRefs[0], err.Error())

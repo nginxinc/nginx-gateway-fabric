@@ -247,7 +247,7 @@ func findBackendTLSPolicyForService(
 		for _, targetRef := range btp.Source.Spec.TargetRefs {
 			if string(targetRef.Name) == refName && btpNs == refNs {
 				if beTLSPolicy != nil {
-					if sort.LessObjectMeta(&btp.Source.ObjectMeta, &beTLSPolicy.Source.ObjectMeta) {
+					if sort.LessClientObject(btp.Source, beTLSPolicy.Source) {
 						beTLSPolicy = btp
 					}
 				} else {
@@ -263,7 +263,7 @@ func findBackendTLSPolicyForService(
 		if !beTLSPolicy.Valid {
 			err = fmt.Errorf("the backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
 		} else {
-			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAccepted())
+			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewPolicyAccepted())
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -57,8 +58,10 @@ const (
 
 // RouteKey is the unique identifier for a L7Route
 type RouteKey struct {
+	// NamespacedName is the NamespacedName of the Route.
 	NamespacedName types.NamespacedName
-	RouteType      RouteType
+	// RouteType is the type of the Route.
+	RouteType RouteType
 }
 
 // L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute
@@ -73,6 +76,8 @@ type L7Route struct {
 	ParentRefs []ParentRef
 	// Conditions define the conditions to be reported in the status of the Route.
 	Conditions []conditions.Condition
+	// Policies holds the policies that are attached to the Route.
+	Policies []*Policy
 	// Valid indicates if the Route is valid.
 	Valid bool
 	// Attachable indicates if the Route is attachable to any Listener.
@@ -218,7 +223,7 @@ func findGatewayForParentRef(
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
 ) (gwNsName types.NamespacedName, found bool) {
-	if ref.Kind != nil && *ref.Kind != "Gateway" {
+	if ref.Kind != nil && *ref.Kind != kinds.Gateway {
 		return types.NamespacedName{}, false
 	}
 	if ref.Group != nil && *ref.Group != v1.GroupName {
@@ -698,7 +703,8 @@ func validateResponseHeaders(
 	for _, h := range headers {
 		valErr := field.Invalid(path, h, "header name is not allowed")
 		name := strings.ToLower(string(h.Name))
-		if _, exists := disallowedResponseHeaderSet[name]; exists || strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+		if _, exists := disallowedResponseHeaderSet[name]; exists ||
+			strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
 			allErrs = append(allErrs, valErr)
 		}
 	}
@@ -741,4 +747,18 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	}
 
 	return allErrs
+}
+
+func routeKeyForKind(kind v1.Kind, nsname types.NamespacedName) RouteKey {
+	key := RouteKey{NamespacedName: nsname}
+	switch kind {
+	case kinds.HTTPRoute:
+		key.RouteType = RouteTypeHTTP
+	case kinds.GRPCRoute:
+		key.RouteType = RouteTypeGRPC
+	default:
+		panic(fmt.Sprintf("unsupported route kind: %s", kind))
+	}
+
+	return key
 }

@@ -9,7 +9,8 @@ import (
 
 // Exporter exports telemetry data to some destination.
 //
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Exporter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Exporter
 type Exporter interface {
 	Export(ctx context.Context, data tel.Exportable) error
 }

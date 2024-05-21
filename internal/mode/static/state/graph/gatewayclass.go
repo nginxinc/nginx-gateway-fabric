@@ -12,6 +12,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -93,7 +94,7 @@ func validateGatewayClass(
 		var err error
 		path := field.NewPath("spec").Child("parametersRef")
 		if _, ok := supportedParamKinds[string(gc.Spec.ParametersRef.Kind)]; !ok {
-			err = field.NotSupported(path.Child("kind"), string(gc.Spec.ParametersRef.Kind), []string{"NginxProxy"})
+			err = field.NotSupported(path.Child("kind"), string(gc.Spec.ParametersRef.Kind), []string{kinds.NginxProxy})
 		} else if npCfg == nil {
 			err = field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
 			conds = append(conds, staticConds.NewGatewayClassRefNotFound())
@@ -117,5 +118,5 @@ func validateGatewayClass(
 }
 
 var supportedParamKinds = map[string]struct{}{
-	"NginxProxy": {},
+	kinds.NginxProxy: {},
 }

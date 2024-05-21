@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -290,7 +291,7 @@ func TestValidateListenerHostname(t *testing.T) {
 func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 	HTTPRouteGroupKind := []v1.RouteGroupKind{
 		{
-			Kind:  "HTTPRoute",
+			Kind:  kinds.HTTPRoute,
 			Group: helpers.GetPointer[v1.Group](v1.GroupName),
 		},
 	}
@@ -318,7 +319,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			protocol: v1.HTTPProtocolType,
 			kind: []v1.RouteGroupKind{
 				{
-					Kind:  "HTTPRoute",
+					Kind:  kinds.HTTPRoute,
 					Group: helpers.GetPointer[v1.Group]("bad-group"),
 				},
 			},
@@ -353,7 +354,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			name:      "valid HTTPS no kind specified",
 			expected: []v1.RouteGroupKind{
 				{
-					Kind: "HTTPRoute",
+					Kind: kinds.HTTPRoute,
 				},
 			},
 		},
@@ -361,7 +362,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			protocol: v1.HTTPProtocolType,
 			kind: []v1.RouteGroupKind{
 				{
-					Kind:  "HTTPRoute",
+					Kind:  kinds.HTTPRoute,
 					Group: helpers.GetPointer[v1.Group](v1.GroupName),
 				},
 				{

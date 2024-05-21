@@ -2,7 +2,9 @@
 package helpers
 
 import (
+	"bytes"
 	"fmt"
+	"text/template"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,4 +52,38 @@ func MustCastObject[T client.Object](object client.Object) T {
 	}
 
 	panic(fmt.Errorf("unexpected object type %T", object))
+}
+
+// EqualPointers returns whether two pointers are equal.
+// Pointers are considered equal if one of the following is true:
+// - They are both nil.
+// - One is nil and the other is empty (e.g. nil string and "").
+// - They are both non-nil, and their values are the same.
+func EqualPointers[T comparable](p1, p2 *T) bool {
+	if p1 == nil && p2 == nil {
+		return true
+	}
+
+	var p1Val, p2Val T
+
+	if p1 != nil {
+		p1Val = *p1
+	}
+
+	if p2 != nil {
+		p2Val = *p2
+	}
+
+	return p1Val == p2Val
+}
+
+// MustExecuteTemplate executes the template with the given data.
+func MustExecuteTemplate(template *template.Template, data interface{}) []byte {
+	var buf bytes.Buffer
+
+	if err := template.Execute(&buf, data); err != nil {
+		panic(err)
+	}
+
+	return buf.Bytes()
 }

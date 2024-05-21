@@ -4,6 +4,7 @@ import (
 	"strings"
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -14,8 +15,9 @@ func executeMaps(conf dataplane.Configuration) []executeResult {
 	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
 	result := executeResult{
 		dest: httpConfigFile,
-		data: execute(mapsTemplate, maps),
+		data: helpers.MustExecuteTemplate(mapsTemplate, maps),
 	}
+
 	return []executeResult{result}
 }
 

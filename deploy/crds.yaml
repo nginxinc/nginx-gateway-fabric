@@ -107,14 +107,15 @@ spec:
                         pattern: ^\d{1,4}(ms|s)?$
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: header can only be specified if server is specified
+                      rule: '!(has(self.header) && !has(self.server))'
                 type: object
               targetRef:
                 description: |-
                   TargetRef identifies an API object to apply the policy to.
                   Object must be in the same namespace as the policy.
-
-
-                  Support: Gateway, HTTPRoute
+                  Support: Gateway, HTTPRoute, GRPCRoute.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -137,6 +138,12 @@ spec:
                 - kind
                 - name
                 type: object
+                x-kubernetes-validations:
+                - message: 'TargetRef Kind must be one of: Gateway, HTTPRoute, or
+                    GRPCRoute'
+                  rule: (self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')
+                - message: TargetRef Group must be gateway.networking.k8s.io.
+                  rule: (self.group=='gateway.networking.k8s.io')
             required:
             - targetRef
             type: object

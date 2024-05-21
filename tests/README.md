@@ -1,31 +1,46 @@
-# System Testing
+# NGINX Gateway Fabric Testing
 
-The tests in this directory are meant to be run on a live Kubernetes environment to verify a real system. These
-are similar to the existing [conformance tests](../conformance/README.md), but will verify things such as:
+## Overview
 
-- NGF-specific functionality
-- Non-Functional requirements (NFR) testing (such as performance, scale, etc.)
+This directory contains the tests for NGINX Gateway Fabric. The tests are divided into two categories:
 
-When running locally, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
-test framework. Traffic is sent over this port. If running on a GCP VM targeting a GKE cluster, the tests will create an
-internal LoadBalancer service which will receive the test traffic.
+1. Conformance Testing. This is to ensure that the NGINX Gateway Fabric conforms to the Gateway API specification.
+2. System Testing. This is to ensure that the NGINX Gateway Fabric works as expected in a real system.
 
-**Important**: NFR tests can only be run on a GKE cluster.
+## Table of Contents
 
-Directory structure is as follows:
-
-- `framework`: contains utility functions for running the tests
-- `results`: contains the results files for the NFR tests
-- `scripts`: contain scripts used to set up the environment and run the tests
-- `suite`: contains the test files
-
-> Note: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
+- [Prerequisites](#prerequisites)
+- [Common steps for all tests](#common-steps-for-all-tests)
+  - [Step 1 - Create a Kubernetes cluster](#step-1---create-a-kubernetes-cluster)
+  - [Step 2 - Build and Load Images](#step-2---build-and-load-images)
+- [Conformance Testing](#conformance-testing)
+  - [Step 1 - Install NGINX Gateway Fabric to configured kind cluster](#step-1---install-nginx-gateway-fabric-to-configured-kind-cluster)
+    - [_Option 1_ Build and install NGINX Gateway Fabric from local to configured kind cluster](#option-1-build-and-install-nginx-gateway-fabric-from-local-to-configured-kind-cluster)
+    - [_Option 2_ Install NGINX Gateway Fabric from local already built image to configured kind cluster](#option-2-install-nginx-gateway-fabric-from-local-already-built-image-to-configured-kind-cluster)
+    - [_Option 3_ Install NGINX Gateway Fabric from edge to configured kind cluster](#option-3-install-nginx-gateway-fabric-from-edge-to-configured-kind-cluster)
+  - [Step 2 - Build conformance test runner image](#step-2---build-conformance-test-runner-image)
+  - [Step 3 - Run Gateway conformance tests](#step-3---run-gateway-conformance-tests)
+  - [Step 4 - Cleanup the conformance test fixtures and uninstall NGINX Gateway Fabric](#step-4---cleanup-the-conformance-test-fixtures-and-uninstall-nginx-gateway-fabric)
+  - [Step 5 - Revert changes to Go modules](#step-5---revert-changes-to-go-modules)
+  - [Step 6 - Delete kind cluster](#step-6---delete-kind-cluster)
+- [System Testing](#system-testing)
+  - [Step 1 - Run the tests](#step-1---run-the-tests)
+    - [1a - Run the functional tests locally](#1a---run-the-functional-tests-locally)
+    - [1b - Run the tests on a GKE cluster from a GCP VM](#1b---run-the-tests-on-a-gke-cluster-from-a-gcp-vm)
+      - [Functional Tests](#functional-tests)
+      - [NFR tests](#nfr-tests)
+        - [Longevity testing](#longevity-testing)
+  - [Common test amendments](#common-test-amendments)
+  - [Step 2 - Cleanup](#step-2---cleanup)
 
 ## Prerequisites
 
 - Kubernetes cluster.
+- [kind](https://kind.sigs.k8s.io/).
 - Docker.
 - Golang.
+- [yq](https://github.com/mikefarah/yq/#install)
+- Make.
 
 If running NFR tests, or running functional tests in GKE:
 
@@ -33,60 +48,11 @@ If running NFR tests, or running functional tests in GKE:
 - A GKE cluster (if `master-authorized-networks` is enabled, please set `ADD_VM_IP_AUTH_NETWORKS=true` in your vars.env file)
 - Access to GCP Service Account with Kubernetes admin permissions
 
-> Note: all commands in steps below are executed from the `tests` directory
+All the commands below are executed from the `tests` directory. You can see all the available commands by running `make help`.
 
-```shell
-make
-```
+## Common steps for all tests
 
-```text
-add-local-ip-to-cluster        Add local IP to the GKE cluster master-authorized-networks
-build-images-with-plus         Build NGF and NGINX Plus images
-build-images                   Build NGF and NGINX images
-cleanup-gcp                    Cleanup all GCP resources
-cleanup-router                 Delete the GKE router
-cleanup-vm                     Delete the test GCP VM and delete the firewall rule
-create-and-setup-vm            Create and setup a GCP VM for tests
-create-gke-cluster             Create a GKE cluster
-create-gke-router              Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
-create-kind-cluster            Create a kind cluster
-delete-gke-cluster             Delete the GKE cluster
-delete-kind-cluster            Delete kind cluster
-help                           Display this help
-load-images-with-plus          Load NGF and NGINX Plus images on configured kind cluster
-load-images                    Load NGF and NGINX images on configured kind cluster
-nfr-test                       Run the NFR tests on a GCP VM
-run-tests-on-vm                Run the functional tests on a GCP VM
-setup-gcp-and-run-nfr-tests    Create and setup a GKE router and GCP VM for tests and run the NFR tests
-setup-gcp-and-run-tests        Create and setup a GKE router and GCP VM for tests and run the functional tests
-start-longevity-test           Start the longevity test to run for 4 days in GKE
-stop-longevity-test            Stops the longevity test and collects results
-sync-files-to-vm               Syncs your local NGF files with the NGF repo on the VM
-test                           Runs the functional tests on your default k8s cluster
-test-with-plus                 Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
-```
-
-**Note:** The following variables are configurable when running the below `make` commands:
-
-| Variable                     | Default                         | Description                                                         |
-|------------------------------|---------------------------------|---------------------------------------------------------------------|
-| TAG                          | edge                            | tag for the locally built NGF images                                |
-| PREFIX                       | nginx-gateway-fabric            | prefix for the locally built NGF image                              |
-| NGINX_PREFIX                 | nginx-gateway-fabric/nginx      | prefix for the locally built NGINX image                            |
-| NGINX_PLUS_PREFIX            | nginx-gateway-fabric/nginx-plus | prefix for the locally built NGINX Plus image                       |
-| PLUS_ENABLED                 | false                           | Flag to indicate if NGINX Plus should be enabled                    |
-| PULL_POLICY                  | Never                           | NGF image pull policy                                               |
-| GW_API_VERSION               | 1.1.0                           | version of Gateway API resources to install                         |
-| K8S_VERSION                  | latest                          | version of k8s that the tests are run on                            |
-| GW_SERVICE_TYPE              | NodePort                        | type of Service that should be created                              |
-| GW_SVC_GKE_INTERNAL          | false                           | specifies if the LoadBalancer should be a GKE internal service      |
-| GINKGO_LABEL                 | ""                              | name of the ginkgo label that will filter the tests to run          |
-| GINKGO_FLAGS                 | ""                              | other ginkgo flags to pass to the go test command                   |
-| TELEMETRY_ENDPOINT           | Set in the main Makefile        | The endpoint to which telemetry reports are sent                    |
-| TELEMETRY_ENDPOINT_INSECURE= | Set in the main Makefile        | Controls whether TLS should be used when sending telemetry reports. |
-
-
-## Step 1 - Create a Kubernetes cluster
+### Step 1 - Create a Kubernetes cluster
 
 This can be done in a cloud provider of choice, or locally using `kind`.
 
@@ -125,7 +91,7 @@ make create-gke-cluster
 make add-local-ip-to-cluster
 ```
 
-## Step 2 - Build and Load Images
+### Step 2 - Build and Load Images
 
 Loading the images only applies to a `kind` cluster. If using a cloud provider, you will need to tag and push
 your images to a registry that is accessible from that cloud provider.
@@ -146,9 +112,152 @@ For the telemetry test, which requires a OTel collector, build an image with the
 TELEMETRY_ENDPOINT=otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317 TELEMETRY_ENDPOINT_INSECURE=true
 ```
 
-## Step 3 - Run the tests
+## Conformance Testing
 
-### 3a - Run the functional tests locally
+### Step 1 - Install NGINX Gateway Fabric to configured kind cluster
+
+> Note: If you want to run the latest conformance tests from the Gateway API `main` branch, set the following
+> environment variable before deploying NGF:
+
+```bash
+ export GW_API_VERSION=main
+```
+
+> Otherwise, the latest stable version will be used by default.
+> Additionally, if you want to run conformance tests with experimental features enabled, set the following
+> environment variable before deploying NGF:
+
+```bash
+ export ENABLE_EXPERIMENTAL=true
+```
+
+#### _Option 1_ Build and install NGINX Gateway Fabric from local to configured kind cluster
+
+```makefile
+make install-ngf-local-build
+```
+
+Or, to install NGF with NGINX Plus enabled (NGINX Plus cert and key must exist in the root of the repo):
+
+```makefile
+make install-ngf-local-build-with-plus
+```
+
+#### _Option 2_ Install NGINX Gateway Fabric from local already built image to configured kind cluster
+
+You can optionally skip the actual _build_ step.
+
+```makefile
+make install-ngf-local-no-build
+```
+
+Or, to install NGF with NGINX Plus enabled:
+
+```makefile
+make install-ngf-no-build-with-plus
+```
+
+> Note: If choosing this option, the following step _must_ be completed manually _before_ you build the image:
+
+```makefile
+make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
+```
+
+Or, if you are building the NGINX Plus image:
+
+```makefile
+make update-ngf-manifest-with-plus PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
+```
+
+#### _Option 3_ Install NGINX Gateway Fabric from edge to configured kind cluster
+
+You can also skip the build NGF image step and prepare the environment to instead use the `edge` image. Note that this
+option does not currently support installing with NGINX Plus enabled.
+
+```makefile
+make install-ngf-edge
+```
+
+### Step 2 - Build conformance test runner image
+
+> Note: If you want to run the latest conformance tests from the Gateway API `main` branch, run the following
+> make command to update the Go modules to `main`:
+
+```makefile
+make update-go-modules
+```
+
+> You can also point to a specific fork/branch by running:
+
+```bash
+go mod edit -replace=sigs.k8s.io/gateway-api=<your-fork>@<your-branch>
+go mod download
+go mod verify
+go mod tidy
+```
+
+> Otherwise, the latest stable version will be used by default.
+
+```makefile
+make build-test-runner-image
+```
+
+### Step 3 - Run Gateway conformance tests
+
+```makefile
+make run-conformance-tests
+```
+
+### Step 4 - Cleanup the conformance test fixtures and uninstall NGINX Gateway Fabric
+
+```makefile
+make cleanup-conformance-tests
+```
+
+```makefile
+make uninstall-ngf
+```
+
+### Step 5 - Revert changes to Go modules
+
+**Optional** Not required if you aren't running the `main` Gateway API tests.
+
+```makefile
+make reset-go-modules
+```
+
+### Step 6 - Delete kind cluster
+
+```makefile
+make delete-kind-cluster
+```
+
+## System Testing
+
+The system tests are meant to be run on a live Kubernetes environment to verify a real system. These
+are similar to the existing conformance tests, but will verify things such as:
+
+- NGF-specific functionality
+- Non-Functional requirements (NFR) testing (such as performance, scale, etc.)
+
+When running locally, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
+test framework. Traffic is sent over this port. If running on a GCP VM targeting a GKE cluster, the tests will create an
+internal LoadBalancer service which will receive the test traffic.
+
+**Important**: NFR tests can only be run on a GKE cluster.
+
+Directory structure is as follows:
+
+- `framework`: contains utility functions for running the tests
+- `results`: contains the results files for the NFR tests
+- `scripts`: contain scripts used to set up the environment and run the tests
+- `suite`: contains the test files
+
+> Note: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
+
+### Step 1 - Run the tests
+
+#### 1a - Run the functional tests locally
 
 ```makefile
 make test TAG=$(whoami)
@@ -169,7 +278,7 @@ To run the telemetry test:
 make test TAG=$(whoami) GINKGO_LABEL=telemetry
 ```
 
-### 3b - Run the tests on a GKE cluster from a GCP VM
+#### 1b - Run the tests on a GKE cluster from a GCP VM
 
 This step only applies if you are running the NFR tests, or would like to run the functional tests on a GKE cluster from a GCP based VM.
 
@@ -215,7 +324,6 @@ make run-tests-on-vm
 
 To set up the GCP environment with the router and VM and then run the tests, run the following command:
 
-
 ```makefile
 make setup-gcp-and-run-nfr-tests
 ```
@@ -238,9 +346,11 @@ make start-longevity-test
 ```
 
 <!--  -->
+
 > Note: If you want to change the time period for which the test runs, update the `wrk` commands in `suite/scripts/longevity-wrk.sh` to the time period you want, and run `make sync-files-to-vm`.
 
 <!--  -->
+
 > Note: If you want to re-run the longevity test, you need to clear out the `cafe.example.com` entry from the `/etc/hosts` file on your VM.
 
 You can verify the test is working by checking nginx logs to see traffic flow, and check that the cronjob is running and redeploying apps.
@@ -310,30 +420,30 @@ XIt("runs some test", func(){
 
 For more information of filtering specs, see [the docs here](https://onsi.github.io/ginkgo/#filtering-specs).
 
-## Step 4 - Cleanup
+## Step 2 - Cleanup
 
 1. Delete kind cluster, if required
 
-    ```makefile
-    make delete-kind-cluster
-    ```
+   ```makefile
+   make delete-kind-cluster
+   ```
 
 2. Delete the GCP components (GKE cluster, GKE router, VM, and firewall rule), if required
 
-    ```makefile
-    make cleanup-gcp
-    ```
+   ```makefile
+   make cleanup-gcp
+   ```
 
-    or
+   or
 
-    ```makefile
-    make cleanup-router
-    ```
+   ```makefile
+   make cleanup-router
+   ```
 
-    ```makefile
-    make cleanup-vm
-    ```
+   ```makefile
+   make cleanup-vm
+   ```
 
-    ```makefile
-    make delete-gke-cluster
-    ```
+   ```makefile
+   make delete-gke-cluster
+   ```

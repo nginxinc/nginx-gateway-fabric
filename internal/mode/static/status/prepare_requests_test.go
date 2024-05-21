@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +21,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	statusFramework "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -1058,7 +1060,13 @@ func TestBuildGatewayStatuses(t *testing.T) {
 
 			updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-			reqs := PrepareGatewayRequests(test.gateway, test.ignoredGateways, transitionTime, addr, test.nginxReloadRes)
+			reqs := PrepareGatewayRequests(
+				test.gateway,
+				test.ignoredGateways,
+				transitionTime,
+				addr,
+				test.nginxReloadRes,
+			)
 
 			g.Expect(reqs).To(HaveLen(expectedTotalReqs))
 
@@ -1105,8 +1113,8 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 		}
 	}
 
-	attachedConds := []conditions.Condition{staticConds.NewBackendTLSPolicyAccepted()}
-	invalidConds := []conditions.Condition{staticConds.NewBackendTLSPolicyInvalid("invalid backendTLSPolicy")}
+	attachedConds := []conditions.Condition{staticConds.NewPolicyAccepted()}
+	invalidConds := []conditions.Condition{staticConds.NewPolicyInvalid("invalid backendTLSPolicy")}
 
 	validPolicyCfg := policyCfg{
 		Name:         "valid-bt",
@@ -1156,6 +1164,8 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 							AncestorRef: v1.ParentReference{
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
+								Group:     helpers.GetPointer[v1.Group](v1.GroupName),
+								Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1165,7 +1175,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 									ObservedGeneration: 1,
 									LastTransitionTime: transitionTime,
 									Reason:             string(v1alpha2.PolicyReasonAccepted),
-									Message:            "BackendTLSPolicy is accepted by the Gateway",
+									Message:            "Policy is accepted",
 								},
 							},
 						},
@@ -1186,6 +1196,8 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 							AncestorRef: v1.ParentReference{
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
+								Group:     helpers.GetPointer[v1.Group](v1.GroupName),
+								Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1230,6 +1242,8 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 							AncestorRef: v1.ParentReference{
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
+								Group:     helpers.GetPointer[v1.Group](v1.GroupName),
+								Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1239,7 +1253,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 									ObservedGeneration: 1,
 									LastTransitionTime: transitionTime,
 									Reason:             string(v1alpha2.PolicyReasonAccepted),
-									Message:            "BackendTLSPolicy is accepted by the Gateway",
+									Message:            "Policy is accepted",
 								},
 							},
 						},
@@ -1367,6 +1381,247 @@ func TestBuildNginxGatewayStatus(t *testing.T) {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "nginx-gateway"}, &ngw)
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(helpers.Diff(*test.expected, ngw.Status)).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestBuildNGFPolicyStatuses(t *testing.T) {
+	const gatewayCtlrName = "controller"
+
+	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
+
+	type policyCfg struct {
+		Ancestor   *graph.PolicyAncestor
+		Name       string
+		Conditions []conditions.Condition
+	}
+
+	// We have to use a real policy here because the test makes the status update using the k8sClient.
+	// One policy type should suffice here, unless a new policy introduces branching.
+	getPolicy := func(cfg policyCfg) *graph.Policy {
+		return &graph.Policy{
+			Source: &ngfAPI.ClientSettingsPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       cfg.Name,
+					Namespace:  "test",
+					Generation: 2,
+				},
+			},
+			Conditions: cfg.Conditions,
+			Ancestor:   cfg.Ancestor,
+		}
+	}
+
+	invalidConds := []conditions.Condition{staticConds.NewPolicyInvalid("invalid")}
+	targetRefNotFoundConds := []conditions.Condition{staticConds.NewPolicyTargetNotFound("target not found")}
+
+	validPolicyKey := graph.PolicyKey{
+		NsName: types.NamespacedName{Namespace: "test", Name: "valid-pol"},
+		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
+	}
+	validPolicyCfg := policyCfg{
+		Name: validPolicyKey.NsName.Name,
+		Ancestor: &graph.PolicyAncestor{
+			Ancestor: v1.ParentReference{
+				Name: "ancestor",
+			},
+		},
+	}
+
+	invalidPolicyKey := graph.PolicyKey{
+		NsName: types.NamespacedName{Namespace: "test", Name: "invalid-pol"},
+		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
+	}
+	invalidPolicyCfg := policyCfg{
+		Name:       invalidPolicyKey.NsName.Name,
+		Conditions: invalidConds,
+		Ancestor: &graph.PolicyAncestor{
+			Ancestor: v1.ParentReference{
+				Name: "ancestor",
+			},
+		},
+	}
+
+	targetRefNotFoundPolicyKey := graph.PolicyKey{
+		NsName: types.NamespacedName{Namespace: "test", Name: "target-not-found-pol"},
+		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
+	}
+	targetRefNotFoundPolicyCfg := policyCfg{
+		Name: targetRefNotFoundPolicyKey.NsName.Name,
+		Ancestor: &graph.PolicyAncestor{
+			Ancestor: v1.ParentReference{
+				Name: "ancestor",
+			},
+			Conditions: targetRefNotFoundConds,
+		},
+	}
+
+	multiInvalidCondsPolicyKey := graph.PolicyKey{
+		NsName: types.NamespacedName{Namespace: "test", Name: "multi-invalid-conds-pol"},
+		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
+	}
+	multiInvalidCondsPolicyCfg := policyCfg{
+		Name:       multiInvalidCondsPolicyKey.NsName.Name,
+		Conditions: invalidConds,
+		Ancestor: &graph.PolicyAncestor{
+			Ancestor: v1.ParentReference{
+				Name: "ancestor",
+			},
+			Conditions: targetRefNotFoundConds,
+		},
+	}
+
+	nilAncestorPolicyKey := graph.PolicyKey{
+		NsName: types.NamespacedName{Namespace: "test", Name: "nil-ancestor-pol"},
+		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
+	}
+	nilAncestorPolicyCfg := policyCfg{
+		Name:     nilAncestorPolicyKey.NsName.Name,
+		Ancestor: nil,
+	}
+
+	tests := []struct {
+		policies map[graph.PolicyKey]*graph.Policy
+		expected map[types.NamespacedName]v1alpha2.PolicyStatus
+		name     string
+	}{
+		{
+			name:     "nil policies",
+			expected: map[types.NamespacedName]v1alpha2.PolicyStatus{},
+		},
+		{
+			name: "mix valid and invalid policies",
+			policies: map[graph.PolicyKey]*graph.Policy{
+				invalidPolicyKey:           getPolicy(invalidPolicyCfg),
+				targetRefNotFoundPolicyKey: getPolicy(targetRefNotFoundPolicyCfg),
+				validPolicyKey:             getPolicy(validPolicyCfg),
+			},
+			expected: map[types.NamespacedName]v1alpha2.PolicyStatus{
+				invalidPolicyKey.NsName: {
+					Ancestors: []v1alpha2.PolicyAncestorStatus{
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonInvalid),
+									Message:            "invalid",
+								},
+							},
+						},
+					},
+				},
+				targetRefNotFoundPolicyKey.NsName: {
+					Ancestors: []v1alpha2.PolicyAncestorStatus{
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonTargetNotFound),
+									Message:            "target not found",
+								},
+							},
+						},
+					},
+				},
+				validPolicyKey.NsName: {
+					Ancestors: []v1alpha2.PolicyAncestorStatus{
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonAccepted),
+									Message:            "Policy is accepted",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "policy with policy conditions and ancestor conditions; policy conditions win",
+			policies: map[graph.PolicyKey]*graph.Policy{
+				multiInvalidCondsPolicyKey: getPolicy(multiInvalidCondsPolicyCfg),
+			},
+			expected: map[types.NamespacedName]v1alpha2.PolicyStatus{
+				multiInvalidCondsPolicyKey.NsName: {
+					Ancestors: []v1alpha2.PolicyAncestorStatus{
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonInvalid),
+									Message:            "invalid",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Policy with nil ancestor",
+			policies: map[graph.PolicyKey]*graph.Policy{
+				nilAncestorPolicyKey: getPolicy(nilAncestorPolicyCfg),
+			},
+			expected: map[types.NamespacedName]v1alpha2.PolicyStatus{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			k8sClient := createK8sClientFor(&ngfAPI.ClientSettingsPolicy{})
+
+			for _, pol := range test.policies {
+				err := k8sClient.Create(context.Background(), pol.Source)
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			updater := statusFramework.NewUpdater(k8sClient, zap.New())
+
+			reqs := PrepareNGFPolicyRequests(test.policies, transitionTime, gatewayCtlrName)
+
+			g.Expect(reqs).To(HaveLen(len(test.expected)))
+
+			updater.Update(context.Background(), reqs...)
+
+			for nsname, expected := range test.expected {
+				var pol ngfAPI.ClientSettingsPolicy
+
+				err := k8sClient.Get(context.Background(), nsname, &pol)
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(helpers.Diff(expected, pol.Status)).To(BeEmpty())
 			}
 		})
 	}

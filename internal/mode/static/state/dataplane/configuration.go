@@ -13,6 +13,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -27,6 +28,7 @@ func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
 	resolver resolver.ServiceResolver,
+	generator policies.ConfigGenerator,
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
@@ -38,7 +40,7 @@ func BuildConfiguration(
 	}
 
 	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(g.Gateway.Listeners)
+	httpServers, sslServers := buildServers(g.Gateway, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
@@ -200,17 +202,17 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	return verify
 }
 
-func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
+func buildServers(gw *graph.Gateway, generator policies.ConfigGenerator) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1.ProtocolType]portPathRules{
 		v1.HTTPProtocolType:  make(portPathRules),
 		v1.HTTPSProtocolType: make(portPathRules),
 	}
 
-	for _, l := range listeners {
+	for _, l := range gw.Listeners {
 		if l.Valid {
 			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
 			if rules == nil {
-				rules = newHostPathRules()
+				rules = newHostPathRules(generator)
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
@@ -221,7 +223,19 @@ func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
 	httpRules := rulesForProtocol[v1.HTTPProtocolType]
 	sslRules := rulesForProtocol[v1.HTTPSProtocolType]
 
-	return httpRules.buildServers(), sslRules.buildServers()
+	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
+
+	additions := buildAdditions(gw.Policies, generator)
+
+	for i := range httpServers {
+		httpServers[i].Additions = additions
+	}
+
+	for i := range sslServers {
+		sslServers[i].Additions = additions
+	}
+
+	return httpServers, sslServers
 }
 
 // portPathRules keeps track of hostPathRules per port
@@ -248,18 +262,20 @@ type pathAndType struct {
 }
 
 type hostPathRules struct {
+	generator        policies.ConfigGenerator
 	rulesPerHost     map[string]map[pathAndType]PathRule
 	listenersForHost map[string]*graph.Listener
 	httpsListeners   []*graph.Listener
-	listenersExist   bool
 	port             int32
+	listenersExist   bool
 }
 
-func newHostPathRules() *hostPathRules {
+func newHostPathRules(generator policies.ConfigGenerator) *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[pathAndType]PathRule),
 		listenersForHost: make(map[string]*graph.Listener),
 		httpsListeners:   make([]*graph.Listener, 0),
+		generator:        generator,
 	}
 }
 
@@ -327,6 +343,8 @@ func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.List
 			}
 		}
 
+		additions := buildAdditions(route.Policies, hpr.generator)
+
 		for _, h := range hostnames {
 			for _, m := range rule.Matches {
 				path := getPath(m.Path)
@@ -351,6 +369,7 @@ func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.List
 					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
+					Additions:    additions,
 				})
 
 				hpr.rulesPerHost[h][key] = hostRule
@@ -636,4 +655,30 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	}
 
 	return baseConfig
+}
+
+func buildAdditions(policies []*graph.Policy, generator policies.ConfigGenerator) []Addition {
+	if len(policies) == 0 {
+		return nil
+	}
+
+	additions := make([]Addition, 0, len(policies))
+
+	for _, policy := range policies {
+		if !policy.Valid {
+			continue
+		}
+
+		additions = append(additions, Addition{
+			Bytes: generator.Generate(policy.Source),
+			Identifier: fmt.Sprintf(
+				"%s_%s_%s",
+				policy.Source.GetObjectKind().GroupVersionKind().Kind,
+				policy.Source.GetNamespace(),
+				policy.Source.GetName(),
+			),
+		})
+	}
+
+	return additions
 }

@@ -4,6 +4,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 // referenceGrantResolver resolves references from one resource to another.
@@ -58,7 +60,7 @@ func toService(nsname types.NamespacedName) toResource {
 func fromGateway(namespace string) fromResource {
 	return fromResource{
 		group:     v1.GroupName,
-		kind:      "Gateway",
+		kind:      kinds.Gateway,
 		namespace: namespace,
 	}
 }
@@ -66,7 +68,7 @@ func fromGateway(namespace string) fromResource {
 func fromHTTPRoute(namespace string) fromResource {
 	return fromResource{
 		group:     v1.GroupName,
-		kind:      "HTTPRoute",
+		kind:      kinds.HTTPRoute,
 		namespace: namespace,
 	}
 }

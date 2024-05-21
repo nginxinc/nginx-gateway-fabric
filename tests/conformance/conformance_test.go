@@ -15,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package tests
+package conformance
 
 import (
 	"os"
@@ -23,8 +23,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/sets"
-	conf_v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance"
+	conf_v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -41,14 +41,14 @@ func TestConformance(t *testing.T) {
 
 	opts := conformance.DefaultOptions(t)
 	opts.Implementation = conf_v1.Implementation{
-			Organization: "nginxinc",
-			Project:      "nginx-gateway-fabric",
-			URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
-			Version:      *flags.ImplementationVersion,
-			Contact: []string{
-				"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
+		Organization: "nginxinc",
+		Project:      "nginx-gateway-fabric",
+		URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
+		Version:      *flags.ImplementationVersion,
+		Contact: []string{
+			"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
 		},
-		}
+	}
 	opts.ConformanceProfiles = sets.New(suite.GatewayHTTPConformanceProfileName, suite.GatewayGRPCConformanceProfileName)
 
 	testSuite, err := suite.NewConformanceTestSuite(opts)

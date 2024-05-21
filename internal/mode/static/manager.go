@@ -42,6 +42,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -50,6 +51,8 @@ import (
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -110,16 +113,22 @@ func StartManager(cfg config.Config) error {
 		int32(cfg.HealthConfig.Port):  "HealthPort",
 	}
 
+	mustExtractGVK := kinds.NewMustExtractGKV(scheme)
+
+	genericValidator := ngxvalidation.GenericValidator{}
+	policyManager := createPolicyManager(mustExtractGVK, genericValidator)
+
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
 		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
-			GenericValidator:    ngxvalidation.GenericValidator{},
+			GenericValidator:    genericValidator,
+			PolicyValidator:     policyManager,
 		},
 		EventRecorder:  recorder,
-		Scheme:         scheme,
+		MustExtractGVK: mustExtractGVK,
 		ProtectedPorts: protectedPorts,
 	})
 
@@ -221,6 +230,7 @@ func StartManager(cfg config.Config) error {
 		usageSecret:                   usageSecret,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
+		policyConfigGenerator:         policyManager,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -270,6 +280,21 @@ func StartManager(cfg config.Config) error {
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func createPolicyManager(
+	mustExtractGVK kinds.MustExtractGVK,
+	validator validation.GenericValidator,
+) *policies.Manager {
+	cfgs := []policies.ManagerConfig{
+		{
+			GVK:       mustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
+			Validator: clientsettings.NewValidator(validator),
+			Generator: clientsettings.Generate,
+		},
+	}
+
+	return policies.NewManager(mustExtractGVK, cfgs...)
 }
 
 func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
@@ -340,9 +365,12 @@ func registerControllers(
 		{
 			objectType: &gatewayv1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithK8sPredicate(k8spredicate.And(
-					k8spredicate.GenerationChangedPredicate{},
-					predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName})),
+				controller.WithK8sPredicate(
+					k8spredicate.And(
+						k8spredicate.GenerationChangedPredicate{},
+						predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName},
+					),
+				),
 			},
 		},
 		{
@@ -423,6 +451,12 @@ func registerControllers(
 		},
 		{
 			objectType: &gatewayv1.GRPCRoute{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
+		{
+			objectType: &ngfAPI.ClientSettingsPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
@@ -607,6 +641,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&gatewayv1beta1.ReferenceGrantList{},
 		&ngfAPI.NginxProxyList{},
 		&gatewayv1.GRPCRouteList{},
+		&ngfAPI.ClientSettingsPolicyList{},
 		partialObjectMetadataList,
 	}
 

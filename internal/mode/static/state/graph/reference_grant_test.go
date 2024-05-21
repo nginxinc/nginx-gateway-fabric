@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 func TestReferenceGrantResolver(t *testing.T) {
@@ -20,7 +21,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 				From: []v1beta1.ReferenceGrantFrom{
 					{
 						Group:     v1beta1.GroupName,
-						Kind:      "Gateway",
+						Kind:      kinds.Gateway,
 						Namespace: v1beta1.Namespace(gwNs),
 					},
 				},
@@ -45,7 +46,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 				From: []v1beta1.ReferenceGrantFrom{
 					{
 						Group:     v1beta1.GroupName,
-						Kind:      "Gateway",
+						Kind:      kinds.Gateway,
 						Namespace: v1beta1.Namespace(gwNs),
 					},
 				},
@@ -68,17 +69,17 @@ func TestReferenceGrantResolver(t *testing.T) {
 				From: []v1beta1.ReferenceGrantFrom{
 					{
 						Group:     v1beta1.GroupName,
-						Kind:      "Gateway",
+						Kind:      kinds.Gateway,
 						Namespace: "wrong-ns1",
 					},
 					{
 						Group:     v1beta1.GroupName,
-						Kind:      "Gateway",
+						Kind:      kinds.Gateway,
 						Namespace: "wrong-ns2",
 					},
 					{
 						Group:     v1beta1.GroupName,
-						Kind:      "Gateway",
+						Kind:      kinds.Gateway,
 						Namespace: v1beta1.Namespace(gwNs),
 					},
 				},
@@ -87,7 +88,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 	}
 
 	normalTo := toResource{kind: "Secret", name: secretNsName.Name, namespace: secretNsName.Namespace}
-	normalFrom := fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: gwNs}
+	normalFrom := fromResource{group: v1beta1.GroupName, kind: kinds.Gateway, namespace: gwNs}
 
 	tests := []struct {
 		to      toResource
@@ -127,13 +128,13 @@ func TestReferenceGrantResolver(t *testing.T) {
 		{
 			msg:     "wrong 'from' group",
 			to:      normalTo,
-			from:    fromResource{group: "wrong.group", kind: "Gateway", namespace: gwNs},
+			from:    fromResource{group: "wrong.group", kind: kinds.Gateway, namespace: gwNs},
 			allowed: false,
 		},
 		{
 			msg:     "wrong 'from' namespace",
 			to:      normalTo,
-			from:    fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: "wrong-ns"},
+			from:    fromResource{group: v1beta1.GroupName, kind: kinds.Gateway, namespace: "wrong-ns"},
 			allowed: false,
 		},
 		{
@@ -198,7 +199,7 @@ func TestFromGateway(t *testing.T) {
 
 	exp := fromResource{
 		group:     v1beta1.GroupName,
-		kind:      "Gateway",
+		kind:      kinds.Gateway,
 		namespace: "ns",
 	}
 
@@ -211,7 +212,7 @@ func TestFromHTTPRoute(t *testing.T) {
 
 	exp := fromResource{
 		group:     v1beta1.GroupName,
-		kind:      "HTTPRoute",
+		kind:      kinds.HTTPRoute,
 		namespace: "ns",
 	}
 
