@@ -3,6 +3,7 @@ module github.com/nginxinc/nginx-gateway-fabric/tests
 go 1.22.2
 
 require (
+	github.com/nginxinc/nginx-gateway-fabric v0.1.0-rc.1.0.20240521170716-206f1364bf89
 	github.com/onsi/ginkgo/v2 v2.17.3
 	github.com/onsi/gomega v1.33.1
 	github.com/prometheus/client_golang v1.19.1
@@ -67,7 +68,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

@@ -185,7 +185,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		time.Sleep(2 * time.Second)
 
 		// update Gateway API and NGF
-		output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
+		output, err := framework.InstallGatewayAPI(*gatewayAPIVersion)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		output, err = framework.UpgradeNGF(cfg, "--values", valuesFile)
