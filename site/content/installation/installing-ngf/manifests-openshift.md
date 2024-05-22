@@ -57,12 +57,12 @@ kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/downl
 
 Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/openshift-nginx-plus-gateway.yaml).
 
-Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
+Update the `openshift-nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
 
 {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
 ```shell
-kubectl apply -f nginx-plus-gateway.yaml
+kubectl apply -f openshift-nginx-plus-gateway.yaml
 ```
 
 #### Edge version
@@ -70,7 +70,7 @@ kubectl apply -f nginx-plus-gateway.yaml
 ##### For NGINX
 
 ```shell
-kubectl apply -f deploy/manifests/openshift/nginx-gateway.yaml
+kubectl apply -f deploy/manifests/openshift/openshift-nginx-gateway.yaml
 ```
 
 ##### For NGINX Plus
@@ -78,10 +78,10 @@ kubectl apply -f deploy/manifests/openshift/nginx-gateway.yaml
 {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
 ```shell
-kubectl apply -f deploy/manifests/openshift/nginx-plus-gateway.yaml
+kubectl apply -f deploy/manifests/openshift/openshift-nginx-plus-gateway.yaml
 ```
 
-Update the nginx-plus-gateway.yaml file to include your chosen image from the F5 Container registry or your custom container image.
+Update the openshift-nginx-plus-gateway.yaml file to include your chosen image from the F5 Container registry or your custom container image.
 
 #### Enable experimental features
 
@@ -90,16 +90,16 @@ We support a subset of the additional features provided by the Gateway API exper
 ##### For NGINX
 
 ```shell
-kubectl apply -f deploy/manifests/openshift/nginx-gateway-experimental.yaml
+kubectl apply -f deploy/manifests/openshift/openshift-nginx-gateway-experimental.yaml
 ```
 
 ##### For NGINX Plus
 
 ```shell
-kubectl apply -f deploy/manifests/openshift/nginx-plus-gateway-experimental.yaml
+kubectl apply -f deploy/manifests/openshift/openshift-nginx-plus-gateway-experimental.yaml
 ```
 
-Update the nginx-plus-gateway-experimental.yaml file to include your chosen image from the F5 Container registry or your custom container image.
+Update the openshift-nginx-plus-gateway-experimental.yaml file to include your chosen image from the F5 Container registry or your custom container image.
 
 {{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
 
@@ -162,11 +162,11 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 Follow these steps to configure delayed pod termination:
 
-1. Open the `nginx-gateway.yaml` for editing.
+1. Open the `openshift-nginx-gateway.yaml` for editing.
 
 1. **Add delayed shutdown hooks**:
 
-   - In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
+   - In the `openshift-nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
 
      ```yaml
      <...>
