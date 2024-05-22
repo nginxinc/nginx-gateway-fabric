@@ -129,6 +129,8 @@ jobs:
         echo "PLUS_ENABLED=${{ inputs.nginx_plus }}" >> vars.env
         echo "GINKGO_LABEL=" >> vars.env
         echo "NGF_VERSION=${{ inputs.version }}" >> vars.env
+        echo "GKE_NUM_NODES=12" >> vars.env
+        echo "GKE_MACHINE_TYPE=n2d-standard-16" >> vars.env
 
     - name: Create GKE cluster
       working-directory: ./tests
