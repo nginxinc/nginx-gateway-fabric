@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -15,6 +16,29 @@ import (
 // It resolves to the specified address instead of using DNS.
 // The status and body of the response is returned, or an error.
 func Get(url, address string, timeout time.Duration) (int, string, error) {
+	resp, err := makeRequest(http.MethodGet, url, address, nil, timeout)
+	if err != nil {
+		return 0, "", err
+	}
+
+	defer resp.Body.Close()
+
+	body := new(bytes.Buffer)
+	_, err = body.ReadFrom(resp.Body)
+	if err != nil {
+		return resp.StatusCode, "", err
+	}
+
+	return resp.StatusCode, body.String(), nil
+}
+
+// Post sends a POST request to the specified url with the body as the payload.
+// It resolves to the specified address instead of using DNS.
+func Post(url, address string, body io.Reader, timeout time.Duration) (*http.Response, error) {
+	return makeRequest(http.MethodPost, url, address, body, timeout)
+}
+
+func makeRequest(method, url, address string, body io.Reader, timeout time.Duration) (*http.Response, error) {
 	dialer := &net.Dialer{}
 
 	http.DefaultTransport.(*http.Transport).DialContext = func(
@@ -30,9 +54,9 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return 0, "", err
+		return nil, err
 	}
 
 	var resp *http.Response
@@ -48,15 +72,8 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 	}
 
 	if err != nil {
-		return 0, "", err
-	}
-	defer resp.Body.Close()
-
-	body := new(bytes.Buffer)
-	_, err = body.ReadFrom(resp.Body)
-	if err != nil {
-		return resp.StatusCode, "", err
+		return nil, err
 	}
 
-	return resp.StatusCode, body.String(), nil
+	return resp, nil
 }
