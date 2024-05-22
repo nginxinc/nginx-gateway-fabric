@@ -213,7 +213,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 				if lease.Spec.HolderIdentity != nil {
 					for _, podName := range podNames {
-						if podName == strings.Split(*lease.Spec.HolderIdentity, "_")[0] {
+						if strings.Contains(*lease.Spec.HolderIdentity, podName) {
 							return true, nil
 						}
 					}
