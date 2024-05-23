@@ -191,7 +191,7 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
-	helm lint $(CHART_DIR)
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric quay.io/helmpack/chart-testing:latest ct lint --config .ct.yaml
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster.
