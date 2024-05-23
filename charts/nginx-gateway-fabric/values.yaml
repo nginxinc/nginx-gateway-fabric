@@ -72,15 +72,15 @@ nginx:
 
   ## The configuration for the data plane that is contained in the NginxProxy resource.
   config: {}
-    # disableHTTP2: false
-    # telemetry:
-    #   exporter:
-    #     endpoint: otel-collector.default.svc:4317
-    #     interval: 5s
-    #     batchSize: 512
-    #     batchCount: 4
-    #   serviceName: ""
-    #   spanAttributes: []
+  # disableHTTP2: false
+  # telemetry:
+  #   exporter:
+  #     endpoint: otel-collector.default.svc:4317
+  #     interval: 5s
+  #     batchSize: 512
+  #     batchCount: 4
+  #   serviceName: ""
+  #   spanAttributes: []
 
   ## Configuration for NGINX Plus usage reporting.
   usage:
@@ -138,14 +138,14 @@ service:
   ## A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from
   ## your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports.
   ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-    name: http
-  - port: 443
-    targetPort: 443
-    protocol: TCP
-    name: https
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
 
 metrics:
   ## Enable exposing metrics in the Prometheus format.
