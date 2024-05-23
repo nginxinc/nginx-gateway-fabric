@@ -21,6 +21,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
+const (
+	conditionTypeAccepted = "Accepted"
+)
+
 var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"), func() {
 	var (
 		files = []string{
@@ -177,7 +181,7 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 					nsname := types.NamespacedName{Name: name, Namespace: namespace}
 
 					err := waitForCSPolicyToBeAccepted(nsname)
-					Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("%s was not marked as conflicted", name))
+					Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("%s was not accepted", name))
 				}
 
 				Expect(resourceManager.DeleteFromFiles(policies, namespace)).To(Succeed())
@@ -282,7 +286,7 @@ func ancestorStatusMustHaveAcceptedCondition(
 		return fmt.Errorf("expected 1 condition in status, got %d", len(status.Conditions))
 	}
 
-	if status.Conditions[0].Type != "Accepted" {
+	if status.Conditions[0].Type != conditionTypeAccepted {
 		return fmt.Errorf("expected condition type to be Accepted, got %s", status.Conditions[0].Type)
 	}
 
@@ -291,7 +295,7 @@ func ancestorStatusMustHaveAcceptedCondition(
 	}
 
 	if status.Conditions[0].Reason != string(condReason) {
-		return fmt.Errorf("expected condition status to be %s, got %s", condReason, status.Conditions[0].Reason)
+		return fmt.Errorf("expected condition reason to be %s, got %s", condReason, status.Conditions[0].Reason)
 	}
 
 	return nil
