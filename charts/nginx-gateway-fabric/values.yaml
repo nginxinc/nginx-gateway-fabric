@@ -112,12 +112,6 @@ nodeSelector: {}
 ## The affinity of the NGINX Gateway Fabric pod.
 affinity: {}
 
-## The platform that NGINX Gateway Fabric is being deployed on. Valid values: kubernetes, openshift
-platform: kubernetes
-
-## Create and apply the OpenShift SecurityContextConstraints object.
-createOpenShiftSCC: true
-
 serviceAccount:
   annotations: {}
   ## The name of the service account of the NGINX Gateway Fabric pods. Used for RBAC.
