@@ -31,7 +31,7 @@ volumes:
 - emptyDir
 - secret
 users:
-- {{ printf "system:serviceaccount:*:%s" (include "nginx-gateway.fullname" .) }}
+- {{ printf "system:serviceaccount:%s:%s" .Release.Namespace (include "nginx-gateway.serviceAccountName" .) }}
 allowedCapabilities:
 - NET_BIND_SERVICE
 - KILL
