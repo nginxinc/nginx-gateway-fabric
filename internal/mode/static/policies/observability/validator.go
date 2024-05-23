@@ -30,15 +30,23 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 // Validate validates the spec of an ObservabilityPolicy.
 func (v *Validator) Validate(
 	policy policies.Policy,
-	globalSettings *policies.GlobalPolicySettings,
+	policyValidationCtx *policies.ValidationContext,
 ) []conditions.Condition {
 	obs, ok := policy.(*ngfAPI.ObservabilityPolicy)
 	if !ok {
 		panic(fmt.Sprintf("expected ObservabilityPolicy, got: %T", policy))
 	}
 
-	if globalSettings == nil || !globalSettings.NginxProxyValid {
-		return []conditions.Condition{staticConds.NewPolicyNotAcceptedNginxProxyNotSet()}
+	if policyValidationCtx == nil || !policyValidationCtx.NginxProxyValid {
+		return []conditions.Condition{
+			staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageNginxProxyInvalid),
+		}
+	}
+
+	if !policyValidationCtx.TelemetryEnabled {
+		return []conditions.Condition{
+			staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageTelemetryNotEnabled),
+		}
 	}
 
 	if err := validateTargetRefs(obs.Spec.TargetRefs); err != nil {

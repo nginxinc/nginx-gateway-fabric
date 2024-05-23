@@ -77,6 +77,14 @@ const (
 	// PolicyReasonNginxProxyConfigNotSet is used with the "PolicyAccepted" condition when the
 	// NginxProxy resource is missing or invalid.
 	PolicyReasonNginxProxyConfigNotSet v1alpha2.PolicyConditionReason = "NginxProxyConfigNotSet"
+
+	// PolicyMessageNginxProxyInvalid is a message used with the PolicyReasonNginxProxyConfigNotSet reason
+	// when the NginxProxy resource is either invalid or not attached.
+	PolicyMessageNginxProxyInvalid = "The NginxProxy configuration is either invalid or not attached to the GatewayClass"
+
+	// PolicyMessageTelemetryNotEnabled is a message used with the PolicyReasonNginxProxyConfigNotSet reason
+	// when telemetry is not enabled in the NginxProxy resource.
+	PolicyMessageTelemetryNotEnabled = "Telemetry is not enabled in the NginxProxy resource"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
@@ -646,11 +654,11 @@ func NewPolicyTargetNotFound(msg string) conditions.Condition {
 
 // NewPolicyNotAcceptedNginxProxyNotSet returns a Condition that indicates that the Policy is not accepted
 // because it relies in the NginxProxy configuration which is missing or invalid.
-func NewPolicyNotAcceptedNginxProxyNotSet() conditions.Condition {
+func NewPolicyNotAcceptedNginxProxyNotSet(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(PolicyReasonNginxProxyConfigNotSet),
-		Message: "The NginxProxy configuration is either invalid or not attached to the GatewayClass",
+		Message: msg,
 	}
 }

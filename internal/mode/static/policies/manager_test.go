@@ -43,7 +43,7 @@ var _ = Describe("Policy Manager", func() {
 		mustExtractGVK,
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("apple error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return true },
@@ -55,7 +55,7 @@ var _ = Describe("Policy Manager", func() {
 		},
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("orange error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return false },

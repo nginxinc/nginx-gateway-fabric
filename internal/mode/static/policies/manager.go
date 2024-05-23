@@ -20,7 +20,7 @@ type GenerateFunc func(policy Policy, globalSettings *ngfAPI.NginxProxy) []byte
 //counterfeiter:generate . Validator
 type Validator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition
+	Validate(policy Policy, policyValidationCtx *ValidationContext) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b Policy) bool
 }
@@ -75,7 +75,7 @@ func (m *Manager) Generate(policy Policy, globalSettings *ngfAPI.NginxProxy) []b
 }
 
 // Validate validates the policy.
-func (m *Manager) Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition {
+func (m *Manager) Validate(policy Policy, policyValidationCtx *ValidationContext) []conditions.Condition {
 	gvk := m.mustExtractGVK(policy)
 
 	validator, ok := m.validators[gvk]
@@ -83,7 +83,7 @@ func (m *Manager) Validate(policy Policy, globalSettings *GlobalPolicySettings) 
 		panic(fmt.Sprintf("no validator registered for policy %T", policy))
 	}
 
-	return validator.Validate(policy, globalSettings)
+	return validator.Validate(policy, policyValidationCtx)
 }
 
 // Conflicts returns true if the policies conflict.

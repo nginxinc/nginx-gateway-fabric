@@ -54,7 +54,7 @@ type GenericValidator interface {
 //counterfeiter:generate . PolicyValidator
 type PolicyValidator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy policies.Policy, globalSettings *policies.GlobalPolicySettings) []conditions.Condition
+	Validate(policy policies.Policy, policyValidationCtx *policies.ValidationContext) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b policies.Policy) bool
 }

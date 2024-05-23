@@ -175,7 +175,7 @@ func BuildGraph(
 	validators validation.Validators,
 	protectedPorts ProtectedPorts,
 ) *Graph {
-	policySettings := &policies.GlobalPolicySettings{}
+	policyValidationCtx := &policies.ValidationContext{}
 
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
@@ -188,7 +188,8 @@ func BuildGraph(
 	if gc != nil && npCfg != nil {
 		for _, cond := range gc.Conditions {
 			if cond.Type == string(conditions.GatewayClassResolvedRefs) && cond.Status == metav1.ConditionTrue {
-				policySettings.NginxProxyValid = true
+				policyValidationCtx.NginxProxyValid = true
+				policyValidationCtx.TelemetryEnabled = npCfg.Spec.Telemetry != nil && npCfg.Spec.Telemetry.Exporter != nil
 				break
 			}
 		}
@@ -231,7 +232,7 @@ func BuildGraph(
 		validators.PolicyValidator,
 		processedGws,
 		routes,
-		policySettings,
+		policyValidationCtx,
 	)
 
 	g := &Graph{

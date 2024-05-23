@@ -28,7 +28,7 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 }
 
 // Validate validates the spec of a ClientSettingsPolicy.
-func (v *Validator) Validate(policy policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
+func (v *Validator) Validate(policy policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
 	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
 	if err := validateTargetRef(csp.Spec.TargetRef); err != nil {

@@ -161,7 +161,7 @@ func processPolicies(
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
-	policySettings *policies.GlobalPolicySettings,
+	policyValidationCtx *policies.ValidationContext,
 ) map[PolicyKey]*Policy {
 	if len(policies) == 0 || gateways.Winner == nil {
 		return nil
@@ -202,7 +202,7 @@ func processPolicies(
 			continue
 		}
 
-		conds := validator.Validate(policy, policySettings)
+		conds := validator.Validate(policy, policyValidationCtx)
 
 		processedPolicies[key] = &Policy{
 			Source:     policy,

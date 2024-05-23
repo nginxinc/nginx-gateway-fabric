@@ -622,7 +622,7 @@ func TestProcessPolicies(t *testing.T) {
 			validator: &policiesfakes.FakeValidator{
 				ValidateStub: func(
 					policy policies.Policy,
-					_ *policies.GlobalPolicySettings,
+					_ *policies.ValidationContext,
 				) []conditions.Condition {
 					if policy.GetName() == "pol1" {
 						return []conditions.Condition{staticConds.NewPolicyInvalid("invalid error")}

@@ -52,22 +52,33 @@ func createModifiedPolicy(mod policyModFunc) *ngfAPI.ObservabilityPolicy {
 }
 
 func TestValidator_Validate(t *testing.T) {
+	validCtx := &policies.ValidationContext{
+		NginxProxyValid:  true,
+		TelemetryEnabled: true,
+	}
+
 	tests := []struct {
-		name             string
-		policy           *ngfAPI.ObservabilityPolicy
-		globalSettings   *policies.GlobalPolicySettings
-		expErrSubstrings []string
+		name                string
+		policy              *ngfAPI.ObservabilityPolicy
+		policyValidationCtx *policies.ValidationContext
+		expErrSubstrings    []string
 	}{
 		{
-			name:             "global settings are nil",
+			name:             "validation context is nil",
 			policy:           createValidPolicy(),
 			expErrSubstrings: []string{"NginxProxy configuration is either invalid or not attached"},
 		},
 		{
-			name:             "global settings are invalid",
-			policy:           createValidPolicy(),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: false},
-			expErrSubstrings: []string{"NginxProxy configuration is either invalid or not attached"},
+			name:                "validation context is invalid",
+			policy:              createValidPolicy(),
+			policyValidationCtx: &policies.ValidationContext{NginxProxyValid: false},
+			expErrSubstrings:    []string{"NginxProxy configuration is either invalid or not attached"},
+		},
+		{
+			name:                "telemetry is not enabled",
+			policy:              createValidPolicy(),
+			policyValidationCtx: &policies.ValidationContext{NginxProxyValid: true, TelemetryEnabled: false},
+			expErrSubstrings:    []string{"Telemetry is not enabled"},
 		},
 		{
 			name: "invalid target ref; unsupported group",
@@ -75,8 +86,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.TargetRefs[0].Group = "Unsupported"
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.targetRefs.group"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.targetRefs.group"},
 		},
 		{
 			name: "invalid target ref; unsupported kind",
@@ -84,8 +95,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.TargetRefs[0].Kind = "Unsupported"
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.targetRefs.kind"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.targetRefs.kind"},
 		},
 		{
 			name: "invalid strategy",
@@ -93,8 +104,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Tracing.Strategy = "invalid"
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.tracing.strategy"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.tracing.strategy"},
 		},
 		{
 			name: "invalid context",
@@ -102,8 +113,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Tracing.Context = helpers.GetPointer[ngfAPI.TraceContext]("invalid")
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.tracing.context"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.tracing.context"},
 		},
 		{
 			name: "invalid span name",
@@ -111,8 +122,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Tracing.SpanName = helpers.GetPointer("invalid$$$")
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.tracing.spanName"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.tracing.spanName"},
 		},
 		{
 			name: "invalid span attribute key",
@@ -120,8 +131,8 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Tracing.SpanAttributes[0].Key = "invalid$$$"
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.tracing.spanAttributes.key"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.tracing.spanAttributes.key"},
 		},
 		{
 			name: "invalid span attribute value",
@@ -129,14 +140,14 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Tracing.SpanAttributes[0].Value = "invalid$$$"
 				return p
 			}),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: []string{"spec.tracing.spanAttributes.value"},
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    []string{"spec.tracing.spanAttributes.value"},
 		},
 		{
-			name:             "valid",
-			policy:           createValidPolicy(),
-			globalSettings:   &policies.GlobalPolicySettings{NginxProxyValid: true},
-			expErrSubstrings: nil,
+			name:                "valid",
+			policy:              createValidPolicy(),
+			policyValidationCtx: validCtx,
+			expErrSubstrings:    nil,
 		},
 	}
 
@@ -146,7 +157,7 @@ func TestValidator_Validate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			conds := v.Validate(test.policy, test.globalSettings)
+			conds := v.Validate(test.policy, test.policyValidationCtx)
 
 			if len(test.expErrSubstrings) == 0 {
 				g.Expect(conds).To(BeEmpty())
