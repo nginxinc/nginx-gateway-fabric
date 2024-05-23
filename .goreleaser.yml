@@ -70,7 +70,3 @@ release:
     - glob: ./deploy/manifests/nginx-plus-gateway.yaml
     - glob: ./deploy/manifests/nginx-gateway-experimental.yaml
     - glob: ./deploy/manifests/nginx-plus-gateway-experimental.yaml
-    - glob: ./deploy/manifests/openshift/openshift-nginx-gateway.yaml
-    - glob: ./deploy/manifests/openshift/openshift-nginx-plus-gateway.yaml
-    - glob: ./deploy/manifests/openshift/openshift-nginx-gateway-experimental.yaml
-    - glob: ./deploy/manifests/openshift/openshift-nginx-plus-gateway-experimental.yaml
