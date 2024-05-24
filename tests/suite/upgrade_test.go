@@ -208,11 +208,12 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			500*time.Millisecond,
 			true, /* poll immediately */
 			func(_ context.Context) (bool, error) {
+				defer GinkgoRecover()
 				Expect(k8sClient.Get(leaseCtx, key, &lease)).To(Succeed())
 
 				if lease.Spec.HolderIdentity != nil {
 					for _, podName := range podNames {
-						if podName == *lease.Spec.HolderIdentity {
+						if strings.Contains(*lease.Spec.HolderIdentity, podName) {
 							return true, nil
 						}
 					}
