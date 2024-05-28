@@ -1,10 +1,10 @@
 package suite
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -48,12 +48,23 @@ var _ = Describe("Basic test example", Label("functional"), func() {
 			url = fmt.Sprintf("http://foo.example.com:%s/hello", strconv.Itoa(portFwdPort))
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		status, body, err := framework.GetWithRetry(ctx, url, address, timeoutConfig.RequestTimeout)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(status).To(Equal(http.StatusOK))
-		Expect(body).To(ContainSubstring("URI: /hello"))
+		Eventually(
+			func() error {
+				status, body, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
+				if err != nil {
+					return err
+				}
+				if status != http.StatusOK {
+					return fmt.Errorf("status not 200; got %d", status)
+				}
+				expBody := "URI: /hello"
+				if !strings.Contains(body, expBody) {
+					return fmt.Errorf("bad body: got %s; expected %s", body, expBody)
+				}
+				return nil
+			}).
+			WithTimeout(timeoutConfig.RequestTimeout).
+			WithPolling(500 * time.Millisecond).
+			Should(Succeed())
 	})
 })

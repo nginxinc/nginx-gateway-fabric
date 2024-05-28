@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,15 +24,23 @@ import (
 )
 
 // This test can be flaky when waiting to see traces show up in the collector logs.
+// Sometimes they get there right away, sometimes it takes 30 seconds. Retries were
+// added to attempt to mitigate the issue, but it didn't fix it 100%
 var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
-	files := []string{
-		"hello-world/apps.yaml",
-		"hello-world/gateway.yaml",
-		"hello-world/routes.yaml",
-	}
-	var ns core.Namespace
+	var (
+		files = []string{
+			"hello-world/apps.yaml",
+			"hello-world/gateway.yaml",
+			"hello-world/routes.yaml",
+		}
+		nginxProxyFile     = "tracing/nginxproxy.yaml"
+		policySingleFile   = "tracing/policy-single.yaml"
+		policyMultipleFile = "tracing/policy-multiple.yaml"
 
-	var collectorPodName, helloURL, worldURL, helloworldURL string
+		ns core.Namespace
+
+		collectorPodName, helloURL, worldURL, helloworldURL string
+	)
 
 	BeforeEach(func() {
 		ns = core.Namespace{
@@ -42,20 +49,11 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 			},
 		}
 
-		output, err := installCollector()
+		output, err := framework.InstallCollector()
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
-		collectorPodNames, err := resourceManager.GetPodNames(
-			collectorNamespace,
-			client.MatchingLabels{
-				"app.kubernetes.io/name": "opentelemetry-collector",
-			},
-		)
-
+		collectorPodName, err = framework.GetCollectorPodName(resourceManager)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(collectorPodNames).To(HaveLen(1))
-
-		collectorPodName = collectorPodNames[0]
 
 		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
@@ -66,25 +64,38 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 		worldURL = url + "/world"
 		helloworldURL = url + "/helloworld"
 		if portFwdPort != 0 {
-			helloURL = fmt.Sprintf("%s:%s/hello", url, strconv.Itoa(portFwdPort))
-			worldURL = fmt.Sprintf("%s:%s/world", url, strconv.Itoa(portFwdPort))
-			helloworldURL = fmt.Sprintf("%s:%s/helloworld", url, strconv.Itoa(portFwdPort))
+			helloURL = fmt.Sprintf("%s:%d/hello", url, portFwdPort)
+			worldURL = fmt.Sprintf("%s:%d/world", url, portFwdPort)
+			helloworldURL = fmt.Sprintf("%s:%d/helloworld", url, portFwdPort)
 		}
 	})
 
 	AfterEach(func() {
-		output, err := uninstallCollector()
+		output, err := framework.UninstallCollector(resourceManager)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
+		Expect(resourceManager.DeleteFromFiles(
+			[]string{nginxProxyFile, policySingleFile, policyMultipleFile}, ns.Name)).To(Succeed())
 		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
+		defer cancel()
+
+		key := types.NamespacedName{Name: gatewayClassName}
+		var gwClass gatewayv1.GatewayClass
+		Expect(k8sClient.Get(ctx, key, &gwClass)).To(Succeed())
+
+		gwClass.Spec.ParametersRef = nil
+
+		Expect(k8sClient.Update(ctx, &gwClass)).To(Succeed())
 	})
 
 	updateGatewayClass := func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
 		defer cancel()
 
-		key := types.NamespacedName{Name: "nginx"}
+		key := types.NamespacedName{Name: gatewayClassName}
 		var gwClass gatewayv1.GatewayClass
 		if err := k8sClient.Get(ctx, key, &gwClass); err != nil {
 			return err
@@ -99,33 +110,38 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 		return k8sClient.Update(ctx, &gwClass)
 	}
 
-	sendTraceRequests := func(ctx context.Context, url string, count int) {
+	sendRequests := func(url string, count int) {
 		for range count {
-			status, _, err := framework.GetWithRetry(ctx, url, address, timeoutConfig.RequestTimeout)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(status).To(Equal(http.StatusOK))
+			Eventually(
+				func() error {
+					status, _, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
+					if err != nil {
+						return err
+					}
+					if status != http.StatusOK {
+						return fmt.Errorf("status not 200; got %d", status)
+					}
+					return nil
+				}).
+				WithTimeout(timeoutConfig.RequestTimeout).
+				WithPolling(500 * time.Millisecond).
+				Should(Succeed())
 		}
 	}
 
-	It("sends tracing spans for one policy attached to one route", func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+	// Send traffic and verify that traces exist for hello app. We send every time this is called because
+	// sometimes it takes awhile to see the traces show up.
+	findTraces := func() bool {
+		sendRequests(helloURL, 25)
+		sendRequests(worldURL, 25)
+		sendRequests(helloworldURL, 25)
 
-		sendTraceRequests(ctx, helloURL, 5)
-
-		// verify that no traces exist yet
-		logs, err := resourceManager.GetPodLogs(collectorNamespace, collectorPodName, &core.PodLogOptions{})
+		logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		Expect(logs).ToNot(ContainSubstring("service.name: Str(ngf:helloworld:gateway:my-test-svc)"))
+		return strings.Contains(logs, "service.name: Str(ngf:helloworld:gateway:my-test-svc)")
+	}
 
-		// install tracing configuration
-		traceFiles := []string{
-			"tracing/nginxproxy.yaml",
-			"tracing/policy-single.yaml",
-		}
-		Expect(resourceManager.ApplyFromFiles(traceFiles, ns.Name)).To(Succeed())
-		Expect(updateGatewayClass()).To(Succeed())
-
+	checkStatus := func() {
 		Eventually(
 			func() error {
 				return verifyGatewayClassResolvedRefs()
@@ -142,21 +158,29 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 
-		// send traffic and verify that traces exist for hello app
-		findTraces := func() bool {
-			sendTraceRequests(ctx, helloURL, 25)
-			sendTraceRequests(ctx, worldURL, 25)
-			sendTraceRequests(ctx, helloworldURL, 25)
-
-			logs, err := resourceManager.GetPodLogs(collectorNamespace, collectorPodName, &core.PodLogOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			return strings.Contains(logs, "service.name: Str(ngf:helloworld:gateway:my-test-svc)")
-		}
-
 		// wait for expected first line to show up
 		Eventually(findTraces, "1m", "5s").Should(BeTrue())
+	}
 
-		logs, err = resourceManager.GetPodLogs(collectorNamespace, collectorPodName, &core.PodLogOptions{})
+	It("sends tracing spans for one policy attached to one route", func() {
+		sendRequests(helloURL, 5)
+
+		// verify that no traces exist yet
+		logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(logs).ToNot(ContainSubstring("service.name: Str(ngf:helloworld:gateway:my-test-svc)"))
+
+		// install tracing configuration
+		traceFiles := []string{
+			nginxProxyFile,
+			policySingleFile,
+		}
+		Expect(resourceManager.ApplyFromFiles(traceFiles, ns.Name)).To(Succeed())
+		Expect(updateGatewayClass()).To(Succeed())
+
+		checkStatus()
+
+		logs, err = resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(logs).To(ContainSubstring("http.method: Str(GET)"))
@@ -172,46 +196,15 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 	It("sends tracing spans for one policy attached to multiple routes", func() {
 		// install tracing configuration
 		traceFiles := []string{
-			"tracing/nginxproxy.yaml",
-			"tracing/policy-multiple.yaml",
+			nginxProxyFile,
+			policyMultipleFile,
 		}
 		Expect(resourceManager.ApplyFromFiles(traceFiles, ns.Name)).To(Succeed())
 		Expect(updateGatewayClass()).To(Succeed())
 
-		Eventually(
-			func() error {
-				return verifyGatewayClassResolvedRefs()
-			}).
-			WithTimeout(timeoutConfig.GetTimeout).
-			WithPolling(500 * time.Millisecond).
-			Should(Succeed())
+		checkStatus()
 
-		Eventually(
-			func() error {
-				return verifyPolicyStatus()
-			}).
-			WithTimeout(timeoutConfig.GetTimeout).
-			WithPolling(500 * time.Millisecond).
-			Should(Succeed())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		// send traffic and verify that traces exist for hello app
-		findTraces := func() bool {
-			sendTraceRequests(ctx, helloURL, 25)
-			sendTraceRequests(ctx, worldURL, 25)
-			sendTraceRequests(ctx, helloworldURL, 25)
-
-			logs, err := resourceManager.GetPodLogs(collectorNamespace, collectorPodName, &core.PodLogOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			return strings.Contains(logs, "service.name: Str(ngf:helloworld:gateway:my-test-svc)")
-		}
-
-		// wait for expected first line to show up
-		Eventually(findTraces, "1m", "5s").Should(BeTrue())
-
-		logs, err := resourceManager.GetPodLogs(collectorNamespace, collectorPodName, &core.PodLogOptions{})
+		logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(logs).To(ContainSubstring("http.method: Str(GET)"))
@@ -263,7 +256,7 @@ func verifyPolicyStatus() error {
 	}
 
 	if count != len(pol.Status.Ancestors) {
-		return errors.New("Policy not accepted")
+		return fmt.Errorf("Policy not accepted; expected %d accepted conditions, got %d", len(pol.Status.Ancestors), count)
 	}
 
 	return nil

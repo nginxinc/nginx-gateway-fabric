@@ -6,13 +6,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // Get sends a GET request to the specified url.
@@ -54,7 +51,7 @@ func makeRequest(method, url, address string, body io.Reader, timeout time.Durat
 		return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", address, port))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
@@ -79,37 +76,4 @@ func makeRequest(method, url, address string, body io.Reader, timeout time.Durat
 	}
 
 	return resp, nil
-}
-
-// GetWithRetry retries the Get function until it succeeds or the context times out.
-func GetWithRetry(
-	ctx context.Context,
-	url,
-	address string,
-	requestTimeout time.Duration,
-) (int, string, error) {
-	var statusCode int
-	var body string
-
-	err := wait.PollUntilContextCancel(
-		ctx,
-		500*time.Millisecond,
-		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
-			var getErr error
-			statusCode, body, getErr = Get(url, address, requestTimeout)
-			if getErr != nil {
-				return false, getErr
-			}
-
-			if statusCode != 200 {
-				log.Printf("got %d code instead of expected 200\n", statusCode)
-				return false, nil
-			}
-
-			return true, nil
-		},
-	)
-
-	return statusCode, body, err
 }
