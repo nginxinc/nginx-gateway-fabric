@@ -40,6 +40,14 @@ Create data plane config name.
 {{- end }}
 
 {{/*
+Create security context constraints name.
+*/}}
+{{- define "nginx-gateway.scc-name" -}}
+{{- $name := default .Release.Name .Values.nameOverride }}
+{{- printf "%s-scc" $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "nginx-gateway.chart" -}}
