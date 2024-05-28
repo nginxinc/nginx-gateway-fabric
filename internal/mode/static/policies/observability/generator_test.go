@@ -53,7 +53,7 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 			expStrings: []string{
-				"otel_trace $ratio_ns_test_namespace_name_test_policy;",
+				"otel_trace $otel_ratio_25;",
 			},
 		},
 		{
@@ -202,12 +202,13 @@ func TestGeneratePanics(t *testing.T) {
 
 func TestCreateRatioVarName(t *testing.T) {
 	pol := &ngfAPI.ObservabilityPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-policy",
-			Namespace: "test-namespace",
+		Spec: ngfAPI.ObservabilityPolicySpec{
+			Tracing: &ngfAPI.Tracing{
+				Ratio: helpers.GetPointer[int32](25),
+			},
 		},
 	}
 
 	g := NewWithT(t)
-	g.Expect(observability.CreateRatioVarName(pol)).To(Equal("$ratio_ns_test_namespace_name_test_policy"))
+	g.Expect(observability.CreateRatioVarName(pol)).To(Equal("$otel_ratio_25"))
 }

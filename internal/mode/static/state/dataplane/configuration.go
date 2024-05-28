@@ -641,8 +641,8 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	for _, pol := range g.NGFPolicies {
 		if obsPol, ok := pol.Source.(*ngfAPI.ObservabilityPolicy); ok {
 			if obsPol.Spec.Tracing != nil && obsPol.Spec.Tracing.Ratio != nil && *obsPol.Spec.Tracing.Ratio > 0 {
-				nsName := observability.CreateRatioVarName(obsPol)
-				ratioMap[nsName] = *obsPol.Spec.Tracing.Ratio
+				ratioName := observability.CreateRatioVarName(obsPol)
+				ratioMap[ratioName] = *obsPol.Spec.Tracing.Ratio
 			}
 		}
 	}

@@ -2,7 +2,6 @@ package observability
 
 import (
 	"fmt"
-	"strings"
 	"text/template"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -70,8 +69,5 @@ func Generate(policy policies.Policy, globalSettings *policies.GlobalPolicySetti
 // CreateRatioVarName builds a variable name for an ObservabilityPolicy to be used with
 // ratio-based trace sampling.
 func CreateRatioVarName(policy *ngfAPI.ObservabilityPolicy) string {
-	namespace := strings.ReplaceAll(policy.GetNamespace(), "-", "_")
-	name := strings.ReplaceAll(policy.GetName(), "-", "_")
-
-	return fmt.Sprintf("$ratio_ns_%s_name_%s", namespace, name)
+	return fmt.Sprintf("$otel_ratio_%d", *policy.Spec.Tracing.Ratio)
 }

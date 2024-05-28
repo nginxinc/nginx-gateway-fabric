@@ -3059,7 +3059,7 @@ func TestBuildTelemetry(t *testing.T) {
 			},
 			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
 				t.Ratios = []Ratio{
-					{Name: "$ratio_ns_custom_ns_name_obsPolicy", Value: 25},
+					{Name: "$otel_ratio_25", Value: 25},
 				}
 				return t
 			}),
