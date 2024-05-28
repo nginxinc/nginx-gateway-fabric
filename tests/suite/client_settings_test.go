@@ -21,10 +21,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-const (
-	conditionTypeAccepted = "Accepted"
-)
-
 var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"), func() {
 	var (
 		files = []string{
@@ -285,7 +281,7 @@ func ancestorStatusMustHaveAcceptedCondition(
 		return fmt.Errorf("expected 1 condition in status, got %d", len(status.Conditions))
 	}
 
-	if status.Conditions[0].Type != conditionTypeAccepted {
+	if status.Conditions[0].Type != string(v1alpha2.RouteConditionAccepted) {
 		return fmt.Errorf("expected condition type to be Accepted, got %s", status.Conditions[0].Type)
 	}
 
