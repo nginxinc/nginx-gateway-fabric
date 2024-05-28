@@ -17,7 +17,6 @@ TELEMETRY_REPORT_PERIOD = 24h
 TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
 TELEMETRY_ENDPOINT_INSECURE = false
 
-GW_API_VERSION = 1.1.0
 ENABLE_EXPERIMENTAL ?= false
 NODE_VERSION = $(shell cat .nvmrc)
 
@@ -112,15 +111,15 @@ generate-crds: ## Generate CRDs and Go types using kubebuilder
 
 .PHONY: install-crds
 install-crds: ## Install CRDs
-	kubectl kustomize config/crd | kubectl apply -f -
+	kubectl kustomize $(SELF_DIR)config/crd | kubectl apply -f -
 
 .PHONY: install-gateway-crds
 install-gateway-crds: ## Install Gateway API CRDs
-	$(SELF_DIR)tests/scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	kubectl kustomize $(SELF_DIR)config/crd/gateway-api/$(if $(filter true,$(ENABLE_EXPERIMENTAL)),experimental,standard) | kubectl apply -f -
 
 .PHONY: uninstall-gateway-crds
 uninstall-gateway-crds: ## Uninstall Gateway API CRDs
-	$(SELF_DIR)tests/scripts/uninstall-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	kubectl kustomize $(SELF_DIR)config/crd/gateway-api/$(if $(filter true,$(ENABLE_EXPERIMENTAL)),experimental,standard) | kubectl delete -f -
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
