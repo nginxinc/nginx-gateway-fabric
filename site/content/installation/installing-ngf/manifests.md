@@ -45,6 +45,23 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
+{{<note>}}If you are deploying NGINX Gateway Fabric on OpenShift, we've supplied a baseline [SecurityContextConstraints](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/scc.yaml) manifest that you can download, modify if needed, and apply. You will also need to make sure the SecurityContextConstraints resource is added to the ClusterRole RBAC:
+
+```yaml
+. . .
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  resourceNames:
+  -  nginx-gateway-scc
+  verbs:
+  - use
+ ```
+
+Alternatively, use [helm]({{< relref "installation/installing-ngf/helm.md" >}}), which will automatically configure the mentioned resources on OpenShift.
+{{</note>}}
+
 #### Stable release
 
 ##### For NGINX
