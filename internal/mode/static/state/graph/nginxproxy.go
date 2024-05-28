@@ -10,13 +10,27 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
+// NginxProxy represents the NginxProxy resource.
+type NginxProxy struct {
+	// Source is the source resource.
+	Source *ngfAPI.NginxProxy
+	// Valid shows whether the NginxProxy is valid.
+	Valid bool
+}
+
 // getNginxProxy returns the NginxProxy associated with the GatewayClass (if it exists).
 func getNginxProxy(
 	nps map[types.NamespacedName]*ngfAPI.NginxProxy,
 	gc *v1.GatewayClass,
-) *ngfAPI.NginxProxy {
+) *NginxProxy {
 	if gcReferencesAnyNginxProxy(gc) {
-		return nps[types.NamespacedName{Name: gc.Spec.ParametersRef.Name}]
+		npCfg := nps[types.NamespacedName{Name: gc.Spec.ParametersRef.Name}]
+		if npCfg != nil {
+			return &NginxProxy{
+				Source: npCfg,
+				Valid:  true,
+			}
+		}
 	}
 
 	return nil
@@ -40,12 +54,12 @@ func gcReferencesAnyNginxProxy(gc *v1.GatewayClass) bool {
 // validateNginxProxy performs re-validation on string values in the case of CRD validation failure.
 func validateNginxProxy(
 	validator validation.GenericValidator,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 	spec := field.NewPath("spec")
 
-	telemetry := npCfg.Spec.Telemetry
+	telemetry := npCfg.Source.Spec.Telemetry
 	if telemetry != nil {
 		telPath := spec.Child("telemetry")
 		if telemetry.ServiceName != nil {
@@ -86,6 +100,10 @@ func validateNginxProxy(
 				}
 			}
 		}
+	}
+
+	if len(allErrs) > 0 {
+		npCfg.Valid = false
 	}
 
 	return allErrs

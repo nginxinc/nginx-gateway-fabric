@@ -7,20 +7,19 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 // GenerateFunc generates config as []byte for an NGF Policy.
-type GenerateFunc func(policy Policy, globalSettings *ngfAPI.NginxProxy) []byte
+type GenerateFunc func(policy Policy, globalSettings *GlobalPolicySettings) []byte
 
 // Validator validates an NGF Policy.
 //
 //counterfeiter:generate . Validator
 type Validator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy Policy, policyValidationCtx *ValidationContext) []conditions.Condition
+	Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b Policy) bool
 }
@@ -63,7 +62,7 @@ func NewManager(
 }
 
 // Generate generates config for the policy as a byte array.
-func (m *Manager) Generate(policy Policy, globalSettings *ngfAPI.NginxProxy) []byte {
+func (m *Manager) Generate(policy Policy, globalSettings *GlobalPolicySettings) []byte {
 	gvk := m.mustExtractGVK(policy)
 
 	generate, ok := m.generators[gvk]
@@ -75,7 +74,7 @@ func (m *Manager) Generate(policy Policy, globalSettings *ngfAPI.NginxProxy) []b
 }
 
 // Validate validates the policy.
-func (m *Manager) Validate(policy Policy, policyValidationCtx *ValidationContext) []conditions.Condition {
+func (m *Manager) Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition {
 	gvk := m.mustExtractGVK(policy)
 
 	validator, ok := m.validators[gvk]
@@ -83,7 +82,7 @@ func (m *Manager) Validate(policy Policy, policyValidationCtx *ValidationContext
 		panic(fmt.Sprintf("no validator registered for policy %T", policy))
 	}
 
-	return validator.Validate(policy, policyValidationCtx)
+	return validator.Validate(policy, globalSettings)
 }
 
 // Conflicts returns true if the policies conflict.

@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
@@ -65,7 +64,7 @@ func processGatewayClasses(
 
 func buildGatewayClass(
 	gc *v1.GatewayClass,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
 	validator validation.GenericValidator,
 ) *GatewayClass {
@@ -84,7 +83,7 @@ func buildGatewayClass(
 
 func validateGatewayClass(
 	gc *v1.GatewayClass,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
 	validator validation.GenericValidator,
 ) ([]conditions.Condition, bool) {

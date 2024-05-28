@@ -619,18 +619,20 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
-	nginxProxy := &ngfAPI.NginxProxy{
-		Spec: ngfAPI.NginxProxySpec{
-			Telemetry: &ngfAPI.Telemetry{
-				Exporter: &ngfAPI.TelemetryExporter{
-					Endpoint:   "my-otel.svc:4563",
-					BatchSize:  helpers.GetPointer(int32(512)),
-					BatchCount: helpers.GetPointer(int32(4)),
-					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+	nginxProxy := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{
+					Exporter: &ngfAPI.TelemetryExporter{
+						Endpoint:   "my-otel.svc:4563",
+						BatchSize:  helpers.GetPointer(int32(512)),
+						BatchCount: helpers.GetPointer(int32(4)),
+						Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+					},
+					ServiceName: helpers.GetPointer("my-svc"),
 				},
-				ServiceName: helpers.GetPointer("my-svc"),
+				DisableHTTP2: true,
 			},
-			DisableHTTP2: true,
 		},
 	}
 
@@ -2245,7 +2247,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g := NewWithT(t)
 
 			fakeGenerator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(p policies.Policy, _ *ngfAPI.NginxProxy) []byte {
+				GenerateStub: func(p policies.Policy, _ *policies.GlobalPolicySettings) []byte {
 					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
 					case "ApplePolicy":
 						return []byte("apple")
@@ -2966,18 +2968,20 @@ func TestConvertBackendTLS(t *testing.T) {
 }
 
 func TestBuildTelemetry(t *testing.T) {
-	telemetryConfigured := &ngfAPI.NginxProxy{
-		Spec: ngfAPI.NginxProxySpec{
-			Telemetry: &ngfAPI.Telemetry{
-				Exporter: &ngfAPI.TelemetryExporter{
-					Endpoint:   "my-otel.svc:4563",
-					BatchSize:  helpers.GetPointer(int32(512)),
-					BatchCount: helpers.GetPointer(int32(4)),
-					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
-				},
-				ServiceName: helpers.GetPointer("my-svc"),
-				SpanAttributes: []ngfAPI.SpanAttribute{
-					{Key: "key", Value: "value"},
+	telemetryConfigured := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{
+					Exporter: &ngfAPI.TelemetryExporter{
+						Endpoint:   "my-otel.svc:4563",
+						BatchSize:  helpers.GetPointer(int32(512)),
+						BatchCount: helpers.GetPointer(int32(4)),
+						Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+					},
+					ServiceName: helpers.GetPointer("my-svc"),
+					SpanAttributes: []ngfAPI.SpanAttribute{
+						{Key: "key", Value: "value"},
+					},
 				},
 			},
 		},
@@ -3004,7 +3008,9 @@ func TestBuildTelemetry(t *testing.T) {
 	}{
 		{
 			g: &graph.Graph{
-				NginxProxy: &ngfAPI.NginxProxy{},
+				NginxProxy: &graph.NginxProxy{
+					Source: &ngfAPI.NginxProxy{},
+				},
 			},
 			expTelemetry: Telemetry{},
 			msg:          "No telemetry configured",
@@ -3053,7 +3059,7 @@ func TestBuildTelemetry(t *testing.T) {
 			},
 			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
 				t.Ratios = []Ratio{
-					{Name: "$ratio_custom_ns_obsPolicy", Value: 25},
+					{Name: "$ratio_ns_custom_ns_name_obsPolicy", Value: 25},
 				}
 				return t
 			}),
@@ -3176,7 +3182,7 @@ func TestBuildAdditions(t *testing.T) {
 			g := NewWithT(t)
 
 			generator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(policy policies.Policy, _ *ngfAPI.NginxProxy) []byte {
+				GenerateStub: func(policy policies.Policy, _ *policies.GlobalPolicySettings) []byte {
 					return []byte(policy.GetName())
 				},
 			}

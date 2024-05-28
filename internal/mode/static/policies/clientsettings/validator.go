@@ -1,11 +1,8 @@
 package clientsettings
 
 import (
-	"slices"
-
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -28,10 +25,12 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 }
 
 // Validate validates the spec of a ClientSettingsPolicy.
-func (v *Validator) Validate(policy policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
+func (v *Validator) Validate(policy policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
 	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
-	if err := validateTargetRef(csp.Spec.TargetRef); err != nil {
+	targetRefPath := field.NewPath("spec").Child("targetRef")
+	supportedKinds := []gatewayv1.Kind{kinds.Gateway, kinds.HTTPRoute, kinds.GRPCRoute}
+	if err := policies.ValidateTargetRef(csp.Spec.TargetRef, targetRefPath, supportedKinds); err != nil {
 		return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
 	}
 
@@ -77,34 +76,6 @@ func conflicts(a, b ngfAPI.ClientSettingsPolicySpec) bool {
 	}
 
 	return false
-}
-
-func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference) error {
-	basePath := field.NewPath("spec").Child("targetRef")
-
-	if ref.Group != gatewayv1.GroupName {
-		path := basePath.Child("group")
-
-		return field.NotSupported(
-			path,
-			ref.Group,
-			[]string{gatewayv1.GroupName},
-		)
-	}
-
-	supportedKinds := []gatewayv1.Kind{kinds.Gateway, kinds.HTTPRoute, kinds.GRPCRoute}
-
-	if !slices.Contains(supportedKinds, ref.Kind) {
-		path := basePath.Child("kind")
-
-		return field.NotSupported(
-			path,
-			ref.Kind,
-			supportedKinds,
-		)
-	}
-
-	return nil
 }
 
 // validateSettings performs validation on fields in the spec that are vulnerable to code injection.

@@ -22,11 +22,11 @@ type FakePolicyValidator struct {
 	conflictsReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	ValidateStub        func(policies.Policy, *policies.ValidationContext) []conditions.Condition
+	ValidateStub        func(policies.Policy, *policies.GlobalPolicySettings) []conditions.Condition
 	validateMutex       sync.RWMutex
 	validateArgsForCall []struct {
 		arg1 policies.Policy
-		arg2 *policies.ValidationContext
+		arg2 *policies.GlobalPolicySettings
 	}
 	validateReturns struct {
 		result1 []conditions.Condition
@@ -100,12 +100,12 @@ func (fake *FakePolicyValidator) ConflictsReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *FakePolicyValidator) Validate(arg1 policies.Policy, arg2 *policies.ValidationContext) []conditions.Condition {
+func (fake *FakePolicyValidator) Validate(arg1 policies.Policy, arg2 *policies.GlobalPolicySettings) []conditions.Condition {
 	fake.validateMutex.Lock()
 	ret, specificReturn := fake.validateReturnsOnCall[len(fake.validateArgsForCall)]
 	fake.validateArgsForCall = append(fake.validateArgsForCall, struct {
 		arg1 policies.Policy
-		arg2 *policies.ValidationContext
+		arg2 *policies.GlobalPolicySettings
 	}{arg1, arg2})
 	stub := fake.ValidateStub
 	fakeReturns := fake.validateReturns
@@ -126,13 +126,13 @@ func (fake *FakePolicyValidator) ValidateCallCount() int {
 	return len(fake.validateArgsForCall)
 }
 
-func (fake *FakePolicyValidator) ValidateCalls(stub func(policies.Policy, *policies.ValidationContext) []conditions.Condition) {
+func (fake *FakePolicyValidator) ValidateCalls(stub func(policies.Policy, *policies.GlobalPolicySettings) []conditions.Condition) {
 	fake.validateMutex.Lock()
 	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = stub
 }
 
-func (fake *FakePolicyValidator) ValidateArgsForCall(i int) (policies.Policy, *policies.ValidationContext) {
+func (fake *FakePolicyValidator) ValidateArgsForCall(i int) (policies.Policy, *policies.GlobalPolicySettings) {
 	fake.validateMutex.RLock()
 	defer fake.validateMutex.RUnlock()
 	argsForCall := fake.validateArgsForCall[i]

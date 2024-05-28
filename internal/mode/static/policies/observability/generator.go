@@ -31,7 +31,7 @@ otel_span_attr "{{ $attr.Key }}" "{{ $attr.Value }}";
 `
 
 // Generate generates configuration as []byte for an ObservabilityPolicy.
-func Generate(policy policies.Policy, globalSettings *ngfAPI.NginxProxy) []byte {
+func Generate(policy policies.Policy, globalSettings *policies.GlobalPolicySettings) []byte {
 	obs := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](policy)
 
 	var strategy string
@@ -54,8 +54,8 @@ func Generate(policy policies.Policy, globalSettings *ngfAPI.NginxProxy) []byte 
 	}
 
 	var spanAttributes []ngfAPI.SpanAttribute
-	if globalSettings != nil && globalSettings.Spec.Telemetry != nil {
-		spanAttributes = globalSettings.Spec.Telemetry.SpanAttributes
+	if globalSettings != nil {
+		spanAttributes = globalSettings.TracingSpanAttributes
 	}
 
 	fields := map[string]interface{}{
@@ -73,5 +73,5 @@ func CreateRatioVarName(policy *ngfAPI.ObservabilityPolicy) string {
 	namespace := strings.ReplaceAll(policy.GetNamespace(), "-", "_")
 	name := strings.ReplaceAll(policy.GetName(), "-", "_")
 
-	return fmt.Sprintf("$ratio_%s_%s", namespace, name)
+	return fmt.Sprintf("$ratio_ns_%s_name_%s", namespace, name)
 }

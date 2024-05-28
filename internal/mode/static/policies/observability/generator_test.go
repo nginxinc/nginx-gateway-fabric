@@ -20,10 +20,10 @@ func TestGenerate(t *testing.T) {
 	spanName := helpers.GetPointer("my-span")
 
 	tests := []struct {
-		name       string
-		policy     policies.Policy
-		npCfg      *ngfAPI.NginxProxy
-		expStrings []string
+		name           string
+		policy         policies.Policy
+		globalSettings *policies.GlobalPolicySettings
+		expStrings     []string
 	}{
 		{
 			name: "strategy set to default ratio",
@@ -53,7 +53,7 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 			expStrings: []string{
-				"otel_trace $ratio_test_namespace_test_policy;",
+				"otel_trace $ratio_ns_test_namespace_name_test_policy;",
 			},
 		},
 		{
@@ -138,13 +138,9 @@ func TestGenerate(t *testing.T) {
 					Tracing: &ngfAPI.Tracing{},
 				},
 			},
-			npCfg: &ngfAPI.NginxProxy{
-				Spec: ngfAPI.NginxProxySpec{
-					Telemetry: &ngfAPI.Telemetry{
-						SpanAttributes: []ngfAPI.SpanAttribute{
-							{Key: "test-global-key", Value: "test-global-value"},
-						},
-					},
+			globalSettings: &policies.GlobalPolicySettings{
+				TracingSpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "test-global-key", Value: "test-global-value"},
 				},
 			},
 			expStrings: []string{
@@ -166,13 +162,9 @@ func TestGenerate(t *testing.T) {
 					},
 				},
 			},
-			npCfg: &ngfAPI.NginxProxy{
-				Spec: ngfAPI.NginxProxySpec{
-					Telemetry: &ngfAPI.Telemetry{
-						SpanAttributes: []ngfAPI.SpanAttribute{
-							{Key: "test-global-key", Value: "test-global-value"},
-						},
-					},
+			globalSettings: &policies.GlobalPolicySettings{
+				TracingSpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "test-global-key", Value: "test-global-value"},
 				},
 			},
 			expStrings: []string{
@@ -189,7 +181,7 @@ func TestGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			cfgString := string(observability.Generate(test.policy, test.npCfg))
+			cfgString := string(observability.Generate(test.policy, test.globalSettings))
 
 			for _, str := range test.expStrings {
 				g.Expect(cfgString).To(ContainSubstring(str))
@@ -217,5 +209,5 @@ func TestCreateRatioVarName(t *testing.T) {
 	}
 
 	g := NewWithT(t)
-	g.Expect(observability.CreateRatioVarName(pol)).To(Equal("$ratio_test_namespace_test_policy"))
+	g.Expect(observability.CreateRatioVarName(pol)).To(Equal("$ratio_ns_test_namespace_name_test_policy"))
 }

@@ -6,7 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
@@ -43,24 +42,24 @@ var _ = Describe("Policy Manager", func() {
 		mustExtractGVK,
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("apple error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return true },
 			},
-			Generator: func(_ policies.Policy, _ *ngfAPI.NginxProxy) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []byte {
 				return []byte("apple")
 			},
 			GVK: appleGVK,
 		},
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.ValidationContext) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("orange error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return false },
 			},
-			Generator: func(_ policies.Policy, _ *ngfAPI.NginxProxy) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []byte {
 				return []byte("orange")
 			},
 			GVK: orangeGVK,

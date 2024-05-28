@@ -105,15 +105,13 @@ func attachPolicyToRoute(policy *Policy, route *L7Route, ctlrName string) {
 		return
 	}
 
-	policy.Ancestors = append(policy.Ancestors, ancestor)
-
 	if !route.Valid || !route.Attachable || len(route.ParentRefs) == 0 {
-		cond := staticConds.NewPolicyTargetNotFound("TargetRef is invalid")
-		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
-
+		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")}
+		policy.Ancestors = append(policy.Ancestors, ancestor)
 		return
 	}
 
+	policy.Ancestors = append(policy.Ancestors, ancestor)
 	route.Policies = append(route.Policies, policy)
 }
 
@@ -139,20 +137,19 @@ func attachPolicyToGateway(
 		return
 	}
 
-	policy.Ancestors = append(policy.Ancestors, ancestor)
-
 	if ignored {
-		cond := staticConds.NewPolicyTargetNotFound("TargetRef is ignored")
-		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
+		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is ignored")}
+		policy.Ancestors = append(policy.Ancestors, ancestor)
 		return
 	}
 
 	if !gw.Valid {
-		cond := staticConds.NewPolicyTargetNotFound("TargetRef is invalid")
-		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
+		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")}
+		policy.Ancestors = append(policy.Ancestors, ancestor)
 		return
 	}
 
+	policy.Ancestors = append(policy.Ancestors, ancestor)
 	gw.Policies = append(gw.Policies, policy)
 }
 
@@ -161,7 +158,7 @@ func processPolicies(
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
-	policyValidationCtx *policies.ValidationContext,
+	globalSettings *policies.GlobalPolicySettings,
 ) map[PolicyKey]*Policy {
 	if len(policies) == 0 || gateways.Winner == nil {
 		return nil
@@ -170,8 +167,8 @@ func processPolicies(
 	processedPolicies := make(map[PolicyKey]*Policy)
 
 	for key, policy := range policies {
-		var refsTracked bool
 		targetRefs := make([]PolicyTargetRef, 0, len(policy.GetTargetRefs()))
+
 		for _, ref := range policy.GetTargetRefs() {
 			refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.GetNamespace()}
 			refGroupKind := fmt.Sprintf("%s/%s", ref.Group, ref.Kind)
@@ -189,7 +186,6 @@ func processPolicies(
 				continue
 			}
 
-			refsTracked = true
 			targetRefs = append(targetRefs,
 				PolicyTargetRef{
 					Kind:   ref.Kind,
@@ -198,11 +194,11 @@ func processPolicies(
 				})
 		}
 
-		if !refsTracked {
+		if len(targetRefs) == 0 {
 			continue
 		}
 
-		conds := validator.Validate(policy, policyValidationCtx)
+		conds := validator.Validate(policy, globalSettings)
 
 		processedPolicies[key] = &Policy{
 			Source:     policy,

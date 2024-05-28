@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -139,7 +138,7 @@ func buildRoutesForGateways(
 	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
 	grpcRoutes map[types.NamespacedName]*v1.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 ) map[RouteKey]*L7Route {
 	if len(gatewayNsNames) == 0 {
 		return nil
@@ -166,11 +165,11 @@ func buildRoutesForGateways(
 	return routes
 }
 
-func isHTTP2Disabled(npCfg *ngfAPI.NginxProxy) bool {
+func isHTTP2Disabled(npCfg *NginxProxy) bool {
 	if npCfg == nil {
 		return false
 	}
-	return npCfg.Spec.DisableHTTP2
+	return npCfg.Source.Spec.DisableHTTP2
 }
 
 func buildSectionNameRefs(

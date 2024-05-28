@@ -341,6 +341,9 @@ func TestBuildGraph(t *testing.T) {
 					BatchCount: helpers.GetPointer(int32(4)),
 				},
 				ServiceName: helpers.GetPointer("my-svc"),
+				SpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
 			},
 		},
 	}
@@ -595,10 +598,20 @@ func TestBuildGraph(t *testing.T) {
 			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
 				client.ObjectKeyFromObject(btp.Source): &btp,
 			},
-			NginxProxy: proxy,
+			NginxProxy: &NginxProxy{
+				Source: proxy,
+				Valid:  true,
+			},
 			NGFPolicies: map[PolicyKey]*Policy{
 				hrPolicyKey: processedRoutePolicy,
 				gwPolicyKey: processedGwPolicy,
+			},
+			GlobalPolicySettings: &policies.GlobalPolicySettings{
+				NginxProxyValid:  true,
+				TelemetryEnabled: true,
+				TracingSpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
 			},
 		}
 	}
@@ -646,6 +659,8 @@ func TestBuildGraph(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			fakePolicyValidator := &validationfakes.FakePolicyValidator{}
+
 			result := BuildGraph(
 				test.store,
 				controllerName,
@@ -653,7 +668,7 @@ func TestBuildGraph(t *testing.T) {
 				validation.Validators{
 					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
 					GenericValidator:    &validationfakes.FakeGenericValidator{},
-					PolicyValidator:     &validationfakes.FakePolicyValidator{},
+					PolicyValidator:     fakePolicyValidator,
 				},
 				protectedPorts,
 			)

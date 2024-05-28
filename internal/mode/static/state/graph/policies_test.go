@@ -35,6 +35,11 @@ func TestAttachPolicies(t *testing.T) {
 				Group:  v1.GroupName,
 				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway"},
 			},
+			{
+				Kind:   kinds.Gateway,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway2"}, // ignored
+			},
 		},
 	}
 
@@ -47,6 +52,11 @@ func TestAttachPolicies(t *testing.T) {
 				Kind:   kinds.HTTPRoute,
 				Group:  v1.GroupName,
 				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-route"},
+			},
+			{
+				Kind:   kinds.HTTPRoute,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr2-route"},
 			},
 		},
 	}
@@ -93,6 +103,23 @@ func TestAttachPolicies(t *testing.T) {
 					Source: &v1.HTTPRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "hr-route",
+							Namespace: testNs,
+						},
+					},
+					ParentRefs: []ParentRef{
+						{
+							Attachment: &ParentRefAttachmentStatus{
+								Attached: true,
+							},
+						},
+					},
+					Valid:      true,
+					Attachable: true,
+				},
+				createRouteKey("hr2-route", RouteTypeHTTP): {
+					Source: &v1.HTTPRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "hr2-route",
 							Namespace: testNs,
 						},
 					},
@@ -622,7 +649,7 @@ func TestProcessPolicies(t *testing.T) {
 			validator: &policiesfakes.FakeValidator{
 				ValidateStub: func(
 					policy policies.Policy,
-					_ *policies.ValidationContext,
+					_ *policies.GlobalPolicySettings,
 				) []conditions.Condition {
 					if policy.GetName() == "pol1" {
 						return []conditions.Condition{staticConds.NewPolicyInvalid("invalid error")}

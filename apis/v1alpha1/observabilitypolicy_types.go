@@ -64,6 +64,7 @@ type Tracing struct {
 
 	// Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
 	// By default, 100% of http requests are traced. Not applicable for parent-based tracing.
+	// If ratio is set to 0, tracing is disabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

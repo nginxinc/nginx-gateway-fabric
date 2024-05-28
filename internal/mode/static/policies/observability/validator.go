@@ -1,15 +1,12 @@
 package observability
 
 import (
-	"fmt"
-	"slices"
-
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -30,27 +27,28 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 // Validate validates the spec of an ObservabilityPolicy.
 func (v *Validator) Validate(
 	policy policies.Policy,
-	policyValidationCtx *policies.ValidationContext,
+	globalSettings *policies.GlobalPolicySettings,
 ) []conditions.Condition {
-	obs, ok := policy.(*ngfAPI.ObservabilityPolicy)
-	if !ok {
-		panic(fmt.Sprintf("expected ObservabilityPolicy, got: %T", policy))
-	}
+	obs := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](policy)
 
-	if policyValidationCtx == nil || !policyValidationCtx.NginxProxyValid {
+	if globalSettings == nil || !globalSettings.NginxProxyValid {
 		return []conditions.Condition{
 			staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageNginxProxyInvalid),
 		}
 	}
 
-	if !policyValidationCtx.TelemetryEnabled {
+	if !globalSettings.TelemetryEnabled {
 		return []conditions.Condition{
 			staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageTelemetryNotEnabled),
 		}
 	}
 
-	if err := validateTargetRefs(obs.Spec.TargetRefs); err != nil {
-		return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
+	targetRefPath := field.NewPath("spec").Child("targetRefs")
+	supportedKinds := []gatewayv1.Kind{kinds.HTTPRoute, kinds.GRPCRoute}
+	for _, ref := range obs.Spec.TargetRefs {
+		if err := policies.ValidateTargetRef(ref, targetRefPath, supportedKinds); err != nil {
+			return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
+		}
 	}
 
 	if err := v.validateSettings(obs.Spec); err != nil {
@@ -62,44 +60,10 @@ func (v *Validator) Validate(
 
 // Conflicts returns true if the two ObservabilityPolicies conflict.
 func (v *Validator) Conflicts(polA, polB policies.Policy) bool {
-	a, okA := polA.(*ngfAPI.ObservabilityPolicy)
-	b, okB := polB.(*ngfAPI.ObservabilityPolicy)
-
-	if !okA || !okB {
-		panic(fmt.Sprintf("expected ObservabilityPolicies, got: %T, %T", polA, polB))
-	}
+	a := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](polA)
+	b := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](polB)
 
 	return a.Spec.Tracing != nil && b.Spec.Tracing != nil
-}
-
-func validateTargetRefs(refs []v1alpha2.LocalPolicyTargetReference) error {
-	basePath := field.NewPath("spec").Child("targetRefs")
-
-	for _, ref := range refs {
-		if ref.Group != gatewayv1.GroupName {
-			path := basePath.Child("group")
-
-			return field.Invalid(
-				path,
-				ref.Group,
-				fmt.Sprintf("unsupported targetRef Group %q; must be %s", ref.Group, gatewayv1.GroupName),
-			)
-		}
-
-		supportedKinds := []gatewayv1.Kind{kinds.HTTPRoute, kinds.GRPCRoute}
-
-		if !slices.Contains(supportedKinds, ref.Kind) {
-			path := basePath.Child("kind")
-
-			return field.Invalid(
-				path,
-				ref.Kind,
-				fmt.Sprintf("unsupported targetRef Kind %q; Kind must be one of: %v", ref.Kind, supportedKinds),
-			)
-		}
-	}
-
-	return nil
 }
 
 func (v *Validator) validateSettings(spec ngfAPI.ObservabilityPolicySpec) error {
@@ -135,7 +99,7 @@ func (v *Validator) validateSettings(spec ngfAPI.ObservabilityPolicySpec) error 
 					allErrs,
 					field.NotSupported(
 						tracePath.Child("context"),
-						spec.Tracing.Strategy,
+						spec.Tracing.Context,
 						[]string{
 							string(ngfAPI.TraceContextExtract),
 							string(ngfAPI.TraceContextInject),

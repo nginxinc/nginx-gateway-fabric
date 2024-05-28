@@ -4,16 +4,15 @@ package policiesfakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 )
 
 type FakeConfigGenerator struct {
-	GenerateStub        func(policies.Policy, *v1alpha1.NginxProxy) []byte
+	GenerateStub        func(policies.Policy, *policies.GlobalPolicySettings) []byte
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
 		arg1 policies.Policy
-		arg2 *v1alpha1.NginxProxy
+		arg2 *policies.GlobalPolicySettings
 	}
 	generateReturns struct {
 		result1 []byte
@@ -25,12 +24,12 @@ type FakeConfigGenerator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigGenerator) Generate(arg1 policies.Policy, arg2 *v1alpha1.NginxProxy) []byte {
+func (fake *FakeConfigGenerator) Generate(arg1 policies.Policy, arg2 *policies.GlobalPolicySettings) []byte {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 		arg1 policies.Policy
-		arg2 *v1alpha1.NginxProxy
+		arg2 *policies.GlobalPolicySettings
 	}{arg1, arg2})
 	stub := fake.GenerateStub
 	fakeReturns := fake.generateReturns
@@ -51,13 +50,13 @@ func (fake *FakeConfigGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeConfigGenerator) GenerateCalls(stub func(policies.Policy, *v1alpha1.NginxProxy) []byte) {
+func (fake *FakeConfigGenerator) GenerateCalls(stub func(policies.Policy, *policies.GlobalPolicySettings) []byte) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = stub
 }
 
-func (fake *FakeConfigGenerator) GenerateArgsForCall(i int) (policies.Policy, *v1alpha1.NginxProxy) {
+func (fake *FakeConfigGenerator) GenerateArgsForCall(i int) (policies.Policy, *policies.GlobalPolicySettings) {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
 	argsForCall := fake.generateArgsForCall[i]

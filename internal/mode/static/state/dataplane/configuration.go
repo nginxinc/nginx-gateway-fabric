@@ -218,7 +218,7 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
-			rules.upsertListener(l, g.NginxProxy)
+			rules.upsertListener(l, g.GlobalPolicySettings)
 		}
 	}
 
@@ -227,7 +227,7 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 
 	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
 
-	additions := buildAdditions(g.Gateway.Policies, g.NginxProxy, generator)
+	additions := buildAdditions(g.Gateway.Policies, g.GlobalPolicySettings, generator)
 
 	for i := range httpServers {
 		httpServers[i].Additions = additions
@@ -281,7 +281,7 @@ func newHostPathRules(generator policies.ConfigGenerator) *hostPathRules {
 	}
 }
 
-func (hpr *hostPathRules) upsertListener(l *graph.Listener, npCfg *ngfAPI.NginxProxy) {
+func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *policies.GlobalPolicySettings) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
@@ -294,11 +294,15 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener, npCfg *ngfAPI.NginxP
 			continue
 		}
 
-		hpr.upsertRoute(r, l, npCfg)
+		hpr.upsertRoute(r, l, globalSettings)
 	}
 }
 
-func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.Listener, npCfg *ngfAPI.NginxProxy) {
+func (hpr *hostPathRules) upsertRoute(
+	route *graph.L7Route,
+	listener *graph.Listener,
+	globalSettings *policies.GlobalPolicySettings,
+) {
 	var hostnames []string
 	GRPC := route.RouteType == graph.RouteTypeGRPC
 
@@ -345,7 +349,7 @@ func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.List
 			}
 		}
 
-		additions := buildAdditions(route.Policies, npCfg, hpr.generator)
+		additions := buildAdditions(route.Policies, globalSettings, hpr.generator)
 
 		for _, h := range hostnames {
 			for _, m := range rule.Matches {
@@ -603,12 +607,14 @@ func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
 
 // buildTelemetry generates the Otel configuration.
 func buildTelemetry(g *graph.Graph) Telemetry {
-	if g.NginxProxy == nil || g.NginxProxy.Spec.Telemetry == nil || g.NginxProxy.Spec.Telemetry.Exporter == nil {
+	if g.NginxProxy == nil ||
+		g.NginxProxy.Source.Spec.Telemetry == nil ||
+		g.NginxProxy.Source.Spec.Telemetry.Exporter == nil {
 		return Telemetry{}
 	}
 
 	serviceName := fmt.Sprintf("ngf:%s:%s", g.Gateway.Source.Namespace, g.Gateway.Source.Name)
-	telemetry := g.NginxProxy.Spec.Telemetry
+	telemetry := g.NginxProxy.Source.Spec.Telemetry
 	if telemetry.ServiceName != nil {
 		serviceName = serviceName + ":" + *telemetry.ServiceName
 	}
@@ -628,6 +634,9 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 		tel.Interval = string(*telemetry.Exporter.Interval)
 	}
 
+	// FIXME(sberman): https://github.com/nginxinc/nginx-gateway-fabric/issues/2038
+	// Find a generic way to include relevant policy info at the http context so we don't need policy-specific
+	// logic in this function
 	ratioMap := make(map[string]int32)
 	for _, pol := range g.NGFPolicies {
 		if obsPol, ok := pol.Source.(*ngfAPI.ObservabilityPolicy); ok {
@@ -658,7 +667,7 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		return baseConfig
 	}
 
-	if g.NginxProxy.Spec.DisableHTTP2 {
+	if g.NginxProxy.Source.Spec.DisableHTTP2 {
 		baseConfig.HTTP2 = false
 	}
 
@@ -667,7 +676,7 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 
 func buildAdditions(
 	policies []*graph.Policy,
-	npCfg *ngfAPI.NginxProxy,
+	globalSettings *policies.GlobalPolicySettings,
 	generator policies.ConfigGenerator,
 ) []Addition {
 	if len(policies) == 0 {
@@ -682,7 +691,7 @@ func buildAdditions(
 		}
 
 		additions = append(additions, Addition{
-			Bytes: generator.Generate(policy.Source, npCfg),
+			Bytes: generator.Generate(policy.Source, globalSettings),
 			Identifier: fmt.Sprintf(
 				"%s_%s_%s",
 				policy.Source.GetObjectKind().GroupVersionKind().Kind,
