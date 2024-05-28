@@ -51,7 +51,6 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 	})
 
 	AfterAll(func() {
-		Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		Expect(resourceManager.DeleteNamespace(namespace)).To(Succeed())
 	})
 
