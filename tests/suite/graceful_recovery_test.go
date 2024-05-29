@@ -28,7 +28,7 @@ const (
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
 // documentation), this test is recommended to be run separate from other nfr tests.
-var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recovery"), func() {
+var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
 		"graceful-recovery/cafe-secret.yaml",
@@ -42,10 +42,10 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		},
 	}
 
-	teaURL := "https://cafe.example.com/tea"
-	coffeeURL := "http://cafe.example.com/coffee"
+	teaURI := "/tea"
+	coffeeURI := "http://cafe.example.com/coffee"
 
-	var ngfPodName string
+	var ngfPodName, teaURL, coffeeURL string
 
 	BeforeAll(func() {
 		// this test is unique in that it will check the entire log of both ngf and nginx containers
@@ -60,6 +60,12 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(podNames).To(HaveLen(1))
 
 		ngfPodName = podNames[0]
+		port := 80
+		if portFwdPort != 0 {
+			port = portFwdPort
+		}
+		teaURL = fmt.Sprintf("http://cafe.example.com:%d", port) + teaURI
+		coffeeURL = fmt.Sprintf("http://cafe.example.com:%d", port) + coffeeURI
 	})
 
 	BeforeEach(func() {

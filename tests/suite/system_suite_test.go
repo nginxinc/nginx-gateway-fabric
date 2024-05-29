@@ -259,8 +259,8 @@ var _ = BeforeSuite(func() {
 		"upgrade",            // - running upgrade test (this test will deploy its own version)
 		"longevity-teardown", // - running longevity teardown (deployment will already exist)
 		"telemetry",          // - running telemetry test (NGF will be deployed as part of the test)
-		"graceful-recovery",  // - running graceful recovery test (this test will deploy its own version)
-		"scale",              // - running scale test (this test will deploy its own version)
+		// "graceful-recovery",  // - running graceful recovery test (this test will deploy its own version)
+		"scale", // - running scale test (this test will deploy its own version)
 	}
 	for _, s := range skipSubstrings {
 		if strings.Contains(labelFilter, s) {
@@ -299,6 +299,7 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "graceful-recovery") ||
+		// graceful-recovery tests are treated as functional tests to be run in the pipeline
+		// strings.Contains(labelFilter, "graceful-recovery") ||
 		strings.Contains(labelFilter, "scale")
 }
