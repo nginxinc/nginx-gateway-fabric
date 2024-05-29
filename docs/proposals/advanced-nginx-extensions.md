@@ -7,7 +7,7 @@
 
 NGINX Gateway Fabric (NGF) [exposes](/site/content/overview/gateway-api-compatibility.md) NGINX features via Gateway API
 resources (like HTTPRoute) and [NGINX extensions](nginx-extensions.md) (like ClientSettingPolicy). Combined, they
-expose a subset of most common NGINX configuration. As we implement more Gateway API resources and NGINX extensions,
+expose a subset of the most common NGINX configuration. As we implement more Gateway API resources and NGINX extensions,
 the subset will grow. However, it will take time. Additionally, because the number of NGINX configuration directives
 and parameters is huge, not all of them will be supported that way. As a result, users are not able to implement certain
 NGINX use cases. To allow them to implement those use cases, we need to bring a new extension mechanism to NGF.
