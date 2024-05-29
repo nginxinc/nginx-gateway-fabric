@@ -4,6 +4,7 @@ package validationfakes
 import (
 	"sync"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -21,16 +22,17 @@ type FakePolicyValidator struct {
 	conflictsReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	ValidateStub        func(policies.Policy) error
+	ValidateStub        func(policies.Policy, *policies.GlobalSettings) []conditions.Condition
 	validateMutex       sync.RWMutex
 	validateArgsForCall []struct {
 		arg1 policies.Policy
+		arg2 *policies.GlobalSettings
 	}
 	validateReturns struct {
-		result1 error
+		result1 []conditions.Condition
 	}
 	validateReturnsOnCall map[int]struct {
-		result1 error
+		result1 []conditions.Condition
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -98,18 +100,19 @@ func (fake *FakePolicyValidator) ConflictsReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *FakePolicyValidator) Validate(arg1 policies.Policy) error {
+func (fake *FakePolicyValidator) Validate(arg1 policies.Policy, arg2 *policies.GlobalSettings) []conditions.Condition {
 	fake.validateMutex.Lock()
 	ret, specificReturn := fake.validateReturnsOnCall[len(fake.validateArgsForCall)]
 	fake.validateArgsForCall = append(fake.validateArgsForCall, struct {
 		arg1 policies.Policy
-	}{arg1})
+		arg2 *policies.GlobalSettings
+	}{arg1, arg2})
 	stub := fake.ValidateStub
 	fakeReturns := fake.validateReturns
-	fake.recordInvocation("Validate", []interface{}{arg1})
+	fake.recordInvocation("Validate", []interface{}{arg1, arg2})
 	fake.validateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -123,39 +126,39 @@ func (fake *FakePolicyValidator) ValidateCallCount() int {
 	return len(fake.validateArgsForCall)
 }
 
-func (fake *FakePolicyValidator) ValidateCalls(stub func(policies.Policy) error) {
+func (fake *FakePolicyValidator) ValidateCalls(stub func(policies.Policy, *policies.GlobalSettings) []conditions.Condition) {
 	fake.validateMutex.Lock()
 	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = stub
 }
 
-func (fake *FakePolicyValidator) ValidateArgsForCall(i int) policies.Policy {
+func (fake *FakePolicyValidator) ValidateArgsForCall(i int) (policies.Policy, *policies.GlobalSettings) {
 	fake.validateMutex.RLock()
 	defer fake.validateMutex.RUnlock()
 	argsForCall := fake.validateArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakePolicyValidator) ValidateReturns(result1 error) {
+func (fake *FakePolicyValidator) ValidateReturns(result1 []conditions.Condition) {
 	fake.validateMutex.Lock()
 	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = nil
 	fake.validateReturns = struct {
-		result1 error
+		result1 []conditions.Condition
 	}{result1}
 }
 
-func (fake *FakePolicyValidator) ValidateReturnsOnCall(i int, result1 error) {
+func (fake *FakePolicyValidator) ValidateReturnsOnCall(i int, result1 []conditions.Condition) {
 	fake.validateMutex.Lock()
 	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = nil
 	if fake.validateReturnsOnCall == nil {
 		fake.validateReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 []conditions.Condition
 		})
 	}
 	fake.validateReturnsOnCall[i] = struct {
-		result1 error
+		result1 []conditions.Condition
 	}{result1}
 }
 

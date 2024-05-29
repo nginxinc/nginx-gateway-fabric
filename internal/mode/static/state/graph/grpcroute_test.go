@@ -127,9 +127,11 @@ func TestBuildGRPCRoutes(t *testing.T) {
 
 	validator := &validationfakes.FakeHTTPFieldsValidator{}
 
-	npCfg := &ngfAPI.NginxProxy{
-		Spec: ngfAPI.NginxProxySpec{
-			DisableHTTP2: false,
+	npCfg := &NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				DisableHTTP2: false,
+			},
 		},
 	}
 

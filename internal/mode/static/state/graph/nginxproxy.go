@@ -10,13 +10,33 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
-// getNginxProxy returns the NginxProxy associated with the GatewayClass (if it exists).
-func getNginxProxy(
+// NginxProxy represents the NginxProxy resource.
+type NginxProxy struct {
+	// Source is the source resource.
+	Source *ngfAPI.NginxProxy
+	// ErrMsgs contains the validation errors if they exist, to be included in the GatewayClass condition.
+	ErrMsgs field.ErrorList
+	// Valid shows whether the NginxProxy is valid.
+	Valid bool
+}
+
+// buildNginxProxy validates and returns the NginxProxy associated with the GatewayClass (if it exists).
+func buildNginxProxy(
 	nps map[types.NamespacedName]*ngfAPI.NginxProxy,
 	gc *v1.GatewayClass,
-) *ngfAPI.NginxProxy {
+	validator validation.GenericValidator,
+) *NginxProxy {
 	if gcReferencesAnyNginxProxy(gc) {
-		return nps[types.NamespacedName{Name: gc.Spec.ParametersRef.Name}]
+		npCfg := nps[types.NamespacedName{Name: gc.Spec.ParametersRef.Name}]
+		if npCfg != nil {
+			errs := validateNginxProxy(validator, npCfg)
+
+			return &NginxProxy{
+				Source:  npCfg,
+				Valid:   len(errs) == 0,
+				ErrMsgs: errs,
+			}
+		}
 	}
 
 	return nil

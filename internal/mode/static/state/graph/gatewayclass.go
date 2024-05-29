@@ -9,12 +9,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 // GatewayClass represents the GatewayClass resource.
@@ -65,15 +63,14 @@ func processGatewayClasses(
 
 func buildGatewayClass(
 	gc *v1.GatewayClass,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
-	validator validation.GenericValidator,
 ) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
-	conds, valid := validateGatewayClass(gc, npCfg, crdVersions, validator)
+	conds, valid := validateGatewayClass(gc, npCfg, crdVersions)
 
 	return &GatewayClass{
 		Source:     gc,
@@ -84,9 +81,8 @@ func buildGatewayClass(
 
 func validateGatewayClass(
 	gc *v1.GatewayClass,
-	npCfg *ngfAPI.NginxProxy,
+	npCfg *NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
-	validator validation.GenericValidator,
 ) ([]conditions.Condition, bool) {
 	var conds []conditions.Condition
 
@@ -98,11 +94,8 @@ func validateGatewayClass(
 		} else if npCfg == nil {
 			err = field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
 			conds = append(conds, staticConds.NewGatewayClassRefNotFound())
-		} else {
-			nginxProxyErrs := validateNginxProxy(validator, npCfg)
-			if len(nginxProxyErrs) > 0 {
-				err = errors.New(nginxProxyErrs.ToAggregate().Error())
-			}
+		} else if !npCfg.Valid {
+			err = errors.New(npCfg.ErrMsgs.ToAggregate().Error())
 		}
 
 		if err != nil {

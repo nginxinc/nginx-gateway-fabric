@@ -153,7 +153,7 @@ func TestGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			cfgString := string(clientsettings.Generate(test.policy))
+			cfgString := string(clientsettings.Generate(test.policy, nil))
 
 			for _, str := range test.expStrings {
 				g.Expect(cfgString).To(ContainSubstring(str))
@@ -166,7 +166,7 @@ func TestGeneratePanics(t *testing.T) {
 	g := NewWithT(t)
 
 	generate := func() {
-		clientsettings.Generate(&policiesfakes.FakePolicy{})
+		clientsettings.Generate(&policiesfakes.FakePolicy{}, nil)
 	}
 
 	g.Expect(generate).To(Panic())

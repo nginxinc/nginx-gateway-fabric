@@ -1,12 +1,12 @@
 package graph
 
 import (
-	"errors"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -16,8 +16,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
 func TestProcessGatewayClasses(t *testing.T) {
@@ -166,29 +164,13 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 	}
 
-	createValidNPValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateServiceNameReturns(nil)
-		v.ValidateEndpointReturns(nil)
-
-		return v
-	}
-
-	createInvalidNPValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateServiceNameReturns(errors.New("error"))
-		v.ValidateEndpointReturns(errors.New("error"))
-
-		return v
-	}
-
 	tests := []struct {
-		gc          *v1.GatewayClass
-		np          *ngfAPI.NginxProxy
-		validator   validation.GenericValidator
-		crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata
-		expected    *GatewayClass
-		name        string
+		gc           *v1.GatewayClass
+		np           *NginxProxy
+		crdMetadata  map[types.NamespacedName]*metav1.PartialObjectMetadata
+		expected     *GatewayClass
+		name         string
+		expNPInvalid bool
 	}{
 		{
 			gc:          validGC,
@@ -206,17 +188,19 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithParams,
-			np: &ngfAPI.NginxProxy{
-				TypeMeta: metav1.TypeMeta{
-					Kind: kinds.NginxProxy,
-				},
-				Spec: ngfAPI.NginxProxySpec{
-					Telemetry: &ngfAPI.Telemetry{
-						ServiceName: helpers.GetPointer("my-svc"),
+			np: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					TypeMeta: metav1.TypeMeta{
+						Kind: kinds.NginxProxy,
+					},
+					Spec: ngfAPI.NginxProxySpec{
+						Telemetry: &ngfAPI.Telemetry{
+							ServiceName: helpers.GetPointer("my-svc"),
+						},
 					},
 				},
+				Valid: true,
 			},
-			validator: createValidNPValidator(),
 			expected: &GatewayClass{
 				Source:     gcWithParams,
 				Valid:      true,
@@ -226,10 +210,13 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithInvalidKind,
-			np: &ngfAPI.NginxProxy{
-				TypeMeta: metav1.TypeMeta{
-					Kind: kinds.NginxProxy,
+			np: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					TypeMeta: metav1.TypeMeta{
+						Kind: kinds.NginxProxy,
+					},
 				},
+				Valid: true,
 			},
 			expected: &GatewayClass{
 				Source: gcWithInvalidKind,
@@ -254,24 +241,26 @@ func TestBuildGatewayClass(t *testing.T) {
 					),
 				},
 			},
-			name: "invalid gatewayclass with paramsRef resource that doesn't exist",
+			expNPInvalid: true,
+			name:         "invalid gatewayclass with paramsRef resource that doesn't exist",
 		},
 		{
 			gc: gcWithParams,
-			np: &ngfAPI.NginxProxy{
-				TypeMeta: metav1.TypeMeta{
-					Kind: kinds.NginxProxy,
-				},
-				Spec: ngfAPI.NginxProxySpec{
-					Telemetry: &ngfAPI.Telemetry{
-						ServiceName: helpers.GetPointer("my-svc"),
-						Exporter: &ngfAPI.TelemetryExporter{
-							Endpoint: "my-endpoint",
-						},
-					},
+			np: &NginxProxy{
+				Valid: false,
+				ErrMsgs: field.ErrorList{
+					field.Invalid(
+						field.NewPath("spec", "telemetry", "serviceName"),
+						"my-svc",
+						"error",
+					),
+					field.Invalid(
+						field.NewPath("spec", "telemetry", "exporter", "endpoint"),
+						"my-endpoint",
+						"error",
+					),
 				},
 			},
-			validator: createInvalidNPValidator(),
 			expected: &GatewayClass{
 				Source: gcWithParams,
 				Valid:  true,
@@ -282,7 +271,8 @@ func TestBuildGatewayClass(t *testing.T) {
 					),
 				},
 			},
-			name: "invalid gatewayclass with invalid paramsRef resource",
+			expNPInvalid: true,
+			name:         "invalid gatewayclass with invalid paramsRef resource",
 		},
 		{
 			gc:          validGC,
@@ -300,8 +290,11 @@ func TestBuildGatewayClass(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := buildGatewayClass(test.gc, test.np, test.crdMetadata, test.validator)
+			result := buildGatewayClass(test.gc, test.np, test.crdMetadata)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+			if test.np != nil {
+				g.Expect(test.np.Valid).ToNot(Equal(test.expNPInvalid))
+			}
 		})
 	}
 }

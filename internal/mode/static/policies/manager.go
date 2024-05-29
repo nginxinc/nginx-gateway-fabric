@@ -7,18 +7,19 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 // GenerateFunc generates config as []byte for an NGF Policy.
-type GenerateFunc func(policy Policy) []byte
+type GenerateFunc func(policy Policy, globalSettings *GlobalSettings) []byte
 
 // Validator validates an NGF Policy.
 //
 //counterfeiter:generate . Validator
 type Validator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy Policy) error
+	Validate(policy Policy, globalSettings *GlobalSettings) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b Policy) bool
 }
@@ -61,7 +62,7 @@ func NewManager(
 }
 
 // Generate generates config for the policy as a byte array.
-func (m *Manager) Generate(policy Policy) []byte {
+func (m *Manager) Generate(policy Policy, globalSettings *GlobalSettings) []byte {
 	gvk := m.mustExtractGVK(policy)
 
 	generate, ok := m.generators[gvk]
@@ -69,11 +70,11 @@ func (m *Manager) Generate(policy Policy) []byte {
 		panic(fmt.Sprintf("no generate function registered for policy %T", policy))
 	}
 
-	return generate(policy)
+	return generate(policy, globalSettings)
 }
 
 // Validate validates the policy.
-func (m *Manager) Validate(policy Policy) error {
+func (m *Manager) Validate(policy Policy, globalSettings *GlobalSettings) []conditions.Condition {
 	gvk := m.mustExtractGVK(policy)
 
 	validator, ok := m.validators[gvk]
@@ -81,7 +82,7 @@ func (m *Manager) Validate(policy Policy) error {
 		panic(fmt.Sprintf("no validator registered for policy %T", policy))
 	}
 
-	return validator.Validate(policy)
+	return validator.Validate(policy, globalSettings)
 }
 
 // Conflicts returns true if the policies conflict.

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
@@ -79,8 +80,10 @@ var (
 const (
 	releaseName           = "ngf-test"
 	ngfNamespace          = "nginx-gateway"
+	gatewayClassName      = "nginx"
 	ngfHTTPForwardedPort  = 10080
 	ngfHTTPSForwardedPort = 10443
+	ngfControllerName     = "gateway.nginx.org/nginx-gateway-controller"
 )
 
 type setupConfig struct {
@@ -100,8 +103,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(apps.AddToScheme(scheme)).To(Succeed())
 	Expect(apiext.AddToScheme(scheme)).To(Succeed())
 	Expect(coordination.AddToScheme(scheme)).To(Succeed())
-	Expect(v1.AddToScheme(scheme)).To(Succeed())
+	Expect(v1.Install(scheme)).To(Succeed())
 	Expect(batchv1.AddToScheme(scheme)).To(Succeed())
+	Expect(ngfAPI.AddToScheme(scheme)).To(Succeed())
 
 	options := client.Options{
 		Scheme: scheme,
@@ -167,7 +171,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		installCfg.ImagePullPolicy = *imagePullPolicy
 	}
 
-	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
+	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)

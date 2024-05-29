@@ -255,6 +255,10 @@ Directory structure is as follows:
 
 > Note: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
 
+### Logging in tests
+
+To log in the tests, use the `GinkgoWriter` interface described here: https://onsi.github.io/ginkgo/#logging-output.
+
 ### Step 1 - Run the tests
 
 #### 1a - Run the functional tests locally
