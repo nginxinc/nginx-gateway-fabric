@@ -37,7 +37,7 @@ keepalive_timeout {{ .KeepAlive.Timeout.Server }};
 `
 
 // Generate generates configuration as []byte for a ClientSettingsPolicy.
-func Generate(policy policies.Policy) []byte {
+func Generate(policy policies.Policy, _ *policies.GlobalSettings) []byte {
 	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
 	return helpers.MustExecuteTemplate(tmpl, csp.Spec)

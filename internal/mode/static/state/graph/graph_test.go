@@ -341,6 +341,9 @@ func TestBuildGraph(t *testing.T) {
 					BatchCount: helpers.GetPointer(int32(4)),
 				},
 				ServiceName: helpers.GetPointer("my-svc"),
+				SpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
 			},
 		},
 	}
@@ -364,18 +367,22 @@ func TestBuildGraph(t *testing.T) {
 	}
 	processedRoutePolicy := &Policy{
 		Source: hrPolicy,
-		Ancestor: &PolicyAncestor{
-			Ancestor: gatewayv1.ParentReference{
-				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
-				Namespace: (*gatewayv1.Namespace)(&testNs),
-				Name:      "hr-1",
+		Ancestors: []PolicyAncestor{
+			{
+				Ancestor: gatewayv1.ParentReference{
+					Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+					Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
+					Namespace: (*gatewayv1.Namespace)(&testNs),
+					Name:      "hr-1",
+				},
 			},
 		},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.HTTPRoute,
-			Group:  gatewayv1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-1"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.HTTPRoute,
+				Group:  gatewayv1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-1"},
+			},
 		},
 		Valid: true,
 	}
@@ -393,18 +400,22 @@ func TestBuildGraph(t *testing.T) {
 	}
 	processedGwPolicy := &Policy{
 		Source: gwPolicy,
-		Ancestor: &PolicyAncestor{
-			Ancestor: gatewayv1.ParentReference{
-				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
-				Namespace: (*gatewayv1.Namespace)(&testNs),
-				Name:      "gateway-1",
+		Ancestors: []PolicyAncestor{
+			{
+				Ancestor: gatewayv1.ParentReference{
+					Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+					Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
+					Namespace: (*gatewayv1.Namespace)(&testNs),
+					Name:      "gateway-1",
+				},
 			},
 		},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.Gateway,
-			Group:  gatewayv1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.Gateway,
+				Group:  gatewayv1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
+			},
 		},
 		Valid: true,
 	}
@@ -587,10 +598,20 @@ func TestBuildGraph(t *testing.T) {
 			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
 				client.ObjectKeyFromObject(btp.Source): &btp,
 			},
-			NginxProxy: proxy,
+			NginxProxy: &NginxProxy{
+				Source: proxy,
+				Valid:  true,
+			},
 			NGFPolicies: map[PolicyKey]*Policy{
 				hrPolicyKey: processedRoutePolicy,
 				gwPolicyKey: processedGwPolicy,
+			},
+			GlobalSettings: &policies.GlobalSettings{
+				NginxProxyValid:  true,
+				TelemetryEnabled: true,
+				TracingSpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
 			},
 		}
 	}
@@ -638,6 +659,8 @@ func TestBuildGraph(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			fakePolicyValidator := &validationfakes.FakePolicyValidator{}
+
 			result := BuildGraph(
 				test.store,
 				controllerName,
@@ -645,7 +668,7 @@ func TestBuildGraph(t *testing.T) {
 				validation.Validators{
 					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
 					GenericValidator:    &validationfakes.FakeGenericValidator{},
-					PolicyValidator:     &validationfakes.FakePolicyValidator{},
+					PolicyValidator:     fakePolicyValidator,
 				},
 				protectedPorts,
 			)
@@ -1001,8 +1024,8 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 			GetNamespaceStub: func() string {
 				return testNs
 			},
-			GetTargetRefStub: func() v1alpha2.LocalPolicyTargetReference {
-				return ref
+			GetTargetRefsStub: func() []v1alpha2.LocalPolicyTargetReference {
+				return []v1alpha2.LocalPolicyTargetReference{ref}
 			},
 		}
 	}

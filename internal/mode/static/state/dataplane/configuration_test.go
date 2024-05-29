@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -619,19 +620,22 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
-	nginxProxy := &ngfAPI.NginxProxy{
-		Spec: ngfAPI.NginxProxySpec{
-			Telemetry: &ngfAPI.Telemetry{
-				Exporter: &ngfAPI.TelemetryExporter{
-					Endpoint:   "my-otel.svc:4563",
-					BatchSize:  helpers.GetPointer(int32(512)),
-					BatchCount: helpers.GetPointer(int32(4)),
-					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+	nginxProxy := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{
+					Exporter: &ngfAPI.TelemetryExporter{
+						Endpoint:   "my-otel.svc:4563",
+						BatchSize:  helpers.GetPointer(int32(512)),
+						BatchCount: helpers.GetPointer(int32(4)),
+						Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+					},
+					ServiceName: helpers.GetPointer("my-svc"),
 				},
-				ServiceName: helpers.GetPointer("my-svc"),
+				DisableHTTP2: true,
 			},
-			DisableHTTP2: true,
 		},
+		Valid: true,
 	}
 
 	tests := []struct {
@@ -2061,15 +2065,67 @@ func TestBuildConfiguration(t *testing.T) {
 				CertBundles:    map[CertBundleID]CertBundle{},
 				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false},
 				Telemetry: Telemetry{
-					Endpoint:       "my-otel.svc:4563",
-					Interval:       "5s",
-					BatchSize:      512,
-					BatchCount:     4,
-					ServiceName:    "ngf:ns:gw:my-svc",
-					SpanAttributes: []SpanAttribute{},
+					Endpoint:    "my-otel.svc:4563",
+					Interval:    "5s",
+					BatchSize:   512,
+					BatchCount:  4,
+					ServiceName: "ngf:ns:gw:my-svc",
+					Ratios:      []Ratio{},
 				},
 			},
 			msg: "NginxProxy with tracing config and http2 disabled",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{},
+						},
+					},
+				},
+				Routes: map[graph.RouteKey]*graph.L7Route{},
+				NginxProxy: &graph.NginxProxy{
+					Valid: false,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							DisableHTTP2: true,
+							Telemetry: &ngfAPI.Telemetry{
+								Exporter: &ngfAPI.TelemetryExporter{
+									Endpoint: "some-endpoint",
+								},
+							},
+						},
+					},
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:     []VirtualServer{},
+				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:    map[CertBundleID]CertBundle{},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				Telemetry:      Telemetry{},
+			},
+			msg: "invalid NginxProxy",
 		},
 		{
 			graph: &graph.Graph{
@@ -2246,7 +2302,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g := NewWithT(t)
 
 			fakeGenerator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(p policies.Policy) []byte {
+				GenerateStub: func(p policies.Policy, _ *policies.GlobalSettings) []byte {
 					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
 					case "ApplePolicy":
 						return []byte("apple")
@@ -2967,32 +3023,39 @@ func TestConvertBackendTLS(t *testing.T) {
 }
 
 func TestBuildTelemetry(t *testing.T) {
-	telemetryConfigured := &ngfAPI.NginxProxy{
-		Spec: ngfAPI.NginxProxySpec{
-			Telemetry: &ngfAPI.Telemetry{
-				Exporter: &ngfAPI.TelemetryExporter{
-					Endpoint:   "my-otel.svc:4563",
-					BatchSize:  helpers.GetPointer(int32(512)),
-					BatchCount: helpers.GetPointer(int32(4)),
-					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
-				},
-				ServiceName: helpers.GetPointer("my-svc"),
-				SpanAttributes: []ngfAPI.SpanAttribute{
-					{Key: "key", Value: "value"},
+	telemetryConfigured := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{
+					Exporter: &ngfAPI.TelemetryExporter{
+						Endpoint:   "my-otel.svc:4563",
+						BatchSize:  helpers.GetPointer(int32(512)),
+						BatchCount: helpers.GetPointer(int32(4)),
+						Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+					},
+					ServiceName: helpers.GetPointer("my-svc"),
+					SpanAttributes: []ngfAPI.SpanAttribute{
+						{Key: "key", Value: "value"},
+					},
 				},
 			},
 		},
+		Valid: true,
 	}
 
-	expTelemetryConfigured := Telemetry{
-		Endpoint:    "my-otel.svc:4563",
-		ServiceName: "ngf:ns:gw:my-svc",
-		Interval:    "5s",
-		BatchSize:   512,
-		BatchCount:  4,
-		SpanAttributes: []SpanAttribute{
-			{Key: "key", Value: "value"},
-		},
+	createTelemetry := func() Telemetry {
+		return Telemetry{
+			Endpoint:    "my-otel.svc:4563",
+			ServiceName: "ngf:ns:gw:my-svc",
+			Interval:    "5s",
+			BatchSize:   512,
+			BatchCount:  4,
+			Ratios:      []Ratio{},
+		}
+	}
+
+	createModifiedTelemetry := func(mod func(Telemetry) Telemetry) Telemetry {
+		return mod(createTelemetry())
 	}
 
 	tests := []struct {
@@ -3002,10 +3065,28 @@ func TestBuildTelemetry(t *testing.T) {
 	}{
 		{
 			g: &graph.Graph{
-				NginxProxy: &ngfAPI.NginxProxy{},
+				NginxProxy: &graph.NginxProxy{
+					Source: &ngfAPI.NginxProxy{},
+				},
 			},
 			expTelemetry: Telemetry{},
 			msg:          "No telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Telemetry: &ngfAPI.Telemetry{
+								Exporter: &ngfAPI.TelemetryExporter{},
+							},
+						},
+					},
+					Valid: false,
+				},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "Invalid NginxProxy configured",
 		},
 		{
 			g: &graph.Graph{
@@ -3019,15 +3100,154 @@ func TestBuildTelemetry(t *testing.T) {
 				},
 				NginxProxy: telemetryConfigured,
 			},
-			expTelemetry: expTelemetryConfigured,
+			expTelemetry: createTelemetry(),
 			msg:          "Telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
+				t.Ratios = []Ratio{
+					{Name: "$otel_ratio_25", Value: 25},
+				}
+				return t
+			}),
+			msg: "Telemetry configured with observability policy ratio",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "obsPolicy2"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy2",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](50),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "obsPolicy3"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy3",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "csPolicy"}}: {
+						Source: &ngfAPI.ClientSettingsPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "csPolicy",
+								Namespace: "custom-ns",
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
+				t.Ratios = []Ratio{
+					{Name: "$otel_ratio_25", Value: 25},
+					{Name: "$otel_ratio_50", Value: 50},
+				}
+				return t
+			}),
+			msg: "Multiple policies exist; telemetry ratio is properly set",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](0),
+								},
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createTelemetry(),
+			msg:          "Telemetry configured with zero observability policy ratio",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildTelemetry(tc.g)).To(Equal(tc.expTelemetry))
+			tel := buildTelemetry(tc.g)
+			sort.Slice(tel.Ratios, func(i, j int) bool {
+				return tel.Ratios[i].Value < tel.Ratios[j].Value
+			})
+			g.Expect(tel).To(Equal(tc.expTelemetry))
 		})
 	}
 }
@@ -3109,12 +3329,12 @@ func TestBuildAdditions(t *testing.T) {
 			g := NewWithT(t)
 
 			generator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(policy policies.Policy) []byte {
+				GenerateStub: func(policy policies.Policy, _ *policies.GlobalSettings) []byte {
 					return []byte(policy.GetName())
 				},
 			}
 
-			additions := buildAdditions(test.policies, generator)
+			additions := buildAdditions(test.policies, nil, generator)
 			g.Expect(additions).To(BeEquivalentTo(test.expAdditions))
 		})
 	}

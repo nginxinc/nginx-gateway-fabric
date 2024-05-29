@@ -242,7 +242,6 @@ func waitForClientSettingsAncestorStatus(
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-
 			var pol ngfAPI.ClientSettingsPolicy
 
 			if err := k8sClient.Get(ctx, policyNsname, &pol); err != nil {
@@ -261,7 +260,7 @@ func waitForClientSettingsAncestorStatus(
 
 			ancestor := pol.Status.Ancestors[0]
 
-			if err := ancestorMustEqualTargetRef(ancestor, pol.GetTargetRef(), policyNsname.Namespace); err != nil {
+			if err := ancestorMustEqualTargetRef(ancestor, pol.GetTargetRefs()[0], policyNsname.Namespace); err != nil {
 				return false, err
 			}
 

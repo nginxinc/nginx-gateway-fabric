@@ -42,11 +42,15 @@ type ObservabilityPolicySpec struct {
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
 
-	// TargetRef identifies an API object to apply the policy to.
-	// Object must be in the same namespace as the policy.
-	//
+	// TargetRefs identifies the API object(s) to apply the policy to.
+	// Objects must be in the same namespace as the policy.
 	// Support: HTTPRoute
-	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be: HTTPRoute or GRPCRoute",rule="(self.exists(t, t.kind=='HTTPRoute') || self.exists(t, t.kind=='GRPCRoute'))"
+	// +kubebuilder:validation:XValidation:message="TargetRef Group must be gateway.networking.k8s.io.",rule="self.all(t, t.group=='gateway.networking.k8s.io')"
+	//nolint:lll
+	TargetRefs []gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRefs"`
 }
 
 // Tracing allows for enabling and configuring OpenTelemetry tracing.
@@ -60,6 +64,7 @@ type Tracing struct {
 
 	// Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
 	// By default, 100% of http requests are traced. Not applicable for parent-based tracing.
+	// If ratio is set to 0, tracing is disabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

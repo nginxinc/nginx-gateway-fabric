@@ -1596,7 +1596,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				changed, graph := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
-				Expect(graph.NginxProxy).To(Equal(np))
+				Expect(graph.NginxProxy.Source).To(Equal(np))
 			})
 			It("captures changes for an NginxProxy", func() {
 				processor.CaptureUpsertChange(npUpdated)
@@ -1604,7 +1604,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				changed, graph := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
-				Expect(graph.NginxProxy).To(Equal(npUpdated))
+				Expect(graph.NginxProxy.Source).To(Equal(npUpdated))
 			})
 			It("handles deletes for an NginxProxy", func() {
 				processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))
@@ -1618,8 +1618,10 @@ var _ = Describe("ChangeProcessor", func() {
 		Describe("NGF Policy resource changes", Ordered, func() {
 			var (
 				gw              *v1.Gateway
+				route           *v1.HTTPRoute
 				csp, cspUpdated *ngfAPI.ClientSettingsPolicy
-				cspKey          graph.PolicyKey
+				obs, obsUpdated *ngfAPI.ObservabilityPolicy
+				cspKey, obsKey  graph.PolicyKey
 			)
 
 			BeforeAll(func() {
@@ -1630,6 +1632,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(newGraph.NGFPolicies).To(BeEmpty())
 
 				gw = createGateway("gw")
+				route = createRoute("hr-1", "gw", "foo.example.com", v1.HTTPBackendRef{})
 
 				csp = &ngfAPI.ClientSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1659,6 +1662,37 @@ var _ = Describe("ChangeProcessor", func() {
 						Version: "v1alpha1",
 					},
 				}
+
+				obs = &ngfAPI.ObservabilityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "obs",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.ObservabilityPolicySpec{
+						TargetRefs: []v1alpha2.LocalPolicyTargetReference{
+							{
+								Group: v1.GroupName,
+								Kind:  kinds.HTTPRoute,
+								Name:  "hr-1",
+							},
+						},
+						Tracing: &ngfAPI.Tracing{
+							Strategy: ngfAPI.TraceStrategyRatio,
+						},
+					},
+				}
+
+				obsUpdated = obs.DeepCopy()
+				obsUpdated.Spec.Tracing.Strategy = ngfAPI.TraceStrategyParent
+
+				obsKey = graph.PolicyKey{
+					NsName: types.NamespacedName{Name: "obs", Namespace: "test"},
+					GVK: schema.GroupVersionKind{
+						Group:   ngfAPI.GroupName,
+						Kind:    kinds.ObservabilityPolicy,
+						Version: "v1alpha1",
+					},
+				}
 			})
 
 			/*
@@ -1670,6 +1704,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("a policy is created that references a resource that is not in the last graph", func() {
 				It("reports no changes", func() {
 					processor.CaptureUpsertChange(csp)
+					processor.CaptureUpsertChange(obs)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
@@ -1683,21 +1718,32 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(graph.NGFPolicies).To(HaveKey(cspKey))
 					Expect(graph.NGFPolicies[cspKey].Source).To(Equal(csp))
+					Expect(graph.NGFPolicies).ToNot(HaveKey(obsKey))
+
+					processor.CaptureUpsertChange(route)
+					changed, graph = processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+					Expect(graph.NGFPolicies).To(HaveKey(obsKey))
+					Expect(graph.NGFPolicies[obsKey].Source).To(Equal(obs))
 				})
 			})
 			When("the policy is updated", func() {
 				It("captures changes for a policy", func() {
 					processor.CaptureUpsertChange(cspUpdated)
+					processor.CaptureUpsertChange(obsUpdated)
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(graph.NGFPolicies).To(HaveKey(cspKey))
 					Expect(graph.NGFPolicies[cspKey].Source).To(Equal(cspUpdated))
+					Expect(graph.NGFPolicies).To(HaveKey(obsKey))
+					Expect(graph.NGFPolicies[obsKey].Source).To(Equal(obsUpdated))
 				})
 			})
 			When("the policy is deleted", func() {
 				It("removes the policy from the graph", func() {
 					processor.CaptureDeleteChange(&ngfAPI.ClientSettingsPolicy{}, client.ObjectKeyFromObject(csp))
+					processor.CaptureDeleteChange(&ngfAPI.ObservabilityPolicy{}, client.ObjectKeyFromObject(obs))
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))

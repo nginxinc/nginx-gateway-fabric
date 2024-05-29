@@ -8,4 +8,4 @@ spec:
   - name: http
     port: 80
     protocol: HTTP
-    hostname: "*.example.com"
+    hostname: foo.example.com

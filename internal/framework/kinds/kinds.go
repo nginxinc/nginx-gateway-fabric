@@ -25,6 +25,8 @@ const (
 const (
 	// ClientSettingsPolicy is the ClientSettingsPolicy kind.
 	ClientSettingsPolicy = "ClientSettingsPolicy"
+	// ObservabilityPolicy is the ObservabilityPolicy kind.
+	ObservabilityPolicy = "ObservabilityPolicy"
 	// NginxProxy is the NginxProxy kind.
 	NginxProxy = "NginxProxy"
 )
