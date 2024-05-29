@@ -218,7 +218,7 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
-			rules.upsertListener(l, g.GlobalPolicySettings)
+			rules.upsertListener(l, g.GlobalSettings)
 		}
 	}
 
@@ -227,7 +227,7 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 
 	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
 
-	additions := buildAdditions(g.Gateway.Policies, g.GlobalPolicySettings, generator)
+	additions := buildAdditions(g.Gateway.Policies, g.GlobalSettings, generator)
 
 	for i := range httpServers {
 		httpServers[i].Additions = additions
@@ -281,7 +281,7 @@ func newHostPathRules(generator policies.ConfigGenerator) *hostPathRules {
 	}
 }
 
-func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *policies.GlobalPolicySettings) {
+func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *policies.GlobalSettings) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
@@ -301,7 +301,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *poli
 func (hpr *hostPathRules) upsertRoute(
 	route *graph.L7Route,
 	listener *graph.Listener,
-	globalSettings *policies.GlobalPolicySettings,
+	globalSettings *policies.GlobalSettings,
 ) {
 	var hostnames []string
 	GRPC := route.RouteType == graph.RouteTypeGRPC
@@ -674,7 +674,7 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 
 func buildAdditions(
 	policies []*graph.Policy,
-	globalSettings *policies.GlobalPolicySettings,
+	globalSettings *policies.GlobalSettings,
 	generator policies.ConfigGenerator,
 ) []Addition {
 	if len(policies) == 0 {

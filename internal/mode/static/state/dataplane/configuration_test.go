@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -2249,7 +2250,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g := NewWithT(t)
 
 			fakeGenerator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(p policies.Policy, _ *policies.GlobalPolicySettings) []byte {
+				GenerateStub: func(p policies.Policy, _ *policies.GlobalSettings) []byte {
 					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
 					case "ApplePolicy":
 						return []byte("apple")
@@ -3105,6 +3106,76 @@ func TestBuildTelemetry(t *testing.T) {
 							},
 							Spec: ngfAPI.ObservabilityPolicySpec{
 								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "obsPolicy2"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy2",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](50),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "obsPolicy3"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy3",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+					{NsName: types.NamespacedName{Name: "csPolicy"}}: {
+						Source: &ngfAPI.ClientSettingsPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "csPolicy",
+								Namespace: "custom-ns",
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
+				t.Ratios = []Ratio{
+					{Name: "$otel_ratio_25", Value: 25},
+					{Name: "$otel_ratio_50", Value: 50},
+				}
+				return t
+			}),
+			msg: "Multiple policies exist; telemetry ratio is properly set",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
 									Ratio: helpers.GetPointer[int32](0),
 								},
 							},
@@ -3120,7 +3191,11 @@ func TestBuildTelemetry(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildTelemetry(tc.g)).To(Equal(tc.expTelemetry))
+			tel := buildTelemetry(tc.g)
+			sort.Slice(tel.Ratios, func(i, j int) bool {
+				return tel.Ratios[i].Value < tel.Ratios[j].Value
+			})
+			g.Expect(tel).To(Equal(tc.expTelemetry))
 		})
 	}
 }
@@ -3202,7 +3277,7 @@ func TestBuildAdditions(t *testing.T) {
 			g := NewWithT(t)
 
 			generator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(policy policies.Policy, _ *policies.GlobalPolicySettings) []byte {
+				GenerateStub: func(policy policies.Policy, _ *policies.GlobalSettings) []byte {
 					return []byte(policy.GetName())
 				},
 			}

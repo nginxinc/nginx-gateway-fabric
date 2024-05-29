@@ -12,14 +12,14 @@ import (
 )
 
 // GenerateFunc generates config as []byte for an NGF Policy.
-type GenerateFunc func(policy Policy, globalSettings *GlobalPolicySettings) []byte
+type GenerateFunc func(policy Policy, globalSettings *GlobalSettings) []byte
 
 // Validator validates an NGF Policy.
 //
 //counterfeiter:generate . Validator
 type Validator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition
+	Validate(policy Policy, globalSettings *GlobalSettings) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b Policy) bool
 }
@@ -62,7 +62,7 @@ func NewManager(
 }
 
 // Generate generates config for the policy as a byte array.
-func (m *Manager) Generate(policy Policy, globalSettings *GlobalPolicySettings) []byte {
+func (m *Manager) Generate(policy Policy, globalSettings *GlobalSettings) []byte {
 	gvk := m.mustExtractGVK(policy)
 
 	generate, ok := m.generators[gvk]
@@ -74,7 +74,7 @@ func (m *Manager) Generate(policy Policy, globalSettings *GlobalPolicySettings) 
 }
 
 // Validate validates the policy.
-func (m *Manager) Validate(policy Policy, globalSettings *GlobalPolicySettings) []conditions.Condition {
+func (m *Manager) Validate(policy Policy, globalSettings *GlobalSettings) []conditions.Condition {
 	gvk := m.mustExtractGVK(policy)
 
 	validator, ok := m.validators[gvk]

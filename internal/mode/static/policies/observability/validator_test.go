@@ -52,7 +52,7 @@ func createModifiedPolicy(mod policyModFunc) *ngfAPI.ObservabilityPolicy {
 }
 
 func TestValidator_Validate(t *testing.T) {
-	globalSettings := &policies.GlobalPolicySettings{
+	globalSettings := &policies.GlobalSettings{
 		NginxProxyValid:  true,
 		TelemetryEnabled: true,
 	}
@@ -60,7 +60,7 @@ func TestValidator_Validate(t *testing.T) {
 	tests := []struct {
 		name           string
 		policy         *ngfAPI.ObservabilityPolicy
-		globalSettings *policies.GlobalPolicySettings
+		globalSettings *policies.GlobalSettings
 		expConditions  []conditions.Condition
 	}{
 		{
@@ -73,7 +73,7 @@ func TestValidator_Validate(t *testing.T) {
 		{
 			name:           "validation context is invalid",
 			policy:         createValidPolicy(),
-			globalSettings: &policies.GlobalPolicySettings{NginxProxyValid: false},
+			globalSettings: &policies.GlobalSettings{NginxProxyValid: false},
 			expConditions: []conditions.Condition{
 				staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageNginxProxyInvalid),
 			},
@@ -81,7 +81,7 @@ func TestValidator_Validate(t *testing.T) {
 		{
 			name:           "telemetry is not enabled",
 			policy:         createValidPolicy(),
-			globalSettings: &policies.GlobalPolicySettings{NginxProxyValid: true, TelemetryEnabled: false},
+			globalSettings: &policies.GlobalSettings{NginxProxyValid: true, TelemetryEnabled: false},
 			expConditions: []conditions.Condition{
 				staticConds.NewPolicyNotAcceptedNginxProxyNotSet(staticConds.PolicyMessageTelemetryNotEnabled),
 			},

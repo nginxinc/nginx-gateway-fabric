@@ -27,15 +27,18 @@ type Policy interface {
 //
 //counterfeiter:generate . ConfigGenerator
 type ConfigGenerator interface {
-	Generate(policy Policy, globalSettings *GlobalPolicySettings) []byte
+	Generate(policy Policy, globalSettings *GlobalSettings) []byte
 }
 
-// GlobalPolicySettings contains global settings from the current state of the graph that may be
+// GlobalSettings contains global settings from the current state of the graph that may be
 // needed for policy validation or generation if certain policies rely on those global settings.
-type GlobalPolicySettings struct {
+type GlobalSettings struct {
+	// TracingSpanAttributes contain the attributes specified in the NginxProxy resource.
 	TracingSpanAttributes []ngfAPI.SpanAttribute
-	NginxProxyValid       bool
-	TelemetryEnabled      bool
+	// NginxProxyValid is whether or not the NginxProxy resource is valid.
+	NginxProxyValid bool
+	// TelemetryEnabled is whether or not telemetry is enabled in the NginxProxy resource.
+	TelemetryEnabled bool
 }
 
 // ValidateTargetRef validates a policy's targetRef for the proper group and kind.

@@ -27,7 +27,7 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 // Validate validates the spec of an ObservabilityPolicy.
 func (v *Validator) Validate(
 	policy policies.Policy,
-	globalSettings *policies.GlobalPolicySettings,
+	globalSettings *policies.GlobalSettings,
 ) []conditions.Condition {
 	obs := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](policy)
 

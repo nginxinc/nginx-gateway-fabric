@@ -30,7 +30,7 @@ otel_span_attr "{{ $attr.Key }}" "{{ $attr.Value }}";
 `
 
 // Generate generates configuration as []byte for an ObservabilityPolicy.
-func Generate(policy policies.Policy, globalSettings *policies.GlobalPolicySettings) []byte {
+func Generate(policy policies.Policy, globalSettings *policies.GlobalSettings) []byte {
 	obs := helpers.MustCastObject[*ngfAPI.ObservabilityPolicy](policy)
 
 	var strategy string

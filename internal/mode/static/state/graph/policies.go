@@ -158,7 +158,7 @@ func processPolicies(
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
-	globalSettings *policies.GlobalPolicySettings,
+	globalSettings *policies.GlobalSettings,
 ) map[PolicyKey]*Policy {
 	if len(policies) == 0 || gateways.Winner == nil {
 		return nil

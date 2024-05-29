@@ -22,7 +22,7 @@ func TestGenerate(t *testing.T) {
 	tests := []struct {
 		name           string
 		policy         policies.Policy
-		globalSettings *policies.GlobalPolicySettings
+		globalSettings *policies.GlobalSettings
 		expStrings     []string
 	}{
 		{
@@ -138,7 +138,7 @@ func TestGenerate(t *testing.T) {
 					Tracing: &ngfAPI.Tracing{},
 				},
 			},
-			globalSettings: &policies.GlobalPolicySettings{
+			globalSettings: &policies.GlobalSettings{
 				TracingSpanAttributes: []ngfAPI.SpanAttribute{
 					{Key: "test-global-key", Value: "test-global-value"},
 				},
@@ -162,7 +162,7 @@ func TestGenerate(t *testing.T) {
 					},
 				},
 			},
-			globalSettings: &policies.GlobalPolicySettings{
+			globalSettings: &policies.GlobalSettings{
 				TracingSpanAttributes: []ngfAPI.SpanAttribute{
 					{Key: "test-global-key", Value: "test-global-value"},
 				},

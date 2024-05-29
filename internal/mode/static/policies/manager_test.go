@@ -42,24 +42,24 @@ var _ = Describe("Policy Manager", func() {
 		mustExtractGVK,
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalSettings) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("apple error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return true },
 			},
-			Generator: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
 				return []byte("apple")
 			},
 			GVK: appleGVK,
 		},
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalSettings) []conditions.Condition {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("orange error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return false },
 			},
-			Generator: func(_ policies.Policy, _ *policies.GlobalPolicySettings) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
 				return []byte("orange")
 			},
 			GVK: orangeGVK,

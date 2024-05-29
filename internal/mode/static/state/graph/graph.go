@@ -70,9 +70,9 @@ type Graph struct {
 	NginxProxy *NginxProxy
 	// NGFPolicies holds all NGF Policies.
 	NGFPolicies map[PolicyKey]*Policy
-	// GlobalPolicySettings contains global settings from the current state of the graph that may be
+	// GlobalSettings contains global settings from the current state of the graph that may be
 	// needed for policy validation or generation if certain policies rely on those global settings.
-	GlobalPolicySettings *policies.GlobalPolicySettings
+	GlobalSettings *policies.GlobalSettings
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -177,7 +177,7 @@ func BuildGraph(
 	validators validation.Validators,
 	protectedPorts ProtectedPorts,
 ) *Graph {
-	var globalSettings *policies.GlobalPolicySettings
+	var globalSettings *policies.GlobalSettings
 
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
@@ -189,9 +189,9 @@ func BuildGraph(
 	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata)
 	if gc != nil && npCfg != nil && npCfg.Source != nil {
 		spec := npCfg.Source.Spec
-		globalSettings = &policies.GlobalPolicySettings{
+		globalSettings = &policies.GlobalSettings{
 			NginxProxyValid:  npCfg.Valid,
-			TelemetryEnabled: npCfg.Valid && spec.Telemetry != nil && spec.Telemetry.Exporter != nil,
+			TelemetryEnabled: spec.Telemetry != nil && spec.Telemetry.Exporter != nil,
 		}
 
 		if spec.Telemetry != nil {
@@ -252,7 +252,7 @@ func BuildGraph(
 		BackendTLSPolicies:         processedBackendTLSPolicies,
 		NginxProxy:                 npCfg,
 		NGFPolicies:                processedPolicies,
-		GlobalPolicySettings:       globalSettings,
+		GlobalSettings:             globalSettings,
 	}
 
 	g.attachPolicies(controllerName)

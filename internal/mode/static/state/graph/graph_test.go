@@ -606,7 +606,7 @@ func TestBuildGraph(t *testing.T) {
 				hrPolicyKey: processedRoutePolicy,
 				gwPolicyKey: processedGwPolicy,
 			},
-			GlobalPolicySettings: &policies.GlobalPolicySettings{
+			GlobalSettings: &policies.GlobalSettings{
 				NginxProxyValid:  true,
 				TelemetryEnabled: true,
 				TracingSpanAttributes: []ngfAPI.SpanAttribute{
