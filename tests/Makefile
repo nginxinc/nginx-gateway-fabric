@@ -1,4 +1,5 @@
 CI=false
+CLUSTER_NAME ?= kind
 CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
 CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
@@ -29,7 +30,7 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG)
+	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --name $(CLUSTER_NAME)
 	kubectl apply -f conformance/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
