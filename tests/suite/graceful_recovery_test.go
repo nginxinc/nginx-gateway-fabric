@@ -42,10 +42,12 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 		},
 	}
 
-	teaURI := "/tea"
-	coffeeURI := "http://cafe.example.com/coffee"
+	baseHttpURL := "http://cafe.example.com"
+	baseHttpsURL := "https://cafe.example.com"
+	teaURL := baseHttpsURL + "/tea"
+	coffeeURL := baseHttpURL + "/coffee"
 
-	var ngfPodName, teaURL, coffeeURL string
+	var ngfPodName string
 
 	BeforeAll(func() {
 		// this test is unique in that it will check the entire log of both ngf and nginx containers
@@ -60,12 +62,12 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 		Expect(podNames).To(HaveLen(1))
 
 		ngfPodName = podNames[0]
-		port := 80
 		if portFwdPort != 0 {
-			port = portFwdPort
+			coffeeURL = fmt.Sprintf("%s:%d/coffee", baseHttpURL, portFwdPort)
 		}
-		teaURL = fmt.Sprintf("http://cafe.example.com:%d", port) + teaURI
-		coffeeURL = fmt.Sprintf("http://cafe.example.com:%d", port) + coffeeURI
+		if portFwdHTTPSPort != 0 {
+			teaURL = fmt.Sprintf("%s:%d/tea", baseHttpsURL, portFwdHTTPSPort)
+		}
 	})
 
 	BeforeEach(func() {
