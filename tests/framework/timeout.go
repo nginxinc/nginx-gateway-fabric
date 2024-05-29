@@ -29,6 +29,9 @@ type TimeoutConfig struct {
 
 	// GetLeaderLeaseTimeout represents the maximum time for NGF to retrieve the leader lease.
 	GetLeaderLeaseTimeout time.Duration
+
+	// GetStatusTimeout represents the maximum time for NGF to update the status of a resource.
+	GetStatusTimeout time.Duration
 }
 
 // DefaultTimeoutConfig populates a TimeoutConfig with the default values.
@@ -43,5 +46,6 @@ func DefaultTimeoutConfig() TimeoutConfig {
 		RequestTimeout:          10 * time.Second,
 		ContainerRestartTimeout: 10 * time.Second,
 		GetLeaderLeaseTimeout:   60 * time.Second,
+		GetStatusTimeout:        60 * time.Second,
 	}
 }
