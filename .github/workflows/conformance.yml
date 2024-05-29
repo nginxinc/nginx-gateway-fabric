@@ -129,10 +129,8 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          k8s_version=${{ inputs.k8s-version }}
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(inputs.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
-          echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
-        working-directory: ./tests
+          kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
+          kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
 
       - name: Setup conformance tests
         run: |
