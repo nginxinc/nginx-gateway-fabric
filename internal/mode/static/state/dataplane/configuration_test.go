@@ -2082,6 +2082,58 @@ func TestBuildConfiguration(t *testing.T) {
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{},
+						},
+					},
+				},
+				Routes: map[graph.RouteKey]*graph.L7Route{},
+				NginxProxy: &graph.NginxProxy{
+					Valid: false,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							DisableHTTP2: true,
+							Telemetry: &ngfAPI.Telemetry{
+								Exporter: &ngfAPI.TelemetryExporter{
+									Endpoint: "some-endpoint",
+								},
+							},
+						},
+					},
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:     []VirtualServer{},
+				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:    map[CertBundleID]CertBundle{},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				Telemetry:      Telemetry{},
+			},
+			msg: "invalid NginxProxy",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
 					Listeners: []*graph.Listener{
 						{
