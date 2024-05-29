@@ -59,11 +59,13 @@ Visit [http://127.0.0.1:16686](http://127.0.0.1:16686) to view the dashboard.
 
 ## Enabling Tracing
 
-Enabling tracing requires two pieces of configuration. The first is a resource called `NginxProxy`, which contains global settings relating to the NGINX data plane. This resource is created and managed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/), and is referenced in the `parametersRef` field of the GatewayClass. This resource can be created and linked when we install NGINX Gateway Fabric using its helm chart, or it can be added later. In this guide we will install the resource using the helm chart, but will also show what it looks like in case you want to add it after installation.
+Enabling tracing requires two pieces of configuration.
+
+- `NginxProxy`: This resource contains global settings relating to the NGINX data plane. It is created and managed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/), and is referenced in the `parametersRef` field of the GatewayClass. This resource can be created and linked when we install NGINX Gateway Fabric using its helm chart, or it can be added later. In this guide we will install the resource using the helm chart, but will also show what it looks like in case you want to add it after installation.
 
 The `NginxProxy` resource contains configuration for the collector, and applies to all Gateways and routes under the GatewayClass. It does not enable tracing, but is a prerequisite to the next piece of configuration.
 
-The second piece of configuration is the `ObservabilityPolicy`, which is a [Policy](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that targets HTTPRoutes or GRPCRoutes. This Policy is created by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/) and enables tracing for a specific route or routes. It requires the `NginxProxy` resource to exist in order to complete the tracing configuration.
+- `ObservabilityPolicy`: This resource is a [Policy](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that targets HTTPRoutes or GRPCRoutes. It is created by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/) and enables tracing for a specific route or routes. It requires the `NginxProxy` resource to exist in order to complete the tracing configuration.
 
 TODO(sberman): link to reference docs
 
@@ -277,14 +279,14 @@ spec:
     name: coffee
   tracing:
     strategy: ratio
-    ratio: 50
+    ratio: 75
     spanAttributes:
     - key: coffee-key
       value: coffee-value
 EOF
 ```
 
-This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, where 50% of requests will be sampled. We've also included a span attribute to add extra data to the spans.
+This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, where 75% of requests will be sampled. We've also included a span attribute to add extra data to the spans.
 
 Let's check the status of the policy:
 
@@ -310,13 +312,13 @@ Status:
     Controller Name:         gateway.nginx.org/nginx-gateway-controller
 ```
 
-The policy is accepted, so now let's send some more traffic.
+The policy is accepted, so now let's send some more traffic. Run the following command multiple times.
 
 ```shell
-for i in $(seq 1 10); do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee; sleep 1; done
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
 
-This will send 10 requests. Once complete, let's refresh the Jaeger dashboard. We should now see a service entry called `ngf:default:cafe`, and a few traces. The service name by default is `ngf:<gateway-namespace>:<gateway-name>`.
+Once complete, let's refresh the Jaeger dashboard. We should now see a service entry called `ngf:default:cafe`, and a few traces. The service name by default is `ngf:<gateway-namespace>:<gateway-name>`.
 
 {{<img src="img/jaeger-trace-overview.png" alt="">}}
 
