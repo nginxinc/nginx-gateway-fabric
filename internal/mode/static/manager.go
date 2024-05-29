@@ -420,6 +420,9 @@ func registerControllers(
 		},
 		{
 			objectType: &apiv1.Secret{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.ResourceVersionChangedPredicate{}),
+			},
 		},
 		{
 			objectType: &discoveryV1.EndpointSlice{},
