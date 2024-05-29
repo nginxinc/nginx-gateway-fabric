@@ -634,6 +634,7 @@ func TestBuildConfiguration(t *testing.T) {
 				DisableHTTP2: true,
 			},
 		},
+		Valid: true,
 	}
 
 	tests := []struct {
@@ -2068,6 +2069,7 @@ func TestBuildConfiguration(t *testing.T) {
 					BatchSize:   512,
 					BatchCount:  4,
 					ServiceName: "ngf:ns:gw:my-svc",
+					Ratios:      []Ratio{},
 				},
 			},
 			msg: "NginxProxy with tracing config and http2 disabled",
@@ -2985,6 +2987,7 @@ func TestBuildTelemetry(t *testing.T) {
 				},
 			},
 		},
+		Valid: true,
 	}
 
 	createTelemetry := func() Telemetry {
@@ -2994,6 +2997,7 @@ func TestBuildTelemetry(t *testing.T) {
 			Interval:    "5s",
 			BatchSize:   512,
 			BatchCount:  4,
+			Ratios:      []Ratio{},
 		}
 	}
 
@@ -3014,6 +3018,22 @@ func TestBuildTelemetry(t *testing.T) {
 			},
 			expTelemetry: Telemetry{},
 			msg:          "No telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Telemetry: &ngfAPI.Telemetry{
+								Exporter: &ngfAPI.TelemetryExporter{},
+							},
+						},
+					},
+					Valid: false,
+				},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "Invalid NginxProxy configured",
 		},
 		{
 			g: &graph.Graph{

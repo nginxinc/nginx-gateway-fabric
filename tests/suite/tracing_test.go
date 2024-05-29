@@ -141,7 +141,7 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 		return strings.Contains(logs, "service.name: Str(ngf:helloworld:gateway:my-test-svc)")
 	}
 
-	checkStatus := func() {
+	checkStatusAndTraces := func() {
 		Eventually(
 			func() error {
 				return verifyGatewayClassResolvedRefs()
@@ -178,7 +178,7 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 		Expect(resourceManager.ApplyFromFiles(traceFiles, ns.Name)).To(Succeed())
 		Expect(updateGatewayClass()).To(Succeed())
 
-		checkStatus()
+		checkStatusAndTraces()
 
 		logs, err = resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())
@@ -202,7 +202,7 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 		Expect(resourceManager.ApplyFromFiles(traceFiles, ns.Name)).To(Succeed())
 		Expect(updateGatewayClass()).To(Succeed())
 
-		checkStatus()
+		checkStatusAndTraces()
 
 		logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, collectorPodName, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())

@@ -185,8 +185,8 @@ func BuildGraph(
 		return &Graph{}
 	}
 
-	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
-	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
+	npCfg := buildNginxProxy(state.NginxProxies, processedGwClasses.Winner, validators.GenericValidator)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata)
 	if gc != nil && npCfg != nil && npCfg.Source != nil {
 		spec := npCfg.Source.Spec
 		globalSettings = &policies.GlobalPolicySettings{

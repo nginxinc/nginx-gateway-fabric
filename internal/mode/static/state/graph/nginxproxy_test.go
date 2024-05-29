@@ -82,7 +82,7 @@ func TestGetNginxProxy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(getNginxProxy(test.nps, test.gc)).To(Equal(test.expNP))
+			g.Expect(buildNginxProxy(test.nps, test.gc, &validationfakes.FakeGenericValidator{})).To(Equal(test.expNP))
 		})
 	}
 }
@@ -241,7 +241,7 @@ func TestValidateNginxProxy(t *testing.T) {
 	}
 
 	tests := []struct {
-		np              *NginxProxy
+		np              *ngfAPI.NginxProxy
 		validator       *validationfakes.FakeGenericValidator
 		name            string
 		expErrSubstring string
@@ -250,37 +250,31 @@ func TestValidateNginxProxy(t *testing.T) {
 		{
 			name:      "valid nginxproxy",
 			validator: createValidValidator(),
-			np: &NginxProxy{
-				Source: &ngfAPI.NginxProxy{
-					Spec: ngfAPI.NginxProxySpec{
-						Telemetry: &ngfAPI.Telemetry{
-							ServiceName: helpers.GetPointer("my-svc"),
-							Exporter: &ngfAPI.TelemetryExporter{
-								Interval: helpers.GetPointer[ngfAPI.Duration]("5ms"),
-								Endpoint: "my-endpoint",
-							},
-							SpanAttributes: []ngfAPI.SpanAttribute{
-								{Key: "key", Value: "value"},
-							},
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						ServiceName: helpers.GetPointer("my-svc"),
+						Exporter: &ngfAPI.TelemetryExporter{
+							Interval: helpers.GetPointer[ngfAPI.Duration]("5ms"),
+							Endpoint: "my-endpoint",
+						},
+						SpanAttributes: []ngfAPI.SpanAttribute{
+							{Key: "key", Value: "value"},
 						},
 					},
 				},
-				Valid: true,
 			},
 			expectErrCount: 0,
 		},
 		{
 			name:      "invalid serviceName",
 			validator: createInvalidValidator(),
-			np: &NginxProxy{
-				Source: &ngfAPI.NginxProxy{
-					Spec: ngfAPI.NginxProxySpec{
-						Telemetry: &ngfAPI.Telemetry{
-							ServiceName: helpers.GetPointer("my-svc"), // any value is invalid by the validator
-						},
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						ServiceName: helpers.GetPointer("my-svc"), // any value is invalid by the validator
 					},
 				},
-				Valid: true, // default is true, will be updated to false once validation fails
 			},
 			expErrSubstring: "telemetry.serviceName",
 			expectErrCount:  1,
@@ -288,17 +282,14 @@ func TestValidateNginxProxy(t *testing.T) {
 		{
 			name:      "invalid endpoint",
 			validator: createInvalidValidator(),
-			np: &NginxProxy{
-				Source: &ngfAPI.NginxProxy{
-					Spec: ngfAPI.NginxProxySpec{
-						Telemetry: &ngfAPI.Telemetry{
-							Exporter: &ngfAPI.TelemetryExporter{
-								Endpoint: "my-endpoint", // any value is invalid by the validator
-							},
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						Exporter: &ngfAPI.TelemetryExporter{
+							Endpoint: "my-endpoint", // any value is invalid by the validator
 						},
 					},
 				},
-				Valid: true, // default is true, will be updated to false once validation fails
 			},
 			expErrSubstring: "telemetry.exporter.endpoint",
 			expectErrCount:  1,
@@ -306,19 +297,16 @@ func TestValidateNginxProxy(t *testing.T) {
 		{
 			name:      "invalid interval",
 			validator: createInvalidValidator(),
-			np: &NginxProxy{
-				Source: &ngfAPI.NginxProxy{
-					Spec: ngfAPI.NginxProxySpec{
-						Telemetry: &ngfAPI.Telemetry{
-							Exporter: &ngfAPI.TelemetryExporter{
-								Interval: helpers.GetPointer[ngfAPI.Duration](
-									"my-interval",
-								), // any value is invalid by the validator
-							},
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						Exporter: &ngfAPI.TelemetryExporter{
+							Interval: helpers.GetPointer[ngfAPI.Duration](
+								"my-interval",
+							), // any value is invalid by the validator
 						},
 					},
 				},
-				Valid: true, // default is true, will be updated to false once validation fails
 			},
 			expErrSubstring: "telemetry.exporter.interval",
 			expectErrCount:  1,
@@ -326,13 +314,11 @@ func TestValidateNginxProxy(t *testing.T) {
 		{
 			name:      "invalid spanAttributes",
 			validator: createInvalidValidator(),
-			np: &NginxProxy{
-				Source: &ngfAPI.NginxProxy{
-					Spec: ngfAPI.NginxProxySpec{
-						Telemetry: &ngfAPI.Telemetry{
-							SpanAttributes: []ngfAPI.SpanAttribute{
-								{Key: "my-key", Value: "my-value"}, // any value is invalid by the validator
-							},
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						SpanAttributes: []ngfAPI.SpanAttribute{
+							{Key: "my-key", Value: "my-value"}, // any value is invalid by the validator
 						},
 					},
 				},
@@ -350,7 +336,6 @@ func TestValidateNginxProxy(t *testing.T) {
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			if len(allErrs) > 0 {
 				g.Expect(allErrs.ToAggregate().Error()).To(ContainSubstring(test.expErrSubstring))
-				g.Expect(test.np.Valid).To(BeFalse())
 			}
 		})
 	}

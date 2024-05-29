@@ -607,7 +607,7 @@ func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
 
 // buildTelemetry generates the Otel configuration.
 func buildTelemetry(g *graph.Graph) Telemetry {
-	if g.NginxProxy == nil ||
+	if g.NginxProxy == nil || !g.NginxProxy.Valid ||
 		g.NginxProxy.Source.Spec.Telemetry == nil ||
 		g.NginxProxy.Source.Spec.Telemetry.Exporter == nil {
 		return Telemetry{}
@@ -647,11 +647,9 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 		}
 	}
 
-	if len(ratioMap) > 0 {
-		tel.Ratios = make([]Ratio, 0, len(ratioMap))
-		for name, ratio := range ratioMap {
-			tel.Ratios = append(tel.Ratios, Ratio{Name: name, Value: ratio})
-		}
+	tel.Ratios = make([]Ratio, 0, len(ratioMap))
+	for name, ratio := range ratioMap {
+		tel.Ratios = append(tel.Ratios, Ratio{Name: name, Value: ratio})
 	}
 
 	return tel
