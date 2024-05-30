@@ -17,6 +17,7 @@ jobs:
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name != 'schedule' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
