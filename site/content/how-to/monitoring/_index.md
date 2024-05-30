@@ -1,7 +1,7 @@
 ---
 title: "Monitoring and Troubleshooting"
 description:
-weight: 500
+weight: 400
 linkTitle: "Monitoring and Troubleshooting"
 menu:
   docs:
