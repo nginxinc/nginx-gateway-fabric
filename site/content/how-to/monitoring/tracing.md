@@ -1,24 +1,23 @@
 ---
 title: "Tracing"
-description: "Learn how to configure tracing in NGINX Gateway Fabric."
 weight: 200
 toc: true
 docs: "DOCS-000"
 ---
 
-{{<custom-styles>}}
+Learn how to configure tracing in NGINX Gateway Fabric.
 
 ## Overview
 
-NGINX Gateway Fabric supports tracing using [OpenTelemetry](https://opentelemetry.io/). The official [NGINX OpenTelemetry Module](https://github.com/nginxinc/nginx-otel) instruments the NGINX data plane to export traces to a configured collector. Tracing data can be exported to an OpenTelemetry Protocol (OTLP) exporter, such as the [OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector). This collector can then export data to one or more upstream collectors like [Jaeger](https://www.jaegertracing.io/), [DataDog](https://docs.datadoghq.com/tracing/), and many others. This particular model is called the [Agent model](https://opentelemetry.io/docs/collector/deployment/agent/).
+NGINX Gateway Fabric supports tracing using [OpenTelemetry](https://opentelemetry.io/). The official [NGINX OpenTelemetry Module](https://github.com/nginxinc/nginx-otel) instruments the NGINX data plane to export traces to a configured collector. Tracing data can be used with an OpenTelemetry Protocol (OTLP) exporter, such as the [OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector). This collector can then export data to one or more upstream collectors like [Jaeger](https://www.jaegertracing.io/), [DataDog](https://docs.datadoghq.com/tracing/), and many others. This is called the [Agent model](https://opentelemetry.io/docs/collector/deployment/agent/).
 
-In this guide, we are going enable tracing on our HTTPRoutes using NGINX Gateway Fabric. We will use the OpenTelemetry Collector and Jaeger to process and collect our traces.
+This guide explains how to enable tracing on HTTPRoutes using NGINX Gateway Fabric. It uses the OpenTelemetry Collector and Jaeger to process and collect the traces.
 
-## Installing the Collectors
+## Install the Collectors
 
-The first step is to install the collectors. NGINX Gateway Fabric will be configured to export to the OpenTelemetry Collector, which is configured to export to Jaeger. This model allows us to easily swap out the visualization collector (Jaeger) for something else if we want to, or add more collectors without needing to reconfigure NGINX Gateway Fabric. It is also possible to configure NGINX Gateway Fabric to export directly to Jaeger, if desired.
+The first step is to install the collectors. NGINX Gateway Fabric will be configured to export to the OpenTelemetry Collector, which is configured to export to Jaeger. This model allows the visualization collector (Jaeger) to be swapped with something else, or to add more collectors without needing to reconfigure NGINX Gateway Fabric. It is also possible to configure NGINX Gateway Fabric to export directly to Jaeger.
 
-First, create the namespace:
+Create the namespace:
 
 ```shell
 kubectl create namespace monitoring
@@ -29,15 +28,15 @@ Download the following files containing the configurations for the collectors:
 - {{< download "otel-collector.yaml" "otel-collector.yaml" >}}
 - {{< download "jaeger.yaml" "jaeger.yaml" >}}
 
-{{< note >}}These collectors are for demo purposes and are not tuned for production use.{{< /note >}}
+{{< note >}}These collectors are for demonstration purposes and are not tuned for production use.{{< /note >}}
 
-and install:
+Then install them:
 
 ```shell
 kubectl apply -f otel-collector.yaml -f jaeger.yaml -n monitoring
 ```
 
-Ensure that the Pods are running:
+Ensure the Pods are running:
 
 ```shell
 kubectl -n monitoring get pods
@@ -57,9 +56,9 @@ kubectl port-forward -n monitoring svc/jaeger 16686:16686 &
 
 Visit [http://127.0.0.1:16686](http://127.0.0.1:16686) to view the dashboard.
 
-## Enabling Tracing
+## Enable tracing
 
-Enabling tracing requires two pieces of configuration.
+To enable tracing, you must configure two resources:
 
 - `NginxProxy`: This resource contains global settings relating to the NGINX data plane. It is created and managed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/), and is referenced in the `parametersRef` field of the GatewayClass. This resource can be created and linked when we install NGINX Gateway Fabric using its helm chart, or it can be added later. In this guide we will install the resource using the helm chart, but will also show what it looks like in case you want to add it after installation.
 
@@ -69,9 +68,9 @@ The `NginxProxy` resource contains configuration for the collector, and applies 
 
 TODO(sberman): link to reference docs
 
-### Installing NGINX Gateway Fabric with global tracing config
+### Install NGINX Gateway Fabric with global tracing configuration
 
-{{< note >}}Ensure that you've already [installed the Gateway API resources]({{< relref "installation/installing-ngf/helm.md#installing-the-gateway-api-resources" >}}).{{< /note >}}
+{{< note >}}Ensure that you [install the Gateway API resources]({{< relref "installation/installing-ngf/helm.md#installing-the-gateway-api-resources" >}}).{{< /note >}}
 
 Based on the collector we deployed above, we'll create the following `values.yaml` file to install NGINX Gateway Fabric:
 
@@ -88,7 +87,7 @@ nginx:
 EOT
 ```
 
-We've set the endpoint and added a demo attribute that will be added to all tracing spans.
+The endpoint and demo attribute will be added to all tracing spans.
 
 To install:
 
@@ -96,7 +95,7 @@ To install:
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway -f values.yaml
 ```
 
-As a result, we should see the following configurations:
+You should see the following configuration:
 
 ```shell
 kubectl get nginxproxies.gateway.nginx.org ngf-proxy-config -o yaml
@@ -153,20 +152,20 @@ status:
     type: ResolvedRefs
 ```
 
-If you already had NGINX Gateway Fabric installed, then you can simply create the `NginxProxy` resource and link it in the GatewayClass `parametersRef` like shown above, using:
+If you already have NGINX Gateway Fabric installed, then you can create the `NginxProxy` resource and link it to the GatewayClass `parametersRef`:
 
 ```shell
 kubectl edit gatewayclasses.gateway.networking.k8s.io nginx
 ```
 
-Next you'll want to [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+Next, [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
    GW_PORT=<port number>
    ```
 
-Now we can create our application, route, and tracing policy.
+You can now create the application, route, and tracing policy.
 
 ### Create the application and route
 
@@ -209,7 +208,7 @@ spec:
 EOF
 ```
 
-Next we'll create the Gateway resource and HTTPRoute for our app:
+Create the Gateway resource and HTTPRoute for the application:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -244,7 +243,7 @@ spec:
 EOF
 ```
 
-Let's ensure that traffic can flow to our application.
+Check that traffic can flow to the application.
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
@@ -252,7 +251,7 @@ Let's ensure that traffic can flow to our application.
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
 
-We should see a response from the coffee Pod.
+You should receive a response from the coffee Pod.
 
 ```text
 Server address: 10.244.0.69:8080
@@ -260,11 +259,11 @@ Server name: coffee-6b8b6d6486-k5w5w
 URI: /coffee
 ```
 
-Assuming that you have access to the [Jaeger dashboard](http://127.0.0.1:16686) from earlier in the guide, you shouldn't see any tracing information yet. This means we need to create our `ObservabilityPolicy`.
+You shouldn't see any information from the [Jaeger dashboard](http://127.0.0.1:16686) yet: you need to create the `ObservabilityPolicy`.
 
 ### Create the ObservabilityPolicy
 
-To enable tracing for our coffee HTTPRoute, we create the following policy:
+To enable tracing for the coffee HTTPRoute, create the following policy:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -286,9 +285,9 @@ spec:
 EOF
 ```
 
-This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, where 75% of requests will be sampled. We've also included a span attribute to add extra data to the spans.
+This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, sampling 75% of requests. The `spanAttributes` provide extra data.
 
-Let's check the status of the policy:
+Check the status of the policy:
 
 ```shell
 kubectl describe observabilitypolicies.gateway.nginx.org coffee
@@ -312,7 +311,7 @@ Status:
     Controller Name:         gateway.nginx.org/nginx-gateway-controller
 ```
 
-The policy is accepted, so now let's send some more traffic. Run the following command multiple times.
+The `message` field shows the policy is accepted. Run the next command multiple times to create new traffic.
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
@@ -324,11 +323,11 @@ Once complete, let's refresh the Jaeger dashboard. We should now see a service e
 
 <br></br>
 
-If we click into one of the traces, we can see the attributes.
+Select a trace to view the attributes.
 
 {{<img src="img/jaeger-trace-attributes.png" alt="">}}
 
-As you can see, the trace includes the attribute from the global NginxProxy resource, set by the cluster operator, as well as the attribute from the ObservabilityPolicy, set by the application developer.
+The trace includes the attribute from the global NginxProxy resource as well as the attribute from the ObservabilityPolicy.
 
 ## Further Reading
 
