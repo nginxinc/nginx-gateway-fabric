@@ -261,7 +261,7 @@ jobs:
     with:
       image: ${{ matrix.image }}
       k8s-version: ${{ matrix.k8s-version }}
-    if: ${{ needs.vars.outputs.helm_changes || github.event_name == 'schedule' }}
+    if: ${{ needs.vars.outputs.helm_changes == 'true' || github.event_name == 'schedule' }}
 
   publish-helm:
     name: Package and Publish Helm Chart
