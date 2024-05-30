@@ -85,7 +85,7 @@ nginx:
 EOT
 ```
 
-The endpoint and demo attribute will be added to all tracing spans.
+The span attribute will be added to all tracing spans.
 
 To install:
 
@@ -283,7 +283,7 @@ spec:
 EOF
 ```
 
-This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, sampling 75% of requests. The `spanAttributes` provide extra data.
+This policy attaches to the coffee HTTPRoute and enables ratio-based tracing, sampling 75% of requests. The span attribute is only included in the spans for the routes referenced in this policy.
 
 Check the status of the policy:
 
