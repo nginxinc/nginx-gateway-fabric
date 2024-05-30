@@ -32,7 +32,7 @@ jobs:
       go_path: ${{ steps.vars.outputs.go_path }}
       min_k8s_version: ${{ steps.vars.outputs.min_k8s_version }}
       k8s_latest: ${{ steps.vars.outputs.k8s_latest }}
-      helm_changes: ${{ steps.vars.outputs.helm_changes }}
+      helm_changes: ${{ steps.filter.outputs.charts }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
@@ -44,14 +44,13 @@ jobs:
         with:
           go-version: stable
 
-      - name: Set up Python
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
+      - name: Check for changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
         with:
-          python-version: "3.x"
-          check-latest: true
-
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@e6669bcd63d7cb57cb4380c33043eebe5d111992 # v2.6.1
+          filters: |
+            charts:
+            - charts/nginx-gateway-fabric/**/*
 
       - name: Output Variables
         id: vars
@@ -59,7 +58,6 @@ jobs:
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "min_k8s_version=v1.25.16" >> $GITHUB_OUTPUT
           echo "k8s_latest=$(grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[:]' '{print $2}')" >> $GITHUB_OUTPUT
-          echo "helm_changes=$(ct list-changed --config .ct.yaml)" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
