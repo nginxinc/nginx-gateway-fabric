@@ -60,19 +60,17 @@ Visit [http://127.0.0.1:16686](http://127.0.0.1:16686) to view the dashboard.
 
 To enable tracing, you must configure two resources:
 
-- `NginxProxy`: This resource contains global settings relating to the NGINX data plane. It is created and managed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/), and is referenced in the `parametersRef` field of the GatewayClass. This resource can be created and linked when we install NGINX Gateway Fabric using its helm chart, or it can be added later. In this guide we will install the resource using the helm chart, but will also show what it looks like in case you want to add it after installation.
+- `NginxProxy`: This resource contains global settings relating to the NGINX data plane. It is created and managed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/), and is referenced in the `parametersRef` field of the GatewayClass. This resource can be created and linked when we install NGINX Gateway Fabric using its helm chart, or it can be added later. This guide installs the resource using the helm chart, but the resource can also be created for an existing deployment.
 
 The `NginxProxy` resource contains configuration for the collector, and applies to all Gateways and routes under the GatewayClass. It does not enable tracing, but is a prerequisite to the next piece of configuration.
 
 - `ObservabilityPolicy`: This resource is a [Policy](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that targets HTTPRoutes or GRPCRoutes. It is created by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/) and enables tracing for a specific route or routes. It requires the `NginxProxy` resource to exist in order to complete the tracing configuration.
 
-TODO(sberman): link to reference docs
-
 ### Install NGINX Gateway Fabric with global tracing configuration
 
 {{< note >}}Ensure that you [install the Gateway API resources]({{< relref "installation/installing-ngf/helm.md#installing-the-gateway-api-resources" >}}).{{< /note >}}
 
-Based on the collector we deployed above, we'll create the following `values.yaml` file to install NGINX Gateway Fabric:
+Referencing the previously deployed collector, create the following `values.yaml` file for installing NGINX Gateway Fabric:
 
 ```yaml
 cat <<EOT > values.yaml
@@ -317,7 +315,7 @@ The `message` field shows the policy is accepted. Run the next command multiple 
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
 
-Once complete, let's refresh the Jaeger dashboard. We should now see a service entry called `ngf:default:cafe`, and a few traces. The service name by default is `ngf:<gateway-namespace>:<gateway-name>`.
+Once complete, refresh the Jaeger dashboard. You should see a service entry called `ngf:default:cafe`, and a few traces. The default service name is `ngf:<gateway-namespace>:<gateway-name>`.
 
 {{<img src="img/jaeger-trace-overview.png" alt="">}}
 
@@ -328,7 +326,3 @@ Select a trace to view the attributes.
 {{<img src="img/jaeger-trace-attributes.png" alt="">}}
 
 The trace includes the attribute from the global NginxProxy resource as well as the attribute from the ObservabilityPolicy.
-
-## Further Reading
-
-TODO(sberman): link to reference docs again
