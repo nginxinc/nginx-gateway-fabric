@@ -109,7 +109,7 @@ tolerations: []
 ## The nodeSelector of the NGINX Gateway Fabric pod.
 nodeSelector: {}
 
-## The affinity of the NGINX Gateway Fabric pod.
+## The affinity of the NGINX Gateway Fabric pods.
 affinity: {}
 
 serviceAccount:
