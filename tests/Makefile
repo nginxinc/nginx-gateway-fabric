@@ -1,4 +1,5 @@
 CI=false
+CLUSTER_NAME ?= kind
 CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
 CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
@@ -10,7 +11,7 @@ GW_SERVICE_TYPE=NodePort## Service type to use for the gateway
 GW_SVC_GKE_INTERNAL=false
 K8S_VERSION ?= latest## Kubernetes version to use. Expected format: 1.24 (major.minor) or latest
 NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
-PULL_POLICY=Never## Pull policy for the images
+PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
 SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
@@ -29,7 +30,7 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG)
+	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --name $(CLUSTER_NAME)
 	kubectl apply -f conformance/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \

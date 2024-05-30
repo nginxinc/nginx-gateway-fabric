@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  helm-tests:
-    name: Helm Tests
+  helm-tests-local:
+    name: Helm Tests Local
     runs-on: ubuntu-22.04
     if: ${{ github.event_name != 'schedule' }}
     steps:
@@ -115,3 +115,43 @@ jobs:
           --set=nginxGateway.image.pullPolicy=Never \
           --set=nginx.image.pullPolicy=Never \
           --set=nginxGateway.productTelemetry.enable=false"
+
+  helm-test-remote:
+    name: Helm Tests Remote
+    runs-on: ubuntu-22.04
+    # if: ${{ github.event_name == 'schedule' }}
+    steps:
+      - name: Install cloud-provider-kind
+        run: go install sigs.k8s.io/cloud-provider-kind@latest
+
+      - name: Run cloud-provider-kind
+        run: ~/go/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
+
+      - name: Deploy Kubernetes
+        id: k8s
+        run: |
+          kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
+          kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
+
+      - name: Create k8s secret
+        if: ${{ inputs.image == 'plus' }}
+        run: |
+          kubectl create secret docker-registry nginx-plus-registry-secret --docker-server=private-registry.nginx.com --docker-username=${{ secrets.JWT_PLUS_REGISTRY }} --docker-password=none -n nginx-gateway
+
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
+        with:
+          python-version: "3.x"
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@e6669bcd63d7cb57cb4380c33043eebe5d111992 # v2.6.1
+
+      - name: Install Chart
+        run: |
+          ct install --config .ct.yaml --all --helm-extra-set-args="--set=nginxGateway.image.tag=nightly \
+          --set=nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx${{ inputs.image == 'plus' && '-plus' || ''}} \
+          --set=nginx.plus=${{ inputs.image == 'plus' }} \
+          --set=nginx.image.tag=nightly \
+          --set=nginxGateway.productTelemetry.enable=false \
+          ${{ inputs.image == 'plus' && '--set=nginx.image.pullSecret=nginx-plus-registry-secret' || '' }}"
