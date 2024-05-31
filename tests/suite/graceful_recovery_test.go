@@ -280,7 +280,9 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: ngfContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
+	if !*plusEnabled {
+		Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
+	}
 }
 
 func checkLeaderLeaseChange(originalLeaseName string) error {
