@@ -119,6 +119,7 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry
         working-directory: ./tests
+
       - name: Run functional tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
