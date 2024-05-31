@@ -23,10 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-// This test can be flaky when waiting to see traces show up in the collector logs.
-// Sometimes they get there right away, sometimes it takes 30 seconds. Retries were
-// added to attempt to mitigate the issue, but it didn't fix it 100%
-var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
+var _ = Describe("Tracing", Label("functional", "tracing"), func() {
 	var (
 		files = []string{
 			"hello-world/apps.yaml",
@@ -159,7 +156,7 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional"), func() {
 			Should(Succeed())
 
 		// wait for expected first line to show up
-		Eventually(findTraces, "1m", "5s").Should(BeTrue())
+		Eventually(findTraces, "5m", "5s").Should(BeTrue())
 	}
 
 	It("sends tracing spans for one policy attached to one route", func() {
