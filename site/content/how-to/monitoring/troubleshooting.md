@@ -9,13 +9,13 @@ docs: "DOCS-1419"
 
 This topic describes possible issues users might encounter when using NGINX Gateway Fabric. When possible, suggested workarounds are provided.
 
-### **General Troubleshooting**
+### General Troubleshooting
 
 When attempting to diagnose a problem or get support, there are a few important data points that can be collected to help with understanding what issues may exist.
 
-#### Resource Status
+##### Resource Status
 
-To get the status of a resource, use `kubectl describe`. For example, to check the status of the `coffee` HTTPRoute:
+To get the status of a resource, use `kubectl describe`. For example, to check the status of the `coffee` HTTPRoute, which has an error:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee [-n namespace]
@@ -26,17 +26,17 @@ kubectl describe httproutes.gateway.networking.k8s.io coffee [-n namespace]
 Status:
   Parents:
     Conditions:
-      Last Transition Time:  2024-05-31T16:22:26Z
+      Last Transition Time:  2024-05-31T17:20:51Z
       Message:               The route is accepted
-      Observed Generation:   1
+      Observed Generation:   4
       Reason:                Accepted
       Status:                True
       Type:                  Accepted
-      Last Transition Time:  2024-05-31T16:22:26Z
-      Message:               All references are resolved
-      Observed Generation:   1
-      Reason:                ResolvedRefs
-      Status:                True
+      Last Transition Time:  2024-05-31T17:20:51Z
+      Message:               spec.rules[0].backendRefs[0].name: Not found: "bad-backend"
+      Observed Generation:   4
+      Reason:                BackendNotFound
+      Status:                False
       Type:                  ResolvedRefs
     Controller Name:         gateway.nginx.org/nginx-gateway-controller
     Parent Ref:
@@ -47,9 +47,9 @@ Status:
       Section Name:  http
 ```
 
-If a resource has any errors relating to its configuration or relation to other resources, it is likely that those errors will be contained within the status.
+If a resource has any errors relating to its configuration or relation to other resources, it is likely that those errors will be contained within the status. The `ObservedGeneration` in the status should match the `ObservedGeneration` of the resource. Otherwise, this could mean that the resource wasn't processed yet or the status failed to update.
 
-#### Events
+##### Events
 
 Events may be created by NGINX Gateway Fabric or other Kubernetes components that could indicate system or configuration issues. To see events:
 
@@ -57,25 +57,33 @@ Events may be created by NGINX Gateway Fabric or other Kubernetes components tha
 kubectl get events [-n namespace]
 ```
 
-#### Logs
+For example, a warning event when the NginxGateway configuration CRD is deleted:
+
+```text
+kubectl -n nginx-gateway get event
+LAST SEEN   TYPE      REASON              OBJECT                                           MESSAGE
+5s          Warning   ResourceDeleted     nginxgateway/ngf-config                          NginxGateway configuration was deleted; using defaults
+```
+
+##### Logs
 
 Logs of the NGINX Gateway Fabric control plane and data plane can contain information that isn't otherwise reported in status or events. These could include errors in processing or passing traffic.
 
-To see logs for the control plane container (replacing the name of the deployment if necessary):
+To see logs for the control plane container:
 
 ```shell
-kubectl -n nginx-gateway logs deployments/nginx-gateway-fabric -c nginx-gateway
+kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway
 ```
 
-To see logs for the data plane container (replacing the name of the deployment if necessary):
+To see logs for the data plane container:
 
 ```shell
-kubectl -n nginx-gateway logs deployments/nginx-gateway-fabric -c nginx
+kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx
 ```
 
 You can also see the logs of a container that has crashed or been killed, by specifying the `-p` flag with the above commands.
 
-### **NGINX fails to reload**
+### NGINX fails to reload
 
 #### Description
 
@@ -90,7 +98,7 @@ To resolve this issue you will need to set `allowPrivilegeEscalation` to `true`.
 - If using Helm, you can set the `nginxGateway.securityContext.allowPrivilegeEscalation` value.
 - If using the manifests directly, you can update this field under the `nginx-gateway` container's `securityContext`.
 
-### **Usage Reporting errors**
+### Usage Reporting errors
 
 #### Description
 
