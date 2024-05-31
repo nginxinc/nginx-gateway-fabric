@@ -100,11 +100,11 @@ nfr-test: ## Run the NFR tests on a GCP VM
 	NFR=true bash scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
-start-longevity-test: START_LONGEVITY=true
+start-longevity-test: export START_LONGEVITY=true
 start-longevity-test: nfr-test ## Start the longevity test to run for 4 days in GKE
 
 .PHONY: stop-longevity-test
-stop-longevity-test: STOP_LONGEVITY=true
+stop-longevity-test: export STOP_LONGEVITY=true
 stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
 .PHONY: .vm-nfr-test
