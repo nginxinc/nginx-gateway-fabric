@@ -1,0 +1,8 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Changelog
+      labels:
+        - release-notes
