@@ -109,3 +109,31 @@ If using NGINX Gateway Fabric with NGINX Plus as the data plane, you will see th
 #### Resolution
 
 To resolve this issue, enable Usage Reporting by following the [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) guide.
+
+### 413 Request Entity Too Large
+
+#### Description
+
+If you receive the following error:
+
+```text
+<html>
+<head><title>413 Request Entity Too Large</title></head>
+<body>
+<center><h1>413 Request Entity Too Large</h1></center>
+<hr><center>nginx/1.25.5</center>
+</body>
+</html>
+```
+
+or see the following error message in the NGINX logs:
+
+```text
+2024/05/30 21:48:22 [error] 138#138: *43 client intended to send too large body: 112 bytes, client: 127.0.0.1, server: cafe.example.com, request: "POST /coffee HTTP/1.1", host: "cafe.example.com:8080"
+```
+
+the request body exceeds the [client_max_body_size](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size).
+
+#### Resolution
+
+You can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. See this [guide]({{< relref "how-to/traffic-management/client-settings.md" >}}) for instructions.

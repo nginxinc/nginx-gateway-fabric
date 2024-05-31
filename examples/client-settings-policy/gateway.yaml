@@ -9,7 +9,3 @@ spec:
     port: 80
     protocol: HTTP
     hostname: "*.example.com"
-  - name: http2
-    port: 8080
-    protocol: HTTP
-    hostname: "*.example.org"
