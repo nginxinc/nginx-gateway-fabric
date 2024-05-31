@@ -30,7 +30,7 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	go test -v ./tests -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
+	go test -v ./conformance -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
 		--supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \
 		--report-output=conformance-profile.yaml
 
@@ -134,7 +134,7 @@ delete-gke-cluster: ## Delete the GKE cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
 	bash scripts/add-local-ip-auth-networks.sh
 
-HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
+HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip
 
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster
