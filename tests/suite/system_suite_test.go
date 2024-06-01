@@ -48,7 +48,6 @@ var (
 	gatewayAPIPrevVersion = flag.String(
 		"gateway-api-prev-version", "", "Supported Gateway API version for previous NGF release",
 	)
-	k8sVersion = flag.String("k8s-version", "latest", "Version of k8s being tested on")
 	// Configurable NGF installation variables. Helm values will be used as defaults if not specified.
 	ngfImageRepository       = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository     = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
@@ -214,7 +213,7 @@ func teardown(relName string) {
 	output, err := framework.UninstallNGF(cfg, k8sClient)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	output, err = framework.UninstallGatewayAPI(*gatewayAPIVersion, *k8sVersion)
+	output, err = framework.UninstallGatewayAPI(*gatewayAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
