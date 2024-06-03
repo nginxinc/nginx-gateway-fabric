@@ -280,8 +280,13 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: ngfContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	if !*plusEnabled {
-		Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
+
+	for _, line := range strings.Split(logs, "\n") {
+		if *plusEnabled && strings.Contains(line, "[error]") {
+			Expect(line).To(ContainSubstring("Usage reporting must be enabled when using NGINX Plus"), line)
+		} else {
+			Expect(line).ToNot(ContainSubstring("[error]"), line)
+		}
 	}
 }
 
