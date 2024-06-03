@@ -31,16 +31,18 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 			"longevity/prom.yaml",
 		}
 
-		ns = &core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "longevity",
-			},
-		}
+		ns core.Namespace
 
 		labelFilter = GinkgoLabelFilter()
 	)
 
 	BeforeEach(func() {
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "longevity",
+			},
+		}
+
 		if !strings.Contains(labelFilter, "longevity") {
 			Skip("skipping longevity test unless 'longevity' label is explicitly defined when running")
 		}
@@ -51,7 +53,7 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 			Skip("'longevity-setup' label not specified; skipping...")
 		}
 
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(promFile, ngfNamespace)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())

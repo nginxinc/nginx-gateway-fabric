@@ -1,15 +1,15 @@
 package policies_test
 
 import (
-	"errors"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 var _ = Describe("Policy Manager", func() {
@@ -42,20 +42,24 @@ var _ = Describe("Policy Manager", func() {
 		mustExtractGVK,
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub:  func(_ policies.Policy) error { return errors.New("apple error") },
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalSettings) []conditions.Condition {
+					return []conditions.Condition{staticConds.NewPolicyInvalid("apple error")}
+				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return true },
 			},
-			Generator: func(_ policies.Policy) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
 				return []byte("apple")
 			},
 			GVK: appleGVK,
 		},
 		policies.ManagerConfig{
 			Validator: &policiesfakes.FakeValidator{
-				ValidateStub:  func(_ policies.Policy) error { return errors.New("orange error") },
+				ValidateStub: func(_ policies.Policy, _ *policies.GlobalSettings) []conditions.Condition {
+					return []conditions.Condition{staticConds.NewPolicyInvalid("orange error")}
+				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return false },
 			},
-			Generator: func(_ policies.Policy) []byte {
+			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
 				return []byte("orange")
 			},
 			GVK: orangeGVK,
@@ -65,13 +69,13 @@ var _ = Describe("Policy Manager", func() {
 	Context("Validation", func() {
 		When("Policy is registered with manager", func() {
 			It("Validates the policy", func() {
-				err := mgr.Validate(applePolicy)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("apple error"))
+				conds := mgr.Validate(applePolicy, nil)
+				Expect(conds).To(HaveLen(1))
+				Expect(conds[0].Message).To(Equal("apple error"))
 
-				err = mgr.Validate(orangePolicy)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("orange error"))
+				conds = mgr.Validate(orangePolicy, nil)
+				Expect(conds).To(HaveLen(1))
+				Expect(conds[0].Message).To(Equal("orange error"))
 			})
 			It("Returns whether the policies conflict", func() {
 				Expect(mgr.Conflicts(applePolicy, applePolicy)).To(BeTrue())
@@ -81,7 +85,7 @@ var _ = Describe("Policy Manager", func() {
 		When("Policy is not registered with manager", func() {
 			It("Panics on call to validate", func() {
 				validate := func() {
-					_ = mgr.Validate(&policiesfakes.FakePolicy{})
+					_ = mgr.Validate(&policiesfakes.FakePolicy{}, nil)
 				}
 
 				Expect(validate).To(Panic())
@@ -98,14 +102,14 @@ var _ = Describe("Policy Manager", func() {
 	Context("Generation", func() {
 		When("Policy is registered with manager", func() {
 			It("Generates the configuration for the policy", func() {
-				Expect(mgr.Generate(applePolicy)).To(Equal([]byte("apple")))
-				Expect(mgr.Generate(orangePolicy)).To(Equal([]byte("orange")))
+				Expect(mgr.Generate(applePolicy, nil)).To(Equal([]byte("apple")))
+				Expect(mgr.Generate(orangePolicy, nil)).To(Equal([]byte("orange")))
 			})
 		})
 		When("Policy is not registered with manager", func() {
 			It("Panics on generate", func() {
 				generate := func() {
-					_ = mgr.Generate(&policiesfakes.FakePolicy{})
+					_ = mgr.Generate(&policiesfakes.FakePolicy{}, nil)
 				}
 
 				Expect(generate).To(Panic())

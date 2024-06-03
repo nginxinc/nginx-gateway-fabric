@@ -1,0 +1,17 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: ObservabilityPolicy
+metadata:
+  name: test-observability-policy
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: hello
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: world
+  tracing:
+    strategy: ratio
+    spanAttributes:
+    - key: testkey2
+      value: testval2

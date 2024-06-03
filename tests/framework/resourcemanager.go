@@ -313,7 +313,11 @@ func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, name
 		return err
 	}
 
-	if err := rm.waitForRoutesToBeReady(ctx, namespace); err != nil {
+	if err := rm.waitForHTTPRoutesToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	if err := rm.waitForGRPCRoutesToBeReady(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -371,7 +375,7 @@ func (rm *ResourceManager) waitForGatewaysToBeReady(ctx context.Context, namespa
 	)
 }
 
-func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace string) error {
+func (rm *ResourceManager) waitForHTTPRoutesToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
@@ -385,13 +389,29 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 			var numParents, readyCount int
 			for _, route := range routeList.Items {
 				numParents += len(route.Spec.ParentRefs)
-				for _, parent := range route.Status.Parents {
-					for _, cond := range parent.Conditions {
-						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
-							readyCount++
-						}
-					}
-				}
+				readyCount += countNumberOfReadyParents(route.Status.Parents)
+			}
+
+			return numParents == readyCount, nil
+		},
+	)
+}
+
+func (rm *ResourceManager) waitForGRPCRoutesToBeReady(ctx context.Context, namespace string) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var routeList v1.GRPCRouteList
+			if err := rm.K8sClient.List(ctx, &routeList, client.InNamespace(namespace)); err != nil {
+				return false, err
+			}
+
+			var numParents, readyCount int
+			for _, route := range routeList.Items {
+				numParents += len(route.Spec.ParentRefs)
+				readyCount += countNumberOfReadyParents(route.Status.Parents)
 			}
 
 			return numParents == readyCount, nil
@@ -648,4 +668,18 @@ func GetReadyNGFPodNames(
 	}
 
 	return nil, errors.New("unable to find NGF Pod(s)")
+}
+
+func countNumberOfReadyParents(parents []v1.RouteParentStatus) int {
+	readyCount := 0
+
+	for _, parent := range parents {
+		for _, cond := range parent.Conditions {
+			if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				readyCount++
+			}
+		}
+	}
+
+	return readyCount
 }

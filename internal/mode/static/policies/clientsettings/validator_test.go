@@ -9,11 +9,13 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 type policyModFunc func(policy *ngfAPI.ClientSettingsPolicy) *ngfAPI.ClientSettingsPolicy
@@ -52,9 +54,9 @@ func createModifiedPolicy(mod policyModFunc) *ngfAPI.ClientSettingsPolicy {
 
 func TestValidator_Validate(t *testing.T) {
 	tests := []struct {
-		name             string
-		policy           *ngfAPI.ClientSettingsPolicy
-		expErrSubstrings []string
+		name          string
+		policy        *ngfAPI.ClientSettingsPolicy
+		expConditions []conditions.Condition
 	}{
 		{
 			name: "invalid target ref; unsupported group",
@@ -62,7 +64,10 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.TargetRef.Group = "Unsupported"
 				return p
 			}),
-			expErrSubstrings: []string{"spec.targetRef.group"},
+			expConditions: []conditions.Condition{
+				staticConds.NewPolicyInvalid("spec.targetRef.group: Unsupported value: \"Unsupported\": " +
+					"supported values: \"gateway.networking.k8s.io\""),
+			},
 		},
 		{
 			name: "invalid target ref; unsupported kind",
@@ -70,7 +75,10 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.TargetRef.Kind = "Unsupported"
 				return p
 			}),
-			expErrSubstrings: []string{"spec.targetRef.kind"},
+			expConditions: []conditions.Condition{
+				staticConds.NewPolicyInvalid("spec.targetRef.kind: Unsupported value: \"Unsupported\": " +
+					"supported values: \"Gateway\", \"HTTPRoute\", \"GRPCRoute\""),
+			},
 		},
 		{
 			name: "invalid client max body size",
@@ -78,7 +86,11 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.Body.MaxSize = helpers.GetPointer[ngfAPI.Size]("invalid")
 				return p
 			}),
-			expErrSubstrings: []string{"spec.body.maxSize"},
+			expConditions: []conditions.Condition{
+				staticConds.NewPolicyInvalid("spec.body.maxSize: Invalid value: \"invalid\": ^\\d{1,4}(k|m|g)?$ " +
+					"(e.g. '1024',  or '8k',  or '20m',  or '1g', regex used for validation is 'must contain a number. " +
+					"May be followed by 'k', 'm', or 'g', otherwise bytes are assumed')"),
+			},
 		},
 		{
 			name: "invalid durations",
@@ -89,11 +101,14 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.KeepAlive.Timeout.Header = helpers.GetPointer[ngfAPI.Duration]("invalid")
 				return p
 			}),
-			expErrSubstrings: []string{
-				"spec.body.timeout",
-				"spec.keepAlive.time",
-				"spec.keepAlive.timeout.server",
-				"spec.keepAlive.timeout.header",
+			expConditions: []conditions.Condition{
+				staticConds.NewPolicyInvalid("[spec.body.timeout: Invalid value: \"invalid\": \\d{1,4}(ms|s)? " +
+					"(e.g. '5ms',  or '10s', regex used for validation is 'must contain a number followed by 'ms' or 's''), " +
+					"spec.keepAlive.time: Invalid value: \"invalid\": \\d{1,4}(ms|s)? (e.g. '5ms',  or '10s', regex used for " +
+					"validation is 'must contain a number followed by 'ms' or 's''), spec.keepAlive.timeout.server: Invalid value: " +
+					"\"invalid\": \\d{1,4}(ms|s)? (e.g. '5ms',  or '10s', regex used for validation is 'must contain a number " +
+					"followed by 'ms' or 's''), spec.keepAlive.timeout.header: Invalid value: \"invalid\": \\d{1,4}(ms|s)? " +
+					"(e.g. '5ms',  or '10s', regex used for validation is 'must contain a number followed by 'ms' or 's'')]"),
 			},
 		},
 		{
@@ -102,12 +117,15 @@ func TestValidator_Validate(t *testing.T) {
 				p.Spec.KeepAlive.Timeout.Server = nil
 				return p
 			}),
-			expErrSubstrings: []string{"spec.keepAlive.timeout"},
+			expConditions: []conditions.Condition{
+				staticConds.NewPolicyInvalid("spec.keepAlive.timeout: Invalid value: \"null\": " +
+					"server timeout must be set if header timeout is set"),
+			},
 		},
 		{
-			name:             "valid",
-			policy:           createValidPolicy(),
-			expErrSubstrings: nil,
+			name:          "valid",
+			policy:        createValidPolicy(),
+			expConditions: nil,
 		},
 	}
 
@@ -117,17 +135,8 @@ func TestValidator_Validate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			err := v.Validate(test.policy)
-
-			if len(test.expErrSubstrings) == 0 {
-				g.Expect(err).ToNot(HaveOccurred())
-			} else {
-				g.Expect(err).To(HaveOccurred())
-			}
-
-			for _, str := range test.expErrSubstrings {
-				g.Expect(err.Error()).To(ContainSubstring(str))
-			}
+			conds := v.Validate(test.policy, nil)
+			g.Expect(conds).To(Equal(test.expConditions))
 		})
 	}
 }
@@ -136,7 +145,7 @@ func TestValidator_ValidatePanics(t *testing.T) {
 	v := clientsettings.NewValidator(nil)
 
 	validate := func() {
-		_ = v.Validate(&policiesfakes.FakePolicy{})
+		_ = v.Validate(&policiesfakes.FakePolicy{}, nil)
 	}
 
 	g := NewWithT(t)

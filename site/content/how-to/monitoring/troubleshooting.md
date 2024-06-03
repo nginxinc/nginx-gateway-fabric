@@ -1,7 +1,6 @@
 ---
 title: "Troubleshooting"
-
-weight: 300
+weight: 400
 toc: true
 docs: "DOCS-1419"
 ---

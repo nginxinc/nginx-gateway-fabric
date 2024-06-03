@@ -114,7 +114,7 @@ terminationGracePeriodSeconds: 30
 ## Tolerations for the NGINX Gateway Fabric pod.
 tolerations: []
 
-##  The nodeSelector of the NGINX Gateway Fabric pod.
+## The nodeSelector of the NGINX Gateway Fabric pod.
 nodeSelector: {}
 
 ## The affinity of the NGINX Gateway Fabric pod.
