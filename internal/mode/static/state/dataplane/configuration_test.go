@@ -20,8 +20,8 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	policiesfakes "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
@@ -39,10 +39,12 @@ func getNormalBackendRef() graph.BackendRef {
 func getExpectedConfiguration() Configuration {
 	return Configuration{
 		BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-		HTTPServers: []VirtualServer{{
-			IsDefault: true,
-			Port:      80,
-		}},
+		HTTPServers: []VirtualServer{
+			{
+				IsDefault: true,
+				Port:      80,
+			},
+		},
 		SSLServers: []VirtualServer{
 			{
 				IsDefault: true,
@@ -1846,12 +1848,13 @@ func TestBuildConfiguration(t *testing.T) {
 				conf.SSLServers = []VirtualServer{}
 				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
 				conf.Telemetry = Telemetry{
-					Endpoint:    "my-otel.svc:4563",
-					Interval:    "5s",
-					BatchSize:   512,
-					BatchCount:  4,
-					ServiceName: "ngf:ns:gw:my-svc",
-					Ratios:      []Ratio{},
+					Endpoint:       "my-otel.svc:4563",
+					Interval:       "5s",
+					BatchSize:      512,
+					BatchCount:     4,
+					ServiceName:    "ngf:ns:gw:my-svc",
+					Ratios:         []Ratio{},
+					SpanAttributes: []SpanAttribute{},
 				}
 				conf.BaseHTTPConfig = BaseHTTPConfig{HTTP2: false, IPFamily: Dual}
 				return conf
@@ -1929,16 +1932,7 @@ func TestBuildConfiguration(t *testing.T) {
 					{
 						IsDefault: true,
 						Port:      443,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
+						Policies:  []policies.Policy{gwPolicy1.Source, gwPolicy2.Source},
 					},
 					{
 						Hostname: "policy.com",
@@ -1950,59 +1944,27 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										BackendGroup: expHTTPSHRWithPolicyGroups[0],
 										Source:       &httpsHRWithPolicy.ObjectMeta,
-										Additions: []Addition{
-											{
-												Bytes:      []byte("lime"),
-												Identifier: "LimePolicy_default_attach-hr",
-											},
-										},
 									},
 								},
+								Policies: []policies.Policy{hrPolicy2.Source},
 							},
 						},
-						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
-						Port: 443,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+						Policies: []policies.Policy{gwPolicy1.Source, gwPolicy2.Source},
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
+						Policies: []policies.Policy{gwPolicy1.Source, gwPolicy2.Source},
 					},
 				}
 				conf.HTTPServers = []VirtualServer{
 					{
 						IsDefault: true,
 						Port:      80,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
+						Policies:  []policies.Policy{gwPolicy1.Source, gwPolicy2.Source},
 					},
 					{
 						Hostname: "policy.com",
@@ -2014,27 +1976,13 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										Source:       &hrWithPolicy.ObjectMeta,
 										BackendGroup: expHRWithPolicyGroups[0],
-										Additions: []Addition{
-											{
-												Bytes:      []byte("lemon"),
-												Identifier: "LemonPolicy_default_attach-hr",
-											},
-										},
 									},
 								},
+								Policies: []policies.Policy{hrPolicy1.Source},
 							},
 						},
-						Port: 80,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
+						Port:     80,
+						Policies: []policies.Policy{gwPolicy1.Source, gwPolicy2.Source},
 					},
 				}
 				conf.Upstreams = []Upstream{fooUpstream}
@@ -2095,28 +2043,10 @@ func TestBuildConfiguration(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			fakeGenerator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(p policies.Policy, _ *policies.GlobalSettings) []byte {
-					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
-					case "ApplePolicy":
-						return []byte("apple")
-					case "OrangePolicy":
-						return []byte("orange")
-					case "LemonPolicy":
-						return []byte("lemon")
-					case "LimePolicy":
-						return []byte("lime")
-					default:
-						panic(fmt.Sprintf("unknown policy kind: %s", kind))
-					}
-				},
-			}
-
 			result := BuildConfiguration(
 				context.TODO(),
 				test.graph,
 				fakeResolver,
-				fakeGenerator,
 				1,
 			)
 
@@ -2891,6 +2821,9 @@ func TestBuildTelemetry(t *testing.T) {
 			BatchSize:   512,
 			BatchCount:  4,
 			Ratios:      []Ratio{},
+			SpanAttributes: []SpanAttribute{
+				{Key: "key", Value: "value"},
+			},
 		}
 	}
 
@@ -3092,7 +3025,7 @@ func TestBuildTelemetry(t *testing.T) {
 	}
 }
 
-func TestBuildAdditions(t *testing.T) {
+func TestBuildPolicies(t *testing.T) {
 	getPolicy := func(kind, name string) policies.Policy {
 		return &policiesfakes.FakePolicy{
 			GetNameStub: func() string {
@@ -3114,14 +3047,14 @@ func TestBuildAdditions(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		policies     []*graph.Policy
-		expAdditions []Addition
+		name        string
+		policies    []*graph.Policy
+		expPolicies []string
 	}{
 		{
-			name:         "nil policies",
-			policies:     nil,
-			expAdditions: nil,
+			name:        "nil policies",
+			policies:    nil,
+			expPolicies: nil,
 		},
 		{
 			name: "mix of valid and invalid policies",
@@ -3147,19 +3080,10 @@ func TestBuildAdditions(t *testing.T) {
 					Valid:  true,
 				},
 			},
-			expAdditions: []Addition{
-				{
-					Identifier: "Kind1_test_valid1",
-					Bytes:      []byte("valid1"),
-				},
-				{
-					Identifier: "Kind2_test_valid2",
-					Bytes:      []byte("valid2"),
-				},
-				{
-					Identifier: "Kind3_test_valid3",
-					Bytes:      []byte("valid3"),
-				},
+			expPolicies: []string{
+				"valid1",
+				"valid2",
+				"valid3",
 			},
 		},
 	}
@@ -3168,14 +3092,11 @@ func TestBuildAdditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			generator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(policy policies.Policy, _ *policies.GlobalSettings) []byte {
-					return []byte(policy.GetName())
-				},
+			pols := buildPolicies(test.policies)
+			g.Expect(pols).To(HaveLen(len(test.expPolicies)))
+			for _, pol := range pols {
+				g.Expect(test.expPolicies).To(ContainElement(pol.GetName()))
 			}
-
-			additions := buildAdditions(test.policies, nil, generator)
-			g.Expect(additions).To(BeEquivalentTo(test.expAdditions))
 		})
 	}
 }
@@ -3214,4 +3135,9 @@ func TestGetAllowedAddressType(t *testing.T) {
 			g.Expect(getAllowedAddressType(tc.ipFamily)).To(Equal(tc.expected))
 		})
 	}
+}
+
+func TestCreateRatioVarName(t *testing.T) {
+	g := NewWithT(t)
+	g.Expect(CreateRatioVarName(25)).To(Equal("$otel_ratio_25"))
 }

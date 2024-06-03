@@ -22,9 +22,8 @@ The following table summarizes NGINX Gateway Fabric custom policies:
 
 {{</bootstrap-table>}}
 
-
 {{< important >}}
-NGINX Gateway Fabric policies do not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
+If attaching a Policy to a Route, that Route must not share a hostname:port/path combination with any other Route that is not referenced by the same Policy. If it does, the Policy will be rejected. This is because the Policy would end up affecting other Routes that it is not attached to.
 {{< /important >}}
 
 ## Terminology

@@ -7,8 +7,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -23,18 +21,9 @@ type Policy interface {
 	client.Object
 }
 
-// ConfigGenerator generates a slice of bytes containing the configuration from a Policy.
-//
-//counterfeiter:generate . ConfigGenerator
-type ConfigGenerator interface {
-	Generate(policy Policy, globalSettings *GlobalSettings) []byte
-}
-
 // GlobalSettings contains global settings from the current state of the graph that may be
 // needed for policy validation or generation if certain policies rely on those global settings.
 type GlobalSettings struct {
-	// TracingSpanAttributes contain the attributes specified in the NginxProxy resource.
-	TracingSpanAttributes []ngfAPI.SpanAttribute
 	// NginxProxyValid is whether or not the NginxProxy resource is valid.
 	NginxProxyValid bool
 	// TelemetryEnabled is whether or not telemetry is enabled in the NginxProxy resource.

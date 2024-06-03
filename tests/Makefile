@@ -52,7 +52,7 @@ run-conformance-tests: ## Run conformance tests
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
 	kubectl delete pod conformance
-	kubectl delete -f tests/conformance-rbac.yaml
+	kubectl delete -f conformance/conformance-rbac.yaml
 
 .PHONY: build
 build: generate-static-deployment

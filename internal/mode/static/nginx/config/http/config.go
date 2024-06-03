@@ -1,11 +1,13 @@
 package http
 
+const InternalRoutePathPrefix = "/_ngf-internal"
+
 // Server holds all configuration for an HTTP server.
 type Server struct {
 	SSL           *SSL
 	ServerName    string
 	Locations     []Location
-	Includes      []string
+	Includes      []Include
 	Port          int32
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
@@ -18,19 +20,28 @@ type IPFamily struct {
 	IPv6 bool
 }
 
+type LocationType string
+
+const (
+	InternalLocationType LocationType = "internal"
+	ExternalLocationType LocationType = "external"
+	RedirectLocationType LocationType = "redirect"
+)
+
 // Location holds all configuration for an HTTP location.
 type Location struct {
 	Path            string
 	ProxyPass       string
 	HTTPMatchKey    string
-	HTTPMatchVar    string
+	Type            LocationType
 	ProxySetHeaders []Header
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
 	ResponseHeaders ResponseHeaders
 	Rewrites        []string
-	Includes        []string
+	Includes        []Include
 	GRPC            bool
+	Redirects       bool
 }
 
 // Header defines an HTTP header to be passed to the proxied server.
@@ -101,7 +112,7 @@ type Map struct {
 	Parameters []MapParameter
 }
 
-// Parameter defines a Value and Result pair in a Map.
+// MapParameter defines a Value and Result pair in a Map.
 type MapParameter struct {
 	Value  string
 	Result string
@@ -117,4 +128,10 @@ type ProxySSLVerify struct {
 type ServerConfig struct {
 	Servers  []Server
 	IPFamily IPFamily
+}
+
+// Include defines a file that's included via the include directive.
+type Include struct {
+	Name    string
+	Content []byte
 }

@@ -21,8 +21,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
@@ -187,7 +187,7 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 			Hostnames: []gatewayv1.Hostname{
-				"foo.example.com",
+				"bar.example.com",
 			},
 			Rules: []gatewayv1.GRPCRouteRule{
 				{
@@ -478,6 +478,7 @@ func TestBuildGraph(t *testing.T) {
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
 					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+					ListenerPort:      80,
 				},
 			},
 		},
@@ -500,7 +501,8 @@ func TestBuildGraph(t *testing.T) {
 				SectionName: gr.Spec.ParentRefs[0].SectionName,
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
-					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+					AcceptedHostnames: map[string][]string{"listener-80-1": {"bar.example.com"}},
+					ListenerPort:      80,
 				},
 			},
 		},
@@ -525,6 +527,7 @@ func TestBuildGraph(t *testing.T) {
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
 					AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
+					ListenerPort:      443,
 				},
 			},
 		},
@@ -613,9 +616,6 @@ func TestBuildGraph(t *testing.T) {
 			GlobalSettings: &policies.GlobalSettings{
 				NginxProxyValid:  true,
 				TelemetryEnabled: true,
-				TracingSpanAttributes: []ngfAPI.SpanAttribute{
-					{Key: "key", Value: "value"},
-				},
 			},
 		}
 	}

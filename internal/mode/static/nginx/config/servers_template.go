@@ -52,14 +52,18 @@ server {
 
     server_name {{ $s.ServerName }};
 
-    {{- range $i := $s.Includes }}
-    include {{ $i }};
-    {{ end -}}
+        {{- range $i := $s.Includes }}
+    include {{ $i.Name }};
+        {{ end -}}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
+        {{ if eq $l.Type "internal" -}}
+        internal;
+        {{ end }}
+
         {{- range $i := $l.Includes }}
-        include {{ $i }};
+        include {{ $i.Name }};
         {{- end -}}
 
         {{ range $r := $l.Rewrites }}
@@ -70,7 +74,7 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchKey }}
+        {{- if eq $l.Type "redirect" }}
         set $match_key {{ $l.HTTPMatchKey }};
         js_content httpmatches.redirect;
         {{- end }}
@@ -105,7 +109,7 @@ server {
             {{- end }}
         {{- end }}
     }
-        {{ end }}
+        {{- end }}
 
         {{- if $s.GRPC }}
         include /etc/nginx/grpc-error-locations.conf;

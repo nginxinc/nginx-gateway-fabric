@@ -91,6 +91,10 @@ const (
 	// when telemetry is not enabled in the NginxProxy resource.
 	PolicyMessageTelemetryNotEnabled = "Telemetry is not enabled in the NginxProxy resource"
 
+	// PolicyReasonTargetConflict is used with the "PolicyAccepted" condition when a Route that it targets
+	// has an overlapping hostname:port/path combination with another Route.
+	PolicyReasonTargetConflict v1alpha2.PolicyConditionReason = "TargetConflict"
+
 	// GatewayIgnoredReason is used with v1.RouteConditionAccepted when the route references a Gateway that is ignored
 	// by NGF.
 	GatewayIgnoredReason v1.RouteConditionReason = "GatewayIgnored"
@@ -669,6 +673,17 @@ func NewPolicyTargetNotFound(msg string) conditions.Condition {
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1alpha2.PolicyReasonTargetNotFound),
+		Message: msg,
+	}
+}
+
+// NewPolicyNotAcceptedTargetConflict returns a Condition that indicates that the Policy is not accepted
+// because the target resource has a conflict with another resource when attempting to apply this policy.
+func NewPolicyNotAcceptedTargetConflict(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(PolicyReasonTargetConflict),
 		Message: msg,
 	}
 }

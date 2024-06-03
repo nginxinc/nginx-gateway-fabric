@@ -2,11 +2,13 @@ package graph
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -223,6 +225,11 @@ func validatePathMatch(
 	}
 	if path.Value == nil {
 		return field.ErrorList{field.Required(fieldPath.Child("value"), "path value cannot be nil")}
+	}
+
+	if strings.HasPrefix(*path.Value, http.InternalRoutePathPrefix) {
+		msg := fmt.Sprintf("path cannot start with %s", http.InternalRoutePathPrefix)
+		return field.ErrorList{field.Invalid(fieldPath.Child("value"), *path.Value, msg)}
 	}
 
 	if *path.Type != v1.PathMatchPathPrefix && *path.Type != v1.PathMatchExact {

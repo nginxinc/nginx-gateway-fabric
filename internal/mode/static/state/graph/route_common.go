@@ -42,6 +42,8 @@ type ParentRefAttachmentStatus struct {
 	// FailedCondition is the condition that describes why the ParentRef is not attached to the Gateway. It is set
 	// when Attached is false.
 	FailedCondition conditions.Condition
+	// ListenerPort is the port on the Listener that the Route is attached to.
+	ListenerPort v1.PortNumber
 	// Attached indicates if the ParentRef is attached to the Gateway.
 	Attached bool
 }
@@ -367,6 +369,7 @@ func tryToAttachRouteToListeners(
 			return true, false
 		}
 		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
+		refStatus.ListenerPort = l.Source.Port
 
 		l.Routes[rk] = route
 		return true, true

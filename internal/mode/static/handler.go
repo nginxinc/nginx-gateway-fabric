@@ -24,7 +24,6 @@ import (
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -65,8 +64,6 @@ type eventHandlerConfig struct {
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
 	generator ngxConfig.Generator
-	// policyConfigGenerator is the config generator for NGF policies.
-	policyConfigGenerator policies.ConfigGenerator
 	// k8sClient is a Kubernetes API client
 	k8sClient client.Client
 	// logLevelSetter is used to update the logging level.
@@ -196,7 +193,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		return
 	case state.EndpointsOnlyChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -207,7 +204,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		)
 	case state.ClusterStateChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
 
 		h.setLatestConfiguration(&cfg)
 

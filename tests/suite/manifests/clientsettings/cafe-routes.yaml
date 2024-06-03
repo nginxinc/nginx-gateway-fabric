@@ -51,6 +51,7 @@ spec:
     - path:
         type: Exact
         value: /soda
+      method: POST # This results in an internal location, so we can verify that policy attachment works there
     backendRefs:
     - name: soda
       port: 80

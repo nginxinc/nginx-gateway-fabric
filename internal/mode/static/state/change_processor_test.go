@@ -431,6 +431,7 @@ var _ = Describe("ChangeProcessor", func() {
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
 								Attached:          true,
+								ListenerPort:      80,
 							},
 							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 							SectionName: hr1.Spec.ParentRefs[0].SectionName,
@@ -439,6 +440,7 @@ var _ = Describe("ChangeProcessor", func() {
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
 								Attached:          true,
+								ListenerPort:      443,
 							},
 							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 							Idx:         1,
@@ -479,6 +481,7 @@ var _ = Describe("ChangeProcessor", func() {
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-80-1": {"bar.example.com"}},
 								Attached:          true,
+								ListenerPort:      80,
 							},
 							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 							SectionName: hr2.Spec.ParentRefs[0].SectionName,
@@ -487,6 +490,7 @@ var _ = Describe("ChangeProcessor", func() {
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-443-1": {"bar.example.com"}},
 								Attached:          true,
+								ListenerPort:      443,
 							},
 							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 							Idx:         1,
@@ -650,14 +654,16 @@ var _ = Describe("ChangeProcessor", func() {
 						AcceptedHostnames: map[string][]string{
 							"listener-80-1": {"foo.example.com"},
 						},
-						Attached: true,
+						Attached:     true,
+						ListenerPort: 80,
 					}
 
 					expAttachment443 := &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{
 							"listener-443-1": {"foo.example.com"},
 						},
-						Attached: true,
+						Attached:     true,
+						ListenerPort: 443,
 					}
 
 					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
