@@ -10,7 +10,7 @@ import (
 )
 
 func TestSetChangeType(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctu := newChangeTrackingUpdater(nil, nil)
 
 	// Order matters for these cases.

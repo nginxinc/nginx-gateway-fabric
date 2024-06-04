@@ -71,9 +71,9 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		// test := test
+		test := test
 		t.Run(test.name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			g := NewWithT(t)
 
 			processed := processBackendTLSPolicies(test.backendTLSPolicies, nil, "test", test.gateway)
