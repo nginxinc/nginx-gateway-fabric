@@ -28,6 +28,10 @@ Settings applied to an HTTPRoute or GRPCRoute take precedence over settings appl
 
 This guide will show you how to use the `ClientSettingsPolicy` API to configure the client max body size for your applications.
 
+{{< important >}}
+The `ClientSettingsPolicy` API does not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. This will be addressed in a future release.
+{{< /important >}}
+
 ## Setup
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
