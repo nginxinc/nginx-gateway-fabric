@@ -41,6 +41,13 @@ repos:
     rev: v1.59.0
     hooks:
       - id: golangci-lint-full
+        name: golangci-lint-root
+        alias: golangci-lint-root
+
+      - id: golangci-lint-full
+        name: golangci-lint-tests
+        alias: golangci-lint-tests
+        entry: bash -c 'cd tests && golangci-lint run --fix --config $OLDPWD/.golangci.yml'
 
   # Rules are in .markdownlint-cli2.yaml file
   # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions

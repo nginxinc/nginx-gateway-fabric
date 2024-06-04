@@ -191,7 +191,8 @@ func checkContainerRestart(ngfPodName, containerName string, currentRestartCount
 	}
 
 	if restartCount != currentRestartCount+1 {
-		return fmt.Errorf("expected current restart count: %d to match incremented restart count: %d", restartCount, currentRestartCount+1)
+		return fmt.Errorf("expected current restart count: %d to match incremented restart count: %d",
+			restartCount, currentRestartCount+1)
 	}
 
 	return nil
@@ -314,7 +315,7 @@ func getContainerRestartCount(ngfPodName, containerName string) (int, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return 0, fmt.Errorf("error retriving NGF Pod: %w", err)
+		return 0, fmt.Errorf("error retrieving NGF Pod: %w", err)
 	}
 
 	var restartCount int
@@ -333,7 +334,7 @@ func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return nil, fmt.Errorf("error retriving NGF Pod: %w", err)
+		return nil, fmt.Errorf("error retrieving NGF Pod: %w", err)
 	}
 
 	b, err := resourceManager.GetFileContents("graceful-recovery/node-debugger-job.yaml")
