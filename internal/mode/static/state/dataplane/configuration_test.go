@@ -47,6 +47,7 @@ func createFakePolicy(name string, kind string) policies.Policy {
 }
 
 func TestBuildConfiguration(t *testing.T) {
+	t.Parallel()
 	const (
 		invalidMatchesPath = "/not-valid-matches"
 		invalidFiltersPath = "/not-valid-filters"
@@ -2298,7 +2299,9 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			fakeGenerator := &policiesfakes.FakeConfigGenerator{
@@ -2340,6 +2343,7 @@ func TestBuildConfiguration(t *testing.T) {
 }
 
 func TestGetPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path     *v1.HTTPPathMatch
 		expected string
@@ -2368,7 +2372,9 @@ func TestGetPath(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := getPath(test.path)
 			g.Expect(result).To(Equal(test.expected))
@@ -2377,6 +2383,7 @@ func TestGetPath(t *testing.T) {
 }
 
 func TestCreateFilters(t *testing.T) {
+	t.Parallel()
 	redirect1 := v1.HTTPRouteFilter{
 		Type: v1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1.HTTPRequestRedirectFilter{
@@ -2535,7 +2542,9 @@ func TestCreateFilters(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := createHTTPFilters(test.filters)
 
@@ -2545,6 +2554,7 @@ func TestCreateFilters(t *testing.T) {
 }
 
 func TestGetListenerHostname(t *testing.T) {
+	t.Parallel()
 	var emptyHostname v1.Hostname
 	var hostname v1.Hostname = "example.com"
 
@@ -2571,7 +2581,9 @@ func TestGetListenerHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := getListenerHostname(test.hostname)
 			g.Expect(result).To(Equal(test.expected))
@@ -2594,6 +2606,7 @@ func refsToValidRules(refs ...[]graph.BackendRef) []graph.RouteRule {
 }
 
 func TestBuildUpstreams(t *testing.T) {
+	t.Parallel()
 	fooEndpoints := []resolver.Endpoint{
 		{
 			Address: "10.0.0.0",
@@ -2815,6 +2828,7 @@ func TestBuildUpstreams(t *testing.T) {
 }
 
 func TestBuildBackendGroups(t *testing.T) {
+	t.Parallel()
 	createBackendGroup := func(name string, ruleIdx int, backendNames ...string) BackendGroup {
 		backends := make([]Backend, len(backendNames))
 		for i, name := range backendNames {
@@ -2887,6 +2901,7 @@ func TestBuildBackendGroups(t *testing.T) {
 }
 
 func TestHostnameMoreSpecific(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		host1     *v1.Hostname
 		host2     *v1.Hostname
@@ -2938,7 +2953,9 @@ func TestHostnameMoreSpecific(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
@@ -2947,6 +2964,7 @@ func TestHostnameMoreSpecific(t *testing.T) {
 }
 
 func TestConvertBackendTLS(t *testing.T) {
+	t.Parallel()
 	btpCaCertRefs := &graph.BackendTLSPolicy{
 		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -3014,7 +3032,9 @@ func TestConvertBackendTLS(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(convertBackendTLS(tc.btp)).To(Equal(tc.expected))
@@ -3023,6 +3043,7 @@ func TestConvertBackendTLS(t *testing.T) {
 }
 
 func TestBuildTelemetry(t *testing.T) {
+	t.Parallel()
 	telemetryConfigured := &graph.NginxProxy{
 		Source: &ngfAPI.NginxProxy{
 			Spec: ngfAPI.NginxProxySpec{
@@ -3241,7 +3262,9 @@ func TestBuildTelemetry(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			tel := buildTelemetry(tc.g)
 			sort.Slice(tel.Ratios, func(i, j int) bool {
@@ -3253,6 +3276,7 @@ func TestBuildTelemetry(t *testing.T) {
 }
 
 func TestBuildAdditions(t *testing.T) {
+	t.Parallel()
 	getPolicy := func(kind, name string) policies.Policy {
 		return &policiesfakes.FakePolicy{
 			GetNameStub: func() string {
@@ -3325,7 +3349,9 @@ func TestBuildAdditions(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			generator := &policiesfakes.FakeConfigGenerator{

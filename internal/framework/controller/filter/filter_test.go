@@ -8,6 +8,7 @@ import (
 )
 
 func TestCreateSingleResourceFilter(t *testing.T) {
+	t.Parallel()
 	targetNsName := types.NamespacedName{Namespace: "test", Name: "resource"}
 
 	g := NewWithT(t)
@@ -50,7 +51,9 @@ func TestCreateSingleResourceFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			shouldProcess, msg := filter(test.nsname)
 			g.Expect(shouldProcess).To(Equal(test.expectedShouldProcess))

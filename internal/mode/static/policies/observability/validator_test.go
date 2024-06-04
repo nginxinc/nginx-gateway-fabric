@@ -52,6 +52,7 @@ func createModifiedPolicy(mod policyModFunc) *ngfAPI.ObservabilityPolicy {
 }
 
 func TestValidator_Validate(t *testing.T) {
+	t.Parallel()
 	globalSettings := &policies.GlobalSettings{
 		NginxProxyValid:  true,
 		TelemetryEnabled: true,
@@ -184,7 +185,9 @@ func TestValidator_Validate(t *testing.T) {
 	v := observability.NewValidator(validation.GenericValidator{})
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			conds := v.Validate(test.policy, test.globalSettings)
@@ -194,6 +197,7 @@ func TestValidator_Validate(t *testing.T) {
 }
 
 func TestValidator_ValidatePanics(t *testing.T) {
+	t.Parallel()
 	v := observability.NewValidator(nil)
 
 	validate := func() {
@@ -206,6 +210,7 @@ func TestValidator_ValidatePanics(t *testing.T) {
 }
 
 func TestValidator_Conflicts(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		polA      *ngfAPI.ObservabilityPolicy
 		polB      *ngfAPI.ObservabilityPolicy
@@ -243,7 +248,9 @@ func TestValidator_Conflicts(t *testing.T) {
 	v := observability.NewValidator(nil)
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(v.Conflicts(test.polA, test.polB)).To(Equal(test.conflicts))
@@ -252,6 +259,7 @@ func TestValidator_Conflicts(t *testing.T) {
 }
 
 func TestValidator_ConflictsPanics(t *testing.T) {
+	t.Parallel()
 	v := observability.NewValidator(nil)
 
 	conflicts := func() {

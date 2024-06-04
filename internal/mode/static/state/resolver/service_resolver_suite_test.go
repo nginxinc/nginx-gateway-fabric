@@ -8,6 +8,7 @@ import (
 )
 
 func TestServiceResolver(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ServiceResolver Suite")
 }

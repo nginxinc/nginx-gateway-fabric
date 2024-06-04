@@ -11,6 +11,11 @@ linters-settings:
       - name: blank-imports
       - name: context-as-argument
       - name: context-keys-type
+      - name: dot-imports
+        arguments:
+          - allowedPackages:
+              - github.com/onsi/gomega
+              - github.com/onsi/ginkgo/v2
       - name: empty-block
       - name: error-naming
       - name: error-return
@@ -70,6 +75,7 @@ linters:
     - nilerr
     - noctx
     - nolintlint
+    - paralleltest
     - predeclared
     - promlinter
     - reassign
@@ -79,6 +85,7 @@ linters:
     - stylecheck
     - tenv
     - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam

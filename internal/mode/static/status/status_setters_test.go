@@ -16,6 +16,7 @@ import (
 )
 
 func TestNewNginxGatewayStatusSetter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		status, newStatus ngfAPI.NginxGatewayStatus
@@ -52,7 +53,9 @@ func TestNewNginxGatewayStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newNginxGatewayStatusSetter(test.newStatus)
@@ -67,6 +70,7 @@ func TestNewNginxGatewayStatusSetter(t *testing.T) {
 }
 
 func TestNewGatewayStatusSetter(t *testing.T) {
+	t.Parallel()
 	expAddress := gatewayv1.GatewayStatusAddress{
 		Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 		Value: "10.0.0.0",
@@ -113,7 +117,9 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newGatewayStatusSetter(test.newStatus)
@@ -128,6 +134,7 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 }
 
 func TestNewHTTPRouteStatusSetter(t *testing.T) {
+	t.Parallel()
 	const (
 		controllerName      = "controller"
 		otherControllerName = "different"
@@ -288,7 +295,9 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newHTTPRouteStatusSetter(test.newStatus, controllerName)
@@ -303,6 +312,7 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 }
 
 func TestNewGRPCRouteStatusSetter(t *testing.T) {
+	t.Parallel()
 	const (
 		controllerName      = "controller"
 		otherControllerName = "different"
@@ -463,7 +473,9 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newGRPCRouteStatusSetter(test.newStatus, controllerName)
@@ -478,6 +490,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 }
 
 func TestNewGatewayClassStatusSetter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		status, newStatus gatewayv1.GatewayClassStatus
@@ -513,7 +526,9 @@ func TestNewGatewayClassStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newGatewayClassStatusSetter(test.newStatus)
@@ -528,6 +543,7 @@ func TestNewGatewayClassStatusSetter(t *testing.T) {
 }
 
 func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
+	t.Parallel()
 	const (
 		controllerName      = "controller"
 		otherControllerName = "other-controller"
@@ -653,7 +669,9 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newBackendTLSPolicyStatusSetter(test.newStatus, controllerName)
@@ -668,6 +686,7 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 }
 
 func TestNewNGFPolicyStatusSetter(t *testing.T) {
+	t.Parallel()
 	const (
 		controllerName      = "controller"
 		otherControllerName = "other-controller"
@@ -793,7 +812,9 @@ func TestNewNGFPolicyStatusSetter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			setter := newNGFPolicyStatusSetter(test.newStatus, controllerName)
@@ -815,6 +836,7 @@ func TestNewNGFPolicyStatusSetter(t *testing.T) {
 }
 
 func TestGWStatusEqual(t *testing.T) {
+	t.Parallel()
 	getDefaultStatus := func() gatewayv1.GatewayStatus {
 		return gatewayv1.GatewayStatus{
 			Addresses: []gatewayv1.GatewayStatusAddress{
@@ -1004,7 +1026,9 @@ func TestGWStatusEqual(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			equal := gwStatusEqual(test.prevStatus, test.curStatus)
@@ -1014,6 +1038,7 @@ func TestGWStatusEqual(t *testing.T) {
 }
 
 func TestHRStatusEqual(t *testing.T) {
+	t.Parallel()
 	testConds := []metav1.Condition{
 		{
 			Type: "type", /* conditions are covered by another test*/
@@ -1141,7 +1166,9 @@ func TestHRStatusEqual(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			equal := routeStatusEqual("ours", test.prevStatus.Parents, test.curStatus.Parents)
 			g.Expect(equal).To(Equal(test.expEqual))
@@ -1150,6 +1177,7 @@ func TestHRStatusEqual(t *testing.T) {
 }
 
 func TestRouteParentStatusEqual(t *testing.T) {
+	t.Parallel()
 	getDefaultStatus := func() gatewayv1.RouteParentStatus {
 		return gatewayv1.RouteParentStatus{
 			ParentRef: gatewayv1.ParentReference{
@@ -1232,7 +1260,9 @@ func TestRouteParentStatusEqual(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			equal := routeParentStatusEqual(test.p1, test.p2)
 			g.Expect(equal).To(Equal(test.expEqual))
@@ -1241,6 +1271,7 @@ func TestRouteParentStatusEqual(t *testing.T) {
 }
 
 func TestPolicyStatusEqual(t *testing.T) {
+	t.Parallel()
 	getPolicyStatus := func() v1alpha2.PolicyStatus {
 		return v1alpha2.PolicyStatus{
 			Ancestors: []v1alpha2.PolicyAncestorStatus{
@@ -1381,7 +1412,9 @@ func TestPolicyStatusEqual(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			equal := policyStatusEqual(test.controllerName, test.previous, test.current)
 			g.Expect(equal).To(Equal(test.expEqual))

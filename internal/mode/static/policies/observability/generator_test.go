@@ -14,6 +14,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	ratio := helpers.GetPointer[int32](25)
 	zeroRatio := helpers.GetPointer[int32](0)
 	context := helpers.GetPointer[ngfAPI.TraceContext](ngfAPI.TraceContextExtract)
@@ -178,7 +179,9 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			cfgString := string(observability.Generate(test.policy, test.globalSettings))
@@ -191,6 +194,7 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestGeneratePanics(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	generate := func() {
@@ -201,6 +205,7 @@ func TestGeneratePanics(t *testing.T) {
 }
 
 func TestCreateRatioVarName(t *testing.T) {
+	t.Parallel()
 	pol := &ngfAPI.ObservabilityPolicy{
 		Spec: ngfAPI.ObservabilityPolicySpec{
 			Tracing: &ngfAPI.Tracing{
