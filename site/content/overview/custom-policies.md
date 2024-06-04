@@ -61,14 +61,14 @@ The following diagram shows how Inherited Policies work in NGINX Gateway Fabric 
 
 There are three policies defined:
 
-- Blue policy that targets the `dev` Gateway
-- Orange policy that targets the `baz` HTTPRoute
-- Pink policy that targets the `foo` HTTPRoute
+- `dev-policy` that targets the `dev` Gateway
+- `baz-policy` that targets the `baz` HTTPRoute
+- `foo-policy` that targets the `foo` HTTPRoute
 
-The settings in the blue policy affect the `dev` Gateway and are inherited by all the HTTPRoutes attached to `dev`.
-The orange and pink policies are attached to the `baz` and `foo` HTTPRoutes. Since HTTPRoutes are lower than Gateways in the hierarchy, the settings defined in the orange and pink policies override those in the blue policy.
-Since the pink policy only defines the `retries` setting, it still inherits the `timeout` setting from the blue policy.
-The `bar` HTTPRoute has no policy attached to it and inherits all the settings from the blue policy.
+The settings in `dev-policy` affect the `dev` Gateway and are inherited by all the HTTPRoutes attached to `dev`.
+The `baz-policy` and `foo-policy` are attached to the `baz` and `foo` HTTPRoutes. Since HTTPRoutes are lower than Gateways in the hierarchy, the settings defined in them override those in the `dev` policy.
+Since the `foo-policy` only defines the `retries` setting, it still inherits the `timeout` setting from `dev-policy`.
+The `bar` HTTPRoute has no policy attached to it and inherits all the settings from `dev-policy`.
 
 ## Merging Policies
 
