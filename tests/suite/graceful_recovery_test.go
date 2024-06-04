@@ -42,10 +42,10 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 		},
 	}
 
-	baseHttpURL := "http://cafe.example.com"
-	baseHttpsURL := "https://cafe.example.com"
-	teaURL := baseHttpsURL + "/tea"
-	coffeeURL := baseHttpURL + "/coffee"
+	baseHTTPURL := "http://cafe.example.com"
+	baseHTTPSURL := "https://cafe.example.com"
+	teaURL := baseHTTPSURL + "/tea"
+	coffeeURL := baseHTTPURL + "/coffee"
 
 	var ngfPodName string
 
@@ -63,10 +63,10 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 
 		ngfPodName = podNames[0]
 		if portFwdPort != 0 {
-			coffeeURL = fmt.Sprintf("%s:%d/coffee", baseHttpURL, portFwdPort)
+			coffeeURL = fmt.Sprintf("%s:%d/coffee", baseHTTPURL, portFwdPort)
 		}
 		if portFwdHTTPSPort != 0 {
-			teaURL = fmt.Sprintf("%s:%d/tea", baseHttpsURL, portFwdHTTPSPort)
+			teaURL = fmt.Sprintf("%s:%d/tea", baseHTTPSURL, portFwdHTTPSPort)
 		}
 	})
 

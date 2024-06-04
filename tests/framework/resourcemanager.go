@@ -307,7 +307,7 @@ func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 }
 
 // WaitForAppsToBeReadyWithCtx waits for all apps in the specified namespace to be ready or
-// until the provided context is cancelled.
+// until the provided context is canceled.
 func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, namespace string) error {
 	if err := rm.WaitForPodsToBeReady(ctx, namespace); err != nil {
 		return err
@@ -325,7 +325,7 @@ func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, name
 }
 
 // WaitForPodsToBeReady waits for all Pods in the specified namespace to be ready or
-// until the provided context is cancelled.
+// until the provided context is canceled.
 func (rm *ResourceManager) WaitForPodsToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
@@ -708,7 +708,7 @@ func (rm *ResourceManager) WaitForAppsToBeReadyWithCtxWithPodCount(ctx context.C
 }
 
 // WaitForPodsToBeReady waits for all Pods in the specified namespace to be ready or
-// until the provided context is cancelled.
+// until the provided context is canceled.
 func (rm *ResourceManager) WaitForPodsToBeReadyWithCount(ctx context.Context, namespace string, count int) error {
 	return wait.PollUntilContextCancel(
 		ctx,
