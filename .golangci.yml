@@ -17,7 +17,6 @@ linters-settings:
       - name: error-strings
       - name: errorf
       - name: exported
-      - name: if-return
       - name: increment-decrement
       - name: indent-error-flow
       - name: package-comments

@@ -61,6 +61,7 @@ func InstallPrometheus(
 
 	scrapeInterval := fmt.Sprintf("%ds", int(cfg.ScrapeInterval.Seconds()))
 
+	// nolint:gosec
 	output, err = exec.Command(
 		"helm",
 		"install",
@@ -134,13 +135,12 @@ const (
 
 // PrometheusInstance represents a Prometheus instance in the cluster.
 type PrometheusInstance struct {
+	apiClient    v1.API
 	podIP        string
 	podName      string
 	podNamespace string
-	portForward  bool
 	queryTimeout time.Duration
-
-	apiClient v1.API
+	portForward  bool
 }
 
 // PortForward starts port forwarding to the Prometheus instance.
@@ -165,7 +165,7 @@ func (ins *PrometheusInstance) getAPIClient() (v1.API, error) {
 	}
 
 	cfg := api.Config{
-		Address: fmt.Sprintf("%s", endpoint),
+		Address: endpoint,
 	}
 
 	c, err := api.NewClient(cfg)
@@ -227,7 +227,9 @@ func (ins *PrometheusInstance) QueryRange(query string, promRange v1.Range) (mod
 }
 
 // QueryRangeWithCtx sends a range query to Prometheus with the specified context.
-func (ins *PrometheusInstance) QueryRangeWithCtx(ctx context.Context, query string, promRange v1.Range) (model.Value, error) {
+func (ins *PrometheusInstance) QueryRangeWithCtx(ctx context.Context,
+	query string, promRange v1.Range,
+) (model.Value, error) {
 	if err := ins.ensureAPIClient(); err != nil {
 		return nil, err
 	}
