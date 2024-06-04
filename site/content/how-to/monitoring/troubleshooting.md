@@ -126,14 +126,14 @@ If you receive the following error:
 </html>
 ```
 
-or see the following error message in the NGINX logs:
+Or view the following error message in the NGINX logs:
 
 ```text
 2024/05/30 21:48:22 [error] 138#138: *43 client intended to send too large body: 112 bytes, client: 127.0.0.1, server: cafe.example.com, request: "POST /coffee HTTP/1.1", host: "cafe.example.com:8080"
 ```
 
-the request body exceeds the [client_max_body_size](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size).
+The request body exceeds the [client_max_body_size](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size).
 
 #### Resolution
 
-You can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. See this [guide]({{< relref "how-to/traffic-management/client-settings.md" >}}) for instructions.
+You can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. Read the [Client Settings Policy]({{< relref "how-to/traffic-management/client-settings.md" >}}) documentation for more information.

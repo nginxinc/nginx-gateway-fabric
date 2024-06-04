@@ -62,7 +62,7 @@ This guide will show you how to use the `ClientSettingsPolicy` API to configure 
 
 - Test the configuration:
 
-  We can send traffic to the coffee and tea applications using the external IP address and port for NGINX Gateway Fabric.
+  You can send traffic to the coffee and tea applications using the external IP address and port for NGINX Gateway Fabric.
 
   {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
@@ -96,7 +96,7 @@ This guide will show you how to use the `ClientSettingsPolicy` API to configure 
 
 ### Set a default client max body size for the Gateway
 
-To set a default client max body size for the Gateway we created in the setup, create the following `ClientSettingsPolicy`:
+To set a default client max body size for the Gateway created during setup, add the following `ClientSettingsPolicy`:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -117,7 +117,7 @@ EOF
 This `ClientSettingsPolicy` targets the Gateway we created in the setup by specifying it in the `targetRef` field. It limits the max client body size to 50 bytes.
 Since this policy is applied to the Gateway, it will affect all HTTPRoutes and GRPCRoutes attached to the Gateway. All requests to the coffee and tea applications must have a request body of less than or equal to 50 bytes.
 
-Let's verify that the `ClientSettingsPolicy` is Accepted:
+Verify that the `ClientSettingsPolicy` is Accepted:
 
 ```shell
 kubectl describe clientsettingspolicies.gateway.nginx.org gateway-client-settings
@@ -144,7 +144,7 @@ Status:
 Events:                      <none>
 ```
 
-Next, let's test that the policy is configured by sending a POST request to the coffee and tea applications exceeding the client's max body size of 50 bytes.
+Next, test that the policy is configured by sending a POST request to the coffee and tea applications exceeding the client's max body size of 50 bytes.
 
 
 ```shell
@@ -163,13 +163,13 @@ You should receive the following error:
 </html>
 ```
 
-Now, let's try again with a payload that's less than the 50 byte limit:
+Try again with a payload that's less than the 50 byte limit:
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST --data "this payload is under fifty bytes"
 ```
 
-This time, we should receive a response from coffee:
+This time, you should receive a response from coffee:
 
 ```text
 Server address: 10.244.0.6:8080
@@ -201,7 +201,7 @@ EOF
 This `ClientSettingsPolicy` targets the tea HTTPRoute we created in the setup by specifying it in the `targetRef` field. It sets the max client body size to 75 bytes.
 Since this policy is applied to the tea HTTPRoute, it will only affect the tea HTTPRoute, and the `ClientSettingsPolicy` we created in the previous step will affect all other routes attached to the Gateway. This means that the coffee app still has a client max body size of 50 bytes, and the tea app has a max body size of 75.
 
-Let's verify that the `ClientSettingsPolicy` is Accepted:
+Verify that the `ClientSettingsPolicy` is Accepted:
 
 ```shell
 kubectl describe clientsettingspolicies.gateway.nginx.org tea-client-settings
@@ -230,7 +230,7 @@ Events:                      <none>
 
 Notice that the Ancestor Ref in the status is the tea HTTPRoute instead of the Gateway.
 
-Next, let's test that the policy is configured by sending a POST request to the tea application with a request body size greater than 50 bytes.
+Next, test that the policy is configured by sending a POST request to the tea application with a request body size greater than 50 bytes.
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X POST --data "this payload is greater than fifty bytes but less than seventy five"
@@ -259,7 +259,7 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 </html>
 ```
 
-If you want to configure a `ClientSettingsPolicy` for a GRPCRoute, you can specify the GRPCRoute in the `spec.targetRef`:
+To configure a `ClientSettingsPolicy` for a GRPCRoute, you can specify the GRPCRoute in the `spec.targetRef`:
 
 ```yaml
 kubectl apply -f - <<EOF
