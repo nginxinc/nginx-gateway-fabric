@@ -226,6 +226,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 }
 
 func TestBindRouteToListeners(t *testing.T) {
+	t.Parallel()
 	// we create a new listener each time because the function under test can modify it
 	createListener := func(name string) *Listener {
 		return &Listener{
@@ -1223,6 +1224,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			bindL7RouteToListeners(

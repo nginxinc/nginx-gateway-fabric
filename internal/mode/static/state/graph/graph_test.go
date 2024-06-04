@@ -30,6 +30,7 @@ import (
 )
 
 func TestBuildGraph(t *testing.T) {
+	t.Parallel()
 	const (
 		gcName         = "my-class"
 		controllerName = "my.controller"
@@ -854,6 +855,7 @@ func TestBuildGraph(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			// The diffs get very large so the format max length will make sure the output doesn't get truncated.
@@ -879,6 +881,7 @@ func TestBuildGraph(t *testing.T) {
 }
 
 func TestIsReferenced(t *testing.T) {
+	t.Parallel()
 	baseSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNs,
@@ -1172,6 +1175,7 @@ func TestIsReferenced(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			test.graph.GatewayClass = test.gc

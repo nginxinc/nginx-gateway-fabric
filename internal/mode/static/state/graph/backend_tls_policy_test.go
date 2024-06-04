@@ -83,6 +83,7 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 }
 
 func TestValidateBackendTLSPolicy(t *testing.T) {
+	t.Parallel()
 	targetRefNormalCase := []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
 		{
 			LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
@@ -408,6 +409,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			valid, ignored, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test")

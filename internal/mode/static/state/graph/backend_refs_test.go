@@ -398,6 +398,7 @@ func TestVerifyIPFamily(t *testing.T) {
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
+	t.Parallel()
 	sectionNameRefs := []ParentRef{
 		{
 			Idx:     0,
@@ -741,6 +742,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 			addBackendRefsToRules(test.route, resolver, services, test.policies, nil)

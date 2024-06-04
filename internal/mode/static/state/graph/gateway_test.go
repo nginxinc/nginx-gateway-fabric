@@ -145,6 +145,7 @@ func TestProcessGateways(t *testing.T) {
 }
 
 func TestBuildGateway(t *testing.T) {
+	t.Parallel()
 	const gcName = "my-gateway-class"
 
 	labelSet := map[string]string{
@@ -1034,6 +1035,7 @@ func TestBuildGateway(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(test.refGrants)
 			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver, protectedPorts)

@@ -135,6 +135,7 @@ func TestValidateCA(t *testing.T) {
 }
 
 func TestResolve(t *testing.T) {
+	t.Parallel()
 	configMaps := map[types.NamespacedName]*v1.ConfigMap{
 		{Namespace: "test", Name: "configmap1"}: {
 			ObjectMeta: metav1.ObjectMeta{
@@ -210,6 +211,7 @@ func TestResolve(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := configMapResolver.resolve(test.nsname)
