@@ -31,7 +31,6 @@ NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: ngin
 NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginx-plus
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 1.1.0
 TARGET ?= local## The target of the build. Possible values: local and container
-KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= build/out## The folder where the binary will be stored
 GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
@@ -149,7 +148,6 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <$(SELF_DIR)tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
