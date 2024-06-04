@@ -9,13 +9,13 @@ docs: "DOCS-1419"
 
 This topic describes possible issues users might encounter when using NGINX Gateway Fabric. When possible, suggested workarounds are provided.
 
-### General Troubleshooting
+### General troubleshooting
 
-When attempting to diagnose a problem or get support, there are a few important data points that can be collected to help with understanding what issues may exist.
+When investigating a problem or requesting help, there are important data points that can be collected to help understand what issues may exist.
 
-##### Resource Status
+##### Resource status
 
-To get the status of a resource, use `kubectl describe`. For example, to check the status of the `coffee` HTTPRoute, which has an error:
+To check the status of a resource, use `kubectl describe`. This example checks the status of the `coffee` HTTPRoute, which has an error:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee [-n namespace]
@@ -47,11 +47,11 @@ Status:
       Section Name:  http
 ```
 
-If a resource has any errors relating to its configuration or relation to other resources, it is likely that those errors will be contained within the status. The `ObservedGeneration` in the status should match the `ObservedGeneration` of the resource. Otherwise, this could mean that the resource wasn't processed yet or the status failed to update.
+If a resource has errors relating to its configuration or relationship to other resources, they can likely be read in the status. The `ObservedGeneration` in the status should match the `ObservedGeneration` of the resource. Otherwise, this could mean that the resource hasn't been processed yet or that the status failed to update.
 
 ##### Events
 
-Events may be created by NGINX Gateway Fabric or other Kubernetes components that could indicate system or configuration issues. To see events:
+Events created by NGINX Gateway Fabric or other Kubernetes components could indicate system or configuration issues. To see events:
 
 ```shell
 kubectl get events [-n namespace]
@@ -67,7 +67,7 @@ LAST SEEN   TYPE      REASON              OBJECT                                
 
 ##### Logs
 
-Logs of the NGINX Gateway Fabric control plane and data plane can contain information that isn't otherwise reported in status or events. These could include errors in processing or passing traffic.
+Logs from the NGINX Gateway Fabric control plane and data plane can contain information that isn't available to status or events. These can include errors in processing or passing traffic.
 
 To see logs for the control plane container:
 
@@ -81,7 +81,7 @@ To see logs for the data plane container:
 kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx
 ```
 
-You can also see the logs of a container that has crashed or been killed, by specifying the `-p` flag with the above commands.
+You can see logs for a crashed or killed container by adding the `-p` flag to the above commands.
 
 ### NGINX fails to reload
 
