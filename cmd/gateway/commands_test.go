@@ -598,6 +598,7 @@ func TestParseFlags(t *testing.T) {
 }
 
 func TestGetBuildInfo(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
 		return &debug.BuildInfo{
@@ -619,6 +620,7 @@ func TestGetBuildInfo(t *testing.T) {
 }
 
 func TestGetBuildInfoNoBuildInfo(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
 		return nil, false
@@ -634,6 +636,7 @@ func TestGetBuildInfoNoBuildInfo(t *testing.T) {
 }
 
 func TestGetBuildInfoMissingValue(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
 		return &debug.BuildInfo{

@@ -147,7 +147,7 @@ func TestProcessGateways(t *testing.T) {
 }
 
 func TestBuildGateway(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	const gcName = "my-gateway-class"
 
 	labelSet := map[string]string{

@@ -79,7 +79,7 @@ linters:
     - nilerr
     - noctx
     - nolintlint
-    - paralleltest
+    # - paralleltest
     - predeclared
     - promlinter
     - reassign

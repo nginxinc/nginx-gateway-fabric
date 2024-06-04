@@ -399,7 +399,7 @@ func TestVerifyIPFamily(t *testing.T) {
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	sectionNameRefs := []ParentRef{
 		{
 			Idx:     0,

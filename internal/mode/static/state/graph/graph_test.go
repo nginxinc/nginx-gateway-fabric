@@ -708,7 +708,7 @@ func TestBuildGraph(t *testing.T) {
 }
 
 func TestIsReferenced(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	baseSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNs,

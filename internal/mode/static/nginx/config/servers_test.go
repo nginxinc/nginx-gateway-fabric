@@ -2743,6 +2743,7 @@ func TestCreateIncludeFileResults(t *testing.T) {
 }
 
 func TestGetIPFamily(t *testing.T) {
+	t.Parallel()
 	test := []struct {
 		msg            string
 		baseHTTPConfig dataplane.BaseHTTPConfig

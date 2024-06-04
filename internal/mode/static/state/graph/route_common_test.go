@@ -227,7 +227,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 }
 
 func TestBindRouteToListeners(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	// we create a new listener each time because the function under test can modify it
 	createListener := func(name string) *Listener {
 		return &Listener{

@@ -136,7 +136,7 @@ func TestValidateCA(t *testing.T) {
 }
 
 func TestResolve(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	configMaps := map[types.NamespacedName]*v1.ConfigMap{
 		{Namespace: "test", Name: "configmap1"}: {
 			ObjectMeta: metav1.ObjectMeta{
