@@ -22,6 +22,7 @@ import (
 )
 
 func TestBuildSectionNameRefs(t *testing.T) {
+	t.Parallel()
 	const routeNamespace = "test"
 
 	gwNsName1 := types.NamespacedName{Namespace: routeNamespace, Name: "gateway-1"}
@@ -123,6 +124,7 @@ func TestBuildSectionNameRefs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
@@ -137,6 +139,7 @@ func TestBuildSectionNameRefs(t *testing.T) {
 }
 
 func TestFindGatewayForParentRef(t *testing.T) {
+	t.Parallel()
 	gwNsName1 := types.NamespacedName{Namespace: "test-1", Name: "gateway-1"}
 	gwNsName2 := types.NamespacedName{Namespace: "test-2", Name: "gateway-2"}
 
@@ -212,6 +215,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
@@ -1235,6 +1239,7 @@ func TestBindRouteToListeners(t *testing.T) {
 }
 
 func TestFindAcceptedHostnames(t *testing.T) {
+	t.Parallel()
 	var listenerHostnameFoo gatewayv1.Hostname = "foo.example.com"
 	var listenerHostnameCafe gatewayv1.Hostname = "cafe.example.com"
 	var listenerHostnameWildcard gatewayv1.Hostname = "*.example.com"
@@ -1310,6 +1315,7 @@ func TestFindAcceptedHostnames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
 			g.Expect(result).To(Equal(test.expected))
@@ -1318,6 +1324,7 @@ func TestFindAcceptedHostnames(t *testing.T) {
 }
 
 func TestGetHostname(t *testing.T) {
+	t.Parallel()
 	var emptyHostname gatewayv1.Hostname
 	var hostname gatewayv1.Hostname = "example.com"
 
@@ -1345,6 +1352,7 @@ func TestGetHostname(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := getHostname(test.h)
 			g.Expect(result).To(Equal(test.expected))
@@ -1353,6 +1361,7 @@ func TestGetHostname(t *testing.T) {
 }
 
 func TestValidateHostnames(t *testing.T) {
+	t.Parallel()
 	const validHostname = "example.com"
 
 	tests := []struct {
@@ -1383,6 +1392,7 @@ func TestValidateHostnames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateHostnames(test.hostnames, path)
@@ -1397,6 +1407,7 @@ func TestValidateHostnames(t *testing.T) {
 }
 
 func TestValidateFilterRequestHeaderModifier(t *testing.T) {
+	t.Parallel()
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 		return v
@@ -1531,6 +1542,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			allErrs := validateFilterHeaderModifier(
 				test.validator, test.filter.RequestHeaderModifier, filterPath,
@@ -1541,6 +1553,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 }
 
 func TestValidateFilterResponseHeaderModifier(t *testing.T) {
+	t.Parallel()
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 		return v
@@ -1709,6 +1722,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			allErrs := validateFilterResponseHeaderModifier(
 				test.validator, test.filter.ResponseHeaderModifier, filterPath,
@@ -1719,6 +1733,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 }
 
 func TestRouteKeyForKind(t *testing.T) {
+	t.Parallel()
 	nsname := types.NamespacedName{Namespace: testNs, Name: "route"}
 
 	g := NewWithT(t)
@@ -1737,6 +1752,7 @@ func TestRouteKeyForKind(t *testing.T) {
 }
 
 func TestAllowedRouteType(t *testing.T) {
+	t.Parallel()
 	test := []struct {
 		listener  *Listener
 		name      string
@@ -1788,6 +1804,7 @@ func TestAllowedRouteType(t *testing.T) {
 
 	for _, test := range test {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(isRouteTypeAllowedByListener(test.listener, convertRouteType(test.routeType))).To(Equal(test.expResult))
 		})
@@ -1795,6 +1812,7 @@ func TestAllowedRouteType(t *testing.T) {
 }
 
 func TestBindL4RouteToListeners(t *testing.T) {
+	t.Parallel()
 	// we create a new listener each time because the function under test can modify it
 	createListener := func(name string) *Listener {
 		return &Listener{
@@ -2399,6 +2417,7 @@ func TestBindL4RouteToListeners(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			bindL4RouteToListeners(
@@ -2416,6 +2435,7 @@ func TestBindL4RouteToListeners(t *testing.T) {
 }
 
 func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	nsName := types.NamespacedName{Namespace: testNs, Name: "hi"}
@@ -2448,6 +2468,7 @@ func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
 }
 
 func TestTryToAttachL4RouteToListeners_NoAttachableListeners(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	route := &L4Route{

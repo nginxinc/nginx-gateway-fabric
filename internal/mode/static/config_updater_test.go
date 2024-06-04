@@ -16,6 +16,7 @@ import (
 )
 
 func TestUpdateControlPlane(t *testing.T) {
+	t.Parallel()
 	debugLogCfg := &ngfAPI.NginxGateway{
 		Spec: ngfAPI.NginxGatewaySpec{
 			Logging: &ngfAPI.Logging{
@@ -72,6 +73,7 @@ func TestUpdateControlPlane(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			fakeLogSetter := &staticfakes.FakeLogLevelSetter{
@@ -118,6 +120,7 @@ func TestValidateLogLevel(t *testing.T) {
 
 	for _, level := range validLevels {
 		t.Run(fmt.Sprintf("valid level %q", level), func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(validateLogLevel(level)).To(Succeed())

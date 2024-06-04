@@ -18,6 +18,7 @@ import (
 )
 
 func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
+	t.Parallel()
 	winner := &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
@@ -58,6 +59,7 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := test.gws.GetAllNsNames()
 			g.Expect(result).To(Equal(test.expected))
@@ -66,6 +68,7 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 }
 
 func TestProcessGateways(t *testing.T) {
+	t.Parallel()
 	const gcName = "test-gc"
 
 	winner := &v1.Gateway{
@@ -133,6 +136,7 @@ func TestProcessGateways(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := processGateways(test.gws, gcName)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

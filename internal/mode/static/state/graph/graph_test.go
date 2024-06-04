@@ -1182,6 +1182,7 @@ func TestIsReferenced(t *testing.T) {
 }
 
 func TestIsNGFPolicyRelevant(t *testing.T) {
+	t.Parallel()
 	policyGVK := schema.GroupVersionKind{Kind: "MyKind"}
 	existingPolicyNsName := types.NamespacedName{Namespace: "test", Name: "pol"}
 
@@ -1324,6 +1325,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
@@ -1333,6 +1335,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 }
 
 func TestIsNGFPolicyRelevantPanics(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	graph := &Graph{}
 	nsname := types.NamespacedName{Namespace: "test", Name: "pol"}
