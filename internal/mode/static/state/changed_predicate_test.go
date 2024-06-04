@@ -13,6 +13,7 @@ import (
 )
 
 func TestFuncPredicate(t *testing.T) {
+	t.Parallel()
 	alwaysTrueFunc := func(_ ngftypes.ObjectType, _ types.NamespacedName) bool { return true }
 	emptyObject := &v1.Pod{}
 
@@ -25,6 +26,7 @@ func TestFuncPredicate(t *testing.T) {
 }
 
 func TestFuncPredicate_Panic(t *testing.T) {
+	t.Parallel()
 	alwaysTrueFunc := func(_ ngftypes.ObjectType, _ types.NamespacedName) bool { return true }
 
 	p := funcPredicate{stateChanged: alwaysTrueFunc}
@@ -38,6 +40,7 @@ func TestFuncPredicate_Panic(t *testing.T) {
 }
 
 func TestAnnotationChangedPredicate_Delete(t *testing.T) {
+	t.Parallel()
 	p := annotationChangedPredicate{}
 
 	g := NewWithT(t)
@@ -45,6 +48,7 @@ func TestAnnotationChangedPredicate_Delete(t *testing.T) {
 }
 
 func TestAnnotationChangedPredicate_Update(t *testing.T) {
+	t.Parallel()
 	annotation := "test"
 
 	tests := []struct {
@@ -139,7 +143,9 @@ func TestAnnotationChangedPredicate_Update(t *testing.T) {
 	p := annotationChangedPredicate{annotation: annotation}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			if test.expPanic {
 				upsert := func() {

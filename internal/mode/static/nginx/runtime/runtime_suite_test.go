@@ -8,6 +8,7 @@ import (
 )
 
 func TestRuntime(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Runtime Suite")
 }

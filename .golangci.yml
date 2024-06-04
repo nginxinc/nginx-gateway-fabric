@@ -79,6 +79,7 @@ linters:
     - nilerr
     - noctx
     - nolintlint
+    - paralleltest
     - predeclared
     - promlinter
     - reassign
@@ -88,6 +89,7 @@ linters:
     - stylecheck
     - tenv
     - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam

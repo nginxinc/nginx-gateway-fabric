@@ -8,6 +8,7 @@ import (
 )
 
 func TestFile(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "File Suite")
 }

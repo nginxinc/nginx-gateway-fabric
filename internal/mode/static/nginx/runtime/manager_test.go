@@ -24,6 +24,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 })
 
 func TestFindMainProcess(t *testing.T) {
+	t.Parallel()
 	readFileFuncGen := func(content []byte) readFileFunc {
 		return func(name string) ([]byte, error) {
 			if name != pidFile {
@@ -111,7 +112,9 @@ func TestFindMainProcess(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)

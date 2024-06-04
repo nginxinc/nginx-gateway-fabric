@@ -13,6 +13,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	maxSize := helpers.GetPointer[ngfAPI.Size]("10m")
 	bodyTimeout := helpers.GetPointer[ngfAPI.Duration]("600ms")
 	keepaliveRequests := helpers.GetPointer[int32](900)
@@ -160,7 +161,9 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(_ *testing.T) {
+			t.Parallel()
 			generator := clientsettings.NewGenerator()
 
 			resFiles := generator.GenerateForServer([]policies.Policy{test.policy}, http.Server{})
@@ -176,6 +179,7 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestGenerateNoPolicies(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	generator := clientsettings.NewGenerator()

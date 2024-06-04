@@ -36,6 +36,7 @@ import (
 )
 
 func TestNGF(t *testing.T) {
+	t.Parallel()
 	flag.Parse()
 	if *gatewayAPIVersion == "" {
 		panic("Gateway API version must be set")

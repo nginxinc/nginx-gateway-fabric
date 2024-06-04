@@ -8,6 +8,7 @@ import (
 )
 
 func TestLeader(t *testing.T) {
+	t.Parallel()
 	leader := &Leader{}
 
 	g := NewWithT(t)
@@ -15,6 +16,7 @@ func TestLeader(t *testing.T) {
 }
 
 func TestLeaderOrNonLeader(t *testing.T) {
+	t.Parallel()
 	leaderOrNonLeader := &LeaderOrNonLeader{}
 
 	g := NewWithT(t)
@@ -22,6 +24,7 @@ func TestLeaderOrNonLeader(t *testing.T) {
 }
 
 func TestEnableAfterBecameLeader(t *testing.T) {
+	t.Parallel()
 	enabled := false
 	enableAfterBecameLeader := NewEnableAfterBecameLeader(func(_ context.Context) {
 		enabled = true
