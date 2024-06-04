@@ -73,7 +73,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	BeforeEach(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
 
 		Eventually(
 			func() error {
@@ -107,7 +107,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 	)
 
 	if containerName != nginxContainerName {
-		// Since we have already deployed resources and ran resourceManager.WaitForAppsToBeReady(ns.Name) earlier,
+		// Since we have already deployed resources and ran resourceManager.WaitForAppsToBeReadyWithPodCount earlier,
 		// we know that the applications are ready at this point. This could only be the case if NGF has written
 		// statuses, which could only be the case if NGF has the leader lease. Since there is only one instance
 		// of NGF in this test, we can be certain that this is the correct leaseholder name.
@@ -146,7 +146,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 		Should(Succeed())
 
 	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-	Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+	Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
 
 	Eventually(
 		func() error {
