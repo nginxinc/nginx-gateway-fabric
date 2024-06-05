@@ -1,3 +1,4 @@
+version: 2
 env:
   - CGO_ENABLED=0
 
@@ -26,7 +27,7 @@ builds:
     binary: gateway
 
 changelog:
-  skip: true
+  disable: true
 
 archives:
   - id: gateway
