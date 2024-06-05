@@ -278,8 +278,8 @@ type Telemetry struct {
 	ServiceName string
 	// Interval specifies the export interval.
 	Interval string
-	// SpanAttributes are custom key/value attributes that are added to each span.
-	SpanAttributes []SpanAttribute
+	// Ratios is a list of tracing sampling ratios.
+	Ratios []Ratio
 	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
 	BatchSize int32
 	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
@@ -298,4 +298,13 @@ type SpanAttribute struct {
 type BaseHTTPConfig struct {
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
+}
+
+// Ratio represents a tracing sampling ratio used in an nginx config with the otel_module.
+type Ratio struct {
+	// Name is based on the associated ObservabilityPolicy's NamespacedName,
+	// and is used as the nginx variable name for this ratio.
+	Name string
+	// Value is the value of the ratio.
+	Value int32
 }

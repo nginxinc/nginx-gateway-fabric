@@ -1,16 +1,16 @@
 CI=false
+CLUSTER_NAME ?= kind
 CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
 CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
 GINKGO_FLAGS =
 GINKGO_LABEL =
-GW_API_VERSION ?= $(shell yq eval '.resources[0] | split("ref=v") | .[1]' ../config/crd/gateway-api/standard/kustomization.yaml)## Supported Gateway API version from current NGF
+GW_API_VERSION ?= $(shell sed -n 's/.*ref=v\(.*\)/\1/p' ../config/crd/gateway-api/standard/kustomization.yaml)## Supported Gateway API version from current NGF
 GW_API_PREV_VERSION ?= 1.0.0## Supported Gateway API version from previous NGF release
-GW_SERVICE_TYPE=NodePort## Service type to use for the gateway
-GW_SVC_GKE_INTERNAL=false
-K8S_VERSION ?= latest## Kubernetes version to use. Expected format: 1.24 (major.minor) or latest
+GW_SERVICE_TYPE = NodePort## Service type to use for the gateway
+GW_SVC_GKE_INTERNAL = false
 NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
-PULL_POLICY=Never## Pull policy for the images
+PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
 SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
@@ -29,7 +29,7 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG)
+	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --name $(CLUSTER_NAME)
 	kubectl apply -f conformance/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
@@ -100,11 +100,11 @@ nfr-test: ## Run the NFR tests on a GCP VM
 	NFR=true bash scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
-start-longevity-test: START_LONGEVITY=true
+start-longevity-test: export START_LONGEVITY=true
 start-longevity-test: nfr-test ## Start the longevity test to run for 4 days in GKE
 
 .PHONY: stop-longevity-test
-stop-longevity-test: STOP_LONGEVITY=true
+stop-longevity-test: export STOP_LONGEVITY=true
 stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
 .PHONY: .vm-nfr-test
@@ -113,7 +113,7 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 	    --label-filter "nfr" $(GINKGO_FLAGS) ./suite --  --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
-		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
+		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: test
@@ -123,7 +123,7 @@ test: ## Runs the functional tests on your default k8s cluster
 		--gateway-api-version=$(GW_API_VERSION) --gateway-api-prev-version=$(GW_API_PREV_VERSION) \
 		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
-		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
+		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: test-with-plus

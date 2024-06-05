@@ -17,14 +17,14 @@ func TestExecuteTelemetry(t *testing.T) {
 			Interval:    "5s",
 			BatchSize:   512,
 			BatchCount:  4,
-			SpanAttributes: []dataplane.SpanAttribute{
+			Ratios: []dataplane.Ratio{
 				{
-					Key:   "key1",
-					Value: "val1",
+					Name:  "ratio1",
+					Value: 10,
 				},
 				{
-					Key:   "key2",
-					Value: "val2",
+					Name:  "ratio2",
+					Value: 20,
 				},
 			},
 		},
@@ -37,7 +37,9 @@ func TestExecuteTelemetry(t *testing.T) {
 		"interval 5s;":                                 1,
 		"batch_size 512;":                              1,
 		"batch_count 4;":                               1,
-		"otel_span_attr":                               2,
+		"split_clients $otel_trace_id":                 2,
+		"10% on":                                       1,
+		"20% on":                                       1,
 	}
 
 	for expSubStr, expCount := range expSubStrings {

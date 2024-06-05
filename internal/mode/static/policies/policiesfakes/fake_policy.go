@@ -183,15 +183,15 @@ type FakePolicy struct {
 	getSelfLinkReturnsOnCall map[int]struct {
 		result1 string
 	}
-	GetTargetRefStub        func() v1alpha2.LocalPolicyTargetReference
-	getTargetRefMutex       sync.RWMutex
-	getTargetRefArgsForCall []struct {
+	GetTargetRefsStub        func() []v1alpha2.LocalPolicyTargetReference
+	getTargetRefsMutex       sync.RWMutex
+	getTargetRefsArgsForCall []struct {
 	}
-	getTargetRefReturns struct {
-		result1 v1alpha2.LocalPolicyTargetReference
+	getTargetRefsReturns struct {
+		result1 []v1alpha2.LocalPolicyTargetReference
 	}
-	getTargetRefReturnsOnCall map[int]struct {
-		result1 v1alpha2.LocalPolicyTargetReference
+	getTargetRefsReturnsOnCall map[int]struct {
+		result1 []v1alpha2.LocalPolicyTargetReference
 	}
 	GetUIDStub        func() types.UID
 	getUIDMutex       sync.RWMutex
@@ -1188,15 +1188,15 @@ func (fake *FakePolicy) GetSelfLinkReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *FakePolicy) GetTargetRef() v1alpha2.LocalPolicyTargetReference {
-	fake.getTargetRefMutex.Lock()
-	ret, specificReturn := fake.getTargetRefReturnsOnCall[len(fake.getTargetRefArgsForCall)]
-	fake.getTargetRefArgsForCall = append(fake.getTargetRefArgsForCall, struct {
+func (fake *FakePolicy) GetTargetRefs() []v1alpha2.LocalPolicyTargetReference {
+	fake.getTargetRefsMutex.Lock()
+	ret, specificReturn := fake.getTargetRefsReturnsOnCall[len(fake.getTargetRefsArgsForCall)]
+	fake.getTargetRefsArgsForCall = append(fake.getTargetRefsArgsForCall, struct {
 	}{})
-	stub := fake.GetTargetRefStub
-	fakeReturns := fake.getTargetRefReturns
-	fake.recordInvocation("GetTargetRef", []interface{}{})
-	fake.getTargetRefMutex.Unlock()
+	stub := fake.GetTargetRefsStub
+	fakeReturns := fake.getTargetRefsReturns
+	fake.recordInvocation("GetTargetRefs", []interface{}{})
+	fake.getTargetRefsMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -1206,38 +1206,38 @@ func (fake *FakePolicy) GetTargetRef() v1alpha2.LocalPolicyTargetReference {
 	return fakeReturns.result1
 }
 
-func (fake *FakePolicy) GetTargetRefCallCount() int {
-	fake.getTargetRefMutex.RLock()
-	defer fake.getTargetRefMutex.RUnlock()
-	return len(fake.getTargetRefArgsForCall)
+func (fake *FakePolicy) GetTargetRefsCallCount() int {
+	fake.getTargetRefsMutex.RLock()
+	defer fake.getTargetRefsMutex.RUnlock()
+	return len(fake.getTargetRefsArgsForCall)
 }
 
-func (fake *FakePolicy) GetTargetRefCalls(stub func() v1alpha2.LocalPolicyTargetReference) {
-	fake.getTargetRefMutex.Lock()
-	defer fake.getTargetRefMutex.Unlock()
-	fake.GetTargetRefStub = stub
+func (fake *FakePolicy) GetTargetRefsCalls(stub func() []v1alpha2.LocalPolicyTargetReference) {
+	fake.getTargetRefsMutex.Lock()
+	defer fake.getTargetRefsMutex.Unlock()
+	fake.GetTargetRefsStub = stub
 }
 
-func (fake *FakePolicy) GetTargetRefReturns(result1 v1alpha2.LocalPolicyTargetReference) {
-	fake.getTargetRefMutex.Lock()
-	defer fake.getTargetRefMutex.Unlock()
-	fake.GetTargetRefStub = nil
-	fake.getTargetRefReturns = struct {
-		result1 v1alpha2.LocalPolicyTargetReference
+func (fake *FakePolicy) GetTargetRefsReturns(result1 []v1alpha2.LocalPolicyTargetReference) {
+	fake.getTargetRefsMutex.Lock()
+	defer fake.getTargetRefsMutex.Unlock()
+	fake.GetTargetRefsStub = nil
+	fake.getTargetRefsReturns = struct {
+		result1 []v1alpha2.LocalPolicyTargetReference
 	}{result1}
 }
 
-func (fake *FakePolicy) GetTargetRefReturnsOnCall(i int, result1 v1alpha2.LocalPolicyTargetReference) {
-	fake.getTargetRefMutex.Lock()
-	defer fake.getTargetRefMutex.Unlock()
-	fake.GetTargetRefStub = nil
-	if fake.getTargetRefReturnsOnCall == nil {
-		fake.getTargetRefReturnsOnCall = make(map[int]struct {
-			result1 v1alpha2.LocalPolicyTargetReference
+func (fake *FakePolicy) GetTargetRefsReturnsOnCall(i int, result1 []v1alpha2.LocalPolicyTargetReference) {
+	fake.getTargetRefsMutex.Lock()
+	defer fake.getTargetRefsMutex.Unlock()
+	fake.GetTargetRefsStub = nil
+	if fake.getTargetRefsReturnsOnCall == nil {
+		fake.getTargetRefsReturnsOnCall = make(map[int]struct {
+			result1 []v1alpha2.LocalPolicyTargetReference
 		})
 	}
-	fake.getTargetRefReturnsOnCall[i] = struct {
-		result1 v1alpha2.LocalPolicyTargetReference
+	fake.getTargetRefsReturnsOnCall[i] = struct {
+		result1 []v1alpha2.LocalPolicyTargetReference
 	}{result1}
 }
 
@@ -1858,8 +1858,8 @@ func (fake *FakePolicy) Invocations() map[string][][]interface{} {
 	defer fake.getResourceVersionMutex.RUnlock()
 	fake.getSelfLinkMutex.RLock()
 	defer fake.getSelfLinkMutex.RUnlock()
-	fake.getTargetRefMutex.RLock()
-	defer fake.getTargetRefMutex.RUnlock()
+	fake.getTargetRefsMutex.RLock()
+	defer fake.getTargetRefsMutex.RUnlock()
 	fake.getUIDMutex.RLock()
 	defer fake.getUIDMutex.RUnlock()
 	fake.setAnnotationsMutex.RLock()
