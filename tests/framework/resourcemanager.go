@@ -691,7 +691,11 @@ func (rm *ResourceManager) WaitForAppsToBeReadyWithPodCount(namespace string, po
 	return rm.WaitForAppsToBeReadyWithCtxWithPodCount(ctx, namespace, podCount)
 }
 
-func (rm *ResourceManager) WaitForAppsToBeReadyWithCtxWithPodCount(ctx context.Context, namespace string, podCount int) error {
+func (rm *ResourceManager) WaitForAppsToBeReadyWithCtxWithPodCount(
+	ctx context.Context,
+	namespace string,
+	podCount int,
+) error {
 	if err := rm.WaitForPodsToBeReadyWithCount(ctx, namespace, podCount); err != nil {
 		return err
 	}

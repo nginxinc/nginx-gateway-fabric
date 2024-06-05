@@ -271,9 +271,10 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
 		if strings.Contains(line, "[error]") {
 			expectedError1 := "connect() failed (111: Connection refused)"
-			//FIXME(salonichf5) remove this error message check when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
+			// FIXME(salonichf5) remove this error message check
+			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
 			expectedError2 := "no live upstreams while connecting to upstream"
-			Expect(line).To(Or(Equal(expectedError1), Equal(expectedError2)))
+			Expect(line).To(Or(ContainSubstring(expectedError1), ContainSubstring(expectedError2)))
 		}
 	}
 
