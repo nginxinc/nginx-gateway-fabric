@@ -398,6 +398,13 @@ func (rm *ResourceManager) waitForHTTPRoutesToBeReady(ctx context.Context, names
 }
 
 func (rm *ResourceManager) waitForGRPCRoutesToBeReady(ctx context.Context, namespace string) error {
+	// First, check if grpcroute even exists for v1. If not, ignore.
+	var routeList v1.GRPCRouteList
+	err := rm.K8sClient.List(ctx, &routeList, client.InNamespace(namespace))
+	if err != nil && strings.Contains(err.Error(), "no matches for kind") {
+		return nil
+	}
+
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
