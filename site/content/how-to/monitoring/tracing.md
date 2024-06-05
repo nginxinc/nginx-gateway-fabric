@@ -14,7 +14,7 @@ NGINX Gateway Fabric supports tracing using [OpenTelemetry](https://opentelemetr
 This guide explains how to enable tracing on HTTPRoutes using NGINX Gateway Fabric. It uses the OpenTelemetry Collector and Jaeger to process and collect the traces.
 
 {{< important >}}
-Tracing cannot be enabled for [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. This will be addressed in a future release.
+Tracing cannot be enabled for [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
 {{< /important >}}
 
 ## Install the Collectors
