@@ -444,8 +444,9 @@ func createProvisionerModeCommand() *cobra.Command {
 
 // FIXME(pleshakov): Remove this command once NGF min supported Kubernetes version supports sleep action in
 // preStop hook.
-// nolint:lll
 // See https://github.com/kubernetes/enhancements/tree/4ec371d92dcd4f56a2ab18c8ba20bb85d8d20efe/keps/sig-node/3960-pod-lifecycle-sleep-action
+//
+//nolint:lll
 func createSleepCommand() *cobra.Command {
 	// flag names
 	const durationFlag = "duration"

@@ -42,7 +42,6 @@ func TestExecuteBaseHttp(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
 		g := NewWithT(t)
 
 		res := executeBaseHTTPConfig(test.conf)

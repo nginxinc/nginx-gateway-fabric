@@ -6,7 +6,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -224,7 +223,7 @@ func newBackendTLSPolicyStatusSetter(
 }
 
 func newNGFPolicyStatusSetter(
-	status gatewayv1alpha2.PolicyStatus,
+	status v1alpha2.PolicyStatus,
 	gatewayCtlrName string,
 ) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
@@ -234,7 +233,7 @@ func newNGFPolicyStatusSetter(
 		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
 		// ancestor statuses.
 		maxAncestors := len(status.Ancestors) + len(prevStatus.Ancestors)
-		ancestors := make([]gatewayv1alpha2.PolicyAncestorStatus, 0, maxAncestors)
+		ancestors := make([]v1alpha2.PolicyAncestorStatus, 0, maxAncestors)
 
 		// keep all the ancestor statuses that belong to other controllers
 		for _, as := range prevStatus.Ancestors {
@@ -255,7 +254,7 @@ func newNGFPolicyStatusSetter(
 	}
 }
 
-func policyStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+func policyStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) bool {
 	// Since other controllers may update Policy status we can't assume anything about the order of the
 	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.

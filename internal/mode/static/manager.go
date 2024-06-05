@@ -63,7 +63,7 @@ import (
 )
 
 const (
-	// clusterTimeout is a timeout for connections to the Kubernetes API
+	// clusterTimeout is a timeout for connections to the Kubernetes API.
 	clusterTimeout = 10 * time.Second
 )
 
@@ -80,7 +80,7 @@ func init() {
 	utilruntime.Must(appsv1.AddToScheme(scheme))
 }
 
-// nolint:gocyclo
+//nolint:gocyclo
 func StartManager(cfg config.Config) error {
 	nginxChecker := newNginxConfiguredOnStartChecker()
 	mgr, err := createManager(cfg, nginxChecker)
@@ -530,7 +530,7 @@ func registerControllers(
 }
 
 // 10 min jitter is enough per telemetry destination recommendation
-// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069.
 const telemetryJitterFactor = 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
 
 func createTelemetryJob(
@@ -566,7 +566,6 @@ func createTelemetryJob(
 		if err != nil {
 			return nil, fmt.Errorf("cannot create telemetry exporter: %w", err)
 		}
-
 	} else {
 		exporter = telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
 	}

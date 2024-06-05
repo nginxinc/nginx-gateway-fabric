@@ -65,7 +65,11 @@ func (r *Reconciler) newObject(objectType ngftypes.ObjectType) ngftypes.ObjectTy
 	t := reflect.TypeOf(objectType).Elem()
 
 	// We could've used objectType.DeepCopyObject() here, but it's a bit slower confirmed by benchmarks.
-	return reflect.New(t).Interface().(client.Object)
+	obj, ok := reflect.New(t).Interface().(client.Object)
+	if !ok {
+		panic("failed to create a new object")
+	}
+	return obj
 }
 
 // Reconcile implements the reconcile.Reconciler Reconcile method.

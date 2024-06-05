@@ -24,7 +24,7 @@ const (
 
 var defaultPrometheusQueryTimeout = 2 * time.Second
 
-// PrometheusConfig is the configuration for installing Prometheus
+// PrometheusConfig is the configuration for installing Prometheus.
 type PrometheusConfig struct {
 	// ScrapeInterval is the interval at which Prometheus scrapes metrics.
 	ScrapeInterval time.Duration
@@ -61,7 +61,7 @@ func InstallPrometheus(
 
 	scrapeInterval := fmt.Sprintf("%ds", int(cfg.ScrapeInterval.Seconds()))
 
-	// nolint:gosec
+	//nolint:gosec
 	output, err = exec.Command(
 		"helm",
 		"install",
@@ -90,7 +90,7 @@ func InstallPrometheus(
 	pod := pods[0]
 
 	if pod.Status.PodIP == "" {
-		return PrometheusInstance{}, errors.New("Prometheus pod has no IP")
+		return PrometheusInstance{}, errors.New("the Prometheus pod has no IP")
 	}
 
 	var queryTimeout time.Duration

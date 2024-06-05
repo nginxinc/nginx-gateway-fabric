@@ -12,6 +12,7 @@ type simpleValidatorFunc[T configValue] func(v T) error
 type supportedValuesValidatorFunc[T configValue] func(v T) (bool, []string)
 
 func runValidatorTests[T configValue](t *testing.T, run func(g *WithT, v T), caseNamePrefix string, values ...T) {
+	t.Helper()
 	for i, v := range values {
 		t.Run(fmt.Sprintf("%s_case_#%d", caseNamePrefix, i), func(t *testing.T) {
 			g := NewWithT(t)
@@ -25,6 +26,7 @@ func createFailureMessage[T any](v T) string {
 }
 
 func testValidValuesForSimpleValidator[T configValue](t *testing.T, f simpleValidatorFunc[T], values ...T) {
+	t.Helper()
 	runValidatorTests(t, func(g *WithT, v T) {
 		err := f(v)
 		g.Expect(err).ToNot(HaveOccurred(), createFailureMessage(v))
@@ -32,6 +34,7 @@ func testValidValuesForSimpleValidator[T configValue](t *testing.T, f simpleVali
 }
 
 func testInvalidValuesForSimpleValidator[T configValue](t *testing.T, f simpleValidatorFunc[T], values ...T) {
+	t.Helper()
 	runValidatorTests(t, func(g *WithT, v T) {
 		err := f(v)
 		g.Expect(err).To(HaveOccurred(), createFailureMessage(v))
@@ -43,6 +46,7 @@ func testValidValuesForSupportedValuesValidator[T configValue](
 	f supportedValuesValidatorFunc[T],
 	values ...T,
 ) {
+	t.Helper()
 	runValidatorTests(
 		t,
 		func(g *WithT, v T) {
@@ -61,6 +65,7 @@ func testInvalidValuesForSupportedValuesValidator[T configValue](
 	supportedValuesMap map[T]struct{},
 	values ...T,
 ) {
+	t.Helper()
 	runValidatorTests(
 		t,
 		func(g *WithT, v T) {

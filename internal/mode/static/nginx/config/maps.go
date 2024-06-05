@@ -48,7 +48,7 @@ func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {
 
 const (
 	// In order to prepend any passed client header values to values specified in the add headers field of request
-	// header modifiers, we need to create a map parameter regex for any string value
+	// header modifiers, we need to create a map parameter regex for any string value.
 	anyStringFmt = `~.*`
 )
 

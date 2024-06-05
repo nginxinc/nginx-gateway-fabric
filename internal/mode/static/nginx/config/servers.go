@@ -21,7 +21,7 @@ const (
 	rootPath             = "/"
 )
 
-// httpBaseHeaders contains the constant headers set in each HTTP server block
+// httpBaseHeaders contains the constant headers set in each HTTP server block.
 var httpBaseHeaders = []http.Header{
 	{
 		Name:  "Host",
@@ -41,7 +41,7 @@ var httpBaseHeaders = []http.Header{
 	},
 }
 
-// grpcBaseHeaders contains the constant headers set in each gRPC server block
+// grpcBaseHeaders contains the constant headers set in each gRPC server block.
 var grpcBaseHeaders = []http.Header{
 	{
 		Name:  "Host",
@@ -203,7 +203,7 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 }
 
 // rewriteConfig contains the configuration for a location to rewrite paths,
-// as specified in a URLRewrite filter
+// as specified in a URLRewrite filter.
 type rewriteConfig struct {
 	// Rewrite rewrites the original URI to the new URI (ex: /coffee -> /beans)
 	Rewrite string
@@ -284,7 +284,7 @@ func updateLocationsForIncludes(locations []http.Location, includes []string) []
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
-// for example, {/foo: {exact: {}, prefix: {}}}
+// for example, {/foo: {exact: {}, prefix: {}}}.
 type pathAndTypeMap map[string]map[dataplane.PathType]struct{}
 
 // To calculate the maximum number of locations, we need to take into account the following:
@@ -759,7 +759,7 @@ func createDefaultRootLocation() http.Location {
 	}
 }
 
-// isNonSlashedPrefixPath returns whether or not a path is of type Prefix and does not contain a trailing slash
+// isNonSlashedPrefixPath returns whether or not a path is of type Prefix and does not contain a trailing slash.
 func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 	return pathType == dataplane.PathTypePrefix && !strings.HasSuffix(path, "/")
 }

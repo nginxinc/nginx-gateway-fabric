@@ -81,7 +81,6 @@ func calculateReadyEndpoints(endpointSlices []discoveryV1.EndpointSlice) int {
 
 	for _, eps := range endpointSlices {
 		for _, endpoint := range eps.Endpoints {
-
 			if !endpointReady(endpoint) {
 				continue
 			}
@@ -111,7 +110,6 @@ func resolveEndpoints(
 
 	for _, eps := range filteredSlices {
 		for _, endpoint := range eps.Endpoints {
-
 			if !endpointReady(endpoint) {
 				continue
 			}
@@ -191,7 +189,6 @@ func findPort(ports []discoveryV1.EndpointPort, svcPort v1.ServicePort) int32 {
 	portName := svcPort.Name
 
 	for _, p := range ports {
-
 		if p.Port == nil {
 			return getDefaultPort(svcPort)
 		}

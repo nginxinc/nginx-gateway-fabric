@@ -38,7 +38,6 @@ func createSplitClients(backendGroups []dataplane.BackendGroup) []http.SplitClie
 	splitClients := make([]http.SplitClient, 0, numSplits)
 
 	for _, group := range backendGroups {
-
 		distributions := createSplitClientDistributions(group)
 		if distributions == nil {
 			continue
@@ -48,7 +47,6 @@ func createSplitClients(backendGroups []dataplane.BackendGroup) []http.SplitClie
 			VariableName:  convertStringToSafeVariableName(group.Name()),
 			Distributions: distributions,
 		})
-
 	}
 
 	return splitClients
@@ -82,7 +80,7 @@ func createSplitClientDistributions(group dataplane.BackendGroup) []http.SplitCl
 
 	// Iterate over all backends except the last one.
 	// The last backend will get the remaining percentage.
-	for i := 0; i < len(backends)-1; i++ {
+	for i := range len(backends) - 1 {
 		b := backends[i]
 
 		percentage := percentOf(b.Weight, totalWeight)
@@ -117,7 +115,7 @@ func getSplitClientValue(b dataplane.Backend) string {
 // The percentage is rounded to 2 decimal places using the Floor method.
 // Floor is used here in order to guarantee that the sum of all percentages does not exceed 100.
 // Ex. percentOf(2, 3) = 66.66
-// Ex. percentOf(800, 2000) = 40.00
+// Ex. percentOf(800, 2000) = 40.00.
 func percentOf(weight, totalWeight int32) float64 {
 	p := (float64(weight) * 100) / float64(totalWeight)
 	return math.Floor(p*100) / 100

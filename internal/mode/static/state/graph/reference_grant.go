@@ -80,7 +80,6 @@ func newReferenceGrantResolver(refGrants map[types.NamespacedName]*v1beta1.Refer
 	for nsname, grant := range refGrants {
 		for _, to := range grant.Spec.To {
 			for _, from := range grant.Spec.From {
-
 				toName := ""
 				if to.Name != nil {
 					toName = string(*to.Name)

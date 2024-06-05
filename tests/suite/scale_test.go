@@ -490,7 +490,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		Expect(resourceManager.WaitForPodsToBeReady(ctx, namespace)).To(Succeed())
 
-		for i := 0; i < len(objects.ScaleIterationGroups); i++ {
+		for i := range len(objects.ScaleIterationGroups) {
 			Expect(resourceManager.Apply(objects.ScaleIterationGroups[i])).To(Succeed())
 
 			var url string

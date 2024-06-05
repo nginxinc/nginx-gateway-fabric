@@ -20,7 +20,7 @@ type Updater interface {
 	Delete(objType ngftypes.ObjectType, nsname types.NamespacedName)
 }
 
-// objectStore is a store of client.Object
+// objectStore is a store of client.Object.
 type objectStore interface {
 	get(objType ngftypes.ObjectType, nsname types.NamespacedName) client.Object
 	upsert(obj client.Object)
@@ -297,7 +297,7 @@ func (s *changeTrackingUpdater) getAndResetChangedStatus() ChangeType {
 // - if no change occurred on this object, then keep the changeType as-is (could've been set by another object event)
 // - if changeType is already a ClusterStateChange, then we don't need to update the value
 // - otherwise, if we are processing an Endpoint update, then this is an EndpointsOnlyChange changeType
-// - otherwise, this is a different object, and is a ClusterStateChange changeType
+// - otherwise, this is a different object, and is a ClusterStateChange changeType.
 func (s *changeTrackingUpdater) setChangeType(obj client.Object, changed bool) {
 	if changed && s.changeType != ClusterStateChange {
 		if _, ok := obj.(*discoveryV1.EndpointSlice); ok {

@@ -33,7 +33,7 @@ type processedGateways struct {
 	Ignored map[types.NamespacedName]*v1.Gateway
 }
 
-// GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NGF
+// GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NGF.
 func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
 	winnerCnt := 0
 	if gws.Winner != nil {

@@ -121,8 +121,6 @@ func (u *Updater) writeStatuses(
 //
 // Note: this function is public because fake dependencies require us to test this function from the test package
 // to avoid import cycles.
-//
-//nolint:nilerr
 func NewRetryUpdateFunc(
 	getter controller.Getter,
 	updater K8sUpdater,

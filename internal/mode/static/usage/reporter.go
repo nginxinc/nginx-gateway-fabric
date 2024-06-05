@@ -113,8 +113,8 @@ func (r *NIMReporter) Report(ctx context.Context, data ClusterDetails) error {
 	req.Header.Add("Content-Type", "application/json")
 	username, password := r.credentials.GetCredentials()
 	if username == nil || password == nil {
-		return errors.New("username or password not set for NGINX Plus usage reporting; unable to send reports. " +
-			"Ensure that the usage Secret exists and the username and password are set.")
+		return errors.New("username or password not set for NGINX Plus usage reporting; unable to send reports." +
+			" Ensure that the usage Secret exists and the username and password are set")
 	}
 	req.SetBasicAuth(string(username), string(password))
 

@@ -8,7 +8,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics"
 )
 
-// NginxRuntimeCollector implements runtime.Collector interface and prometheus.Collector interface
+// NginxRuntimeCollector implements runtime.Collector interface and prometheus.Collector interface.
 type NginxRuntimeCollector struct {
 	// Metrics
 	reloadsTotal    prometheus.Counter
@@ -17,7 +17,7 @@ type NginxRuntimeCollector struct {
 	reloadsDuration prometheus.Histogram
 }
 
-// NewManagerMetricsCollector creates a new NginxRuntimeCollector
+// NewManagerMetricsCollector creates a new NginxRuntimeCollector.
 func NewManagerMetricsCollector(constLabels map[string]string) *NginxRuntimeCollector {
 	nc := &NginxRuntimeCollector{
 		reloadsTotal: prometheus.NewCounter(

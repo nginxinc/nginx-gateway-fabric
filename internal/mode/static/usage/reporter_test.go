@@ -55,7 +55,7 @@ func TestReport(t *testing.T) {
 			g.Expect(ok).To(BeTrue())
 			g.Expect(contentType[0]).To(Equal("application/json"))
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 		}),
 	)
 	defer server.Close()
@@ -83,7 +83,7 @@ func TestReport_ServerError(t *testing.T) {
 
 	server := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}),
 	)
 	defer server.Close()
