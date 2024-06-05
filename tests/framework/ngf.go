@@ -43,7 +43,7 @@ func InstallGatewayAPI(apiVersion string) ([]byte, error) {
 }
 
 // UninstallGatewayAPI uninstalls the specified version of the Gateway API resources.
-func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
+func UninstallGatewayAPI(apiVersion string) ([]byte, error) {
 	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
 
 	output, err := exec.Command("kubectl", "delete", "-f", apiPath).CombinedOutput()

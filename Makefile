@@ -25,6 +25,9 @@ GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
+# tools versions
+GOLANGCI_LINT_VERSION := $(shell awk '/repo:.*golangci-lint/{getline; if ($$1 == "rev:") {sub(/^v/, "", $$2); print $$2}}' $(SELF_DIR).pre-commit-config.yaml)
+
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
 NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
@@ -168,9 +171,14 @@ njs-fmt: ## Run prettier against the njs httpmatches module
 vet: ## Run go vet against code
 	go vet ./...
 
+.PHONY: check-golangci-lint
+check-golangci-lint:
+	@golangci-lint --version || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with golangci-lint. Follow the docs to install it https://golangci-lint.run/welcome/install/\n"; exit $$code)
+	@golangci-lint --version | grep -q $(GOLANGCI_LINT_VERSION) || (printf "\033[0;33mWarning\033[0m: your golangci-lint version is different from the one specified in .pre-commit-config.yaml. The recommended version is $(GOLANGCI_LINT_VERSION)\n")
+
 .PHONY: lint
-lint: ## Run golangci-lint against code
-	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
+lint: check-golangci-lint ## Run golangci-lint against code
+	golangci-lint run
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code

@@ -28,7 +28,7 @@ const (
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
 // documentation), this test is recommended to be run separate from other nfr tests.
-var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recovery"), func() {
+var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
 		"graceful-recovery/cafe-secret.yaml",
@@ -38,8 +38,10 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 
 	var ns core.Namespace
 
-	teaURL := "https://cafe.example.com/tea"
-	coffeeURL := "http://cafe.example.com/coffee"
+	baseHTTPURL := "http://cafe.example.com"
+	baseHTTPSURL := "https://cafe.example.com"
+	teaURL := baseHTTPSURL + "/tea"
+	coffeeURL := baseHTTPURL + "/coffee"
 
 	var ngfPodName string
 
@@ -56,6 +58,12 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(podNames).To(HaveLen(1))
 
 		ngfPodName = podNames[0]
+		if portFwdPort != 0 {
+			coffeeURL = fmt.Sprintf("%s:%d/coffee", baseHTTPURL, portFwdPort)
+		}
+		if portFwdHTTPSPort != 0 {
+			teaURL = fmt.Sprintf("%s:%d/tea", baseHTTPSURL, portFwdHTTPSPort)
+		}
 	})
 
 	BeforeEach(func() {
@@ -67,7 +75,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 
 		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
 
 		Eventually(
 			func() error {
@@ -101,7 +109,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 	)
 
 	if containerName != nginxContainerName {
-		// Since we have already deployed resources and ran resourceManager.WaitForAppsToBeReady(ns.Name) earlier,
+		// Since we have already deployed resources and ran resourceManager.WaitForAppsToBeReadyWithPodCount earlier,
 		// we know that the applications are ready at this point. This could only be the case if NGF has written
 		// statuses, which could only be the case if NGF has the leader lease. Since there is only one instance
 		// of NGF in this test, we can be certain that this is the correct leaseholder name.
@@ -140,7 +148,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 		Should(Succeed())
 
 	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-	Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+	Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
 
 	Eventually(
 		func() error {
@@ -191,7 +199,8 @@ func checkContainerRestart(ngfPodName, containerName string, currentRestartCount
 	}
 
 	if restartCount != currentRestartCount+1 {
-		return fmt.Errorf("expected current restart count: %d to match incremented restart count: %d", restartCount, currentRestartCount+1)
+		return fmt.Errorf("expected current restart count: %d to match incremented restart count: %d",
+			restartCount, currentRestartCount+1)
 	}
 
 	return nil
@@ -264,7 +273,11 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		Expect(line).ToNot(ContainSubstring("[alert]"), line)
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
 		if strings.Contains(line, "[error]") {
-			Expect(line).To(ContainSubstring("connect() failed (111: Connection refused)"), line)
+			expectedError1 := "connect() failed (111: Connection refused)"
+			// FIXME(salonichf5) remove this error message check
+			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
+			expectedError2 := "no live upstreams while connecting to upstream"
+			Expect(line).To(Or(ContainSubstring(expectedError1), ContainSubstring(expectedError2)))
 		}
 	}
 
@@ -274,7 +287,14 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: ngfContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
+
+	for _, line := range strings.Split(logs, "\n") {
+		if *plusEnabled && strings.Contains(line, "\"level\":\"error\"") {
+			Expect(line).To(ContainSubstring("Usage reporting must be enabled when using NGINX Plus"), line)
+		} else {
+			Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
+		}
+	}
 }
 
 func checkLeaderLeaseChange(originalLeaseName string) error {
@@ -314,7 +334,7 @@ func getContainerRestartCount(ngfPodName, containerName string) (int, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return 0, fmt.Errorf("error retriving NGF Pod: %w", err)
+		return 0, fmt.Errorf("error retrieving NGF Pod: %w", err)
 	}
 
 	var restartCount int
@@ -333,7 +353,7 @@ func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return nil, fmt.Errorf("error retriving NGF Pod: %w", err)
+		return nil, fmt.Errorf("error retrieving NGF Pod: %w", err)
 	}
 
 	b, err := resourceManager.GetFileContents("graceful-recovery/node-debugger-job.yaml")
