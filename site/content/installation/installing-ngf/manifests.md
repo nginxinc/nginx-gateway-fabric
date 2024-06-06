@@ -183,7 +183,7 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
      kubectl apply -f nginx-plus-gateway.yaml
      ```
 
-   - To upgrade the deployment from NGINX OSS to NGINX Plus, simply follow the above instructions for upgrading your Plus deployment.
+   - To upgrade the deployment from NGINX OSS to NGINX Plus, follow the above instructions for upgrading your Plus deployment.
 
     {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
