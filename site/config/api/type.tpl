@@ -2,24 +2,26 @@
 
 <h3 id="{{ anchorIDForType . }}">
     {{- .Name.Name }}
-    {{ if eq .Kind "Alias" }}(<code>{{.Underlying}}</code> alias){{ end -}}
+    {{ if eq .Kind "Alias" }}(<code>{{.Underlying}}</code> alias)</p>{{ end -}}
+    <a class="headerlink" href="#{{ anchorIDForType . }}" title="Permanent link">¶</a>
 </h3>
 {{ with (typeReferences .) }}
     <p>
         (<em>Appears on: </em>
         {{- $prev := "" -}}
         {{- range . -}}
-            {{- if $prev -}}, {{ end -}}
-            {{- $prev = . -}}
+            {{- if $prev -}},{{ end -}}
+            {{ $prev = . }}
             <a href="{{ linkForType . }}">{{ typeDisplayName . }}</a>
         {{- end -}}
         )
     </p>
 {{ end }}
 
-<div>
+
+<p>
     {{ safe (renderComments .CommentLines) }}
-</div>
+</p>
 
 {{ with (constantsOfType .) }}
 <table class="table table-bordered table-striped">

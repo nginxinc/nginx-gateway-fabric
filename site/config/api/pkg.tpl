@@ -3,7 +3,7 @@
 title: "API Reference"
 description: "NGINX Gateway API Reference"
 weight: 100
-toc: true
+toc: false
 ---
 
 {{ with .packages}}
@@ -24,15 +24,13 @@ toc: true
 
     {{ with (index .GoPackages 0 )}}
         {{ with .DocComments }}
-        <div>
+        <p>
             {{ safe (renderComments .) }}
-        </div>
+        </p>
         {{ end }}
     {{ end }}
 
-    {{- if (gt 0 (len (visibleTypes (sortedTypes .Types)))) -}}
     Resource Types:
-    {{- end -}}
     <ul>
     {{- range (visibleTypes (sortedTypes .Types)) -}}
         {{ if isExportedType . -}}

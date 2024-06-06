@@ -11,183 +11,27 @@ toc: false
 </li>
 </ul>
 <h2 id="gateway.nginx.org/v1alpha1">gateway.nginx.org/v1alpha1</h2>
-<div>
+<p>
 <p>Package v1alpha1 contains API Schema definitions for the
 gateway.nginx.org API group.</p>
-</div>
-<ul></ul>
-<h3 id="gateway.nginx.org/v1alpha1.ClientBody">ClientBody
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
 </p>
-<div>
-<p>ClientBody contains the settings for the client request body.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>maxSize</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Size">
-Size
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxSize sets the maximum allowed size of the client request body.
-If the size in a request exceeds the configured value,
-the 413 (Request Entity Too Large) error is returned to the client.
-Setting size to 0 disables checking of client request body size.
-Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size">https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>timeout</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Duration">
-Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Timeout defines a timeout for reading client request body. The timeout is set only for a period between
-two successive read operations, not for the transmission of the whole request body.
-If a client does not transmit anything within this time, the request is terminated with the
-408 (Request Time-out) error.
-Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout</a>.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
-</p>
-<div>
-<p>ClientKeepAlive defines the keep-alive settings for clients.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>requests</code><br/>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Requests sets the maximum number of requests that can be served through one keep-alive connection.
-After the maximum number of requests are made, the connection is closed. Closing connections periodically
-is necessary to free per-connection memory allocations. Therefore, using too high maximum number of requests
-is not recommended as it can lead to excessive memory usage.
-Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>time</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Duration">
-Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Time defines the maximum time during which requests can be processed through one keep-alive connection.
-After this time is reached, the connection is closed following the subsequent request processing.
-Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>timeout</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">
-ClientKeepAliveTimeout
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Timeout defines the keep-alive timeouts for clients.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>)
-</p>
-<div>
-<p>ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
-Default: Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout</a>.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>server</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Duration">
-Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Server sets the timeout during which a keep-alive client connection will stay open on the server side.
-Setting this value to 0 disables keep-alive client connections.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>header</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Duration">
-Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Header sets the timeout in the &ldquo;Keep-Alive: timeout=time&rdquo; response header field.</p>
-</td>
-</tr>
-</tbody>
-</table>
+Resource Types:
+<ul><li>
+<a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy</a>
+</li><li>
+<a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>
+</li><li>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>
+</li><li>
+<a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>
+</li></ul>
 <h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientSettingsPolicy" title="Permanent link">¶</a>
 </h3>
-<div>
+<p>
 <p>ClientSettingsPolicy is an Inherited Attached Policy. It provides a way to configure the behavior of the connection
 between the client and NGINX Gateway Fabric.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -196,6 +40,23 @@ between the client and NGINX Gateway Fabric.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>ClientSettingsPolicy</code></td>
+</tr>
 <tr>
 <td>
 <code>metadata</code><br/>
@@ -285,140 +146,12 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy</a>)
-</p>
-<div>
-<p>ClientSettingsPolicySpec defines the desired state of ClientSettingsPolicy.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>body</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.ClientBody">
-ClientBody
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Body defines the client request body settings.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>keepAlive</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">
-ClientKeepAlive
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KeepAlive defines the keep-alive settings.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>targetRef</code><br/>
-<em>
-<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
-sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
-</a>
-</em>
-</td>
-<td>
-<p>TargetRef identifies an API object to apply the policy to.
-Object must be in the same namespace as the policy.
-Support: Gateway, HTTPRoute, GRPCRoute.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.ControllerLogLevel">ControllerLogLevel
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Logging">Logging</a>)
-</p>
-<div>
-<p>ControllerLogLevel type defines the logging level for the control plane.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody><tr><td><p>&#34;debug&#34;</p></td>
-<td><p>ControllerLogLevelDebug is the debug level for control plane logging.</p>
-</td>
-</tr><tr><td><p>&#34;error&#34;</p></td>
-<td><p>ControllerLogLevelError is the error level for control plane logging.</p>
-</td>
-</tr><tr><td><p>&#34;info&#34;</p></td>
-<td><p>ControllerLogLevelInfo is the info level for control plane logging.</p>
-</td>
-</tr></tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.Duration">Duration
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout</a>, <a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>)
-</p>
-<div>
-<p>Duration is a string value representing a duration in time.
-Duration can be specified in milliseconds (ms) or seconds (s) A value without a suffix is seconds.
-Examples: 120s, 50ms.</p>
-</div>
-<h3 id="gateway.nginx.org/v1alpha1.Logging">Logging
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec</a>)
-</p>
-<div>
-<p>Logging defines logging related settings for the control plane.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>level</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.ControllerLogLevel">
-ControllerLogLevel
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Level defines the logging level.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGateway" title="Permanent link">¶</a>
 </h3>
-<div>
+<p>
 <p>NginxGateway represents the dynamic configuration for an NGINX Gateway Fabric control plane.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -427,6 +160,23 @@ ControllerLogLevel
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>NginxGateway</code></td>
+</tr>
 <tr>
 <td>
 <code>metadata</code><br/>
@@ -487,115 +237,13 @@ NginxGatewayStatus
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason
-(<code>string</code> alias)</h3>
-<div>
-<p>NginxGatewayConditionReason defines the set of reasons that explain why a
-particular NginxGateway condition type has been raised.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody><tr><td><p>&#34;Invalid&#34;</p></td>
-<td><p>NginxGatewayReasonInvalid is a reason that is used with the &ldquo;Valid&rdquo; condition when the condition is False.</p>
-</td>
-</tr><tr><td><p>&#34;Valid&#34;</p></td>
-<td><p>NginxGatewayReasonValid is a reason that is used with the &ldquo;Valid&rdquo; condition when the condition is True.</p>
-</td>
-</tr></tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionType">NginxGatewayConditionType
-(<code>string</code> alias)</h3>
-<div>
-<p>NginxGatewayConditionType is a type of condition associated with an
-NginxGateway. This type should be used with the NginxGatewayStatus.Conditions field.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody><tr><td><p>&#34;Valid&#34;</p></td>
-<td><p>NginxGatewayConditionValid is a condition that is true when the NginxGateway
-configuration is syntactically and semantically valid.</p>
-</td>
-</tr></tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
-</p>
-<div>
-<p>NginxGatewaySpec defines the desired state of the NginxGateway.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>logging</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Logging">
-Logging
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Logging defines logging related settings for the control plane.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayStatus">NginxGatewayStatus
-</h3>
-<p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
-</p>
-<div>
-<p>NginxGatewayStatus defines the state of the NginxGateway.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>conditions</code><br/>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxProxy" title="Permanent link">¶</a>
 </h3>
-<div>
+<p>
 <p>NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
 to configure global settings for all Gateways defined from the GatewayClass.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -604,6 +252,23 @@ to configure global settings for all Gateways defined from the GatewayClass.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>NginxProxy</code></td>
+</tr>
 <tr>
 <td>
 <code>metadata</code><br/>
@@ -664,58 +329,14 @@ Default is false, meaning http2 will be enabled for all servers.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec
+<h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ObservabilityPolicy" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>)
-</p>
-<div>
-<p>NginxProxySpec defines the desired state of the NginxProxy.</p>
-</div>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>telemetry</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.Telemetry">
-Telemetry
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Telemetry specifies the OpenTelemetry configuration.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>disableHTTP2</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DisableHTTP2 defines if http2 should be disabled for all servers.
-Default is false, meaning http2 will be enabled for all servers.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy
-</h3>
-<div>
 <p>ObservabilityPolicy is a Direct Attached Policy. It provides a way to configure observability settings for
 the NGINX Gateway Fabric data plane. Used in conjunction with the NginxProxy CRD that is attached to the
 GatewayClass parametersRef.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -724,6 +345,23 @@ GatewayClass parametersRef.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>ObservabilityPolicy</code></td>
+</tr>
 <tr>
 <td>
 <code>metadata</code><br/>
@@ -799,14 +437,484 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec
+<h3 id="gateway.nginx.org/v1alpha1.ClientBody">ClientBody
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientBody" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
 </p>
-<div>
+<p>
+<p>ClientBody contains the settings for the client request body.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxSize</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Size">
+Size
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxSize sets the maximum allowed size of the client request body.
+If the size in a request exceeds the configured value,
+the 413 (Request Entity Too Large) error is returned to the client.
+Setting size to 0 disables checking of client request body size.
+Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size">https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Timeout defines a timeout for reading client request body. The timeout is set only for a period between
+two successive read operations, not for the transmission of the whole request body.
+If a client does not transmit anything within this time, the request is terminated with the
+408 (Request Time-out) error.
+Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientKeepAlive" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
+</p>
+<p>
+<p>ClientKeepAlive defines the keep-alive settings for clients.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>requests</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests sets the maximum number of requests that can be served through one keep-alive connection.
+After the maximum number of requests are made, the connection is closed. Closing connections periodically
+is necessary to free per-connection memory allocations. Therefore, using too high maximum number of requests
+is not recommended as it can lead to excessive memory usage.
+Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>time</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Time defines the maximum time during which requests can be processed through one keep-alive connection.
+After this time is reached, the connection is closed following the subsequent request processing.
+Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">
+ClientKeepAliveTimeout
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Timeout defines the keep-alive timeouts for clients.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientKeepAliveTimeout" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>)
+</p>
+<p>
+<p>ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
+Default: Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout</a>.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>server</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Server sets the timeout during which a keep-alive client connection will stay open on the server side.
+Setting this value to 0 disables keep-alive client connections.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>header</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Header sets the timeout in the &ldquo;Keep-Alive: timeout=time&rdquo; response header field.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientSettingsPolicySpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy</a>)
+</p>
+<p>
+<p>ClientSettingsPolicySpec defines the desired state of ClientSettingsPolicy.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>body</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.ClientBody">
+ClientBody
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Body defines the client request body settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keepAlive</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">
+ClientKeepAlive
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KeepAlive defines the keep-alive settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRef identifies an API object to apply the policy to.
+Object must be in the same namespace as the policy.
+Support: Gateway, HTTPRoute, GRPCRoute.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.ControllerLogLevel">ControllerLogLevel
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ControllerLogLevel" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Logging">Logging</a>)
+</p>
+<p>
+<p>ControllerLogLevel type defines the logging level for the control plane.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;debug&#34;</p></td>
+<td><p>ControllerLogLevelDebug is the debug level for control plane logging.</p>
+</td>
+</tr><tr><td><p>&#34;error&#34;</p></td>
+<td><p>ControllerLogLevelError is the error level for control plane logging.</p>
+</td>
+</tr><tr><td><p>&#34;info&#34;</p></td>
+<td><p>ControllerLogLevelInfo is the info level for control plane logging.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.Duration">Duration
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Duration" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>,
+<a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>,
+<a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout</a>,
+<a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>)
+</p>
+<p>
+<p>Duration is a string value representing a duration in time.
+Duration can be specified in milliseconds (ms) or seconds (s) A value without a suffix is seconds.
+Examples: 120s, 50ms.</p>
+</p>
+<h3 id="gateway.nginx.org/v1alpha1.Logging">Logging
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Logging" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec</a>)
+</p>
+<p>
+<p>Logging defines logging related settings for the control plane.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>level</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.ControllerLogLevel">
+ControllerLogLevel
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Level defines the logging level.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewayConditionReason" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>NginxGatewayConditionReason defines the set of reasons that explain why a
+particular NginxGateway condition type has been raised.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;Invalid&#34;</p></td>
+<td><p>NginxGatewayReasonInvalid is a reason that is used with the &ldquo;Valid&rdquo; condition when the condition is False.</p>
+</td>
+</tr><tr><td><p>&#34;Valid&#34;</p></td>
+<td><p>NginxGatewayReasonValid is a reason that is used with the &ldquo;Valid&rdquo; condition when the condition is True.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionType">NginxGatewayConditionType
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewayConditionType" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>NginxGatewayConditionType is a type of condition associated with an
+NginxGateway. This type should be used with the NginxGatewayStatus.Conditions field.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;Valid&#34;</p></td>
+<td><p>NginxGatewayConditionValid is a condition that is true when the NginxGateway
+configuration is syntactically and semantically valid.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewaySpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
+</p>
+<p>
+<p>NginxGatewaySpec defines the desired state of the NginxGateway.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>logging</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Logging">
+Logging
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging defines logging related settings for the control plane.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxGatewayStatus">NginxGatewayStatus
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewayStatus" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
+</p>
+<p>
+<p>NginxGatewayStatus defines the state of the NginxGateway.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>conditions</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#condition-v1-meta">
+[]Kubernetes meta/v1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxProxySpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>)
+</p>
+<p>
+<p>NginxProxySpec defines the desired state of the NginxProxy.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>telemetry</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Telemetry">
+Telemetry
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Telemetry specifies the OpenTelemetry configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>disableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHTTP2 defines if http2 should be disabled for all servers.
+Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ObservabilityPolicySpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>)
+</p>
+<p>
 <p>ObservabilityPolicySpec defines the desired state of the ObservabilityPolicy.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -847,23 +955,28 @@ Support: HTTPRoute</p>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.Size">Size
-(<code>string</code> alias)</h3>
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Size" title="Permanent link">¶</a>
+</h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>)
 </p>
-<div>
+<p>
 <p>Size is a string value representing a size. Size can be specified in bytes, kilobytes (k), megabytes (m),
 or gigabytes (g).
 Examples: 1024, 8k, 1m.</p>
-</div>
+</p>
 <h3 id="gateway.nginx.org/v1alpha1.SpanAttribute">SpanAttribute
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SpanAttribute" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>, <a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>,
+<a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
-<div>
+<p>
 <p>SpanAttribute is a key value pair to be added to a tracing span.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -899,13 +1012,15 @@ Format: must have all &lsquo;&ldquo;&rsquo; escaped and must not contain any &ls
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.Telemetry">Telemetry
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Telemetry" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
 </p>
-<div>
+<p>
 <p>Telemetry specifies the OpenTelemetry configuration.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -959,13 +1074,15 @@ then the default becomes a prefix to that value.</p>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.TelemetryExporter" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>)
 </p>
-<div>
+<p>
 <p>TelemetryExporter specifies OpenTelemetry export parameters.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -1030,13 +1147,15 @@ Format: alphanumeric hostname with optional http scheme and optional port.</p>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.TraceContext">TraceContext
-(<code>string</code> alias)</h3>
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.TraceContext" title="Permanent link">¶</a>
+</h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
-<div>
+<p>
 <p>TraceContext specifies how to propagate traceparent/tracestate headers.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -1060,13 +1179,15 @@ of a trace and the parent span are inherited from the incoming request.</p>
 </tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.TraceStrategy">TraceStrategy
-(<code>string</code> alias)</h3>
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.TraceStrategy" title="Permanent link">¶</a>
+</h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
-<div>
+<p>
 <p>TraceStrategy defines the tracing strategy.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>
@@ -1083,13 +1204,15 @@ of a trace and the parent span are inherited from the incoming request.</p>
 </tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.Tracing">Tracing
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Tracing" title="Permanent link">¶</a>
 </h3>
 <p>
-(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec</a>)
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec</a>)
 </p>
-<div>
+<p>
 <p>Tracing allows for enabling and configuring OpenTelemetry tracing.</p>
-</div>
+</p>
 <table class="table table-bordered table-striped">
 <thead>
 <tr>

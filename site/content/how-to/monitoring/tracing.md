@@ -70,6 +70,8 @@ To enable tracing, you must configure two resources:
 
 - `ObservabilityPolicy`: This resource is a [Direct PolicyAttachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that targets HTTPRoutes or GRPCRoutes. It is created by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/) and enables tracing for a specific route or routes. It requires the `NginxProxy` resource to exist in order to complete the tracing configuration.
 
+Foe all the possible configuration options for these resources, see the [API reference]({{< relref "reference/api.md" >}}).
+
 ### Install NGINX Gateway Fabric with global tracing configuration
 
 {{< note >}}Ensure that you [install the Gateway API resources]({{< relref "installation/installing-ngf/helm.md#installing-the-gateway-api-resources" >}}).{{< /note >}}
