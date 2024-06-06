@@ -30,7 +30,9 @@ toc: true
         {{ end }}
     {{ end }}
 
+    {{- if (gt 0 (len (visibleTypes (sortedTypes .Types)))) -}}
     Resource Types:
+    {{- end -}}
     <ul>
     {{- range (visibleTypes (sortedTypes .Types)) -}}
         {{ if isExportedType . -}}

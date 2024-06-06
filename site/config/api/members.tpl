@@ -36,7 +36,7 @@
     {{ if or (eq (fieldName .) "spec") }}
         <br/>
         <br/>
-        <table>
+        <table class="table table-bordered table-striped">
             {{ template "members" .Type }}
         </table>
     {{ end }}

@@ -2,7 +2,7 @@
 title: "API Reference"
 description: "NGINX Gateway API Reference"
 weight: 100
-toc: true
+toc: false
 ---
 <p>Packages:</p>
 <ul>
@@ -15,17 +15,16 @@ toc: true
 <p>Package v1alpha1 contains API Schema definitions for the
 gateway.nginx.org API group.</p>
 </div>
-Resource Types:
 <ul></ul>
 <h3 id="gateway.nginx.org/v1alpha1.ClientBody">ClientBody
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
 </p>
 <div>
 <p>ClientBody contains the settings for the client request body.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -74,12 +73,12 @@ Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#clien
 <h3 id="gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec</a>)
 </p>
 <div>
 <p>ClientKeepAlive defines the keep-alive settings for clients.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -138,13 +137,13 @@ ClientKeepAliveTimeout
 <h3 id="gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>)
 </p>
 <div>
 <p>ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
 Default: Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout</a>.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -189,7 +188,7 @@ Duration
 <p>ClientSettingsPolicy is an Inherited Attached Policy. It provides a way to configure the behavior of the connection
 between the client and NGINX Gateway Fabric.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -224,22 +223,7 @@ ClientSettingsPolicySpec
 <p>Spec defines the desired state of the ClientSettingsPolicy.</p>
 <br/>
 <br/>
-<table>
-<tr>
-<td>
-<code>targetRef</code><br/>
-<em>
-<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#PolicyTargetReference">
-sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
-</a>
-</em>
-</td>
-<td>
-<p>TargetRef identifies an API object to apply the policy to.
-Object must be in the same namespace as the policy.</p>
-<p>Support: Gateway, HTTPRoute</p>
-</td>
-</tr>
+<table class="table table-bordered table-striped">
 <tr>
 <td>
 <code>body</code><br/>
@@ -266,6 +250,21 @@ ClientKeepAlive
 <td>
 <em>(Optional)</em>
 <p>KeepAlive defines the keep-alive settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRef identifies an API object to apply the policy to.
+Object must be in the same namespace as the policy.
+Support: Gateway, HTTPRoute, GRPCRoute.</p>
 </td>
 </tr>
 </table>
@@ -289,12 +288,12 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 <h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicySpec">ClientSettingsPolicySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy</a>)
 </p>
 <div>
 <p>ClientSettingsPolicySpec defines the desired state of ClientSettingsPolicy.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -302,21 +301,6 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>targetRef</code><br/>
-<em>
-<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#PolicyTargetReference">
-sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
-</a>
-</em>
-</td>
-<td>
-<p>TargetRef identifies an API object to apply the policy to.
-Object must be in the same namespace as the policy.</p>
-<p>Support: Gateway, HTTPRoute</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>body</code><br/>
@@ -345,17 +329,32 @@ ClientKeepAlive
 <p>KeepAlive defines the keep-alive settings.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>targetRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRef identifies an API object to apply the policy to.
+Object must be in the same namespace as the policy.
+Support: Gateway, HTTPRoute, GRPCRoute.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.ControllerLogLevel">ControllerLogLevel
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.Logging">Logging</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Logging">Logging</a>)
 </p>
 <div>
 <p>ControllerLogLevel type defines the logging level for the control plane.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Value</th>
@@ -376,7 +375,7 @@ ClientKeepAlive
 <h3 id="gateway.nginx.org/v1alpha1.Duration">Duration
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout</a>, <a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>, <a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout</a>, <a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>)
 </p>
 <div>
 <p>Duration is a string value representing a duration in time.
@@ -386,12 +385,12 @@ Examples: 120s, 50ms.</p>
 <h3 id="gateway.nginx.org/v1alpha1.Logging">Logging
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec</a>)
 </p>
 <div>
 <p>Logging defines logging related settings for the control plane.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -420,7 +419,7 @@ ControllerLogLevel
 <div>
 <p>NginxGateway represents the dynamic configuration for an NGINX Gateway Fabric control plane.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -455,7 +454,7 @@ NginxGatewaySpec
 <p>NginxGatewaySpec defines the desired state of the NginxGateway.</p>
 <br/>
 <br/>
-<table>
+<table class="table table-bordered table-striped">
 <tr>
 <td>
 <code>logging</code><br/>
@@ -494,7 +493,7 @@ NginxGatewayStatus
 <p>NginxGatewayConditionReason defines the set of reasons that explain why a
 particular NginxGateway condition type has been raised.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Value</th>
@@ -515,7 +514,7 @@ particular NginxGateway condition type has been raised.</p>
 <p>NginxGatewayConditionType is a type of condition associated with an
 NginxGateway. This type should be used with the NginxGatewayStatus.Conditions field.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Value</th>
@@ -531,12 +530,12 @@ configuration is syntactically and semantically valid.</p>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewaySpec">NginxGatewaySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
 </p>
 <div>
 <p>NginxGatewaySpec defines the desired state of the NginxGateway.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -563,12 +562,12 @@ Logging
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewayStatus">NginxGatewayStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxGateway">NginxGateway</a>)
 </p>
 <div>
 <p>NginxGatewayStatus defines the state of the NginxGateway.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -597,7 +596,7 @@ Logging
 <p>NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
 to configure global settings for all Gateways defined from the GatewayClass.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -632,7 +631,7 @@ NginxProxySpec
 <p>Spec defines the desired state of the NginxProxy.</p>
 <br/>
 <br/>
-<table>
+<table class="table table-bordered table-striped">
 <tr>
 <td>
 <code>telemetry</code><br/>
@@ -647,6 +646,19 @@ Telemetry
 <p>Telemetry specifies the OpenTelemetry configuration.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>disableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHTTP2 defines if http2 should be disabled for all servers.
+Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -655,12 +667,12 @@ Telemetry
 <h3 id="gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>)
 </p>
 <div>
 <p>NginxProxySpec defines the desired state of the NginxProxy.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -682,6 +694,19 @@ Telemetry
 <p>Telemetry specifies the OpenTelemetry configuration.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>disableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHTTP2 defines if http2 should be disabled for all servers.
+Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy
@@ -691,7 +716,7 @@ Telemetry
 the NGINX Gateway Fabric data plane. Used in conjunction with the NginxProxy CRD that is attached to the
 GatewayClass parametersRef.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -726,22 +751,7 @@ ObservabilityPolicySpec
 <p>Spec defines the desired state of the ObservabilityPolicy.</p>
 <br/>
 <br/>
-<table>
-<tr>
-<td>
-<code>targetRef</code><br/>
-<em>
-<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#PolicyTargetReference">
-sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
-</a>
-</em>
-</td>
-<td>
-<p>TargetRef identifies an API object to apply the policy to.
-Object must be in the same namespace as the policy.</p>
-<p>Support: HTTPRoute</p>
-</td>
-</tr>
+<table class="table table-bordered table-striped">
 <tr>
 <td>
 <code>tracing</code><br/>
@@ -754,6 +764,21 @@ Tracing
 <td>
 <em>(Optional)</em>
 <p>Tracing allows for enabling and configuring tracing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetRefs</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+[]sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRefs identifies the API object(s) to apply the policy to.
+Objects must be in the same namespace as the policy.
+Support: HTTPRoute</p>
 </td>
 </tr>
 </table>
@@ -777,12 +802,12 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 <h3 id="gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>)
 </p>
 <div>
 <p>ObservabilityPolicySpec defines the desired state of the ObservabilityPolicy.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -790,21 +815,6 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>targetRef</code><br/>
-<em>
-<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#PolicyTargetReference">
-sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
-</a>
-</em>
-</td>
-<td>
-<p>TargetRef identifies an API object to apply the policy to.
-Object must be in the same namespace as the policy.</p>
-<p>Support: HTTPRoute</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>tracing</code><br/>
@@ -819,12 +829,27 @@ Tracing
 <p>Tracing allows for enabling and configuring tracing.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>targetRefs</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+[]sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRefs identifies the API object(s) to apply the policy to.
+Objects must be in the same namespace as the policy.
+Support: HTTPRoute</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.Size">Size
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>)
 </p>
 <div>
 <p>Size is a string value representing a size. Size can be specified in bytes, kilobytes (k), megabytes (m),
@@ -834,12 +859,12 @@ Examples: 1024, 8k, 1m.</p>
 <h3 id="gateway.nginx.org/v1alpha1.SpanAttribute">SpanAttribute
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>, <a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>, <a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
 <div>
 <p>SpanAttribute is a key value pair to be added to a tracing span.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -876,12 +901,12 @@ Format: must have all &lsquo;&ldquo;&rsquo; escaped and must not contain any &ls
 <h3 id="gateway.nginx.org/v1alpha1.Telemetry">Telemetry
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
 </p>
 <div>
 <p>Telemetry specifies the OpenTelemetry configuration.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -936,12 +961,12 @@ then the default becomes a prefix to that value.</p>
 <h3 id="gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>)
 </p>
 <div>
 <p>TelemetryExporter specifies OpenTelemetry export parameters.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -1007,12 +1032,12 @@ Format: alphanumeric hostname with optional http scheme and optional port.</p>
 <h3 id="gateway.nginx.org/v1alpha1.TraceContext">TraceContext
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
 <div>
 <p>TraceContext specifies how to propagate traceparent/tracestate headers.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Value</th>
@@ -1037,12 +1062,12 @@ of a trace and the parent span are inherited from the incoming request.</p>
 <h3 id="gateway.nginx.org/v1alpha1.TraceStrategy">TraceStrategy
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
 </p>
 <div>
 <p>TraceStrategy defines the tracing strategy.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Value</th>
@@ -1060,12 +1085,12 @@ of a trace and the parent span are inherited from the incoming request.</p>
 <h3 id="gateway.nginx.org/v1alpha1.Tracing">Tracing
 </h3>
 <p>
-(<em>Appears on:</em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec</a>)
+(<em>Appears on: </em><a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicySpec">ObservabilityPolicySpec</a>)
 </p>
 <div>
 <p>Tracing allows for enabling and configuring OpenTelemetry tracing.</p>
 </div>
-<table>
+<table class="table table-bordered table-striped">
 <thead>
 <tr>
 <th>Field</th>
@@ -1096,7 +1121,8 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
-By default, 100% of http requests are traced. Not applicable for parent-based tracing.</p>
+By default, 100% of http requests are traced. Not applicable for parent-based tracing.
+If ratio is set to 0, tracing is disabled.</p>
 </td>
 </tr>
 <tr>

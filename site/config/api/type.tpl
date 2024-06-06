@@ -6,7 +6,7 @@
 </h3>
 {{ with (typeReferences .) }}
     <p>
-        (<em>Appears on:</em>
+        (<em>Appears on: </em>
         {{- $prev := "" -}}
         {{- range . -}}
             {{- if $prev -}}, {{ end -}}
@@ -22,7 +22,7 @@
 </div>
 
 {{ with (constantsOfType .) }}
-<table>
+<table class="table table-bordered table-striped">
     <thead>
         <tr>
             <th>Value</th>
@@ -46,7 +46,7 @@
 {{ end }}
 
 {{ if .Members }}
-<table>
+<table class="table table-bordered table-striped">
     <thead>
         <tr>
             <th>Field</th>
