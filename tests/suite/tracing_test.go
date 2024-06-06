@@ -23,7 +23,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Tracing", Label("functional", "tracing"), func() {
+// This test can be flaky when waiting to see traces show up in the collector logs.
+// Sometimes they get there right away, sometimes it takes 30 seconds. Retries were
+// added to attempt to mitigate the issue, but it didn't fix it 100%
+var _ = Describe("Tracing", FlakeAttempts(2), Label("functional", "tracing"), func() {
 	var (
 		files = []string{
 			"hello-world/apps.yaml",
