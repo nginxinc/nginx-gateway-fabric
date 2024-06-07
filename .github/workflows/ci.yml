@@ -75,6 +75,9 @@ jobs:
       - name: Check if generated manifests are up to date
         run: make generate-manifests && git diff --exit-code
 
+      - name: Check if helm docs are up to date
+        run: make helm-docs && git diff --exit-code
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-22.04
@@ -164,7 +167,7 @@ jobs:
         if: github.ref_type == 'tag'
 
       - name: Build binary
-        uses: goreleaser/goreleaser-action@5742e2a039330cbb23ebf35f046f814d4c6ff811 # v5.1.0
+        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           version: latest
           args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
