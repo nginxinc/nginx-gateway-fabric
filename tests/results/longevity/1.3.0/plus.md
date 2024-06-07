@@ -63,7 +63,7 @@ failed to start control loop: leader election lost
 failed to start control loop: error setting initial control plane configuration: NginxGateway nginx-gateway/ngf-longevity-config not found: failed to get API group resources: unable to retrieve the complete list of server APIs: gateway.nginx.org/v1alpha1: Get "https://10.61.192.1:443/apis/gateway.nginx.org/v1alpha1?timeout=10s": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
 ```
 
-Those errors correspond to loosing connectivity with the Kubernetes API and NGF container restarts (5). Such logs
+Those errors correspond to losing connectivity with the Kubernetes API and NGF container restarts (5). Such logs
 are expected in that case.
 
 nginx:
