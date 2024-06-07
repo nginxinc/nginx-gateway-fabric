@@ -20,7 +20,7 @@ NGINX use cases. To allow them to implement those use cases, we need to bring a 
 - Most of the configuration complexity should fall onto the cluster operator persona, not the application developer.
 - Provide security controls to prevent application developers from injecting arbitrary NGINX configuration.
 - Ensure adequate configuration validation to prevent NGINX outages due to invalid configuration.
-- Don't require building a custom NGF binary (source code modifications).
+- Advanced NGINX extensions can be used without source code modification.
 
 ## Non-Goals
 
