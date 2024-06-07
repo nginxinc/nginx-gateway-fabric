@@ -1,5 +1,5 @@
 ---
-title: "Custom Policies"
+title: "Custom policies"
 weight: 600
 toc: true
 docs: "DOCS-000"
@@ -8,7 +8,7 @@ docs: "DOCS-000"
 ## Overview
 
 Custom policies are NGINX Gateway Fabric CRDs (Custom Resource Definitions) that allow users to configure NGINX data plane features that are unavailable in the Gateway API.
-These custom policies follow the Gateway API's pattern of [Policy Attachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/), which allows users to extend the Gateway API functionality by creating implementation-specific policies and attaching them to Kubernetes objects such as HTTPRoutes, Gateways, and Services.
+These custom policies follow the Gateway API [Policy Attachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) pattern, which allows users to extend the Gateway API functionality by creating implementation-specific policies and attaching them to Kubernetes objects such as HTTPRoutes, Gateways, and Services.
 
 Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ([Direct Policy Attachment](#direct-policy-attachment)) or objects in a hierarchy ([Inherited Policy Attachment](#inherited-policy-attachment)).
 The following table summarizes NGINX Gateway Fabric custom policies:
@@ -20,9 +20,11 @@ The following table summarizes NGINX Gateway Fabric custom policies:
 | ClientSettingsPolicy                                                 | Configure connection behavior between client and NGINX  | Inherited       | Gateway, HTTPRoute, GRPCRoute | No                            | Yes       | v1alpha1    |
 | [ObservabilityPolicy]({{<relref "/how-to/monitoring/tracing.md" >}}) | Define settings related to tracing, metrics, or logging | Direct          | HTTPRoute, GRPCRoute          | Yes                           | No        | v1alpha1    |
 
+{{</bootstrap-table>}}
+
 
 {{< important >}}
-NGINX Gateway Fabric policies do not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. This will be addressed in a future release.
+NGINX Gateway Fabric policies do not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
 {{< /important >}}
 
 ## Terminology
@@ -34,19 +36,19 @@ NGINX Gateway Fabric policies do not work with [HTTPRoute matches](https://gatew
 
 ## Direct Policy Attachment
 
-A Direct Policy Attachment is a policy that references a single object -- such as a Gateway or HTTPRoute. It is tightly bound to one instance of a particular Kind within a single Namespace or an instance of a single Kind at the cluster-scope. It affects _only_ the object specified in its TargetRef.
+A Direct Policy Attachment is a policy that references a single object, such as a Gateway or HTTPRoute. It is tightly bound to one instance of a particular Kind within a single Namespace or an instance of a single Kind at the cluster-scope. It affects _only_ the object specified in its TargetRef.
 
 This diagram uses a fictional retry policy to show how Direct Policy Attachment works:
 
-{{<img src="img/direct-policy-attachment.png" alt="Direct Policy Attachment">}}
+{{<img src="img/direct-policy-attachment.png" alt="">}}
 
 The policy targets the HTTPRoute `baz` and sets `retries` to `3` and `timeout` to `60s`. Since this policy is a Direct Policy Attachment, its settings are only applied to the `baz` HTTPRoute.
 
 ## Inherited Policy Attachment
 
-Inherited Policy Attachment is designed to allow settings to flow down a hierarchy. The hierarchy for Gateway API resources looks like this:
+Inherited Policy Attachment allows settings to cascade down a hierarchy. The hierarchy for Gateway API resources looks like this:
 
-{{<img src="img/hierarchy.png" alt="Hierarchy">}}
+{{<img src="img/hierarchy.png" alt="">}}
 
 Settings defined in a policy attached to an object in this hierarchy may be inherited by the resources below it. For example, the settings defined in a policy attached to a Gateway may be inherited by all the HTTPRoutes attached to that Gateway.
 
@@ -57,7 +59,7 @@ Default values are given precedence from the bottom up. Therefore, a policy sett
 
 The following diagram shows how Inherited Policies work in NGINX Gateway Fabric using a fictional retry policy:
 
-{{<img src="img/inherited-policy-attachment.png" alt="Inherited Policy Attachment">}}
+{{<img src="img/inherited-policy-attachment.png" alt="">}}
 
 There are three policies defined:
 
@@ -113,7 +115,7 @@ timeout: 60s
 However, if both policies had the `retries` field set, then the policies cannot be merged. In this case, NGINX Gateway Fabric will choose which policy to configure based on the following criteria (continuing on ties):
 
 1. The oldest policy by creation timestamp
-2. The policy appearing first in alphabetical order by "{namespace}/{name}"
+1. The policy appearing first in alphabetical order by "{namespace}/{name}"
 
 If a policy conflicts with a configured policy, NGINX Gateway Fabric will set the policy `Accepted` status to false with a reason of `Conflicted`. See [Policy Status](#policy-status) for more details.
 
@@ -132,7 +134,6 @@ NGINX Gateway Fabric sets the [PolicyStatus](https://gateway-api.sigs.k8s.io/ref
     - `Accepted/False/Conflicted`: the policy is not accepted because it conflicts with another policy.
     - `Accepted/False/TargetNotFound`: the policy is not accepted because it targets a resource that is invalid or does not exist.
     - `Accepted/False/NginxProxyNotSet`: the policy is not accepted because it relies on the NginxProxy configuration which is missing or invalid.
-
 
 To check the status of a policy, use `kubectl describe`. This example checks the status of the `foo` ObservabilityPolicy, which is accepted:
 
