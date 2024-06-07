@@ -1,5 +1,5 @@
 # variables that should not be overridden by the user
-VERSION = edge
+VERSION = 1.3.0
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))

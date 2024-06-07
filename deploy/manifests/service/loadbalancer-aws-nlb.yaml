@@ -8,7 +8,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.3.0"
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
 spec:

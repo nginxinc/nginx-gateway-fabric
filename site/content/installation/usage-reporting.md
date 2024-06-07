@@ -18,7 +18,7 @@ Usage Reporting needs to be configured when deploying NGINX Gateway Fabric.
 
 To enable Usage Reporting, you must have the following:
 
-- NGINX Gateway Fabric 1.2.0 or later
+- NGINX Gateway Fabric 1.3.0 or later
 - [NGINX Instance Manager 2.11](https://docs.nginx.com/nginx-management-suite) or later
 
 In addition to the software requirements, you will need:

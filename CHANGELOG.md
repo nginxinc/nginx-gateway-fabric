@@ -4,6 +4,63 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.3.0
+
+* Update minimum k8s version to 1.25 by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/1885
+* Support NginxProxy CRD and global tracing settings by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/1870
+* Remove zone size for invalid backend ref by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1931
+* Add directive for SSL Server block by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1934
+* Add support for ResponseHeaderModifier for HTTPRouteRule objects by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1880
+* Fix rbac ServiceAccount imagePullSecrets template by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1953
+* Add request header filter support for gRPC by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1909
+* Add field to NginxProxy to allow disabling HTTP2 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1925
+* Support response header filter for GRPCRoute by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1983
+* Upgrade Gateway API to v1.1.0 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1975
+* Collect backendTLSPolicy and GRPCRoute Count by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1954
+* Implement ClientSettingsPolicy by @kate-osborn in https://github.com/nginxinc/nginx-gateway-fabric/pull/1940
+* Allow NGF to run on Openshift  by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1976
+* Bump NGINX Plus to R32 by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/2057
+* Support tracing via the ObservabilityPolicy by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2004
+
+%%DATE%%
+
+FEATURES:
+
+-
+
+BUG FIXES:
+
+-
+
+DOCUMENTATION:
+
+-
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.3.0
+-
+
+UPGRADE:
+
+-
+
+KNOWN ISSUES:
+
+-
+
+COMPATIBILITY:
+
+- The Gateway API version: ``
+- NGINX version: ``
+- NGINX Plus version: ``
+- Kubernetes version: ``
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.3.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.3.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.3.0`
 ## Release 1.2.0
 
 *March 21, 2024*
