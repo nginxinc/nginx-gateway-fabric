@@ -43,7 +43,7 @@ The following cluster will be sufficient:
 
    ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
-      --create-namespace --wait -n nginx-gateway --set nginxGateway.config.logging.level=debug
+      --create-namespace --wait -n nginx-gateway --set nginxGateway.productTelemetry.enable=false
    ```
 
 4. Run tests:
@@ -67,7 +67,7 @@ The following cluster will be sufficient:
      Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
 
      ```console
-     GW_POD=$(k get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
+     GW_POD=$(kubectl get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
      kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
      ```
 
@@ -105,7 +105,7 @@ The following cluster will be sufficient:
    2. Run the provided script with the required number of resources,
       e.g. `cd scripts && bash create-resources-routes-last.sh 30`. The script will deploy backend apps and services,
       wait 60 seconds for them to be ready, and deploy 1 Gateway, 1 Secret, 1 RefGrant, and HTTPRoutes at the same time.
-   3. Measure TimeToReadyTotal as the time it takes from NGF receiving the first HTTPRoute resource update -> final
+   3. Measure TimeToReadyTotal as the time it takes from NGF receiving the first HTTPRoute resource update (logs will say "reconciling") -> final
       config written and NGINX reloaded. Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
 
 ### Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway
