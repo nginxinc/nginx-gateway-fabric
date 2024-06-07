@@ -37,7 +37,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 
 ##### For NGINX Plus
 
-{{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
 {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
 
@@ -182,6 +182,20 @@ To upgrade the CRDs, take the following steps:
    ```
 
    If needed, replace `ngf` with your chosen release name.
+
+## How to upgrade from NGINX OSS to NGINX Plus
+
+- To upgrade from NGINX OSS to NGINX Plus, update the Helm command to include the necessary values for Plus:
+
+  {{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+
+  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
+
+  ```shell
+  helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
+  ```
+
+  If needed, replace `ngf` with your chosen release name.
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 

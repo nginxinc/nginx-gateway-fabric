@@ -167,11 +167,25 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
 
-   - To upgrade the deployment, run:
+   - To upgrade your OSS deployment, run:
 
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-gateway.yaml
      ```
+
+   - To upgrade your Plus deployment:
+
+     Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+
+     Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
+
+     ```shell
+     kubectl apply -f nginx-plus-gateway.yaml
+     ```
+
+   - To upgrade the deployment from NGINX OSS to NGINX Plus, follow the above instructions for upgrading your Plus deployment.
+
+    {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
