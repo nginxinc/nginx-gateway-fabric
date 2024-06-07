@@ -32,6 +32,8 @@ This guide will show you how to use the `ClientSettingsPolicy` API to configure 
 The `ClientSettingsPolicy` API does not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
 {{< /important >}}
 
+For all the possible configuration options for `ClientSettingsPolicy`, see the [API reference]({{< relref "reference/api.md" >}}).
+
 ## Setup
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
