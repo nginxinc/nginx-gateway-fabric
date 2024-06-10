@@ -11,16 +11,16 @@ docs: "DOCS-1412"
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource                              | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
 | ------------------------------------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
-| [GatewayClass](#gatewayclass)         | Supported           | Not supported          | Not supported                         | v1          |
-| [Gateway](#gateway)                   | Supported           | Not supported          | Not supported                         | v1          |
+| [GatewayClass](#gatewayclass)         | Supported           | Not supported          | Supported                             | v1          |
+| [Gateway](#gateway)                   | Supported           | Partially supported    | Not supported                         | v1          |
 | [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
 | [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
-| [GRPCRoute](#grpcroute)               | Partially Supported | Not supported          | Not supported                         | v1          |
+| [GRPCRoute](#grpcroute)               | Partially Supported | Partially supported    | Not supported                         | v1          |
 | [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha3    |
-| [Custom policies](#custom-policies)   | Not supported       | N/A                    | Not supported                         | N/A         |
+| [Custom policies](#custom-policies)   | N/A                 | N/A                    | Supported                             | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -48,9 +48,9 @@ For a description of each field, visit the [Gateway API documentation](https://g
 ### GatewayClass
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource     | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-| ------------ | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| GatewayClass | Supported          | Not supported          | Not supported                         | v1          |
+| Resource     | Core Support Level | Extended Support Level | Implementation-Specific Support Level| API Version |
+| ------------ | ------------------ | ---------------------- | ----------------------------------- | ----------- |
+| GatewayClass | Supported          | Not supported          | Supported                           | v1          |
 {{< /bootstrap-table >}}
 
 NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
@@ -76,9 +76,9 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
 ### Gateway
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| Gateway  | Supported          | Not supported          | Not supported                         | v1          |
+| Resource | Core Support Level | Extended Support Level       | Implementation-Specific Support Level  | API Version |
+| -------- | ------------------ | -----------------------------| ------------------------------------- | ----------- |
+| Gateway  | Supported          | Partially supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 NGINX Gateway Fabric supports a single Gateway resource. The Gateway resource must reference NGINX Gateway Fabric's corresponding GatewayClass.
@@ -185,9 +185,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 ### GRPCRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource  | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
-| --------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
-| GRPCRoute | Supported           | Not supported          | Not supported                         | v1          |
+| Resource  | Core Support Level  | Extended Support Level       | Implementation-Specific Support Level  | API Version |
+| --------- | ------------------- | -----------------------------| ------------------------------------- | ----------- |
+| GRPCRoute | Supported           | Partially supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 **Fields**:
@@ -315,9 +315,10 @@ Fields:
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource        | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 | --------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| Custom policies | Not supported      | N/A                    | Not supported                         | N/A         |
+| Custom policies | N/A                | N/A                    | Supported                             | N/A         |
 {{< /bootstrap-table >}}
 
-Custom policies will be NGINX Gateway Fabric-specific CRDs (Custom Resource Definitions) that will support features such as timeouts, load-balancing methods, authentication, etc. These important data-plane features are not part of the Gateway API specifications.
-
+Custom policies are NGINX Gateway Fabric-specific CRDs (Custom Resource Definitions) that support features such as tracing, and client connection settings. These important data-plane features are not part of the Gateway API specifications.
 While these CRDs are not part of the Gateway API, the mechanism to attach them to Gateway API resources is part of the Gateway API. See the [Policy Attachment documentation](https://gateway-api.sigs.k8s.io/references/policy-attachment/).
+
+See the [custom policies]({{< relref "overview/custom-policies.md" >}}) document for more information.

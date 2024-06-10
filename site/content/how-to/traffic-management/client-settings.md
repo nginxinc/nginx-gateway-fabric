@@ -24,7 +24,7 @@ The settings in `ClientSettingsPolicy` correspond to the following NGINX directi
 When applied to a Gateway, the settings specified in the `ClientSettingsPolicy` affect all HTTPRoutes and GRPCRoutes attached to the Gateway. This allows Cluster Operators to set defaults for all applications using the Gateway.
 
 When applied to an HTTPRoute or GRPCRoute, the settings in the `ClientSettingsPolicy` affect only the route they are applied to. This allows Application Developers to set values for their applications based on their application's behavior or requirements.
-Settings applied to an HTTPRoute or GRPCRoute take precedence over settings applied to a Gateway.
+Settings applied to an HTTPRoute or GRPCRoute take precedence over settings applied to a Gateway. See the [custom policies]({{< relref "overview/custom-policies.md" >}}) document for more information on policies.
 
 This guide will show you how to use the `ClientSettingsPolicy` API to configure the client max body size for your applications.
 
@@ -276,3 +276,7 @@ spec:
     maxSize: "75" # sizes without a unit are bytes.
 EOF
 ```
+
+## Further Reading
+
+- [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
