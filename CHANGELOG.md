@@ -6,27 +6,26 @@ and includes links to all PRs that went into the release.
 
 ## Release 1.3.0
 
-* Update minimum k8s version to 1.25 by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/1885
-* Support NginxProxy CRD and global tracing settings by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/1870
-* Remove zone size for invalid backend ref by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1931
-* Add directive for SSL Server block by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1934
-* Add support for ResponseHeaderModifier for HTTPRouteRule objects by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1880
-* Fix rbac ServiceAccount imagePullSecrets template by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1953
-* Add request header filter support for gRPC by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1909
-* Add field to NginxProxy to allow disabling HTTP2 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1925
-* Support response header filter for GRPCRoute by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1983
-* Upgrade Gateway API to v1.1.0 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1975
-* Collect backendTLSPolicy and GRPCRoute Count by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1954
-* Implement ClientSettingsPolicy by @kate-osborn in https://github.com/nginxinc/nginx-gateway-fabric/pull/1940
-* Allow NGF to run on Openshift  by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1976
-* Bump NGINX Plus to R32 by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/2057
-* Support tracing via the ObservabilityPolicy by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2004
+- Remove zone size for invalid backend ref by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1931
+- Add directive for SSL Server block by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1934
+- Add support for ResponseHeaderModifier for HTTPRouteRule objects by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1880
+- Fix rbac ServiceAccount imagePullSecrets template by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1953
+- Add request header filter support for gRPC by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1909
+- Add field to NginxProxy to allow disabling HTTP2 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1925
+- Support response header filter for GRPCRoute by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1983
+- Upgrade Gateway API to v1.1.0 by @ciarams87 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1975
+- Collect backendTLSPolicy and GRPCRoute Count by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1954
+- Implement ClientSettingsPolicy by @kate-osborn in https://github.com/nginxinc/nginx-gateway-fabric/pull/1940
+- Allow NGF to run on Openshift by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/1976
+- Bump NGINX Plus to R32 by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/2057
+- Support tracing via the ObservabilityPolicy by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2004
 
-%%DATE%%
+_June 11, 2024_
 
 FEATURES:
 
--
+- Update minimum k8s version to 1.25 [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
+- Support NginxProxy CRD and global tracing settings [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
 
 BUG FIXES:
 
@@ -47,7 +46,8 @@ UPGRADE:
 
 KNOWN ISSUES:
 
--
+- Tracing does not work on HTTPRoutes with matching conditions. [2105](https://github.com/nginxinc/nginx-gateway-fabric/issues/2105)
+- ClientSettingsPolicy does not work on HTTPRoutes with matching conditions. [2079](https://github.com/nginxinc/nginx-gateway-fabric/issues/2079)
 
 COMPATIBILITY:
 
@@ -61,9 +61,10 @@ CONTAINER IMAGES:
 - Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.3.0`
 - Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.3.0`
 - Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.3.0`
+
 ## Release 1.2.0
 
-*March 21, 2024*
+_March 21, 2024_
 
 FEATURES:
 
@@ -116,7 +117,7 @@ CONTAINER IMAGES:
 
 ## Release 1.1.0
 
-*December 14, 2023*
+_December 14, 2023_
 
 This release updates NGINX Gateway Fabric to support version 1.0.0 of the Gateway API in addition to bug fixes and documentation updates. Our docs are now available at https://docs.nginx.com/nginx-gateway-fabric.
 
@@ -163,7 +164,7 @@ CONTAINER IMAGES:
 
 ## Release 1.0.0
 
-*October 24, 2023*
+_October 24, 2023_
 
 This is the official v1.0.0 release of NGINX Gateway Fabric.
 
@@ -204,7 +205,7 @@ CONTAINER IMAGES:
 
 ## Release 0.6.0
 
-*August 31, 2023*
+_August 31, 2023_
 
 This release adds a Helm chart, dynamic control plane logging, Prometheus metrics, and in-depth guides for various use cases.
 
@@ -237,7 +238,7 @@ CONTAINER IMAGES:
 
 ## Release 0.5.0
 
-*July 17, 2023*
+_July 17, 2023_
 
 This release completes all v1beta1 Core features of the Gateway API resources. See the [Gateway Compatibility doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/v0.5.0/docs/gateway-api-compatibility.md)
 
@@ -256,7 +257,7 @@ BUG FIXES:
 COMPATIBILITY:
 
 - The Gateway API version: `0.7.1`
-- NGINX version: `1.25.x` *
+- NGINX version: `1.25.x` \*
 - Kubernetes version: `1.21+`
 
 \*the installation manifests use the `nginx:1.25` image, which always points to the latest version of 1.25.x releases.
@@ -267,7 +268,7 @@ CONTAINER IMAGES:
 
 ## Release 0.4.0
 
-*July 6, 2023*
+_July 6, 2023_
 
 This release brings:
 
@@ -315,7 +316,7 @@ DEPENDENCIES:
 COMPATIBILITY:
 
 - The Gateway API version: `0.7.1`
-- NGINX version: `1.25.x` *
+- NGINX version: `1.25.x` \*
 - Kubernetes version: `1.21+`
 
 \*the installation manifests use the `nginx:1.25` image, which always points to the latest version of 1.25.x releases.
@@ -326,12 +327,12 @@ CONTAINER IMAGES:
 
 ## Release 0.3.0
 
-*April 24, 2023*
+_April 24, 2023_
 
 This release brings:
 
 - Extensive validation of Gateway API resources for robustness, security and correctness. See the [validation doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/v0.3.0/docs/resource-validation.md)
-for more details.
+  for more details.
 - Defined open-source development process for NGINX Kubernetes Gateway project. See the [Issue lifecycle doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/v0.3.0/ISSUE_LIFECYCLE.md).
 - Miscellaneous enhancements and bug fixes.
 
@@ -361,7 +362,7 @@ DEPENDENCIES:
 COMPATIBILITY:
 
 - The Gateway API version: `0.6.2`
-- NGINX version: `1.23.x` *
+- NGINX version: `1.23.x` \*
 - Kubernetes version: `1.21+`
 
 \*the installation manifests use the `nginx:1.23` image, which always points to the latest version of 1.23.x releases.
@@ -372,7 +373,7 @@ CONTAINER IMAGES:
 
 ## Release 0.2.0
 
-*October 25, 2022*
+_October 25, 2022_
 
 This release extends the support of the features of the Gateway API resources.
 
@@ -396,11 +397,10 @@ DEPENDENCIES:
 - Use the latest NGINX 1.23 image. [PR-275](https://github.com/nginxinc/nginx-gateway-fabric/pull/275)
 - Bump sigs.k8s.io/gateway-api from 0.5.0 to 0.5.1 [PR-251](https://github.com/nginxinc/nginx-gateway-fabric/pull/251)
 
-
 COMPATIBILITY:
 
 - The Gateway API version: `0.5.1`
-- NGINX version: `1.21.x` *
+- NGINX version: `1.21.x` \*
 - Kubernetes version: `1.21+`
 
 \*the installation manifests use the `nginx:1.21` image, which always points to the latest version of 1.21.x releases.
@@ -411,7 +411,7 @@ CONTAINER IMAGES:
 
 ## Release 0.1.0
 
-*August 22, 2022*
+_August 22, 2022_
 
 This is an initial release of NGINX Kubernetes Gateway project.
 
