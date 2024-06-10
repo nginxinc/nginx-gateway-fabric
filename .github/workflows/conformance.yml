@@ -80,7 +80,7 @@ jobs:
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           version: latest
-          args: build --snapshot --clean
+          args: build --single-target --snapshot --clean
         env:
           TELEMETRY_ENDPOINT: "" # disables sending telemetry
           TELEMETRY_ENDPOINT_INSECURE: "false"

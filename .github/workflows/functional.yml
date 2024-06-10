@@ -68,7 +68,7 @@ jobs:
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           version: latest
-          args: build --snapshot --clean
+          args: build --single-target --snapshot --clean
         env:
           TELEMETRY_ENDPOINT: otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317
           TELEMETRY_ENDPOINT_INSECURE: "true"
@@ -98,6 +98,14 @@ jobs:
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
 
+      - name: Install cloud-provider-kind
+        run: |
+          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.2.0/cloud-provider-kind_0.2.0_linux_amd64.tar.gz
+          tar -xvf cloud-provider-kind_0.2.0_linux_amd64.tar.gz
+
+      - name: Run cloud-provider-kind
+        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+
       - name: Deploy Kubernetes
         id: k8s
         run: |
@@ -108,12 +116,12 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry GW_SERVICE_TYPE=LoadBalancer
         working-directory: ./tests
 
       - name: Run functional tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GW_SERVICE_TYPE=LoadBalancer
         working-directory: ./tests
