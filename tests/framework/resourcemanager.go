@@ -307,13 +307,17 @@ func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 }
 
 // WaitForAppsToBeReadyWithCtx waits for all apps in the specified namespace to be ready or
-// until the provided context is cancelled.
+// until the provided context is canceled.
 func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, namespace string) error {
 	if err := rm.WaitForPodsToBeReady(ctx, namespace); err != nil {
 		return err
 	}
 
-	if err := rm.waitForRoutesToBeReady(ctx, namespace); err != nil {
+	if err := rm.waitForHTTPRoutesToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	if err := rm.waitForGRPCRoutesToBeReady(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -321,7 +325,7 @@ func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, name
 }
 
 // WaitForPodsToBeReady waits for all Pods in the specified namespace to be ready or
-// until the provided context is cancelled.
+// until the provided context is canceled.
 func (rm *ResourceManager) WaitForPodsToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
@@ -371,7 +375,7 @@ func (rm *ResourceManager) waitForGatewaysToBeReady(ctx context.Context, namespa
 	)
 }
 
-func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace string) error {
+func (rm *ResourceManager) waitForHTTPRoutesToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
@@ -385,13 +389,36 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 			var numParents, readyCount int
 			for _, route := range routeList.Items {
 				numParents += len(route.Spec.ParentRefs)
-				for _, parent := range route.Status.Parents {
-					for _, cond := range parent.Conditions {
-						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
-							readyCount++
-						}
-					}
-				}
+				readyCount += countNumberOfReadyParents(route.Status.Parents)
+			}
+
+			return numParents == readyCount, nil
+		},
+	)
+}
+
+func (rm *ResourceManager) waitForGRPCRoutesToBeReady(ctx context.Context, namespace string) error {
+	// First, check if grpcroute even exists for v1. If not, ignore.
+	var routeList v1.GRPCRouteList
+	err := rm.K8sClient.List(ctx, &routeList, client.InNamespace(namespace))
+	if err != nil && strings.Contains(err.Error(), "no matches for kind") {
+		return nil
+	}
+
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var routeList v1.GRPCRouteList
+			if err := rm.K8sClient.List(ctx, &routeList, client.InNamespace(namespace)); err != nil {
+				return false, err
+			}
+
+			var numParents, readyCount int
+			for _, route := range routeList.Items {
+				numParents += len(route.Spec.ParentRefs)
+				readyCount += countNumberOfReadyParents(route.Status.Parents)
 			}
 
 			return numParents == readyCount, nil
@@ -648,4 +675,72 @@ func GetReadyNGFPodNames(
 	}
 
 	return nil, errors.New("unable to find NGF Pod(s)")
+}
+
+func countNumberOfReadyParents(parents []v1.RouteParentStatus) int {
+	readyCount := 0
+
+	for _, parent := range parents {
+		for _, cond := range parent.Conditions {
+			if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				readyCount++
+			}
+		}
+	}
+
+	return readyCount
+}
+
+func (rm *ResourceManager) WaitForAppsToBeReadyWithPodCount(namespace string, podCount int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
+	defer cancel()
+
+	return rm.WaitForAppsToBeReadyWithCtxWithPodCount(ctx, namespace, podCount)
+}
+
+func (rm *ResourceManager) WaitForAppsToBeReadyWithCtxWithPodCount(
+	ctx context.Context,
+	namespace string,
+	podCount int,
+) error {
+	if err := rm.WaitForPodsToBeReadyWithCount(ctx, namespace, podCount); err != nil {
+		return err
+	}
+
+	if err := rm.waitForHTTPRoutesToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	if err := rm.waitForGRPCRoutesToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	return rm.waitForGatewaysToBeReady(ctx, namespace)
+}
+
+// WaitForPodsToBeReady waits for all Pods in the specified namespace to be ready or
+// until the provided context is canceled.
+func (rm *ResourceManager) WaitForPodsToBeReadyWithCount(ctx context.Context, namespace string, count int) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var podList core.PodList
+			if err := rm.K8sClient.List(ctx, &podList, client.InNamespace(namespace)); err != nil {
+				return false, err
+			}
+
+			var podsReady int
+			for _, pod := range podList.Items {
+				for _, cond := range pod.Status.Conditions {
+					if cond.Type == core.PodReady && cond.Status == core.ConditionTrue {
+						podsReady++
+					}
+				}
+			}
+
+			return podsReady == count, nil
+		},
+	)
 }

@@ -3,6 +3,7 @@ package validation
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 )
 
@@ -53,7 +54,7 @@ type GenericValidator interface {
 //counterfeiter:generate . PolicyValidator
 type PolicyValidator interface {
 	// Validate validates an NGF Policy.
-	Validate(policy policies.Policy) error
+	Validate(policy policies.Policy, globalSettings *policies.GlobalSettings) []conditions.Condition
 	// Conflicts returns true if the two Policies conflict.
 	Conflicts(a, b policies.Policy) bool
 }

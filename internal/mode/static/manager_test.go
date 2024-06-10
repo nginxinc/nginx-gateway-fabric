@@ -57,6 +57,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
 				&ngfAPI.ClientSettingsPolicyList{},
+				&ngfAPI.ObservabilityPolicyList{},
 			},
 		},
 		{
@@ -80,6 +81,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
 				&ngfAPI.ClientSettingsPolicyList{},
+				&ngfAPI.ObservabilityPolicyList{},
 			},
 		},
 		{
@@ -105,6 +107,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1alpha3.BackendTLSPolicyList{},
 				&gatewayv1.GRPCRouteList{},
 				&ngfAPI.ClientSettingsPolicyList{},
+				&ngfAPI.ObservabilityPolicyList{},
 			},
 			experimentalEnabled: true,
 		},

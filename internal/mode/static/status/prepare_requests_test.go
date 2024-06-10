@@ -1392,7 +1392,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
 
 	type policyCfg struct {
-		Ancestor   *graph.PolicyAncestor
+		Ancestors  []graph.PolicyAncestor
 		Name       string
 		Conditions []conditions.Condition
 	}
@@ -1409,7 +1409,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 				},
 			},
 			Conditions: cfg.Conditions,
-			Ancestor:   cfg.Ancestor,
+			Ancestors:  cfg.Ancestors,
 		}
 	}
 
@@ -1422,9 +1422,16 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	}
 	validPolicyCfg := policyCfg{
 		Name: validPolicyKey.NsName.Name,
-		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1.ParentReference{
-				Name: "ancestor",
+		Ancestors: []graph.PolicyAncestor{
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor1",
+				},
+			},
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor2",
+				},
 			},
 		},
 	}
@@ -1436,9 +1443,16 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	invalidPolicyCfg := policyCfg{
 		Name:       invalidPolicyKey.NsName.Name,
 		Conditions: invalidConds,
-		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1.ParentReference{
-				Name: "ancestor",
+		Ancestors: []graph.PolicyAncestor{
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor1",
+				},
+			},
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor2",
+				},
 			},
 		},
 	}
@@ -1449,11 +1463,13 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	}
 	targetRefNotFoundPolicyCfg := policyCfg{
 		Name: targetRefNotFoundPolicyKey.NsName.Name,
-		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1.ParentReference{
-				Name: "ancestor",
+		Ancestors: []graph.PolicyAncestor{
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor1",
+				},
+				Conditions: targetRefNotFoundConds,
 			},
-			Conditions: targetRefNotFoundConds,
 		},
 	}
 
@@ -1464,11 +1480,13 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	multiInvalidCondsPolicyCfg := policyCfg{
 		Name:       multiInvalidCondsPolicyKey.NsName.Name,
 		Conditions: invalidConds,
-		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1.ParentReference{
-				Name: "ancestor",
+		Ancestors: []graph.PolicyAncestor{
+			{
+				Ancestor: v1.ParentReference{
+					Name: "ancestor1",
+				},
+				Conditions: targetRefNotFoundConds,
 			},
-			Conditions: targetRefNotFoundConds,
 		},
 	}
 
@@ -1477,8 +1495,8 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 		GVK:    schema.GroupVersionKind{Group: ngfAPI.GroupName, Kind: kinds.ClientSettingsPolicy},
 	}
 	nilAncestorPolicyCfg := policyCfg{
-		Name:     nilAncestorPolicyKey.NsName.Name,
-		Ancestor: nil,
+		Name:      nilAncestorPolicyKey.NsName.Name,
+		Ancestors: nil,
 	}
 
 	tests := []struct {
@@ -1502,7 +1520,23 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 					Ancestors: []v1alpha2.PolicyAncestorStatus{
 						{
 							AncestorRef: v1.ParentReference{
-								Name: "ancestor",
+								Name: "ancestor1",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonInvalid),
+									Message:            "invalid",
+								},
+							},
+						},
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor2",
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1522,7 +1556,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 					Ancestors: []v1alpha2.PolicyAncestorStatus{
 						{
 							AncestorRef: v1.ParentReference{
-								Name: "ancestor",
+								Name: "ancestor1",
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1542,7 +1576,23 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 					Ancestors: []v1alpha2.PolicyAncestorStatus{
 						{
 							AncestorRef: v1.ParentReference{
-								Name: "ancestor",
+								Name: "ancestor1",
+							},
+							ControllerName: gatewayCtlrName,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.PolicyConditionAccepted),
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 2,
+									LastTransitionTime: transitionTime,
+									Reason:             string(v1alpha2.PolicyReasonAccepted),
+									Message:            "Policy is accepted",
+								},
+							},
+						},
+						{
+							AncestorRef: v1.ParentReference{
+								Name: "ancestor2",
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
@@ -1570,7 +1620,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 					Ancestors: []v1alpha2.PolicyAncestorStatus{
 						{
 							AncestorRef: v1.ParentReference{
-								Name: "ancestor",
+								Name: "ancestor1",
 							},
 							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{

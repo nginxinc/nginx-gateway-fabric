@@ -1,0 +1,257 @@
+# NGINX Gateway Fabric Helm Chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+- [NGINX Gateway Fabric Helm Chart](#nginx-gateway-fabric-helm-chart)
+  - [Introduction](#introduction)
+  - [Prerequisites](#prerequisites)
+    - [Installing the Gateway API resources](#installing-the-gateway-api-resources)
+  - [Requirements](#requirements)
+  - [Installing the Chart](#installing-the-chart)
+    - [Installing the Chart from the OCI Registry](#installing-the-chart-from-the-oci-registry)
+    - [Installing the Chart via Sources](#installing-the-chart-via-sources)
+      - [Pulling the Chart](#pulling-the-chart)
+      - [Installing the Chart](#installing-the-chart-1)
+    - [Custom installation options](#custom-installation-options)
+      - [Service type](#service-type)
+  - [Upgrading the Chart](#upgrading-the-chart)
+    - [Upgrading the Gateway Resources](#upgrading-the-gateway-resources)
+    - [Upgrading the CRDs](#upgrading-the-crds)
+    - [Upgrading the Chart from the OCI Registry](#upgrading-the-chart-from-the-oci-registry)
+    - [Upgrading the Chart from the Sources](#upgrading-the-chart-from-the-sources)
+    - [Configure Delayed Termination for Zero Downtime Upgrades](#configure-delayed-termination-for-zero-downtime-upgrades)
+  - [Uninstalling the Chart](#uninstalling-the-chart)
+    - [Uninstalling the Gateway Resources](#uninstalling-the-gateway-resources)
+  - [Configuration](#configuration)
+
+
+## Introduction
+
+This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
+
+## Prerequisites
+
+- [Helm 3.0+](https://helm.sh/docs/intro/install/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+### Installing the Gateway API resources
+
+> [!NOTE]
+>
+> The [Gateway API resources](https://github.com/kubernetes-sigs/gateway-api) from the standard channel must be
+> installed before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure
+> they are the correct version as supported by the NGINX Gateway Fabric -
+> [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
+
+```shell
+kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
+```
+
+{{ template "chart.requirementsSection" . }}
+
+## Installing the Chart
+
+### Installing the Chart from the OCI Registry
+
+To install the latest stable release of NGINX Gateway Fabric in the `nginx-gateway` namespace, run the following command:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
+```
+
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the `main` branch, add `--version 0.0.0-edge` to your install command.
+
+To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run
+the following after installing:
+
+```shell
+kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+```
+
+### Installing the Chart via Sources
+
+#### Pulling the Chart
+
+```shell
+helm pull oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --untar
+cd nginx-gateway-fabric
+```
+
+This will pull the latest stable release. To pull the latest version from the `main` branch, specify the
+`--version 0.0.0-edge` flag when pulling.
+
+#### Installing the Chart
+
+To install the chart into the `nginx-gateway` namespace, run the following command.
+
+```shell
+helm install ngf . --create-namespace -n nginx-gateway
+```
+
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+If the namespace already exists, you can omit the optional `--create-namespace` flag.
+
+To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run
+the following after installing:
+
+```shell
+kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+```
+
+### Custom installation options
+
+#### Service type
+
+By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
+
+To use a NodePort Service instead:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+```
+
+To disable the creation of a Service:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+```
+
+## Upgrading the Chart
+
+> [!NOTE]
+>
+> See [below](#configure-delayed-termination-for-zero-downtime-upgrades) for instructions on how to configure delayed
+> termination if required for zero downtime upgrades in your environment.
+
+### Upgrading the Gateway Resources
+
+Before you upgrade a release, ensure the Gateway API resources are the correct version as supported by the NGINX
+Gateway Fabric - [see the Technical Specifications](../../README.md#technical-specifications).:
+
+To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+
+```shell
+kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
+```
+
+### Upgrading the CRDs
+
+Helm does not upgrade the NGINX Gateway Fabric CRDs during a release upgrade. Before you upgrade a release, you
+must [pull the chart](#pulling-the-chart) from GitHub and run the following command to upgrade the CRDs:
+
+```shell
+kubectl apply -f crds/
+```
+
+The following warning is expected and can be ignored:
+
+```text
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
+```
+
+### Upgrading the Chart from the OCI Registry
+
+To upgrade the release `ngf`, run:
+
+```shell
+helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+```
+
+This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch, specify
+the `--version 0.0.0-edge` flag when upgrading.
+
+### Upgrading the Chart from the Sources
+
+Pull the chart sources as described in [Pulling the Chart](#pulling-the-chart), if not already present. Then, to upgrade
+the release `ngf`, run:
+
+```shell
+helm upgrade ngf . -n nginx-gateway
+```
+
+### Configure Delayed Termination for Zero Downtime Upgrades
+
+To achieve zero downtime upgrades (meaning clients will not see any interruption in traffic while a rolling upgrade is
+being performed on NGF), you may need to configure delayed termination on the NGF Pod, depending on your environment.
+
+> [!NOTE]
+>
+> When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
+> by either the client or the backend. This means that unless all those connections are closed by clients/backends
+> before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
+> clients will see the connections abruptly closed and thus experience downtime.
+
+1. Add `lifecycle` to both the nginx and the nginx-gateway container definition. To do so, update your `values.yaml`
+   file to include the following (update the `sleep` values to what is required in your environment):
+
+   ```yaml
+    nginxGateway:
+    <...>
+    lifecycle:
+        preStop:
+        exec:
+            command:
+            - /usr/bin/gateway
+            - sleep
+            - --duration=40s # This flag is optional, the default is 30s
+
+    nginx:
+    <...>
+    lifecycle:
+        preStop:
+        exec:
+            command:
+            - /bin/sleep
+            - "40"
+   ```
+
+2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
+   is 30). This is to ensure Kubernetes does not terminate the Pod before the `preStopHook` is complete. To do so,
+   update your `values.yaml` file to include the following (update the value to what is required in your environment):
+
+   ```yaml
+   terminationGracePeriodSeconds: 50
+   ```
+
+> [!NOTE]
+>
+> More information on container lifecycle hooks can be found
+> [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
+> description of Pod termination behavior can be found in
+> [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/Pods/Pod-lifecycle/#Pod-termination).
+
+## Uninstalling the Chart
+
+To uninstall/delete the release `ngf`:
+
+```shell
+helm uninstall ngf -n nginx-gateway
+kubectl delete ns nginx-gateway
+kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/deploy/crds.yaml
+```
+
+These commands remove all the Kubernetes components associated with the release and deletes the release.
+
+### Uninstalling the Gateway Resources
+
+> **Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
+> Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
+> running in the cluster!**
+
+To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+
+```shell
+kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl delete -f -
+```
+
+## Configuration
+
+The following table lists the configurable parameters of the NGINX Gateway Fabric chart and their default values.
+
+{{ template "chart.valuesTable" . }}
+
+----------------------------------------------
+Autogenerated from chart metadata using [helm-docs](https://github.com/norwoodj/helm-docs)

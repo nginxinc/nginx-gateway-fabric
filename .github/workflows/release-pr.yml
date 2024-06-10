@@ -18,6 +18,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Branch
         id: branch
@@ -30,6 +32,13 @@ jobs:
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           ref: ${{ steps.branch.outputs.branch }}
+
+      - name: Get Release Notes
+        id: notes
+        uses: lucacome/draft-release@8a63d32c79a171ae6048e614a8988f0ac3ed56d4 # v1.1.0
+        with:
+          config-path: .github/release-notes.yml
+          dry-run: true
 
       - name: Vars
         id: vars
@@ -76,6 +85,7 @@ jobs:
           sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" Makefile
           sed -i "6r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
           sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
+          sed -i "8a ${{ join(fromJson(steps.notes.outputs.release-sections).release-notes, '\n') }}\n" CHANGELOG.md
           make generate-manifests
 
       - name: Create Pull Request

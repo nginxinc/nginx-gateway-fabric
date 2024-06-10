@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"errors"
 	"slices"
 	"testing"
 
@@ -30,10 +29,17 @@ func TestAttachPolicies(t *testing.T) {
 	gwPolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.Gateway,
-			Group:  v1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.Gateway,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway"},
+			},
+			{
+				Kind:   kinds.Gateway,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway2"}, // ignored
+			},
 		},
 	}
 
@@ -41,10 +47,17 @@ func TestAttachPolicies(t *testing.T) {
 	routePolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.HTTPRoute,
-			Group:  v1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-route"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.HTTPRoute,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-route"},
+			},
+			{
+				Kind:   kinds.HTTPRoute,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr2-route"},
+			},
 		},
 	}
 
@@ -52,10 +65,12 @@ func TestAttachPolicies(t *testing.T) {
 	grpcRoutePolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.GRPCRoute,
-			Group:  v1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc-route"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.GRPCRoute,
+				Group:  v1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc-route"},
+			},
 		},
 	}
 
@@ -88,6 +103,23 @@ func TestAttachPolicies(t *testing.T) {
 					Source: &v1.HTTPRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "hr-route",
+							Namespace: testNs,
+						},
+					},
+					ParentRefs: []ParentRef{
+						{
+							Attachment: &ParentRefAttachmentStatus{
+								Attached: true,
+							},
+						},
+					},
+					Valid:      true,
+					Attachable: true,
+				},
+				createRouteKey("hr2-route", RouteTypeHTTP): {
+					Source: &v1.HTTPRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "hr2-route",
 							Namespace: testNs,
 						},
 					},
@@ -243,18 +275,18 @@ func TestAttachPolicyToRoute(t *testing.T) {
 	}
 
 	tests := []struct {
-		route       *L7Route
-		policy      *Policy
-		expAncestor *PolicyAncestor
-		name        string
-		expAttached bool
+		route        *L7Route
+		policy       *Policy
+		name         string
+		expAncestors []PolicyAncestor
+		expAttached  bool
 	}{
 		{
 			name:   "policy attaches to http route",
 			route:  createHTTPRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
 			policy: &Policy{Source: &policiesfakes.FakePolicy{}},
-			expAncestor: &PolicyAncestor{
-				Ancestor: createExpAncestor(kinds.HTTPRoute),
+			expAncestors: []PolicyAncestor{
+				{Ancestor: createExpAncestor(kinds.HTTPRoute)},
 			},
 			expAttached: true,
 		},
@@ -262,8 +294,23 @@ func TestAttachPolicyToRoute(t *testing.T) {
 			name:   "policy attaches to grpc route",
 			route:  createGRPCRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
 			policy: &Policy{Source: &policiesfakes.FakePolicy{}},
-			expAncestor: &PolicyAncestor{
-				Ancestor: createExpAncestor(kinds.GRPCRoute),
+			expAncestors: []PolicyAncestor{
+				{Ancestor: createExpAncestor(kinds.GRPCRoute)},
+			},
+			expAttached: true,
+		},
+		{
+			name:  "attachment with existing ancestor",
+			route: createHTTPRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
+			policy: &Policy{
+				Source: &policiesfakes.FakePolicy{},
+				Ancestors: []PolicyAncestor{
+					{Ancestor: createExpAncestor(kinds.HTTPRoute)},
+				},
+			},
+			expAncestors: []PolicyAncestor{
+				{Ancestor: createExpAncestor(kinds.HTTPRoute)},
+				{Ancestor: createExpAncestor(kinds.HTTPRoute)},
 			},
 			expAttached: true,
 		},
@@ -271,9 +318,11 @@ func TestAttachPolicyToRoute(t *testing.T) {
 			name:   "no attachment; unattachable route",
 			route:  createHTTPRoute(true /*valid*/, false /*attachable*/, true /*parentRefs*/),
 			policy: &Policy{Source: &policiesfakes.FakePolicy{}},
-			expAncestor: &PolicyAncestor{
-				Ancestor:   createExpAncestor(kinds.HTTPRoute),
-				Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor:   createExpAncestor(kinds.HTTPRoute),
+					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+				},
 			},
 			expAttached: false,
 		},
@@ -281,9 +330,11 @@ func TestAttachPolicyToRoute(t *testing.T) {
 			name:   "no attachment; missing parentRefs",
 			route:  createHTTPRoute(true /*valid*/, true /*attachable*/, false /*parentRefs*/),
 			policy: &Policy{Source: &policiesfakes.FakePolicy{}},
-			expAncestor: &PolicyAncestor{
-				Ancestor:   createExpAncestor(kinds.HTTPRoute),
-				Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor:   createExpAncestor(kinds.HTTPRoute),
+					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+				},
 			},
 			expAttached: false,
 		},
@@ -291,18 +342,20 @@ func TestAttachPolicyToRoute(t *testing.T) {
 			name:   "no attachment; invalid route",
 			route:  createHTTPRoute(false /*valid*/, true /*attachable*/, true /*parentRefs*/),
 			policy: &Policy{Source: &policiesfakes.FakePolicy{}},
-			expAncestor: &PolicyAncestor{
-				Ancestor:   createExpAncestor(kinds.HTTPRoute),
-				Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor:   createExpAncestor(kinds.HTTPRoute),
+					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+				},
 			},
 			expAttached: false,
 		},
 		{
-			name:        "no attachment; max ancestors",
-			route:       createHTTPRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
-			policy:      &Policy{Source: createTestPolicyWithAncestors(16)},
-			expAncestor: nil,
-			expAttached: false,
+			name:         "no attachment; max ancestors",
+			route:        createHTTPRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
+			policy:       &Policy{Source: createTestPolicyWithAncestors(16)},
+			expAncestors: nil,
+			expAttached:  false,
 		},
 	}
 
@@ -318,7 +371,7 @@ func TestAttachPolicyToRoute(t *testing.T) {
 				g.Expect(test.route.Policies).To(BeEmpty())
 			}
 
-			g.Expect(test.policy.Ancestor).To(BeEquivalentTo(test.expAncestor))
+			g.Expect(test.policy.Ancestors).To(BeEquivalentTo(test.expAncestors))
 		})
 	}
 }
@@ -350,24 +403,47 @@ func TestAttachPolicyToGateway(t *testing.T) {
 	}
 
 	tests := []struct {
-		policy      *Policy
-		gw          *Gateway
-		expAncestor *PolicyAncestor
-		name        string
-		expAttached bool
+		policy       *Policy
+		gw           *Gateway
+		name         string
+		expAncestors []PolicyAncestor
+		expAttached  bool
 	}{
 		{
 			name: "attached",
 			policy: &Policy{
 				Source: &policiesfakes.FakePolicy{},
-				TargetRef: PolicyTargetRef{
-					Nsname: gatewayNsName,
-					Kind:   "Gateway",
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: gatewayNsName,
+						Kind:   "Gateway",
+					},
 				},
 			},
 			gw: newGateway(true, gatewayNsName),
-			expAncestor: &PolicyAncestor{
-				Ancestor: getGatewayParentRef(gatewayNsName),
+			expAncestors: []PolicyAncestor{
+				{Ancestor: getGatewayParentRef(gatewayNsName)},
+			},
+			expAttached: true,
+		},
+		{
+			name: "attached with existing ancestor",
+			policy: &Policy{
+				Source: &policiesfakes.FakePolicy{},
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: gatewayNsName,
+						Kind:   "Gateway",
+					},
+				},
+				Ancestors: []PolicyAncestor{
+					{Ancestor: getGatewayParentRef(gatewayNsName)},
+				},
+			},
+			gw: newGateway(true, gatewayNsName),
+			expAncestors: []PolicyAncestor{
+				{Ancestor: getGatewayParentRef(gatewayNsName)},
+				{Ancestor: getGatewayParentRef(gatewayNsName)},
 			},
 			expAttached: true,
 		},
@@ -375,15 +451,19 @@ func TestAttachPolicyToGateway(t *testing.T) {
 			name: "not attached; gateway ignored",
 			policy: &Policy{
 				Source: &policiesfakes.FakePolicy{},
-				TargetRef: PolicyTargetRef{
-					Nsname: ignoredGatewayNsName,
-					Kind:   "Gateway",
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: ignoredGatewayNsName,
+						Kind:   "Gateway",
+					},
 				},
 			},
 			gw: newGateway(true, gatewayNsName),
-			expAncestor: &PolicyAncestor{
-				Ancestor:   getGatewayParentRef(ignoredGatewayNsName),
-				Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is ignored")},
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor:   getGatewayParentRef(ignoredGatewayNsName),
+					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is ignored")},
+				},
 			},
 			expAttached: false,
 		},
@@ -391,15 +471,19 @@ func TestAttachPolicyToGateway(t *testing.T) {
 			name: "not attached; invalid gateway",
 			policy: &Policy{
 				Source: &policiesfakes.FakePolicy{},
-				TargetRef: PolicyTargetRef{
-					Nsname: gatewayNsName,
-					Kind:   "Gateway",
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: gatewayNsName,
+						Kind:   "Gateway",
+					},
 				},
 			},
 			gw: newGateway(false, gatewayNsName),
-			expAncestor: &PolicyAncestor{
-				Ancestor:   getGatewayParentRef(gatewayNsName),
-				Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor:   getGatewayParentRef(gatewayNsName),
+					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")},
+				},
 			},
 			expAttached: false,
 		},
@@ -407,27 +491,31 @@ func TestAttachPolicyToGateway(t *testing.T) {
 			name: "not attached; non-NGF gateway",
 			policy: &Policy{
 				Source: &policiesfakes.FakePolicy{},
-				TargetRef: PolicyTargetRef{
-					Nsname: gateway2NsName,
-					Kind:   "Gateway",
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: gateway2NsName,
+						Kind:   "Gateway",
+					},
 				},
 			},
-			gw:          newGateway(true, gatewayNsName),
-			expAncestor: nil,
-			expAttached: false,
+			gw:           newGateway(true, gatewayNsName),
+			expAncestors: nil,
+			expAttached:  false,
 		},
 		{
 			name: "not attached; max ancestors",
 			policy: &Policy{
 				Source: createTestPolicyWithAncestors(16),
-				TargetRef: PolicyTargetRef{
-					Nsname: gatewayNsName,
-					Kind:   "Gateway",
+				TargetRefs: []PolicyTargetRef{
+					{
+						Nsname: gatewayNsName,
+						Kind:   "Gateway",
+					},
 				},
 			},
-			gw:          newGateway(true, gatewayNsName),
-			expAncestor: nil,
-			expAttached: false,
+			gw:           newGateway(true, gatewayNsName),
+			expAncestors: nil,
+			expAttached:  false,
 		},
 	}
 
@@ -439,7 +527,7 @@ func TestAttachPolicyToGateway(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			attachPolicyToGateway(test.policy, test.gw, ignoredGateways, "nginx-gateway")
+			attachPolicyToGateway(test.policy, test.policy.TargetRefs[0], test.gw, ignoredGateways, "nginx-gateway")
 
 			if test.expAttached {
 				g.Expect(test.gw.Policies).To(HaveLen(1))
@@ -447,7 +535,7 @@ func TestAttachPolicyToGateway(t *testing.T) {
 				g.Expect(test.gw.Policies).To(BeEmpty())
 			}
 
-			g.Expect(test.policy.Ancestor).To(BeEquivalentTo(test.expAncestor))
+			g.Expect(test.policy.Ancestors).To(BeEquivalentTo(test.expAncestors))
 		})
 	}
 }
@@ -508,48 +596,63 @@ func TestProcessPolicies(t *testing.T) {
 			expProcessedPolicies: map[PolicyKey]*Policy{
 				pol1Key: {
 					Source: pol1,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
-						Kind:   kinds.HTTPRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
+							Kind:   kinds.HTTPRoute,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 				pol2Key: {
 					Source: pol2,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc"},
-						Kind:   kinds.GRPCRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc"},
+							Kind:   kinds.GRPCRoute,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 				pol3Key: {
 					Source: pol3,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "gw"},
-						Kind:   kinds.Gateway,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "gw"},
+							Kind:   kinds.Gateway,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 				pol4Key: {
 					Source: pol4,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "ignored"},
-						Kind:   kinds.Gateway,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "ignored"},
+							Kind:   kinds.Gateway,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 			},
 		},
 		{
 			name: "invalid and valid policies",
 			validator: &policiesfakes.FakeValidator{
-				ValidateStub: func(policy policies.Policy) error {
+				ValidateStub: func(
+					policy policies.Policy,
+					_ *policies.GlobalSettings,
+				) []conditions.Condition {
 					if policy.GetName() == "pol1" {
-						return errors.New("invalid error")
+						return []conditions.Condition{staticConds.NewPolicyInvalid("invalid error")}
 					}
 
 					return nil
@@ -562,24 +665,30 @@ func TestProcessPolicies(t *testing.T) {
 			expProcessedPolicies: map[PolicyKey]*Policy{
 				pol1Key: {
 					Source: pol1,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
-						Kind:   kinds.HTTPRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
+							Kind:   kinds.HTTPRoute,
+							Group:  v1.GroupName,
+						},
 					},
 					Conditions: []conditions.Condition{
 						staticConds.NewPolicyInvalid("invalid error"),
 					},
-					Valid: false,
+					Ancestors: []PolicyAncestor{},
+					Valid:     false,
 				},
 				pol2Key: {
 					Source: pol2,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc"},
-						Kind:   kinds.GRPCRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc"},
+							Kind:   kinds.GRPCRoute,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 			},
 		},
@@ -597,24 +706,30 @@ func TestProcessPolicies(t *testing.T) {
 			expProcessedPolicies: map[PolicyKey]*Policy{
 				pol1Key: {
 					Source: pol1,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
-						Kind:   kinds.HTTPRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
+							Kind:   kinds.HTTPRoute,
+							Group:  v1.GroupName,
+						},
 					},
-					Valid: true,
+					Ancestors: []PolicyAncestor{},
+					Valid:     true,
 				},
 				pol1ConflictKey: {
 					Source: pol1Conflict,
-					TargetRef: PolicyTargetRef{
-						Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
-						Kind:   kinds.HTTPRoute,
-						Group:  v1.GroupName,
+					TargetRefs: []PolicyTargetRef{
+						{
+							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr"},
+							Kind:   kinds.HTTPRoute,
+							Group:  v1.GroupName,
+						},
 					},
 					Conditions: []conditions.Condition{
 						staticConds.NewPolicyConflicted("Conflicts with another MyPolicy"),
 					},
-					Valid: false,
+					Ancestors: []PolicyAncestor{},
+					Valid:     false,
 				},
 			},
 		},
@@ -646,7 +761,7 @@ func TestProcessPolicies(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			processed := processPolicies(test.policies, test.validator, gateways, routes)
+			processed := processPolicies(test.policies, test.validator, gateways, routes, nil)
 			g.Expect(processed).To(BeEquivalentTo(test.expProcessedPolicies))
 		})
 	}
@@ -681,14 +796,14 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "different policy types can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(appleGVK, "apple"): {
-					Source:    createTestPolicy(appleGVK, hrRef, "apple"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(appleGVK, hrRef, "apple"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 			},
 			fakeValidator:         &policiesfakes.FakeValidator{},
@@ -698,14 +813,14 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "policies of the same type but with different target refs can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange1"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange1"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange1"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange2"): {
-					Source:    createTestPolicy(orangeGVK, grpcRef, "orange2"),
-					TargetRef: grpcTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, grpcRef, "orange2"),
+					TargetRefs: []PolicyTargetRef{grpcTargetRef},
+					Valid:      true,
 				},
 			},
 			fakeValidator:         &policiesfakes.FakeValidator{},
@@ -715,14 +830,14 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "invalid policies can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "valid"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "valid"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "valid"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "invalid"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "invalid"),
-					TargetRef: hrTargetRef,
-					Valid:     false,
+					Source:     createTestPolicy(orangeGVK, hrRef, "invalid"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      false,
 				},
 			},
 			fakeValidator:         &policiesfakes.FakeValidator{},
@@ -733,29 +848,29 @@ func TestMarkConflictedPolicies(t *testing.T) {
 				" condition is added",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange1"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange1"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange1"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange2"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange2"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange2"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange3-conflicts-with-1"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange3-conflicts-with-1"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange3-conflicts-with-1"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange4"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange4"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange4"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange5-conflicts-with-4"): {
-					Source:    createTestPolicy(orangeGVK, hrRef, "orange5-conflicts-with-4"),
-					TargetRef: hrTargetRef,
-					Valid:     true,
+					Source:     createTestPolicy(orangeGVK, hrRef, "orange5-conflicts-with-4"),
+					TargetRefs: []PolicyTargetRef{hrTargetRef},
+					Valid:      true,
 				},
 			},
 			fakeValidator: &policiesfakes.FakeValidator{
@@ -841,8 +956,8 @@ func createTestPolicy(
 		GetNamespaceStub: func() string {
 			return testNs
 		},
-		GetTargetRefStub: func() v1alpha2.LocalPolicyTargetReference {
-			return ref
+		GetTargetRefsStub: func() []v1alpha2.LocalPolicyTargetReference {
+			return []v1alpha2.LocalPolicyTargetReference{ref}
 		},
 		GetObjectKindStub: func() schema.ObjectKind {
 			return &policiesfakes.FakeObjectKind{

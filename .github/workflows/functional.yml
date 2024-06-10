@@ -65,16 +65,16 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build binary
-        uses: goreleaser/goreleaser-action@5742e2a039330cbb23ebf35f046f814d4c6ff811 # v5.1.0
+        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           version: latest
-          args: build --snapshot --clean
+          args: build --single-target --snapshot --clean
         env:
           TELEMETRY_ENDPOINT: otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317
           TELEMETRY_ENDPOINT_INSECURE: "true"
 
       - name: Build NGF Docker Image
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           file: build/Dockerfile
           tags: ${{ steps.ngf-meta.outputs.tags }}
@@ -85,7 +85,7 @@ jobs:
           target: goreleaser
 
       - name: Build NGINX Docker Image
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'plus' && '.nginxplus' || ''}}
           tags: ${{ steps.nginx-meta.outputs.tags }}
@@ -98,24 +98,30 @@ jobs:
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
 
+      - name: Install cloud-provider-kind
+        run: |
+          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.2.0/cloud-provider-kind_0.2.0_linux_amd64.tar.gz
+          tar -xvf cloud-provider-kind_0.2.0_linux_amd64.tar.gz
+
+      - name: Run cloud-provider-kind
+        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          k8s_version=${{ inputs.k8s-version }}
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(inputs.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
-          echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
-
-      - name: Setup functional tests
-        id: setup
-        run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
-          ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make load-images${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
-        working-directory: ./tests
+          kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
+          kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
 
       - name: Run functional telemetry tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry GW_SERVICE_TYPE=LoadBalancer
+        working-directory: ./tests
+
+      - name: Run functional tests
+        run: |
+          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GW_SERVICE_TYPE=LoadBalancer
         working-directory: ./tests

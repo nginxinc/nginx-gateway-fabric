@@ -14,5 +14,5 @@ keywords:
   - gateway
   - nginx
 maintainers:
-  - name: nginxinc
+  - name: nginxinc/nginx-gateway-fabric
     email: kubernetes@nginx.com

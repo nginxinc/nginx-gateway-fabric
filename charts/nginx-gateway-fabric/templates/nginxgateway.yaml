@@ -5,5 +5,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
+  {{- if .Values.nginxGateway.configAnnotations }}
+  annotations:
+    {{- range $key, $value := .Values.nginxGateway.configAnnotations }}
+    {{ printf "%s: %s" $key $value }}
+    {{- end }}
+  {{- end }}
 spec:
   {{- toYaml .Values.nginxGateway.config | nindent 2 }}

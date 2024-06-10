@@ -35,11 +35,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			"ngf-upgrade/cafe-routes.yaml",
 		}
 
-		ns = &core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "ngf-upgrade",
-			},
-		}
+		ns core.Namespace
 
 		valuesFile  = "manifests/ngf-upgrade/values.yaml"
 		resultsFile *os.File
@@ -60,7 +56,13 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		}
 		setup(cfg, "--values", valuesFile)
 
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ngf-upgrade",
+			},
+		}
+
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
@@ -185,7 +187,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		time.Sleep(2 * time.Second)
 
 		// update Gateway API and NGF
-		output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
+		output, err := framework.InstallGatewayAPI(*gatewayAPIVersion)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		output, err = framework.UpgradeNGF(cfg, "--values", valuesFile)

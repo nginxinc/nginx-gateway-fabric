@@ -23,11 +23,8 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 		"dp-perf/gateway.yaml",
 		"dp-perf/cafe-routes.yaml",
 	}
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "dp-perf",
-		},
-	}
+
+	var ns core.Namespace
 
 	var addr string
 	targetURL := "http://cafe.example.com"
@@ -56,7 +53,13 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 	}
 
 	BeforeAll(func() {
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dp-perf",
+			},
+		}
+
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 

@@ -19,7 +19,7 @@ func TestGetNginxProxy(t *testing.T) {
 	tests := []struct {
 		nps   map[types.NamespacedName]*ngfAPI.NginxProxy
 		gc    *v1.GatewayClass
-		expNP *ngfAPI.NginxProxy
+		expNP *NginxProxy
 		name  string
 	}{
 		{
@@ -66,10 +66,13 @@ func TestGetNginxProxy(t *testing.T) {
 					},
 				},
 			},
-			expNP: &ngfAPI.NginxProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "np2",
+			expNP: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "np2",
+					},
 				},
+				Valid: true,
 			},
 			name: "returns correct resource",
 		},
@@ -79,7 +82,7 @@ func TestGetNginxProxy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(getNginxProxy(test.nps, test.gc)).To(Equal(test.expNP))
+			g.Expect(buildNginxProxy(test.nps, test.gc, &validationfakes.FakeGenericValidator{})).To(Equal(test.expNP))
 		})
 	}
 }

@@ -16,7 +16,10 @@ otel_exporter {
 
 otel_service_name {{ .ServiceName }};
 
-{{- range $attr := .SpanAttributes }}
-otel_span_attr "{{ $attr.Key }}" "{{ $attr.Value }}";
+{{- range $ratio := .Ratios }}
+split_clients $otel_trace_id {{ $ratio.Name }} {
+	{{ $ratio.Value }}% on;
+	*  off;
+}
 {{- end }}
 `

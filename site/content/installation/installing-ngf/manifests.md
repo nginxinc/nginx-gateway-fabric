@@ -45,6 +45,23 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
+{{<note>}}If you are deploying NGINX Gateway Fabric on OpenShift, we've supplied a baseline [SecurityContextConstraints](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/scc.yaml) manifest that you can download, modify if needed, and apply. You will also need to make sure the SecurityContextConstraints resource is added to the ClusterRole RBAC:
+
+```yaml
+. . .
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  resourceNames:
+  -  nginx-gateway-scc
+  verbs:
+  - use
+ ```
+
+Alternatively, use [helm]({{< relref "installation/installing-ngf/helm.md" >}}), which will automatically configure the mentioned resources on OpenShift.
+{{</note>}}
+
 #### Stable release
 
 ##### For NGINX
@@ -131,13 +148,13 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Gateway API resources, run:
 
      ```shell
-     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.2.0" | kubectl apply -f -
      ```
 
      or, if you installed the from the experimental channel:
 
      ```shell
-     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
+     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.2.0" | kubectl apply -f -
      ```
 
 1. **Upgrade NGINX Gateway Fabric CRDs:**
@@ -150,11 +167,25 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
 
-   - To upgrade the deployment, run:
+   - To upgrade your OSS deployment, run:
 
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-gateway.yaml
      ```
+
+   - To upgrade your Plus deployment:
+
+     Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+
+     Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
+
+     ```shell
+     kubectl apply -f nginx-plus-gateway.yaml
+     ```
+
+   - To upgrade the deployment from NGINX OSS to NGINX Plus, follow the above instructions for upgrading your Plus deployment.
+
+    {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 

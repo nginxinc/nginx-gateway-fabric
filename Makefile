@@ -17,7 +17,6 @@ TELEMETRY_REPORT_PERIOD = 24h
 TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
 TELEMETRY_ENDPOINT_INSECURE = false
 
-GW_API_VERSION = 1.1.0
 ENABLE_EXPERIMENTAL ?= false
 NODE_VERSION = $(shell cat .nvmrc)
 
@@ -26,13 +25,15 @@ GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
+# tools versions
+GOLANGCI_LINT_VERSION := $(shell awk '/repo:.*golangci-lint/{getline; if ($$1 == "rev:") {sub(/^v/, "", $$2); print $$2}}' $(SELF_DIR).pre-commit-config.yaml)
+
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
 NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
 NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginx-plus
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 1.1.0
 TARGET ?= local## The target of the build. Possible values: local and container
-KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= build/out## The folder where the binary will be stored
 GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
@@ -112,15 +113,15 @@ generate-crds: ## Generate CRDs and Go types using kubebuilder
 
 .PHONY: install-crds
 install-crds: ## Install CRDs
-	kubectl kustomize config/crd | kubectl apply -f -
+	kubectl kustomize $(SELF_DIR)config/crd | kubectl apply -f -
 
 .PHONY: install-gateway-crds
 install-gateway-crds: ## Install Gateway API CRDs
-	$(SELF_DIR)tests/scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	kubectl kustomize $(SELF_DIR)config/crd/gateway-api/$(if $(filter true,$(ENABLE_EXPERIMENTAL)),experimental,standard) | kubectl apply -f -
 
 .PHONY: uninstall-gateway-crds
 uninstall-gateway-crds: ## Uninstall Gateway API CRDs
-	$(SELF_DIR)tests/scripts/uninstall-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	kubectl kustomize $(SELF_DIR)config/crd/gateway-api/$(if $(filter true,$(ENABLE_EXPERIMENTAL)),experimental,standard) | kubectl delete -f -
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
@@ -132,6 +133,7 @@ generate-manifests: ## Generate manifests using Helm.
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway --api-versions security.openshift.io/v1/SecurityContextConstraints -s templates/scc.yaml > $(strip $(MANIFEST_DIR))/scc.yaml
 
 .PHONY: clean
 clean: ## Clean the build
@@ -149,7 +151,6 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <$(SELF_DIR)tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
@@ -170,9 +171,14 @@ njs-fmt: ## Run prettier against the njs httpmatches module
 vet: ## Run go vet against code
 	go vet ./...
 
+.PHONY: check-golangci-lint
+check-golangci-lint:
+	@golangci-lint --version || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with golangci-lint. Follow the docs to install it https://golangci-lint.run/welcome/install/\n"; exit $$code)
+	@golangci-lint --version | grep -q $(GOLANGCI_LINT_VERSION) || (printf "\033[0;33mWarning\033[0m: your golangci-lint version is different from the one specified in .pre-commit-config.yaml. The recommended version is $(GOLANGCI_LINT_VERSION)\n")
+
 .PHONY: lint
-lint: ## Run golangci-lint against code
-	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
+lint: check-golangci-lint ## Run golangci-lint against code
+	golangci-lint run
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
@@ -191,7 +197,11 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
-	helm lint $(CHART_DIR)
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric quay.io/helmpack/chart-testing:latest ct lint --config .ct.yaml
+
+.PHONY: helm-docs
+helm-docs: ## Generate the Helm chart documentation
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric jnorwood/helm-docs:latest --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster.

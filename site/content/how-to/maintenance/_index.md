@@ -1,7 +1,7 @@
 ---
 title: "Maintenance and Upgrades"
 description:
-weight: 400
+weight: 500
 linkTitle: "Maintenance and Upgrades"
 menu:
   docs:

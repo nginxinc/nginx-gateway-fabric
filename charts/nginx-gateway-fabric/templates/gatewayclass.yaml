@@ -4,6 +4,12 @@ metadata:
   name: {{ .Values.nginxGateway.gatewayClassName }}
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
+  {{- if .Values.nginxGateway.gatewayClassAnnotations }}
+  annotations:
+    {{- range $key, $value := .Values.nginxGateway.gatewayClassAnnotations }}
+    {{ printf "%s: %s" $key $value }}
+    {{- end }}
+  {{- end }}
 spec:
   controllerName: {{ .Values.nginxGateway.gatewayControllerName }}
   {{- if .Values.nginx.config }}

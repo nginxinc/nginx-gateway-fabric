@@ -74,7 +74,7 @@ func validateBackendTLSPolicy(
 	ignored = false
 
 	// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
-	if ancestorsFull(backendTLSPolicy.Status.Ancestors, ctlrName) {
+	if backendTLSPolicyAncestorsFull(backendTLSPolicy.Status.Ancestors, ctlrName) {
 		valid = false
 		ignored = true
 	}

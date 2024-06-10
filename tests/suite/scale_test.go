@@ -571,7 +571,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		const testName = "TestScale_Listeners"
 
 		testResultsDir := filepath.Join(resultsDir, testName)
-		Expect(os.MkdirAll(testResultsDir, 0755)).To(Succeed())
+		Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
 
 		objects, err := framework.GenerateScaleListenerObjects(httpListenerCount, false /*non-tls*/)
 		Expect(err).ToNot(HaveOccurred())
@@ -734,22 +734,18 @@ type bucket struct {
 }
 
 type scaleTestResults struct {
-	Name string
-
-	ReloadCount     int
-	ReloadErrsCount int
-	ReloadAvgTime   int
-	ReloadBuckets   []bucket
-
-	EventsCount   int
-	EventsAvgTime int
-	EventsBuckets []bucket
-
-	NGFErrors   int
-	NginxErrors int
-
+	Name                   string
+	EventsBuckets          []bucket
+	ReloadBuckets          []bucket
+	EventsAvgTime          int
+	EventsCount            int
 	NGFContainerRestarts   int
+	NGFErrors              int
 	NginxContainerRestarts int
+	NginxErrors            int
+	ReloadAvgTime          int
+	ReloadCount            int
+	ReloadErrsCount        int
 }
 
 const scaleResultTemplate = `

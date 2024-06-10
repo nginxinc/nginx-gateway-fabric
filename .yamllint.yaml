@@ -4,9 +4,10 @@ yaml-files:
   - "*.yml"
 
 ignore:
-  - charts/nginx-gateway-fabric/templates
+  - charts/nginx-gateway-fabric/
   - config/crd/bases/
   - deploy/crds.yaml
+  - site/static
 
 rules:
   braces: enable

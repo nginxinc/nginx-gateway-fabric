@@ -53,6 +53,7 @@ import (
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -292,6 +293,11 @@ func createPolicyManager(
 			Validator: clientsettings.NewValidator(validator),
 			Generator: clientsettings.Generate,
 		},
+		{
+			GVK:       mustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
+			Validator: observability.NewValidator(validator),
+			Generator: observability.Generate,
+		},
 	}
 
 	return policies.NewManager(mustExtractGVK, cfgs...)
@@ -414,6 +420,9 @@ func registerControllers(
 		},
 		{
 			objectType: &apiv1.Secret{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.ResourceVersionChangedPredicate{}),
+			},
 		},
 		{
 			objectType: &discoveryV1.EndpointSlice{},
@@ -457,6 +466,12 @@ func registerControllers(
 		},
 		{
 			objectType: &ngfAPI.ClientSettingsPolicy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
+		{
+			objectType: &ngfAPI.ObservabilityPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
@@ -642,6 +657,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&ngfAPI.NginxProxyList{},
 		&gatewayv1.GRPCRouteList{},
 		&ngfAPI.ClientSettingsPolicyList{},
+		&ngfAPI.ObservabilityPolicyList{},
 		partialObjectMetadataList,
 	}
 

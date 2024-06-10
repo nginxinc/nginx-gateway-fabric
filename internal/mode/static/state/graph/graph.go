@@ -67,9 +67,12 @@ type Graph struct {
 	// BackendTLSPolicies holds BackendTLSPolicy resources.
 	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
 	// NginxProxy holds the NginxProxy config for the GatewayClass.
-	NginxProxy *ngfAPI.NginxProxy
+	NginxProxy *NginxProxy
 	// NGFPolicies holds all NGF Policies.
 	NGFPolicies map[PolicyKey]*Policy
+	// GlobalSettings contains global settings from the current state of the graph that may be
+	// needed for policy validation or generation if certain policies rely on those global settings.
+	GlobalSettings *policies.GlobalSettings
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -138,14 +141,13 @@ func (g *Graph) IsNGFPolicyRelevant(
 		panic("policy cannot be nil")
 	}
 
-	ref := policy.GetTargetRef()
-
-	switch ref.Group {
-	case gatewayv1.GroupName:
-		return g.gatewayAPIResourceExist(ref, policy.GetNamespace())
-	default:
-		return false
+	for _, ref := range policy.GetTargetRefs() {
+		if ref.Group == gatewayv1.GroupName && g.gatewayAPIResourceExist(ref, policy.GetNamespace()) {
+			return true
+		}
 	}
+
+	return false
 }
 
 func (g *Graph) gatewayAPIResourceExist(ref v1alpha2.LocalPolicyTargetReference, policyNs string) bool {
@@ -175,14 +177,27 @@ func BuildGraph(
 	validators validation.Validators,
 	protectedPorts ProtectedPorts,
 ) *Graph {
+	var globalSettings *policies.GlobalSettings
+
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
 		// configured GatewayClass does not reference this controller
 		return &Graph{}
 	}
 
-	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
-	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
+	npCfg := buildNginxProxy(state.NginxProxies, processedGwClasses.Winner, validators.GenericValidator)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata)
+	if gc != nil && npCfg != nil && npCfg.Source != nil {
+		spec := npCfg.Source.Spec
+		globalSettings = &policies.GlobalSettings{
+			NginxProxyValid:  npCfg.Valid,
+			TelemetryEnabled: spec.Telemetry != nil && spec.Telemetry.Exporter != nil,
+		}
+
+		if spec.Telemetry != nil {
+			globalSettings.TracingSpanAttributes = spec.Telemetry.SpanAttributes
+		}
+	}
 
 	secretResolver := newSecretResolver(state.Secrets)
 	configMapResolver := newConfigMapResolver(state.ConfigMaps)
@@ -215,7 +230,14 @@ func BuildGraph(
 
 	referencedServices := buildReferencedServices(routes)
 
-	processedPolicies := processPolicies(state.NGFPolicies, validators.PolicyValidator, processedGws, routes)
+	// policies must be processed last because they rely on the state of the other resources in the graph
+	processedPolicies := processPolicies(
+		state.NGFPolicies,
+		validators.PolicyValidator,
+		processedGws,
+		routes,
+		globalSettings,
+	)
 
 	g := &Graph{
 		GatewayClass:               gc,
@@ -230,6 +252,7 @@ func BuildGraph(
 		BackendTLSPolicies:         processedBackendTLSPolicies,
 		NginxProxy:                 npCfg,
 		NGFPolicies:                processedPolicies,
+		GlobalSettings:             globalSettings,
 	}
 
 	g.attachPolicies(controllerName)

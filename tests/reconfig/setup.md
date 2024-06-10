@@ -24,7 +24,7 @@
 
 ## Test Environment
 
- The following cluster will be sufficient:
+The following cluster will be sufficient:
 
 - A Kubernetes cluster with 4 nodes on GKE
   - Node: e2-medium (2 vCPU, 4GB memory)
@@ -32,10 +32,10 @@
 ## Setup
 
 1. Create cloud cluster
-2. Deploy CRDs:
+2. Install Gateway API Resources:
 
    ```bash
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+   kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
    ```
 
 3. Deploy NGF from edge using Helm install and wait for LoadBalancer Service to be ready
@@ -43,7 +43,7 @@
 
    ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
-      --create-namespace --wait -n nginx-gateway --set nginxGateway.config.logging.level=debug
+      --create-namespace --wait -n nginx-gateway --set nginxGateway.productTelemetry.enable=false
    ```
 
 4. Run tests:
@@ -59,16 +59,17 @@
         fixtures `scripts/delete-multiple.sh` which takes a number (needs to be the same number as what was used in the
         create script.)
 5. After each individual test:
-    - Describe the Gateway resource and make sure the status is correct.
-    - Check the logs of both NGF containers for errors.
-    - Parse the logs for TimeToReady numbers (see steps 6-7 below).
-    - Grab metrics.
-      Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
 
-       ```console
-       GW_POD=$(k get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
-       kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
-       ```
+   - Describe the Gateway resource and make sure the status is correct.
+   - Check the logs of both NGF containers for errors.
+   - Parse the logs for TimeToReady numbers (see steps 6-7 below).
+   - Grab metrics.
+     Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
+
+     ```console
+     GW_POD=$(kubectl get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
+     kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
+     ```
 
 6. Measure NGINX Reloads and Time to Ready Results
    1. TimeToReadyTotal as described in each test - NGF logs.
@@ -104,7 +105,7 @@
    2. Run the provided script with the required number of resources,
       e.g. `cd scripts && bash create-resources-routes-last.sh 30`. The script will deploy backend apps and services,
       wait 60 seconds for them to be ready, and deploy 1 Gateway, 1 Secret, 1 RefGrant, and HTTPRoutes at the same time.
-   3. Measure TimeToReadyTotal as the time it takes from NGF receiving the first HTTPRoute resource update -> final
+   3. Measure TimeToReadyTotal as the time it takes from NGF receiving the first HTTPRoute resource update (logs will say "reconciling") -> final
       config written and NGINX reloaded. Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
 
 ### Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway

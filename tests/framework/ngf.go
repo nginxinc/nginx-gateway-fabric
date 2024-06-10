@@ -32,11 +32,7 @@ type InstallationConfig struct {
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
-func InstallGatewayAPI(
-	k8sClient client.Client,
-	apiVersion,
-	k8sVersion string,
-) ([]byte, error) {
+func InstallGatewayAPI(apiVersion string) ([]byte, error) {
 	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
 
 	if output, err := exec.Command("kubectl", "apply", "-f", apiPath).CombinedOutput(); err != nil {
@@ -47,7 +43,7 @@ func InstallGatewayAPI(
 }
 
 // UninstallGatewayAPI uninstalls the specified version of the Gateway API resources.
-func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
+func UninstallGatewayAPI(apiVersion string) ([]byte, error) {
 	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
 
 	output, err := exec.Command("kubectl", "delete", "-f", apiPath).CombinedOutput()
@@ -163,7 +159,9 @@ func setImageArgs(cfg InstallationConfig) []string {
 	if cfg.ServiceType != "" {
 		args = append(args, formatValueSet("service.type", cfg.ServiceType)...)
 		if cfg.ServiceType == "LoadBalancer" && cfg.IsGKEInternalLB {
-			args = append(args, formatValueSet(`service.annotations.networking\.gke\.io\/load-balancer-type`, "Internal")...)
+			args = append(
+				args,
+				formatValueSet(`service.annotations.networking\.gke\.io\/load-balancer-type`, "Internal")...)
 		}
 	}
 

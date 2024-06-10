@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
@@ -47,7 +48,6 @@ var (
 	gatewayAPIPrevVersion = flag.String(
 		"gateway-api-prev-version", "", "Supported Gateway API version for previous NGF release",
 	)
-	k8sVersion = flag.String("k8s-version", "latest", "Version of k8s being tested on")
 	// Configurable NGF installation variables. Helm values will be used as defaults if not specified.
 	ngfImageRepository       = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository     = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
@@ -79,8 +79,10 @@ var (
 const (
 	releaseName           = "ngf-test"
 	ngfNamespace          = "nginx-gateway"
+	gatewayClassName      = "nginx"
 	ngfHTTPForwardedPort  = 10080
 	ngfHTTPSForwardedPort = 10443
+	ngfControllerName     = "gateway.nginx.org/nginx-gateway-controller"
 )
 
 type setupConfig struct {
@@ -100,8 +102,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(apps.AddToScheme(scheme)).To(Succeed())
 	Expect(apiext.AddToScheme(scheme)).To(Succeed())
 	Expect(coordination.AddToScheme(scheme)).To(Succeed())
-	Expect(v1.AddToScheme(scheme)).To(Succeed())
+	Expect(v1.Install(scheme)).To(Succeed())
 	Expect(batchv1.AddToScheme(scheme)).To(Succeed())
+	Expect(ngfAPI.AddToScheme(scheme)).To(Succeed())
 
 	options := client.Options{
 		Scheme: scheme,
@@ -167,7 +170,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		installCfg.ImagePullPolicy = *imagePullPolicy
 	}
 
-	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
+	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
@@ -210,7 +213,7 @@ func teardown(relName string) {
 	output, err := framework.UninstallNGF(cfg, k8sClient)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	output, err = framework.UninstallGatewayAPI(*gatewayAPIVersion, *k8sVersion)
+	output, err = framework.UninstallGatewayAPI(*gatewayAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -256,7 +259,6 @@ var _ = BeforeSuite(func() {
 		"upgrade",            // - running upgrade test (this test will deploy its own version)
 		"longevity-teardown", // - running longevity teardown (deployment will already exist)
 		"telemetry",          // - running telemetry test (NGF will be deployed as part of the test)
-		"graceful-recovery",  // - running graceful recovery test (this test will deploy its own version)
 		"scale",              // - running scale test (this test will deploy its own version)
 	}
 	for _, s := range skipSubstrings {
@@ -296,6 +298,5 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "graceful-recovery") ||
 		strings.Contains(labelFilter, "scale")
 }

@@ -282,9 +282,9 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr.Logger, event interface{}) {
 	switch e := event.(type) {
 	case *events.UpsertEvent:
-		filterKey := objectFilterKey(e.Resource, client.ObjectKeyFromObject(e.Resource))
+		upFilterKey := objectFilterKey(e.Resource, client.ObjectKeyFromObject(e.Resource))
 
-		if filter, ok := h.objectFilters[filterKey]; ok {
+		if filter, ok := h.objectFilters[upFilterKey]; ok {
 			filter.upsert(ctx, logger, e.Resource)
 			if !filter.captureChangeInGraph {
 				return
@@ -293,9 +293,9 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 
 		h.cfg.processor.CaptureUpsertChange(e.Resource)
 	case *events.DeleteEvent:
-		filterKey := objectFilterKey(e.Type, e.NamespacedName)
+		delFilterKey := objectFilterKey(e.Type, e.NamespacedName)
 
-		if filter, ok := h.objectFilters[filterKey]; ok {
+		if filter, ok := h.objectFilters[delFilterKey]; ok {
 			filter.delete(ctx, logger, e.NamespacedName)
 			if !filter.captureChangeInGraph {
 				return
@@ -359,14 +359,14 @@ func (h *eventHandlerImpl) updateUpstreamServers(
 		}
 
 		for _, u := range conf.Upstreams {
-			upstream := upstream{
+			confUpstream := upstream{
 				name:    u.Name,
 				servers: ngxConfig.ConvertEndpoints(u.Endpoints),
 			}
 
-			if u, ok := prevUpstreams[upstream.name]; ok {
-				if !serversEqual(upstream.servers, u.Peers) {
-					upstreams = append(upstreams, upstream)
+			if u, ok := prevUpstreams[confUpstream.name]; ok {
+				if !serversEqual(confUpstream.servers, u.Peers) {
+					upstreams = append(upstreams, confUpstream)
 				}
 			}
 		}

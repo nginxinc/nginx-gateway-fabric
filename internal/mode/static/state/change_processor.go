@@ -205,6 +205,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				store:     commonPolicyObjectStore,
 				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
 			},
+			{
+				gvk:       cfg.MustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
+				store:     commonPolicyObjectStore,
+				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
+			},
 		},
 	)
 

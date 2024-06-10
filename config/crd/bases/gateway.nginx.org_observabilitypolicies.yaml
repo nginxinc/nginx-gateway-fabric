@@ -50,35 +50,47 @@ spec:
           spec:
             description: Spec defines the desired state of the ObservabilityPolicy.
             properties:
-              targetRef:
+              targetRefs:
                 description: |-
-                  TargetRef identifies an API object to apply the policy to.
-                  Object must be in the same namespace as the policy.
-
-
+                  TargetRefs identifies the API object(s) to apply the policy to.
+                  Objects must be in the same namespace as the policy.
                   Support: HTTPRoute
-                properties:
-                  group:
-                    description: Group is the group of the target resource.
-                    maxLength: 253
-                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                  kind:
-                    description: Kind is kind of the target resource.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                    type: string
-                  name:
-                    description: Name is the name of the target resource.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
-                required:
-                - group
-                - kind
-                - name
-                type: object
+                items:
+                  description: |-
+                    LocalPolicyTargetReference identifies an API object to apply a direct or
+                    inherited policy to. This should be used as part of Policy resources
+                    that can target Gateway API resources. For more information on how this
+                    policy attachment model works, and a sample Policy resource, refer to
+                    the policy attachment documentation for Gateway API.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-validations:
+                - message: 'TargetRef Kind must be: HTTPRoute or GRPCRoute'
+                  rule: (self.exists(t, t.kind=='HTTPRoute') || self.exists(t, t.kind=='GRPCRoute'))
+                - message: TargetRef Group must be gateway.networking.k8s.io.
+                  rule: self.all(t, t.group=='gateway.networking.k8s.io')
               tracing:
                 description: Tracing allows for enabling and configuring tracing.
                 properties:
@@ -96,6 +108,7 @@ spec:
                     description: |-
                       Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
                       By default, 100% of http requests are traced. Not applicable for parent-based tracing.
+                      If ratio is set to 0, tracing is disabled.
                     format: int32
                     maximum: 100
                     minimum: 0
@@ -155,7 +168,7 @@ spec:
                 - message: ratio can only be specified if strategy is of type ratio
                   rule: '!(has(self.ratio) && self.strategy != ''ratio'')'
             required:
-            - targetRef
+            - targetRefs
             type: object
           status:
             description: Status defines the state of the ObservabilityPolicy.

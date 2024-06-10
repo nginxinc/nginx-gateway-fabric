@@ -24,7 +24,7 @@ repos:
         exclude: (^examples/|^docs/|.*_test.go$)
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.2
+    rev: v8.18.3
     hooks:
       - id: gitleaks
 
@@ -33,7 +33,7 @@ repos:
     hooks:
       - id: prettier
         additional_dependencies:
-          - prettier@3.2.5 # https://github.com/pre-commit/pre-commit/issues/3133
+          - prettier@3.3.1 # https://github.com/pre-commit/pre-commit/issues/3133
         types:
           - javascript
 
@@ -41,6 +41,13 @@ repos:
     rev: v1.59.0
     hooks:
       - id: golangci-lint-full
+        name: golangci-lint-root
+        alias: golangci-lint-root
+
+      - id: golangci-lint-full
+        name: golangci-lint-tests
+        alias: golangci-lint-tests
+        entry: bash -c 'cd tests && golangci-lint run --fix --config $OLDPWD/.golangci.yml'
 
   # Rules are in .markdownlint-cli2.yaml file
   # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions

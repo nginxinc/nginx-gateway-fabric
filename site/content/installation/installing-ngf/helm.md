@@ -37,7 +37,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 
 ##### For NGINX Plus
 
-{{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
 {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
 
@@ -126,17 +126,17 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 To upgrade your Gateway API resources, take the following steps:
 
 - Verify the Gateway API resources are compatible with your NGINX Gateway Fabric version. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
-- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.1.0) for any important upgrade-specific information.
+- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases) for any important upgrade-specific information.
 - To upgrade the Gateway API resources, run:
 
   ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.2.0" | kubectl apply -f -
   ```
 
   or, if you installed the from the experimental channel:
 
   ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
+  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.2.0" | kubectl apply -f -
   ```
 
 ### Upgrade NGINX Gateway Fabric CRDs
@@ -182,6 +182,20 @@ To upgrade the CRDs, take the following steps:
    ```
 
    If needed, replace `ngf` with your chosen release name.
+
+## How to upgrade from NGINX OSS to NGINX Plus
+
+- To upgrade from NGINX OSS to NGINX Plus, update the Helm command to include the necessary values for Plus:
+
+  {{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+
+  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
+
+  ```shell
+  helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
+  ```
+
+  If needed, replace `ngf` with your chosen release name.
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 

@@ -1,0 +1,50 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /hello
+    backendRefs:
+    - name: hello
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: world
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /world
+    backendRefs:
+    - name: world
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /helloworld
+    backendRefs:
+    - name: hello-world
+      port: 80

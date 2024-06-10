@@ -2,21 +2,13 @@ package suite
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
-	crClient "sigs.k8s.io/controller-runtime/pkg/client"
-)
 
-const (
-	collectorNamespace        = "collector"
-	collectorChartReleaseName = "otel-collector"
-	// FIXME(pleshakov): Find a automated way to keep the version updated here similar to dependabot.
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1665
-	collectorChartVersion = "0.73.1"
+	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
 var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func() {
@@ -24,7 +16,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		// Because NGF reports telemetry on start, we need to install the collector first.
 
 		// Install collector
-		output, err := installCollector()
+		output, err := framework.InstallCollector()
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		// Install NGF
@@ -37,22 +29,13 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 	})
 
 	AfterEach(func() {
-		output, err := uninstallCollector()
+		output, err := framework.UninstallCollector(resourceManager)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 	})
 
 	It("sends telemetry", func() {
-		names, err := resourceManager.GetPodNames(
-			collectorNamespace,
-			crClient.MatchingLabels{
-				"app.kubernetes.io/name": "opentelemetry-collector",
-			},
-		)
-
+		name, err := framework.GetCollectorPodName(resourceManager)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(names).To(HaveLen(1))
-
-		name := names[0]
 
 		// We assert that all data points were sent
 		// For some data points, as a sanity check, we assert on sent values.
@@ -64,7 +47,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		Expect(err).ToNot(HaveOccurred())
 
 		matchFirstExpectedLine := func() bool {
-			logs, err := resourceManager.GetPodLogs(collectorNamespace, name, &core.PodLogOptions{})
+			logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, name, &core.PodLogOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			return strings.Contains(logs, "dataType: Str(ngf-product-telemetry)")
 		}
@@ -72,7 +55,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		// Wait until the collector has received the telemetry data
 		Eventually(matchFirstExpectedLine, "30s", "5s").Should(BeTrue())
 
-		logs, err := resourceManager.GetPodLogs(collectorNamespace, name, &core.PodLogOptions{})
+		logs, err := resourceManager.GetPodLogs(framework.CollectorNamespace, name, &core.PodLogOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
 		assertConsecutiveLinesInLogs(
@@ -102,41 +85,6 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		)
 	})
 })
-
-func installCollector() ([]byte, error) {
-	repoAddArgs := []string{
-		"repo",
-		"add",
-		"open-telemetry",
-		"https://open-telemetry.github.io/opentelemetry-helm-charts",
-	}
-
-	if output, err := exec.Command("helm", repoAddArgs...).CombinedOutput(); err != nil {
-		return output, err
-	}
-
-	args := []string{
-		"install",
-		collectorChartReleaseName,
-		"open-telemetry/opentelemetry-collector",
-		"--create-namespace",
-		"--namespace", collectorNamespace,
-		"--version", collectorChartVersion,
-		"-f", "manifests/telemetry/collector-values.yaml",
-		"--wait",
-	}
-
-	return exec.Command("helm", args...).CombinedOutput()
-}
-
-func uninstallCollector() ([]byte, error) {
-	args := []string{
-		"uninstall", collectorChartReleaseName,
-		"--namespace", collectorNamespace,
-	}
-
-	return exec.Command("helm", args...).CombinedOutput()
-}
 
 func assertConsecutiveLinesInLogs(logs string, expectedLines []string) {
 	lines := strings.Split(logs, "\n")

@@ -3,12 +3,11 @@ package framework
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
-
-	"log/slog"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"

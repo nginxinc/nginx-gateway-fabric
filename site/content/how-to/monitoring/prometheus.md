@@ -66,7 +66,7 @@ In the Grafana UI menu, go to `Connections` then `Data sources`. Add your Promet
 
 Download the following sample dashboard and Import as a new Dashboard in the Grafana UI.
 
-{{< download "grafana-dashboard.json" "ngf-grafana-dashboard.json" >}}
+- {{< download "grafana-dashboard.json" "ngf-grafana-dashboard.json" >}}
 
 ## Available metrics in NGINX Gateway Fabric
 
