@@ -336,3 +336,4 @@ The trace includes the attribute from the global NginxProxy resource as well as 
 ## Further Reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
+- [API reference]({{< relref "reference/api.md" >}}): learn about the API reference for NGINX Gateway Fabric.

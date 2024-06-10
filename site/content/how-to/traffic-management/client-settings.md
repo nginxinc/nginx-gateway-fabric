@@ -282,3 +282,4 @@ EOF
 ## Further Reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
+- [API reference]({{< relref "reference/api.md" >}}): learn about the `ClientSettingsPolicy` API.
