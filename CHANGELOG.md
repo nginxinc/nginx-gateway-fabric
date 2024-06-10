@@ -24,8 +24,8 @@ _June 11, 2024_
 
 FEATURES:
 
-- Update minimum k8s version to 1.25 [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
-- Support NginxProxy CRD and global tracing settings [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
+- The minimum supported version of Kubernetes is now 1.25 [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
+- NginxProxy CRD added to configure global settings (such as tracing endpoint) at the GatewayClass level. [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
 
 BUG FIXES:
 
