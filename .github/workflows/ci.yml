@@ -78,6 +78,9 @@ jobs:
       - name: Check if helm docs are up to date
         run: make helm-docs && git diff --exit-code
 
+      - name: Check if API docs are up to date
+        run: make generate-api-docs && git diff --exit-code
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-22.04
