@@ -126,7 +126,7 @@ NGINX Gateway Fabric sets the [PolicyStatus](https://gateway-api.sigs.k8s.io/ref
 `PolicyStatus` fields:
 
 - `ancestors`: describes the status of a route with respect to the ancestor.
-  - `ancestorRef`: the object that the policy targets in `spec.targetRef`
+  - `ancestorRef`: the object that the policy targets in `spec.targetRef`.
   - `controllerName`: the controller name of NGINX Gateway Fabric.
   - `conditions`: (Condition/Status/Reason):
     - `Accepted/True/Accepted`: the policy is accepted by the ancestor.
