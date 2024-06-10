@@ -10,9 +10,6 @@ _June 11, 2024_
 
 FEATURES:
 
-- The minimum supported version of Kubernetes is now 1.25. [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
-- NGINX Plus was updated to R32. [2057](https://github.com/nginxinc/nginx-gateway-fabric/pull/2057)
-- Update to v1.1.0 of the Gateway API. This includes a breaking change to BackendTLSPolicies - see [the release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.1.0) for further details. [1975](https://github.com/nginxinc/nginx-gateway-fabric/pull/1975)
 - NginxProxy CRD added to configure global settings (such as tracing endpoint) at the GatewayClass level. [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
   - Add configuration option to disable HTTP2 to the NginxProxy CRD. [1925](https://github.com/nginxinc/nginx-gateway-fabric/pull/1925)
 - Introduce support for the HTTP filter `ResponseHeaderModifier`, enabling the modification of response headers within HTTPRoutes. [1880](https://github.com/nginxinc/nginx-gateway-fabric/pull/1880). With help from [Kai-Hsun Chen](https://github.com/kevin85421).
@@ -30,8 +27,6 @@ BUG FIXES:
 - Fixed issue when using BackendTLSPolicy that led to failed connections. [1934](https://github.com/nginxinc/nginx-gateway-fabric/pull/1934).
 - Update secrets on resource version change only. [2047](https://github.com/nginxinc/nginx-gateway-fabric/pull/2047)
 - Fix reload errors due to long matching conditions. [1829](https://github.com/nginxinc/nginx-gateway-fabric/pull/1829).
-- Fixed issue when using BackendTLSPolicy that led to failed connections. [1934](https://github.com/nginxinc/nginx-gateway-fabric/pull/1934)
-- Fix RBAC ServiceAccount ImagePullSecrets template which caused errors when running NGF with NGINX+. [1953](https://github.com/nginxinc/nginx-gateway-fabric/pull/1953)
 - Add SecurityContextConstraints so NGF can run on Openshift. [1976](https://github.com/nginxinc/nginx-gateway-fabric/pull/1976)
 
 DOCUMENTATION:
@@ -48,6 +43,13 @@ HELM CHART:
 - Specify minimum Kubernetes version in Helm chart. [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
 - Use kustomize to install Gateway API and NGINX Gateway Fabric CRDs. [1886](https://github.com/nginxinc/nginx-gateway-fabric/pull/1886) and [2011](https://github.com/nginxinc/nginx-gateway-fabric/pull/2011)
 - Annotations for GatewayClass and NginxGateway are now configurable. [1993](https://github.com/nginxinc/nginx-gateway-fabric/pull/1993). Thanks to [sgavrylenko](https://github.com/sgavrylenko).
+- Fix RBAC ServiceAccount ImagePullSecrets template which caused errors when running NGF with NGINX+. [1953](https://github.com/nginxinc/nginx-gateway-fabric/pull/1953)
+
+DEPENDENCIES:
+
+- The minimum supported version of Kubernetes is now 1.25. [1885](https://github.com/nginxinc/nginx-gateway-fabric/pull/1885)
+- NGINX Plus was updated to R32. [2057](https://github.com/nginxinc/nginx-gateway-fabric/pull/2057)
+- Update to v1.1.0 of the Gateway API. This includes a breaking change to BackendTLSPolicies - see [the release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.1.0) for further details. [1975](https://github.com/nginxinc/nginx-gateway-fabric/pull/1975)
 
 UPGRADE:
 
