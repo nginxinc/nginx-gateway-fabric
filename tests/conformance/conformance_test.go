@@ -68,9 +68,6 @@ func TestConformance(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	defer f.Close()
 
-	_, err = f.WriteString("CONFORMANCE PROFILE\n")
-	g.Expect(err).ToNot(HaveOccurred())
-
 	_, err = f.Write(yamlReport)
 	g.Expect(err).ToNot(HaveOccurred())
 }

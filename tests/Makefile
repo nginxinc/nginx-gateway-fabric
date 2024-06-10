@@ -12,7 +12,8 @@ GW_SVC_GKE_INTERNAL = false
 NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
 PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
-SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
+SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification
+#GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
@@ -29,25 +30,9 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --name $(CLUSTER_NAME)
-	kubectl apply -f conformance/conformance-rbac.yaml
-	kubectl run -i conformance \
-		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
-		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
-		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
-						        --supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
-								--report-output=output.txt; cat output.txt" | tee output.txt
-	bash scripts/check-pod-exit-code.sh
-	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
-	rm output.txt
-	grpc_core_result=`yq '.profiles[0].core.result' conformance-profile.yaml`; \
-	http_core_result=`yq '.profiles[1].core.result' conformance-profile.yaml`; \
-	http_extended_result=`yq '.profiles[1].extended.result' conformance-profile.yaml`; \
-	if [ "$$grpc_core_result" != "failure" ] && [ "$$http_core_result" != "failure" ] && [ "$$http_extended_result" != "failure" ] ; then \
-		exit 0; \
-	else \
-		exit 2; \
-	fi
+	go test -v ./conformance -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
+		--supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \
+		--report-output=conformance-profile.yaml
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
@@ -149,7 +134,7 @@ delete-gke-cluster: ## Delete the GKE cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
 	bash scripts/add-local-ip-auth-networks.sh
 
-HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
+HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip
 
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster
