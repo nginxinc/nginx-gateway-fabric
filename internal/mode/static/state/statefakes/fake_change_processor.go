@@ -4,18 +4,19 @@ package statefakes
 import (
 	"sync"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"k8s.io/apimachinery/pkg/types"
+	typesa "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FakeChangeProcessor struct {
-	CaptureDeleteChangeStub        func(client.Object, types.NamespacedName)
+	CaptureDeleteChangeStub        func(types.ObjectType, typesa.NamespacedName)
 	captureDeleteChangeMutex       sync.RWMutex
 	captureDeleteChangeArgsForCall []struct {
-		arg1 client.Object
-		arg2 types.NamespacedName
+		arg1 types.ObjectType
+		arg2 typesa.NamespacedName
 	}
 	CaptureUpsertChangeStub        func(client.Object)
 	captureUpsertChangeMutex       sync.RWMutex
@@ -48,11 +49,11 @@ type FakeChangeProcessor struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeChangeProcessor) CaptureDeleteChange(arg1 client.Object, arg2 types.NamespacedName) {
+func (fake *FakeChangeProcessor) CaptureDeleteChange(arg1 types.ObjectType, arg2 typesa.NamespacedName) {
 	fake.captureDeleteChangeMutex.Lock()
 	fake.captureDeleteChangeArgsForCall = append(fake.captureDeleteChangeArgsForCall, struct {
-		arg1 client.Object
-		arg2 types.NamespacedName
+		arg1 types.ObjectType
+		arg2 typesa.NamespacedName
 	}{arg1, arg2})
 	stub := fake.CaptureDeleteChangeStub
 	fake.recordInvocation("CaptureDeleteChange", []interface{}{arg1, arg2})
@@ -68,13 +69,13 @@ func (fake *FakeChangeProcessor) CaptureDeleteChangeCallCount() int {
 	return len(fake.captureDeleteChangeArgsForCall)
 }
 
-func (fake *FakeChangeProcessor) CaptureDeleteChangeCalls(stub func(client.Object, types.NamespacedName)) {
+func (fake *FakeChangeProcessor) CaptureDeleteChangeCalls(stub func(types.ObjectType, typesa.NamespacedName)) {
 	fake.captureDeleteChangeMutex.Lock()
 	defer fake.captureDeleteChangeMutex.Unlock()
 	fake.CaptureDeleteChangeStub = stub
 }
 
-func (fake *FakeChangeProcessor) CaptureDeleteChangeArgsForCall(i int) (client.Object, types.NamespacedName) {
+func (fake *FakeChangeProcessor) CaptureDeleteChangeArgsForCall(i int) (types.ObjectType, typesa.NamespacedName) {
 	fake.captureDeleteChangeMutex.RLock()
 	defer fake.captureDeleteChangeMutex.RUnlock()
 	argsForCall := fake.captureDeleteChangeArgsForCall[i]

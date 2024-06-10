@@ -21,6 +21,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 // Config is configuration for the provisioner mode.
@@ -63,7 +64,7 @@ func StartManager(cfg Config) error {
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update firstBatchPreparer creation below
 	controllerRegCfgs := []struct {
-		objectType client.Object
+		objectType ngftypes.ObjectType
 		options    []controller.Option
 	}{
 		{

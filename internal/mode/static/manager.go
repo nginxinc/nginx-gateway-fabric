@@ -45,6 +45,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
@@ -356,7 +357,7 @@ func registerControllers(
 	controlConfigNSName types.NamespacedName,
 ) error {
 	type ctlrCfg struct {
-		objectType client.Object
+		objectType ngftypes.ObjectType
 		options    []controller.Option
 	}
 

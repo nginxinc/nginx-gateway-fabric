@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 const (
@@ -82,7 +83,7 @@ func defaultConfig() config {
 // The registered controller will send events to the provided channel.
 func Register(
 	ctx context.Context,
-	objectType client.Object,
+	objectType ngftypes.ObjectType,
 	mgr manager.Manager,
 	eventCh chan<- interface{},
 	options ...Option,
@@ -137,7 +138,7 @@ func Register(
 func addIndex(
 	ctx context.Context,
 	indexer client.FieldIndexer,
-	objectType client.Object,
+	objectType ngftypes.ObjectType,
 	field string,
 	indexerFunc client.IndexerFunc,
 ) error {

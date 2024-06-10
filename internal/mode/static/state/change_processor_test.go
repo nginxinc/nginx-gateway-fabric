@@ -25,6 +25,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -2328,7 +2329,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 		DescribeTable(
 			"CaptureDeleteChange must panic",
-			func(resourceType client.Object, nsname types.NamespacedName) {
+			func(resourceType ngftypes.ObjectType, nsname types.NamespacedName) {
 				process := func() {
 					processor.CaptureDeleteChange(resourceType, nsname)
 				}

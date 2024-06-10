@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 // NamespacedNameFilterFunc is a function that returns true if the resource should be processed by the reconciler.
@@ -24,7 +25,7 @@ type ReconcilerConfig struct {
 	// Getter gets a resource from the k8s API.
 	Getter Getter
 	// ObjectType is the type of the resource that the reconciler will reconcile.
-	ObjectType client.Object
+	ObjectType ngftypes.ObjectType
 	// EventCh is the channel where the reconciler will send events.
 	EventCh chan<- interface{}
 	// NamespacedNameFilter filters resources the controller will process. Can be nil.
@@ -52,7 +53,7 @@ func NewReconciler(cfg ReconcilerConfig) *Reconciler {
 	}
 }
 
-func (r *Reconciler) newObject(objectType client.Object) client.Object {
+func (r *Reconciler) newObject(objectType ngftypes.ObjectType) ngftypes.ObjectType {
 	if r.cfg.OnlyMetadata {
 		partialObj := &metav1.PartialObjectMetadata{}
 		partialObj.SetGroupVersionKind(objectType.GetObjectKind().GroupVersionKind())
