@@ -330,3 +330,7 @@ Select a trace to view the attributes.
 {{<img src="img/jaeger-trace-attributes.png" alt="">}}
 
 The trace includes the attribute from the global NginxProxy resource as well as the attribute from the ObservabilityPolicy.
+
+## Further Reading
+
+- [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
