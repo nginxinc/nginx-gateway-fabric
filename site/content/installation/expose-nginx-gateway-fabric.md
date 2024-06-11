@@ -23,7 +23,7 @@ This gateway is associated with the NGINX Gateway Fabric through the **gatewayCl
 To create a **NodePort** service run the following command:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/service/nodeport.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/manifests/service/nodeport.yaml
 ```
 
 A **NodePort** service allocates a port on every cluster node. Access NGINX Gateway Fabric using any node's IP address and the allocated port.
@@ -37,7 +37,7 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
 1. Run the following command:
 
    ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/service/loadbalancer.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/manifests/service/loadbalancer.yaml
    ```
 
 2. Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the following command:
@@ -53,7 +53,7 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
 1. Run the following command:
 
    ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
    ```
 
 2. In AWS, the NLB (Network Load Balancer) DNS (directory name system) name will be reported by Kubernetes instead of a public IP in the `EXTERNAL-IP` column. To get the DNS name, run:
