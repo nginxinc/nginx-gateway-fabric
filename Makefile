@@ -135,6 +135,9 @@ generate-manifests: ## Generate manifests using Helm.
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway --api-versions security.openshift.io/v1/SecurityContextConstraints -s templates/scc.yaml > $(strip $(MANIFEST_DIR))/scc.yaml
 
+generate-api-docs: ## Generate API docs
+	go run github.com/ahmetb/gen-crd-api-reference-docs -config site/config/api/config.json -template-dir site/config/api -out-file site/content/reference/api.md -api-dir "github.com/nginxinc/nginx-gateway-fabric/apis"
+
 .PHONY: clean
 clean: ## Clean the build
 	-rm -r $(OUT_DIR)
