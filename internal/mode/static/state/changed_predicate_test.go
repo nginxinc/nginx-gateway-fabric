@@ -8,10 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 func TestFuncPredicate(t *testing.T) {
-	alwaysTrueFunc := func(_ client.Object, _ types.NamespacedName) bool { return true }
+	alwaysTrueFunc := func(_ ngftypes.ObjectType, _ types.NamespacedName) bool { return true }
 	emptyObject := &v1.Pod{}
 
 	p := funcPredicate{stateChanged: alwaysTrueFunc}
@@ -23,7 +25,7 @@ func TestFuncPredicate(t *testing.T) {
 }
 
 func TestFuncPredicate_Panic(t *testing.T) {
-	alwaysTrueFunc := func(_ client.Object, _ types.NamespacedName) bool { return true }
+	alwaysTrueFunc := func(_ ngftypes.ObjectType, _ types.NamespacedName) bool { return true }
 
 	p := funcPredicate{stateChanged: alwaysTrueFunc}
 

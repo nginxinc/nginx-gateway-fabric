@@ -115,11 +115,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
+	isReferenced := func(obj ngftypes.ObjectType, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
-	isNGFPolicyRelevant := func(obj client.Object, nsname types.NamespacedName) bool {
+	isNGFPolicyRelevant := func(obj ngftypes.ObjectType, nsname types.NamespacedName) bool {
 		pol, ok := obj.(policies.Policy)
 		if !ok {
 			return false
