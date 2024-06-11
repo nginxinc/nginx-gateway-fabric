@@ -32,7 +32,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 #### Stable release
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/crds.yaml
 ```
 
 #### Edge version
@@ -45,7 +45,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
-{{<note>}}If you are deploying NGINX Gateway Fabric on OpenShift, we've supplied a baseline [SecurityContextConstraints](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/manifests/scc.yaml) manifest that you can download, modify if needed, and apply. You will also need to make sure the SecurityContextConstraints resource is added to the ClusterRole RBAC:
+{{<note>}}If you are deploying NGINX Gateway Fabric on OpenShift, we've supplied a baseline [SecurityContextConstraints](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/manifests/scc.yaml) manifest that you can download, modify if needed, and apply. You will also need to make sure the SecurityContextConstraints resource is added to the ClusterRole RBAC:
 
 ```yaml
 . . .
@@ -67,12 +67,12 @@ Alternatively, use [helm]({{< relref "installation/installing-ngf/helm.md" >}}),
 ##### For NGINX
 
 ```shell
-kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-gateway.yaml
+kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
 ```
 
 ##### For NGINX Plus
 
-Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-plus-gateway.yaml).
 
 Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
 
@@ -148,13 +148,13 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Gateway API resources, run:
 
      ```shell
-     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.2.0" | kubectl apply -f -
+     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.3.0" | kubectl apply -f -
      ```
 
      or, if you installed the from the experimental channel:
 
      ```shell
-     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.2.0" | kubectl apply -f -
+     kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.3.0" | kubectl apply -f -
      ```
 
 1. **Upgrade NGINX Gateway Fabric CRDs:**
@@ -162,7 +162,7 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
      ```shell
-     kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+     kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/crds.yaml
      ```
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
@@ -170,12 +170,12 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade your OSS deployment, run:
 
      ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-gateway.yaml
+     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
      ```
 
    - To upgrade your Plus deployment:
 
-     Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+     Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-plus-gateway.yaml).
 
      Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
 
@@ -245,11 +245,11 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
    - To remove NGINX Gateway Fabric and its custom resource definitions (CRDs), run:
 
      ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-gateway.yaml
+     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
      ```
 
      ```shell
-     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/crds.yaml
      ```
 
 1. **Remove the Gateway API resources:**
