@@ -130,13 +130,13 @@ To upgrade your Gateway API resources, take the following steps:
 - To upgrade the Gateway API resources, run:
 
   ```shell
-  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.2.0" | kubectl apply -f -
+  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.3.0" | kubectl apply -f -
   ```
 
   or, if you installed the from the experimental channel:
 
   ```shell
-  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.2.0" | kubectl apply -f -
+  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.3.0" | kubectl apply -f -
   ```
 
 ### Upgrade NGINX Gateway Fabric CRDs
@@ -150,7 +150,7 @@ To upgrade the CRDs, take the following steps:
 2. Upgrade the CRDs:
 
    ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/crds.yaml
    ```
 
    {{<note>}}Ignore the following warning, as it is expected.{{</note>}}
@@ -264,7 +264,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
      ```shell
      kubectl delete ns nginx-gateway
-     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.2.0/deploy/crds.yaml
+     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/crds.yaml
      ```
 
 3. **Remove the Gateway API resources:**
@@ -273,7 +273,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
 ## Additional configuration
 
-For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.2.0/charts/nginx-gateway-fabric/README.md#configuration).
+For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.3.0/charts/nginx-gateway-fabric/README.md#configuration).
 
 ## Next steps
 
