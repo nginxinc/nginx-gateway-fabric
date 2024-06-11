@@ -44,7 +44,7 @@ The table below summarizes the options regarding the images, manifests, document
 to the correct versions:
 
 | Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                                 |
-| -------------- | ---------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|----------------|------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/deploy). | [Documentation](https://docs.nginx.com/nginx-gateway-fabric). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/examples).                           |
 | Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/site/content). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples). |
 
@@ -65,8 +65,9 @@ the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for information on issue crea
 The following table lists the software versions NGINX Gateway Fabric supports.
 
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS | NGINX Plus |
-| -------------------- | ----------- | ---------- | --------- | ---------- |
+|----------------------|-------------|------------|-----------|------------|
 | Edge                 | 1.1.0       | 1.25+      | 1.27.0    | R32        |
+| 1.3.0                | 1.1.0       | 1.25+      | 1.27.0    | R32        |
 | 1.2.0                | 1.0.0       | 1.23+      | 1.25.4    | R31        |
 | 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
 | 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
