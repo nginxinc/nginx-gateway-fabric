@@ -151,7 +151,7 @@ jobs:
         working-directory: ./tests
 
       - name: Upload profile to release
-        if: ${{ inputs.k8s-version == 'latest' && startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.ref_name }} conformance-profile.yaml --clobber
