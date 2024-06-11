@@ -10,16 +10,16 @@ _June 11, 2024_
 
 FEATURES:
 
-- NginxProxy CRD added to configure global settings (such as tracing endpoint) at the GatewayClass level. [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
-  - Add configuration option to disable HTTP2 to the NginxProxy CRD. [1925](https://github.com/nginxinc/nginx-gateway-fabric/pull/1925)
-- Introduce support for the HTTP filter `ResponseHeaderModifier`, enabling the modification of response headers within HTTPRoutes. [1880](https://github.com/nginxinc/nginx-gateway-fabric/pull/1880). With help from [Kai-Hsun Chen](https://github.com/kevin85421).
 - Support for [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/):
   - Exact Method Matching, Header Matching, and Listener Hostname Matching. [1835](https://github.com/nginxinc/nginx-gateway-fabric/pull/1835)
   - RequestHeaderModifier Filter. [1909](https://github.com/nginxinc/nginx-gateway-fabric/pull/1909)
   - ResponseHeaderModifier filter. [1983](https://github.com/nginxinc/nginx-gateway-fabric/pull/1983)
-- Collect BackendTLSPolicy and GRPCRoute counts configured with NGINX Gateway Fabric. [1954](https://github.com/nginxinc/nginx-gateway-fabric/pull/1954)
-- Introduce ClientSettingsPolicy CRD. This CRD allows users to configure the behavior of the connection between the client and NGINX. [1940](https://github.com/nginxinc/nginx-gateway-fabric/pull/1940)
 - Support tracing via the ObservabilityPolicy CRD. [2004](https://github.com/nginxinc/nginx-gateway-fabric/pull/2004)
+- NginxProxy CRD added to configure global settings (such as tracing endpoint) at the GatewayClass level. [1870](https://github.com/nginxinc/nginx-gateway-fabric/pull/1870)
+  - Add configuration option to disable HTTP2 to the NginxProxy CRD. [1925](https://github.com/nginxinc/nginx-gateway-fabric/pull/1925)
+- Introduce ClientSettingsPolicy CRD. This CRD allows users to configure the behavior of the connection between the client and NGINX. [1940](https://github.com/nginxinc/nginx-gateway-fabric/pull/1940)
+- Introduce support for the HTTP filter `ResponseHeaderModifier`, enabling the modification of response headers within HTTPRoutes. [1880](https://github.com/nginxinc/nginx-gateway-fabric/pull/1880). With help from [Kai-Hsun Chen](https://github.com/kevin85421).
+- Collect BackendTLSPolicy and GRPCRoute counts configured with NGINX Gateway Fabric. [1954](https://github.com/nginxinc/nginx-gateway-fabric/pull/1954)
 
 BUG FIXES:
 
@@ -59,7 +59,7 @@ KNOWN ISSUES:
 
 - Tracing does not work on HTTPRoutes with matching conditions. [2105](https://github.com/nginxinc/nginx-gateway-fabric/issues/2105)
 - ClientSettingsPolicy does not work on HTTPRoutes with matching conditions. [2079](https://github.com/nginxinc/nginx-gateway-fabric/issues/2079)
-- NGF Pod fails to become ready due to nginx reload failure. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
+- In restrictive environments, the NGF Pod may fail to become ready due to a permissions issue that causes nginx reloads to fail. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
 
 COMPATIBILITY:
 
