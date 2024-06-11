@@ -66,20 +66,8 @@ jobs:
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
         working-directory: tests
 
-      - name: Check if generated go files are up to date
-        run: make generate && git diff --exit-code
-
-      - name: Check if generated CRDs and types are up to date
-        run: make generate-crds && git diff --exit-code
-
-      - name: Check if generated manifests are up to date
-        run: make generate-manifests && git diff --exit-code
-
-      - name: Check if helm docs are up to date
-        run: make helm-docs && git diff --exit-code
-
-      - name: Check if API docs are up to date
-        run: make generate-api-docs && git diff --exit-code
+      - name: Check if all the generated files are up to date
+        run: make generate-all && git diff --exit-code
 
   unit-tests:
     name: Unit Tests
@@ -230,7 +218,11 @@ jobs:
       fail-fast: false
       matrix:
         image: [nginx, plus]
-        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "${{ needs.vars.outputs.k8s_latest }}"]
+        k8s-version:
+          [
+            "${{ needs.vars.outputs.min_k8s_version }}",
+            "${{ needs.vars.outputs.k8s_latest }}",
+          ]
     uses: ./.github/workflows/functional.yml
     with:
       image: ${{ matrix.image }}
@@ -245,7 +237,11 @@ jobs:
       fail-fast: false
       matrix:
         image: [nginx, plus]
-        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "${{ needs.vars.outputs.k8s_latest }}"]
+        k8s-version:
+          [
+            "${{ needs.vars.outputs.min_k8s_version }}",
+            "${{ needs.vars.outputs.k8s_latest }}",
+          ]
         enable-experimental: [true, false]
     uses: ./.github/workflows/conformance.yml
     with:
@@ -262,7 +258,11 @@ jobs:
       fail-fast: false
       matrix:
         image: [nginx, plus]
-        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "${{ needs.vars.outputs.k8s_latest }}"]
+        k8s-version:
+          [
+            "${{ needs.vars.outputs.min_k8s_version }}",
+            "${{ needs.vars.outputs.k8s_latest }}",
+          ]
     uses: ./.github/workflows/helm.yml
     with:
       image: ${{ matrix.image }}
