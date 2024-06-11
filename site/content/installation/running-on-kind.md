@@ -58,4 +58,4 @@ kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 
 ## Getting Started with NGINX Gateway Fabric
 
-Learn how to use NGINX Gateway Fabric by exploring the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.2.0/examples) directory. The guides provide practical instructions and scenarios to help you use NGINX Gateway Fabric effectively.
+Learn how to use NGINX Gateway Fabric by exploring the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/examples) directory. The guides provide practical instructions and scenarios to help you use NGINX Gateway Fabric effectively.

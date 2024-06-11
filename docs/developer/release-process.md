@@ -54,7 +54,7 @@ To create a new release, follow these steps:
     1. [README](/README.md) to include the information about the latest release.
     2. [changelog](/CHANGELOG.md).
     3. Helm chart `version` field.
-    4. `VERSION` in top-level Makefile.
+    4. `GW_API_PREV_VERSION` in tests Makefile, if necessary.
     5. Any references in the docs to the previous release.
     6. Any installation instructions to ensure that the supported Gateway API and NGF versions are correct. Specifically, helm README.
 11. Ask the docs team to update the production branch for NGF in Netlify to our latest release branch and run the deployment pipeline.
