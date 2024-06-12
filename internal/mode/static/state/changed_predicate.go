@@ -3,6 +3,8 @@ package state
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 // stateChangedPredicate determines whether upsert and delete events constitute a change in state.
@@ -10,13 +12,13 @@ type stateChangedPredicate interface {
 	// upsert returns true if the newObject changes state.
 	upsert(oldObject, newObject client.Object) bool
 	// delete returns true if the deletion of the object changes state.
-	delete(object client.Object, nsname types.NamespacedName) bool
+	delete(object ngftypes.ObjectType, nsname types.NamespacedName) bool
 }
 
 // funcPredicate applies the stateChanged function on upsert and delete. On upsert, the newObject is passed.
 // Implements stateChangedPredicate.
 type funcPredicate struct {
-	stateChanged func(object client.Object, nsname types.NamespacedName) bool
+	stateChanged func(object ngftypes.ObjectType, nsname types.NamespacedName) bool
 }
 
 func (f funcPredicate) upsert(_, newObject client.Object) bool {
@@ -27,7 +29,7 @@ func (f funcPredicate) upsert(_, newObject client.Object) bool {
 	return f.stateChanged(newObject, client.ObjectKeyFromObject(newObject))
 }
 
-func (f funcPredicate) delete(object client.Object, nsname types.NamespacedName) bool {
+func (f funcPredicate) delete(object ngftypes.ObjectType, nsname types.NamespacedName) bool {
 	return f.stateChanged(object, nsname)
 }
 
@@ -53,4 +55,6 @@ func (a annotationChangedPredicate) upsert(oldObject, newObject client.Object) b
 	return oldAnnotation != newAnnotation
 }
 
-func (a annotationChangedPredicate) delete(_ client.Object, _ types.NamespacedName) bool { return true }
+func (a annotationChangedPredicate) delete(_ ngftypes.ObjectType, _ types.NamespacedName) bool {
+	return true
+}

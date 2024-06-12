@@ -23,11 +23,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	statusFramework "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
-func createK8sClientFor(resourceType client.Object) client.Client {
+func createK8sClientFor(resourceType ngftypes.ObjectType) client.Client {
 	scheme := runtime.NewScheme()
 
 	// for simplicity, we add all used schemes here

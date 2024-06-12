@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -16,14 +17,14 @@ import (
 // Updater updates the cluster state.
 type Updater interface {
 	Upsert(obj client.Object)
-	Delete(objType client.Object, nsname types.NamespacedName)
+	Delete(objType ngftypes.ObjectType, nsname types.NamespacedName)
 }
 
 // objectStore is a store of client.Object
 type objectStore interface {
-	get(objType client.Object, nsname types.NamespacedName) client.Object
+	get(objType ngftypes.ObjectType, nsname types.NamespacedName) client.Object
 	upsert(obj client.Object)
-	delete(objType client.Object, nsname types.NamespacedName)
+	delete(objType ngftypes.ObjectType, nsname types.NamespacedName)
 }
 
 // ngfPolicyObjectStore is a store of policies.Policy.
@@ -44,7 +45,7 @@ func newNGFPolicyObjectStore(
 	}
 }
 
-func (p *ngfPolicyObjectStore) get(objType client.Object, nsname types.NamespacedName) client.Object {
+func (p *ngfPolicyObjectStore) get(objType ngftypes.ObjectType, nsname types.NamespacedName) client.Object {
 	key := graph.PolicyKey{
 		NsName: nsname,
 		GVK:    p.extractGVKFunc(objType),
@@ -67,7 +68,7 @@ func (p *ngfPolicyObjectStore) upsert(obj client.Object) {
 	p.policies[key] = pol
 }
 
-func (p *ngfPolicyObjectStore) delete(objType client.Object, nsname types.NamespacedName) {
+func (p *ngfPolicyObjectStore) delete(objType ngftypes.ObjectType, nsname types.NamespacedName) {
 	key := graph.PolicyKey{
 		NsName: nsname,
 		GVK:    p.extractGVKFunc(objType),
@@ -88,7 +89,7 @@ func newObjectStoreMapAdapter[T client.Object](objects map[types.NamespacedName]
 	}
 }
 
-func (m *objectStoreMapAdapter[T]) get(_ client.Object, nsname types.NamespacedName) client.Object {
+func (m *objectStoreMapAdapter[T]) get(_ ngftypes.ObjectType, nsname types.NamespacedName) client.Object {
 	obj, exist := m.objects[nsname]
 	if !exist {
 		return nil
@@ -105,7 +106,7 @@ func (m *objectStoreMapAdapter[T]) upsert(obj client.Object) {
 	m.objects[client.ObjectKeyFromObject(obj)] = t
 }
 
-func (m *objectStoreMapAdapter[T]) delete(_ client.Object, nsname types.NamespacedName) {
+func (m *objectStoreMapAdapter[T]) delete(_ ngftypes.ObjectType, nsname types.NamespacedName) {
 	delete(m.objects, nsname)
 }
 
@@ -150,7 +151,7 @@ func (m *multiObjectStore) mustFindStoreForObj(obj client.Object) objectStore {
 	return store
 }
 
-func (m *multiObjectStore) get(objType client.Object, nsname types.NamespacedName) client.Object {
+func (m *multiObjectStore) get(objType ngftypes.ObjectType, nsname types.NamespacedName) client.Object {
 	return m.mustFindStoreForObj(objType).get(objType, nsname)
 }
 
@@ -158,7 +159,7 @@ func (m *multiObjectStore) upsert(obj client.Object) {
 	m.mustFindStoreForObj(obj).upsert(obj)
 }
 
-func (m *multiObjectStore) delete(objType client.Object, nsname types.NamespacedName) {
+func (m *multiObjectStore) delete(objType ngftypes.ObjectType, nsname types.NamespacedName) {
 	m.mustFindStoreForObj(objType).delete(objType, nsname)
 }
 
@@ -257,7 +258,7 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.setChangeType(obj, changingUpsert)
 }
 
-func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
+func (s *changeTrackingUpdater) delete(objType ngftypes.ObjectType, nsname types.NamespacedName) (changed bool) {
 	objTypeGVK := s.extractGVK(objType)
 
 	if s.store.persists(objTypeGVK) {
@@ -276,7 +277,7 @@ func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.Names
 	return stateChanged.delete(objType, nsname)
 }
 
-func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.NamespacedName) {
+func (s *changeTrackingUpdater) Delete(objType ngftypes.ObjectType, nsname types.NamespacedName) {
 	s.assertSupportedGVK(s.extractGVK(objType))
 
 	changingDelete := s.delete(objType, nsname)

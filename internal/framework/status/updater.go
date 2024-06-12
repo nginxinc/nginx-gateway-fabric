@@ -12,11 +12,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 // UpdateRequest is a request to update the status of a resource.
 type UpdateRequest struct {
-	ResourceType client.Object
+	ResourceType ngftypes.ObjectType
 	Setter       Setter
 	NsName       types.NamespacedName
 }
@@ -83,7 +84,7 @@ func (u *Updater) Update(ctx context.Context, reqs ...UpdateRequest) {
 func (u *Updater) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
-	resourceType client.Object,
+	resourceType ngftypes.ObjectType,
 	statusSetter Setter,
 ) {
 	obj := resourceType.DeepCopyObject().(client.Object)

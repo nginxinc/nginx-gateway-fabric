@@ -18,6 +18,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -50,7 +51,7 @@ type ChangeProcessor interface {
 	// CaptureDeleteChange captures a delete change to a resource.
 	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one
 	// this ChangeProcessor was created for.
-	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
+	CaptureDeleteChange(resourceType ngftypes.ObjectType, nsname types.NamespacedName)
 	// Process produces a graph-like representation of GatewayAPI resources.
 	// If no changes were captured, the changed return argument will be NoChange and graph will be empty.
 	Process() (changeType ChangeType, graphCfg *graph.Graph)
@@ -114,11 +115,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
+	isReferenced := func(obj ngftypes.ObjectType, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
-	isNGFPolicyRelevant := func(obj client.Object, nsname types.NamespacedName) bool {
+	isNGFPolicyRelevant := func(obj ngftypes.ObjectType, nsname types.NamespacedName) bool {
 		pol, ok := obj.(policies.Policy)
 		if !ok {
 			return false
@@ -241,7 +242,7 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.updater.Upsert(obj)
 }
 
-func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
+func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType ngftypes.ObjectType, nsname types.NamespacedName) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

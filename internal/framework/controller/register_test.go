@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -24,6 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 )
 
 func TestRegister(t *testing.T) {
@@ -62,7 +62,7 @@ func TestRegister(t *testing.T) {
 
 	tests := []struct {
 		fakes                   fakes
-		objectType              client.Object
+		objectType              ngftypes.ObjectType
 		expectedErr             error
 		msg                     string
 		expectedMgrAddCallCount int
