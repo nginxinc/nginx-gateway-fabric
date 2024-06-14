@@ -27,7 +27,7 @@ const (
 )
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
-// documentation), this test is recommended to be run separate from other nfr tests.
+// documentation), this test is recommended to be run separate from other tests.
 var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
@@ -96,8 +96,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	})
 
 	It("recovers when nginx container is restarted", func() {
-		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
-		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
 		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, &ns)
 	})
 })
