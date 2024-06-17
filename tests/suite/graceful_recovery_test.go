@@ -169,20 +169,10 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 	Expect(containerName).ToNot(Equal(""))
 
-	//_, err = exec.Command(
-	//	"docker",
-	//	"restart",
-	//	containerName,
-	//).CombinedOutput()
-	//if err != nil {
-	//	fmt.Println(fmt.Sprint(err.Error()))
-	//	Expect(err).ToNot(HaveOccurred())
-	//}
-
 	_, err = exec.Command(
 		"docker",
 		"restart",
-		"",
+		containerName,
 	).CombinedOutput()
 	if err != nil {
 		fmt.Println(fmt.Sprint(err.Error()))
