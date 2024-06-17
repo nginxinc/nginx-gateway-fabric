@@ -15,7 +15,7 @@ docs: "DOCS-1412"
 | [Gateway](#gateway)                   | Supported           | Partially supported    | Not supported                         | v1          |
 | [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
 | [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
-| [GRPCRoute](#grpcroute)               | Partially Supported | Partially supported    | Not supported                         | v1          |
+| [GRPCRoute](#grpcroute)               | Supported           | Partially supported    | Not supported                         | v1          |
 | [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
