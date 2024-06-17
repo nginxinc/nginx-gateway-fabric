@@ -154,7 +154,6 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	if err != nil {
 		Expect(err).ToNot(HaveOccurred())
 	}
-	fmt.Println(string(containerOutput))
 
 	var containerName string
 	for _, line := range strings.Split(string(containerOutput), "\n") {
@@ -169,9 +168,6 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		}
 	}
 	Expect(containerName).ToNot(Equal(""))
-
-	// really jank - get the string that contains "control-plane"
-	fmt.Println("This is our container name: " + containerName)
 
 	_, err = exec.Command(
 		"docker",
