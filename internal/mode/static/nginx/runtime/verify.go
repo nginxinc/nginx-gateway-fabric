@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-const configVersionURI = "/var/lib/nginx/nginx-config-version.sock"
+const configVersionURI = "/var/run/nginx/nginx-config-version.sock"
 
 var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
 	" Please check the NGINX container logs for possible configuration issues: %w"

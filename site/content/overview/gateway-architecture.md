@@ -76,7 +76,7 @@ The following list describes the connections, preceeded by their types in parent
    - Write: _NGF_ generates NGINX _configuration_ based on the cluster resources and writes them as `.conf` files to the mounted `nginx-conf` volume, located at `/etc/nginx/conf.d`. It also writes _TLS certificates_ and _keys_ from [TLS secrets](https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets) referenced in the accepted Gateway resource to the `nginx-secrets` volume at the path `/etc/nginx/secrets`.
    - Read: _NGF_ reads the PID file `nginx.pid` from the `nginx-run` volume, located at `/var/run/nginx`. _NGF_ extracts the PID of the nginx process from this file in order to send reload signals to _NGINX master_.
 1. (File I/O) _NGF_ writes logs to its _stdout_ and _stderr_, which are collected by the container runtime.
-1. (HTTP) _NGF_ fetches the NGINX metrics via the unix:/var/lib/nginx/nginx-status.sock UNIX socket and converts it to _Prometheus_ format used in #2.
+1. (HTTP) _NGF_ fetches the NGINX metrics via the unix:/var/run/nginx/nginx-status.sock UNIX socket and converts it to _Prometheus_ format used in #2.
 1. (Signal) To reload NGINX, _NGF_ sends the [reload signal](https://nginx.org/en/docs/control.html) to the **NGINX master**.
 1. (File I/O)
    - Write: The _NGINX master_ writes its PID to the `nginx.pid` file stored in the `nginx-run` volume.
@@ -88,7 +88,7 @@ The following list describes the connections, preceeded by their types in parent
 1. (File I/O) The _NGINX master_ sends logs to its _stdout_ and _stderr_, which are collected by the container runtime.
 1. (File I/O) An _NGINX worker_ writes logs to its _stdout_ and _stderr_, which are collected by the container runtime.
 1. (Signal) The _NGINX master_ controls the [lifecycle of _NGINX workers_](https://nginx.org/en/docs/control.html#reconfiguration) it creates workers with the new configuration and shutdowns workers with the old configuration.
-1. (HTTP) To consider a configuration reload a success, _NGF_ ensures that at least one NGINX worker has the new configuration. To do that, _NGF_ checks a particular endpoint via the unix:/var/lib/nginx/nginx-config-version.sock UNIX socket.
+1. (HTTP) To consider a configuration reload a success, _NGF_ ensures that at least one NGINX worker has the new configuration. To do that, _NGF_ checks a particular endpoint via the unix:/var/run/nginx/nginx-config-version.sock UNIX socket.
 1. (HTTP, HTTPS) A _client_ sends traffic to and receives traffic from any of the _NGINX workers_ on ports 80 and 443.
 1. (HTTP, HTTPS) An _NGINX worker_ sends traffic to and receives traffic from the _backends_.
 
