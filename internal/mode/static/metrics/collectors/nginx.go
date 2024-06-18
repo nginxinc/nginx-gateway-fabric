@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	nginxStatusSock = "/var/lib/nginx/nginx-status.sock"
+	nginxStatusSock = "/var/run/nginx/nginx-status.sock"
 	nginxStatusURI  = "http://config-status/stub_status"
 )
 
