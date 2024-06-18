@@ -1,0 +1,38 @@
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Source branch to deploy"
+        required: false
+        default: "main"
+        type: string
+      environment:
+        description: "Determines where build gets pushed to"
+        required: false
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - dev
+          - staging
+          - prod
+  push:
+    branches:
+      - main
+    paths:
+      - nginx-gateway-fabric/site/content
+  pull_request:
+    branches:
+      - "*"
+jobs:
+  call-docs-build-push:
+    uses: nginxinc/docs-actions/.github/workflows/docs-build-push.yml@main
+    with:
+      production_url_path: "/nginx-gateway-fabric"
+      preview_url_path: "/previews/nginx-gateway-fabric/"
+      docs_source_path: "./public/"
+      cdn_content_path: "/*"
+      doc_type: "hugo"
+    secrets:
+      AZURE_CREDENTIALS: ${{secrets.AZURE_CREDENTIALS}}
+      AZURE_KEY_VAULT: ${{secrets.AZURE_KEY_VAULT}}
