@@ -127,9 +127,6 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 			Should(Succeed())
 	}
 
-	// TEMP: Add sleep to see if it resolves falures
-	time.Sleep(5 * time.Second)
-
 	Eventually(
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
