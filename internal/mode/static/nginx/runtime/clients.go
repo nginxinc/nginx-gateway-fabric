@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	nginxPlusAPISock = "/var/run/nginx/nginx-plus-api.sock"
+	nginxPlusAPISock = "/var/lib/nginx/nginx-plus-api.sock"
 	nginxPlusAPIURI  = "http://nginx-plus-api/api"
 )
 
