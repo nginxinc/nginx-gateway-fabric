@@ -22,4 +22,4 @@ LABEL org.nginx.ngf.image.build.agent="${BUILD_AGENT}"
 
 USER 101:1001
 
-CMD ["sh", "-c", "rm -rf /var/run/nginx/* /var/lib/nginx/*.sock && /docker-entrypoint.sh nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "rm -rf /var/run/nginx/*.sock && /docker-entrypoint.sh nginx -g 'daemon off;'"]

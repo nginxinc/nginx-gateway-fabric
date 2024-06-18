@@ -269,8 +269,6 @@ spec:
           mountPath: /var/run/nginx
         - name: nginx-cache
           mountPath: /var/cache/nginx
-        - name: nginx-lib
-          mountPath: /var/lib/nginx
         - name: nginx-includes
           mountPath: /etc/nginx/includes
       terminationGracePeriodSeconds: 30
