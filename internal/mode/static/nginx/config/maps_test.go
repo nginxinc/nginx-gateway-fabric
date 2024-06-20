@@ -189,3 +189,85 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 
 	g.Expect(maps).To(ConsistOf(expectedMap))
 }
+
+func TestExecuteStreamMaps(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSServers: []dataplane.Layer4Server{
+			{
+				Hostname:     "example.com",
+				Port:         8081,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "example.com",
+				Port:         8080,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "cafe.example.com",
+				Port:         8080,
+				UpstreamName: "backend2",
+			},
+		},
+	}
+
+	expSubStrings := map[string]int{
+		"example.com unix:/var/lib/nginx/example.com8081.sock;":           1,
+		"example.com unix:/var/lib/nginx/example.com8080.sock;":           1,
+		"cafe.example.com unix:/var/lib/nginx/cafe.example.com8080.sock;": 1,
+	}
+
+	type assertion func(g *WithT, data string)
+
+	expectedResults := map[string]assertion{
+		streamConfigFile: func(g *WithT, data string) {
+			for expSubStr, expCount := range expSubStrings {
+				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
+			}
+		},
+	}
+
+	results := executeStreamMaps(conf)
+	g.Expect(results).To(HaveLen(len(expectedResults)))
+
+	for _, res := range results {
+		g.Expect(expectedResults).To(HaveKey(res.dest), "executeStreamServers returned unexpected result destination")
+
+		assertData := expectedResults[res.dest]
+		assertData(g, string(res.data))
+	}
+}
+
+func TestCreateStreamMaps(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSServers: []dataplane.Layer4Server{
+			{
+				Hostname:     "example.com",
+				Port:         8081,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "example.com",
+				Port:         8080,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "cafe.example.com",
+				Port:         8080,
+				UpstreamName: "backend2",
+			},
+		},
+	}
+
+	maps := createStreamMaps(conf)
+	g.Expect(maps).To(HaveLen(2))
+
+	g.Expect(maps[0].Parameters).To(HaveLen(1))
+	g.Expect(maps[1].Parameters).To(HaveLen(2))
+
+	g.Expect(maps[0].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8081.sock"))
+	g.Expect(maps[1].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8080.sock"))
+	g.Expect(maps[1].Parameters[1].Result).To(Equal("unix:/var/lib/nginx/cafe.example.com8080.sock"))
+}

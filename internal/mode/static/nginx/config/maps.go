@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	gotemplate "text/template"
 
@@ -19,6 +20,48 @@ func executeMaps(conf dataplane.Configuration) []executeResult {
 	}
 
 	return []executeResult{result}
+}
+
+func executeStreamMaps(conf dataplane.Configuration) []executeResult {
+	maps := createStreamMaps(conf)
+
+	result := executeResult{
+		dest: streamConfigFile,
+		data: helpers.MustExecuteTemplate(mapsTemplate, maps),
+	}
+
+	return []executeResult{result}
+}
+
+func createStreamMaps(conf dataplane.Configuration) []*http.Map {
+	var maps []*http.Map
+	portsToMap := make(map[int32]*http.Map)
+
+	for _, t := range conf.TLSServers {
+		streamMap, ok := portsToMap[t.Port]
+
+		if !ok {
+			m := http.Map{
+				Source:   "$ssl_preread_server_name",
+				Variable: "$dest" + fmt.Sprint(t.Port),
+				Parameters: []http.MapParameter{
+					{
+						Value:  t.Hostname,
+						Result: "unix:/var/lib/nginx/" + t.Hostname + fmt.Sprint(t.Port) + ".sock",
+					},
+				},
+			}
+			maps = append(maps, &m)
+			portsToMap[t.Port] = &m
+		} else {
+			streamMap.Parameters = append(streamMap.Parameters, http.MapParameter{
+				Value:  t.Hostname,
+				Result: "unix:/var/lib/nginx/" + t.Hostname + fmt.Sprint(t.Port) + ".sock",
+			})
+		}
+	}
+
+	return maps
 }
 
 func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {

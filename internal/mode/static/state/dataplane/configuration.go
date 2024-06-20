@@ -48,10 +48,18 @@ func BuildConfiguration(
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
 	baseHTTPConfig := buildBaseHTTPConfig(g)
+	tlsServers := []Layer4Server{
+		{
+			Hostname:     "app.example.com",
+			Port:         443,
+			UpstreamName: "backend1",
+		},
+	}
 
 	config := Configuration{
 		HTTPServers:    httpServers,
 		SSLServers:     sslServers,
+		TLSServers:     tlsServers,
 		Upstreams:      upstreams,
 		BackendGroups:  backendGroups,
 		SSLKeyPairs:    keyPairs,

@@ -35,6 +35,24 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 	return []executeResult{result}
 }
 
+func (g GeneratorImpl) executeStreamUpstreams(_ dataplane.Configuration) []executeResult {
+	upstreams := []http.Upstream{
+		{
+			Name: "backend1",
+			Servers: []http.UpstreamServer{{
+				Address: "10.244.0.7:8443",
+			}},
+		},
+	}
+
+	result := executeResult{
+		dest: streamConfigFile,
+		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),
+	}
+
+	return []executeResult{result}
+}
+
 func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
