@@ -102,15 +102,23 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	})
 
 	It("recovers when drained node is restarted", func() {
-		runRestartNodeTest(teaURL, coffeeURL, files, &ns, true)
+		runRestartNodeWithDrainingTest(teaURL, coffeeURL, files, &ns)
 	})
 
 	It("recovers when node is restarted abruptly", func() {
 		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
 		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
-		runRestartNodeTest(teaURL, coffeeURL, files, &ns, false)
+		runRestartNodeAbruptlyTest(teaURL, coffeeURL, files, &ns)
 	})
 })
+
+func runRestartNodeWithDrainingTest(teaURL, coffeeURL string, files []string, ns *core.Namespace) {
+	runRestartNodeTest(teaURL, coffeeURL, files, ns, true)
+}
+
+func runRestartNodeAbruptlyTest(teaURL, coffeeURL string, files []string, ns *core.Namespace) {
+	runRestartNodeTest(teaURL, coffeeURL, files, ns, false)
+}
 
 func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Namespace, drain bool) {
 	nodeNames, err := getNodeNames()
