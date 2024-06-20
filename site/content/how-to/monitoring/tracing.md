@@ -24,7 +24,7 @@ The first step is to install the collectors. NGINX Gateway Fabric will be config
 Create the namespace:
 
 ```shell
-kubectl create namespace monitoring
+kubectl create namespace tracing
 ```
 
 Download the following files containing the configurations for the collectors:
@@ -37,13 +37,13 @@ Download the following files containing the configurations for the collectors:
 Then install them:
 
 ```shell
-kubectl apply -f otel-collector.yaml -f jaeger.yaml -n monitoring
+kubectl apply -f otel-collector.yaml -f jaeger.yaml -n tracing
 ```
 
 Ensure the Pods are running:
 
 ```shell
-kubectl -n monitoring get pods
+kubectl -n tracing get pods
 ```
 
 ```text
@@ -55,7 +55,7 @@ otel-collector-f786b7dfd-h2x9l   1/1     Running   0          9s
 Once running, you can access the Jaeger dashboard by using port-forwarding in the background:
 
 ```shell
-kubectl port-forward -n monitoring svc/jaeger 16686:16686 &
+kubectl port-forward -n tracing svc/jaeger 16686:16686 &
 ```
 
 Visit [http://127.0.0.1:16686](http://127.0.0.1:16686) to view the dashboard.
