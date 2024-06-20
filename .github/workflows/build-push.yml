@@ -1,3 +1,5 @@
+name: Build + Push to Azure
+
 on:
   workflow_dispatch:
     inputs:
@@ -30,8 +32,8 @@ jobs:
     with:
       production_url_path: "/nginx-gateway-fabric"
       preview_url_path: "/previews/nginx-gateway-fabric/"
-      docs_source_path: "./public/"
-      cdn_content_path: "/*"
+      docs_source_path: "./site/content/"
+      docs_build_path: "./site/"
       doc_type: "hugo"
     secrets:
       AZURE_CREDENTIALS: ${{secrets.AZURE_CREDENTIALS}}
