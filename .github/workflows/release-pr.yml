@@ -78,7 +78,7 @@ jobs:
           include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
-      - name: Generate manifests and changelog
+      - name: Generate files and changelog
         run: |
           sed -i -e "s/v${{ steps.vars.outputs.current_version }}/v${{ inputs.version }}/g" README.md
           sed -i -e "s/\[${{ steps.vars.outputs.current_version }}\]/\[${{ inputs.version }}\]/g" README.md
@@ -86,7 +86,7 @@ jobs:
           sed -i "6r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
           sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
           sed -i "8a ${{ join(fromJson(steps.notes.outputs.release-sections).release-notes, '\n') }}\n" CHANGELOG.md
-          make generate-manifests
+          make generate-all
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
