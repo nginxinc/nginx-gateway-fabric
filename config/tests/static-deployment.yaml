@@ -125,7 +125,5 @@ spec:
         emptyDir: {}
       - name: nginx-cache
         emptyDir: {}
-      - name: nginx-lib
-        emptyDir: {}
       - name: nginx-includes
         emptyDir: {}
