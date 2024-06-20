@@ -138,6 +138,13 @@ generate-manifests: ## Generate manifests using Helm.
 generate-api-docs: ## Generate API docs
 	go run github.com/ahmetb/gen-crd-api-reference-docs -config site/config/api/config.json -template-dir site/config/api -out-file site/content/reference/api.md -api-dir "github.com/nginxinc/nginx-gateway-fabric/apis"
 
+.PHONY: generate-helm-docs
+generate-helm-docs: ## Generate the Helm chart documentation
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric jnorwood/helm-docs:latest --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
+
+.PHONY: generate-all
+generate-all: generate generate-crds generate-manifests generate-api-docs generate-helm-docs ## Generate all the necessary files
+
 .PHONY: clean
 clean: ## Clean the build
 	-rm -r $(OUT_DIR)
@@ -201,10 +208,6 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
 	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric quay.io/helmpack/chart-testing:latest ct lint --config .ct.yaml
-
-.PHONY: helm-docs
-helm-docs: ## Generate the Helm chart documentation
-	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric jnorwood/helm-docs:latest --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster.
