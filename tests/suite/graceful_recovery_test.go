@@ -128,7 +128,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 	}
 
 	// TEMP: Add sleep to see if it resolves falures
-	time.Sleep(5 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	Eventually(
 		func() error {
