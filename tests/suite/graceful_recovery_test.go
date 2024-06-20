@@ -139,29 +139,14 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 			"--ignore-daemonsets",
 			"--delete-local-data",
 		).CombinedOutput()
-		if err != nil {
-			Expect(err).ToNot(HaveOccurred())
-		}
+		Expect(err).ToNot(HaveOccurred())
 
-		_, err = exec.Command(
-			"kubectl",
-			"delete",
-			"node",
-			kindNodeName,
-		).CombinedOutput()
-		if err != nil {
-			Expect(err).ToNot(HaveOccurred())
-		}
-	}
-
-	containerOutput, err := exec.Command(
-		"docker",
-		"container",
-		"ls",
-	).CombinedOutput()
-	if err != nil {
+		_, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
 		Expect(err).ToNot(HaveOccurred())
 	}
+
+	containerOutput, err := exec.Command("docker", "container", "ls").CombinedOutput()
+	Expect(err).ToNot(HaveOccurred())
 
 	var containerName string
 	for _, line := range strings.Split(string(containerOutput), "\n") {
@@ -177,15 +162,8 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 	Expect(containerName).ToNot(Equal(""))
 
-	_, err = exec.Command(
-		"docker",
-		"restart",
-		containerName,
-	).CombinedOutput()
-	if err != nil {
-		fmt.Println(fmt.Sprint(err.Error()))
-		Expect(err).ToNot(HaveOccurred())
-	}
+	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
+	Expect(err).ToNot(HaveOccurred())
 
 	// need to wait for docker container to restart and be running before polling for ready NGF Pods or else we will error
 	Eventually(
@@ -211,6 +189,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		WithTimeout(timeoutConfig.CreateTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(BeTrue())
+
 	ngfPodName := podNames[0]
 	Expect(ngfPodName).ToNot(Equal(""))
 
