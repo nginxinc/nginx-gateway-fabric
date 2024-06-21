@@ -33,12 +33,12 @@ func executeStreamMaps(conf dataplane.Configuration) []executeResult {
 	return []executeResult{result}
 }
 
-func createStreamMaps(conf dataplane.Configuration) []*http.Map {
-	var maps []*http.Map
-	portsToMap := make(map[int32]*http.Map)
+func createStreamMaps(conf dataplane.Configuration) []http.Map {
+	var maps []http.Map
+	portsToMap := make(map[int32]int)
 
 	for _, t := range conf.TLSServers {
-		streamMap, ok := portsToMap[t.Port]
+		mapInd, ok := portsToMap[t.Port]
 
 		if !ok {
 			m := http.Map{
@@ -51,10 +51,10 @@ func createStreamMaps(conf dataplane.Configuration) []*http.Map {
 					},
 				},
 			}
-			maps = append(maps, &m)
-			portsToMap[t.Port] = &m
+			maps = append(maps, m)
+			portsToMap[t.Port] = len(maps) - 1
 		} else {
-			streamMap.Parameters = append(streamMap.Parameters, http.MapParameter{
+			maps[mapInd].Parameters = append(maps[mapInd].Parameters, http.MapParameter{
 				Value:  t.Hostname,
 				Result: "unix:/var/lib/nginx/" + t.Hostname + fmt.Sprint(t.Port) + ".sock",
 			})
@@ -62,7 +62,7 @@ func createStreamMaps(conf dataplane.Configuration) []*http.Map {
 	}
 
 	for _, s := range conf.SSLServers {
-		streamMap, ok := portsToMap[s.Port]
+		mapInd, ok := portsToMap[s.Port]
 
 		hostname := s.Hostname
 
@@ -71,7 +71,7 @@ func createStreamMaps(conf dataplane.Configuration) []*http.Map {
 		}
 
 		if ok {
-			streamMap.Parameters = append(streamMap.Parameters, http.MapParameter{
+			maps[mapInd].Parameters = append(maps[mapInd].Parameters, http.MapParameter{
 				Value:  hostname,
 				Result: "unix:/var/lib/nginx/" + s.Hostname + fmt.Sprint(s.Port) + ".sock",
 			})

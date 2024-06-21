@@ -81,7 +81,7 @@ func TestGenerate(t *testing.T) {
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(6))
+	g.Expect(files).To(HaveLen(7))
 	arrange := func(i, j int) bool {
 		return files[i].Path < files[j].Path
 	}

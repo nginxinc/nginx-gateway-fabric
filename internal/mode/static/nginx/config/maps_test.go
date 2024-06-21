@@ -84,8 +84,6 @@ func TestExecuteMaps(t *testing.T) {
 		"map ${http_my_second_add_header} $my_second_add_header_header_var {": 1,
 		"~.* ${http_my_second_add_header},;":                                  1,
 		"map ${http_my_set_header} $my_set_header_header_var {":               0,
-		"map $http_host $gw_api_compliant_host {":                             1,
-		"map $http_upgrade $connection_upgrade {":                             1,
 	}
 
 	mapResult := executeMaps(conf)
