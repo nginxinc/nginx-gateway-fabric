@@ -17,7 +17,7 @@ const (
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
 
-	// streamFolder is the folder where NGINX HTTP configuration files are stored.
+	// streamFolder is the folder where NGINX Stream configuration files are stored.
 	streamFolder = configFolder + "/stream-conf.d"
 
 	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
