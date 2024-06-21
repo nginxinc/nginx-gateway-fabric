@@ -61,6 +61,23 @@ func createStreamMaps(conf dataplane.Configuration) []*http.Map {
 		}
 	}
 
+	for _, s := range conf.SSLServers {
+		streamMap, ok := portsToMap[s.Port]
+
+		hostname := s.Hostname
+
+		if s.IsDefault {
+			hostname = "default"
+		}
+
+		if ok {
+			streamMap.Parameters = append(streamMap.Parameters, http.MapParameter{
+				Value:  hostname,
+				Result: "unix:/var/lib/nginx/" + s.Hostname + fmt.Sprint(s.Port) + ".sock",
+			})
+		}
+	}
+
 	return maps
 }
 

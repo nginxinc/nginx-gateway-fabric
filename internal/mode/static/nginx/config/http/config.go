@@ -4,9 +4,9 @@ package http
 type Server struct {
 	SSL           *SSL
 	ServerName    string
+	Listen        string
 	Locations     []Location
 	Includes      []string
-	Port          int32
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool

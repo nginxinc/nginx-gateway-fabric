@@ -259,15 +259,22 @@ func TestCreateStreamMaps(t *testing.T) {
 				UpstreamName: "backend2",
 			},
 		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "app.example.com",
+				Port:     8080,
+			},
+		},
 	}
 
 	maps := createStreamMaps(conf)
 	g.Expect(maps).To(HaveLen(2))
 
 	g.Expect(maps[0].Parameters).To(HaveLen(1))
-	g.Expect(maps[1].Parameters).To(HaveLen(2))
+	g.Expect(maps[1].Parameters).To(HaveLen(3))
 
 	g.Expect(maps[0].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8081.sock"))
 	g.Expect(maps[1].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8080.sock"))
 	g.Expect(maps[1].Parameters[1].Result).To(Equal("unix:/var/lib/nginx/cafe.example.com8080.sock"))
+	g.Expect(maps[1].Parameters[2].Result).To(Equal("unix:/var/lib/nginx/app.example.com8080.sock"))
 }

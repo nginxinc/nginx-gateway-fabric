@@ -58,7 +58,7 @@ var grpcBaseHeaders = []http.Header{
 }
 
 func executeServers(conf dataplane.Configuration) []executeResult {
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSServers)
 
 	serverResult := executeResult{
 		dest: httpConfigFile,
@@ -141,9 +141,18 @@ func createIncludes(additions []dataplane.Addition) []string {
 	return includes
 }
 
-func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Server, httpMatchPairs) {
+func createServers(
+	httpServers, sslServers []dataplane.VirtualServer,
+	tlsServers []dataplane.Layer4Server,
+) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
+
+	ports := map[int32]bool{}
+
+	for _, tlsServer := range tlsServers {
+		ports[tlsServer.Port] = true
+	}
 
 	for serverID, s := range httpServers {
 		httpServer, matchPairs := createServer(s, serverID)
@@ -152,7 +161,7 @@ func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Se
 	}
 
 	for serverID, s := range sslServers {
-		sslServer, matchPair := createSSLServer(s, serverID)
+		sslServer, matchPair := createSSLServer(s, serverID, ports[s.Port])
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPair)
 	}
@@ -160,11 +169,19 @@ func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Se
 	return servers, finalMatchPairs
 }
 
-func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
+func createSSLServer(
+	virtualServer dataplane.VirtualServer,
+	serverID int,
+	useSocket bool,
+) (http.Server, httpMatchPairs) {
+	listen := fmt.Sprint(virtualServer.Port)
+	if useSocket {
+		listen = "unix:/var/lib/nginx/" + virtualServer.Hostname + fmt.Sprint(virtualServer.Port) + ".sock"
+	}
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
-			Port:         virtualServer.Port,
+			Listen:       listen,
 		}, nil
 	}
 
@@ -177,17 +194,19 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 			CertificateKey: generatePEMFileName(virtualServer.SSL.KeyPairID),
 		},
 		Locations: locs,
-		Port:      virtualServer.Port,
 		GRPC:      grpc,
 		Includes:  createIncludes(virtualServer.Additions),
+		Listen:    listen,
 	}, matchPairs
 }
 
 func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
+	listen := fmt.Sprint(virtualServer.Port)
+
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultHTTP: true,
-			Port:          virtualServer.Port,
+			Listen:        listen,
 		}, nil
 	}
 
@@ -196,7 +215,7 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 	return http.Server{
 		ServerName: virtualServer.Hostname,
 		Locations:  locs,
-		Port:       virtualServer.Port,
+		Listen:     listen,
 		GRPC:       grpc,
 		Includes:   createIncludes(virtualServer.Additions),
 	}, matchPairs

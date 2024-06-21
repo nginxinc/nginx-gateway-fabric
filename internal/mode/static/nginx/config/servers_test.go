@@ -1024,12 +1024,12 @@ func TestCreateServers(t *testing.T) {
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
-			Port:          8080,
+			Listen:        "8080",
 		},
 		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
-			Port:       8080,
+			Listen:     "8080",
 			GRPC:       true,
 			Includes: []string{
 				includesFolder + "/server-addition-1.conf",
@@ -1038,7 +1038,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			IsDefaultSSL: true,
-			Port:         8443,
+			Listen:       "8443",
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1047,7 +1047,7 @@ func TestCreateServers(t *testing.T) {
 				CertificateKey: expectedPEMPath,
 			},
 			Locations: getExpectedLocations(true),
-			Port:      8443,
+			Listen:    "8443",
 			GRPC:      true,
 			Includes: []string{
 				includesFolder + "/server-addition-1.conf",
@@ -1058,7 +1058,7 @@ func TestCreateServers(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers)
+	result, httpMatchPair := createServers(httpServers, sslServers, []dataplane.Layer4Server{})
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1256,18 +1256,18 @@ func TestCreateServersConflicts(t *testing.T) {
 			expectedServers := []http.Server{
 				{
 					IsDefaultHTTP: true,
-					Port:          8080,
+					Listen:        "8080",
 				},
 				{
 					ServerName: "cafe.example.com",
 					Locations:  test.expLocs,
-					Port:       8080,
+					Listen:     "8080",
 				},
 			}
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{})
+			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, []dataplane.Layer4Server{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
