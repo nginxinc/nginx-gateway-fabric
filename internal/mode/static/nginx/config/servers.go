@@ -176,7 +176,7 @@ func createSSLServer(
 ) (http.Server, httpMatchPairs) {
 	listen := fmt.Sprint(virtualServer.Port)
 	if useSocket {
-		listen = "unix:/var/lib/nginx/" + virtualServer.Hostname + fmt.Sprint(virtualServer.Port) + ".sock"
+		listen = getSocketName(virtualServer.Port, virtualServer.Hostname)
 	}
 	if virtualServer.IsDefault {
 		return http.Server{

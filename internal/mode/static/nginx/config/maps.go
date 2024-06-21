@@ -47,7 +47,7 @@ func createStreamMaps(conf dataplane.Configuration) []http.Map {
 				Parameters: []http.MapParameter{
 					{
 						Value:  server.Hostname,
-						Result: "unix:/var/lib/nginx/" + server.Hostname + fmt.Sprint(server.Port) + ".sock",
+						Result: getSocketName(server.Port, server.Hostname),
 					},
 				},
 			}
@@ -56,7 +56,7 @@ func createStreamMaps(conf dataplane.Configuration) []http.Map {
 		} else {
 			maps[mapInd].Parameters = append(maps[mapInd].Parameters, http.MapParameter{
 				Value:  server.Hostname,
-				Result: "unix:/var/lib/nginx/" + server.Hostname + fmt.Sprint(server.Port) + ".sock",
+				Result: getSocketName(server.Port, server.Hostname),
 			})
 		}
 	}
@@ -73,7 +73,7 @@ func createStreamMaps(conf dataplane.Configuration) []http.Map {
 		if ok {
 			maps[mapInd].Parameters = append(maps[mapInd].Parameters, http.MapParameter{
 				Value:  hostname,
-				Result: "unix:/var/lib/nginx/" + server.Hostname + fmt.Sprint(server.Port) + ".sock",
+				Result: getSocketName(server.Port, hostname),
 			})
 		}
 	}

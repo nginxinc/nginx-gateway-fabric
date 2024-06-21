@@ -211,9 +211,9 @@ func TestExecuteStreamMaps(t *testing.T) {
 	}
 
 	expSubStrings := map[string]int{
-		"example.com unix:/var/lib/nginx/example.com8081.sock;":           1,
-		"example.com unix:/var/lib/nginx/example.com8080.sock;":           1,
-		"cafe.example.com unix:/var/lib/nginx/cafe.example.com8080.sock;": 1,
+		"example.com unix:/var/run/nginx/example.com8081.sock;":           1,
+		"example.com unix:/var/run/nginx/example.com8080.sock;":           1,
+		"cafe.example.com unix:/var/run/nginx/cafe.example.com8080.sock;": 1,
 	}
 
 	type assertion func(g *WithT, data string)
@@ -271,8 +271,8 @@ func TestCreateStreamMaps(t *testing.T) {
 	g.Expect(maps[0].Parameters).To(HaveLen(1))
 	g.Expect(maps[1].Parameters).To(HaveLen(3))
 
-	g.Expect(maps[0].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8081.sock"))
-	g.Expect(maps[1].Parameters[0].Result).To(Equal("unix:/var/lib/nginx/example.com8080.sock"))
-	g.Expect(maps[1].Parameters[1].Result).To(Equal("unix:/var/lib/nginx/cafe.example.com8080.sock"))
-	g.Expect(maps[1].Parameters[2].Result).To(Equal("unix:/var/lib/nginx/app.example.com8080.sock"))
+	g.Expect(maps[0].Parameters[0].Result).To(Equal("unix:/var/run/nginx/example.com8081.sock"))
+	g.Expect(maps[1].Parameters[0].Result).To(Equal("unix:/var/run/nginx/example.com8080.sock"))
+	g.Expect(maps[1].Parameters[1].Result).To(Equal("unix:/var/run/nginx/cafe.example.com8080.sock"))
+	g.Expect(maps[1].Parameters[2].Result).To(Equal("unix:/var/run/nginx/app.example.com8080.sock"))
 }
