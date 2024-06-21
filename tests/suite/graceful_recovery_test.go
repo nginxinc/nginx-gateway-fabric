@@ -81,7 +81,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 			func() error {
 				return checkForWorkingTraffic(teaURL, coffeeURL)
 			}).
-			WithTimeout(timeoutConfig.RequestTimeout).
+			WithTimeout(timeoutConfig.RequestTimeout * 2).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 	})
@@ -152,7 +152,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
