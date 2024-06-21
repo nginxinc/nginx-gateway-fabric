@@ -170,11 +170,12 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		func() bool {
 			output, err := exec.Command(
 				"docker",
-				"container",
 				"inspect",
+				"-f",
+				"{{.State.Running}}",
 				containerName,
 			).CombinedOutput()
-			return strings.Contains(string(output), "\"Running\": true") && err == nil
+			return strings.TrimSpace(string(output)) == "true" && err == nil
 		}).
 		WithTimeout(timeoutConfig.CreateTimeout).
 		WithPolling(500 * time.Millisecond).
