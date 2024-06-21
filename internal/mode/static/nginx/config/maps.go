@@ -34,8 +34,8 @@ func executeStreamMaps(conf dataplane.Configuration) []executeResult {
 }
 
 func createStreamMaps(conf dataplane.Configuration) []http.Map {
-	var maps []http.Map
-	portsToMap := make(map[int32]int)
+	maps := make([]http.Map, 0, len(conf.HTTPServers))
+	portsToMap := make(map[int32]int, len(conf.HTTPServers))
 
 	for _, server := range conf.TLSServers {
 		mapInd, ok := portsToMap[server.Port]
