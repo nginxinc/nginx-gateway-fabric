@@ -145,22 +145,24 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	containerOutput, err := exec.Command("docker", "container", "ls").CombinedOutput()
-	Expect(err).ToNot(HaveOccurred())
+	// containerOutput, err := exec.Command("docker", "container", "ls").CombinedOutput()
+	// Expect(err).ToNot(HaveOccurred())
 
-	var containerName string
-	for _, line := range strings.Split(string(containerOutput), "\n") {
-		for _, word := range strings.Split(line, " ") {
-			// This is a potential weak spot in the code where we rely on the container which NGF
-			// is running on to contain "control-plane" in the name and for no other container to have that either.
-			// This is currently working in our test framework may break in the future.
-			if strings.Contains(word, "control-plane") {
-				containerName = strings.TrimSpace(word)
-				break
-			}
-		}
-	}
-	Expect(containerName).ToNot(Equal(""))
+	containerName := *clusterName + "-control-plane"
+	fmt.Println("This is the container name: " + containerName)
+	//var containerName string
+	//for _, line := range strings.Split(string(containerOutput), "\n") {
+	//	for _, word := range strings.Split(line, " ") {
+	//		// This is a potential weak spot in the code where we rely on the container which NGF
+	//		// is running on to contain "control-plane" in the name and for no other container to have that either.
+	//		// This is currently working in our test framework may break in the future.
+	//		if strings.Contains(word, "control-plane") {
+	//			containerName = strings.TrimSpace(word)
+	//			break
+	//		}
+	//	}
+	//}
+	//Expect(containerName).ToNot(Equal(""))
 
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
 	Expect(err).ToNot(HaveOccurred())
