@@ -9,7 +9,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
-var streamServersTemplate = gotemplate.Must(gotemplate.New("servers").Parse(streamServersTemplateText))
+var streamServersTemplate = gotemplate.Must(gotemplate.New("streamServers").Parse(streamServersTemplateText))
 
 func executeStreamServers(conf dataplane.Configuration) []executeResult {
 	streamServers := createStreamServers(conf)
