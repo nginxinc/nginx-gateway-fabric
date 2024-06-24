@@ -37,13 +37,14 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		})
 	}
 
-	ports := make(map[int32]bool, len(streamServers))
+	portSet := make(map[int32]struct{}, len(streamServers))
 
 	for _, server := range conf.TLSServers {
-		if ports[server.Port] {
+		_, inPortSet := portSet[server.Port]
+		if inPortSet {
 			continue
 		}
-		ports[server.Port] = true
+		portSet[server.Port] = struct{}{}
 		streamServers = append(streamServers, stream.Server{
 			Listen:      fmt.Sprint(server.Port),
 			Destination: "$dest" + fmt.Sprint(server.Port),

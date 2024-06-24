@@ -148,10 +148,10 @@ func createServers(
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
-	ports := map[int32]bool{}
+	sharedPorts := make(map[int32]struct{})
 
 	for _, tlsServer := range tlsServers {
-		ports[tlsServer.Port] = true
+		sharedPorts[tlsServer.Port] = struct{}{}
 	}
 
 	for serverID, s := range httpServers {
@@ -161,7 +161,13 @@ func createServers(
 	}
 
 	for serverID, s := range sslServers {
-		sslServer, matchPair := createSSLServer(s, serverID, ports[s.Port])
+		listen := fmt.Sprint(s.Port)
+
+		_, portInUse := sharedPorts[s.Port]
+		if portInUse {
+			listen = getSocketName(s.Port, s.Hostname)
+		}
+		sslServer, matchPair := createSSLServer(s, serverID, listen)
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPair)
 	}
@@ -172,12 +178,8 @@ func createServers(
 func createSSLServer(
 	virtualServer dataplane.VirtualServer,
 	serverID int,
-	useSocket bool,
+	listen string,
 ) (http.Server, httpMatchPairs) {
-	listen := fmt.Sprint(virtualServer.Port)
-	if useSocket {
-		listen = getSocketName(virtualServer.Port, virtualServer.Hostname)
-	}
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
