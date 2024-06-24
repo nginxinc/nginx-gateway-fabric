@@ -47,7 +47,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 
 	var ngfPodName string
 
-	BeforeAll(func() {
+	BeforeEach(func() {
 		// this test is unique in that it will check the entire log of both ngf and nginx containers
 		// for any errors, so in order to avoid errors generated in previous tests we will uninstall
 		// NGF installed at the suite level, then re-deploy our own
@@ -66,9 +66,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 		if portFwdHTTPSPort != 0 {
 			teaURL = fmt.Sprintf("%s:%d/tea", baseHTTPSURL, portFwdHTTPSPort)
 		}
-	})
 
-	BeforeEach(func() {
 		ns = core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "graceful-recovery",
