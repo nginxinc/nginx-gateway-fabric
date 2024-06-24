@@ -216,24 +216,13 @@ func TestExecuteStreamMaps(t *testing.T) {
 		"cafe.example.com unix:/var/run/nginx/cafe.example.com8080.sock;": 1,
 	}
 
-	type assertion func(g *WithT, data string)
-
-	expectedResults := map[string]assertion{
-		streamConfigFile: func(g *WithT, data string) {
-			for expSubStr, expCount := range expSubStrings {
-				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
-			}
-		},
-	}
-
 	results := executeStreamMaps(conf)
-	g.Expect(results).To(HaveLen(len(expectedResults)))
+	g.Expect(results).To(HaveLen(1))
+	result := results[0]
 
-	for _, res := range results {
-		g.Expect(expectedResults).To(HaveKey(res.dest), "executeStreamServers returned unexpected result destination")
-
-		assertData := expectedResults[res.dest]
-		assertData(g, string(res.data))
+	g.Expect(result.dest).To(Equal(streamConfigFile))
+	for expSubStr, expCount := range expSubStrings {
+		g.Expect(strings.Count(string(result.data), expSubStr)).To(Equal(expCount))
 	}
 }
 
@@ -266,13 +255,24 @@ func TestCreateStreamMaps(t *testing.T) {
 	}
 
 	maps := createStreamMaps(conf)
-	g.Expect(maps).To(HaveLen(2))
 
-	g.Expect(maps[0].Parameters).To(HaveLen(1))
-	g.Expect(maps[1].Parameters).To(HaveLen(3))
-
-	g.Expect(maps[0].Parameters[0].Result).To(Equal("unix:/var/run/nginx/example.com8081.sock"))
-	g.Expect(maps[1].Parameters[0].Result).To(Equal("unix:/var/run/nginx/example.com8080.sock"))
-	g.Expect(maps[1].Parameters[1].Result).To(Equal("unix:/var/run/nginx/cafe.example.com8080.sock"))
-	g.Expect(maps[1].Parameters[2].Result).To(Equal("unix:/var/run/nginx/app.example.com8080.sock"))
+	expectedMaps := []http.Map{
+		{
+			Source:   "$ssl_preread_server_name",
+			Variable: getVariableName(8081),
+			Parameters: []http.MapParameter{
+				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8081.sock"},
+			},
+		},
+		{
+			Source:   "$ssl_preread_server_name",
+			Variable: getVariableName(8080),
+			Parameters: []http.MapParameter{
+				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
+				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
+				{Value: "app.example.com", Result: "unix:/var/run/nginx/app.example.com8080.sock"},
+			},
+		},
+	}
+	g.Expect(maps).To(Equal(expectedMaps))
 }

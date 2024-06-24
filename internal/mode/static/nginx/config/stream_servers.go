@@ -30,7 +30,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	streamServers := make([]stream.Server, 0, len(conf.TLSServers)*2)
 	for _, server := range conf.TLSServers {
 		streamServers = append(streamServers, stream.Server{
-			Listen:      "unix:/var/lib/nginx/" + server.Hostname + fmt.Sprint(server.Port) + ".sock",
+			Listen:      getSocketName(server.Port, server.Hostname),
 			Destination: server.UpstreamName,
 			ProxyPass:   true,
 			SSLPreread:  false,
@@ -47,7 +47,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		portSet[server.Port] = struct{}{}
 		streamServers = append(streamServers, stream.Server{
 			Listen:      fmt.Sprint(server.Port),
-			Destination: "$dest" + fmt.Sprint(server.Port),
+			Destination: getVariableName(server.Port),
 			ProxyPass:   false,
 			SSLPreread:  true,
 		})

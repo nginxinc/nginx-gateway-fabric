@@ -1,11 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -36,26 +38,15 @@ func TestExecuteStreamServers(t *testing.T) {
 		"ssl_preread on;": 2,
 		"proxy_pass":      3,
 	}
-
-	type assertion func(g *WithT, data string)
-
-	expectedResults := map[string]assertion{
-		streamConfigFile: func(g *WithT, data string) {
-			for expSubStr, expCount := range expSubStrings {
-				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
-			}
-		},
-	}
 	g := NewWithT(t)
 
 	results := executeStreamServers(conf)
-	g.Expect(results).To(HaveLen(len(expectedResults)))
+	g.Expect(results).To(HaveLen(1))
+	result := results[0]
 
-	for _, res := range results {
-		g.Expect(expectedResults).To(HaveKey(res.dest), "executeStreamServers returned unexpected result destination")
-
-		assertData := expectedResults[res.dest]
-		assertData(g, string(res.data))
+	g.Expect(result.dest).To(Equal(streamConfigFile))
+	for expSubStr, expCount := range expSubStrings {
+		g.Expect(strings.Count(string(result.data), expSubStr)).To(Equal(expCount))
 	}
 }
 
@@ -86,18 +77,40 @@ func TestCreateStreamServers(t *testing.T) {
 
 	g.Expect(streamServers).To(HaveLen(5))
 
-	SSLPrereadCount := 0
-	ProxyPassCount := 0
-
-	for _, streamServer := range streamServers {
-		if streamServer.SSLPreread {
-			SSLPrereadCount++
-		}
-		if streamServer.ProxyPass {
-			ProxyPassCount++
-		}
+	expectedStreamServers := []stream.Server{
+		{
+			Listen:      getSocketName(conf.TLSServers[0].Port, conf.TLSServers[0].Hostname),
+			Destination: conf.TLSServers[0].UpstreamName,
+			ProxyPass:   true,
+			SSLPreread:  false,
+		},
+		{
+			Listen:      getSocketName(conf.TLSServers[1].Port, conf.TLSServers[1].Hostname),
+			Destination: conf.TLSServers[1].UpstreamName,
+			ProxyPass:   true,
+			SSLPreread:  false,
+		},
+		{
+			Listen:      getSocketName(conf.TLSServers[2].Port, conf.TLSServers[2].Hostname),
+			Destination: conf.TLSServers[2].UpstreamName,
+			ProxyPass:   true,
+			SSLPreread:  false,
+		},
+		{
+			Listen:      fmt.Sprint(8081),
+			Destination: getVariableName(8081),
+			ProxyPass:   false,
+			SSLPreread:  true,
+		},
+		{
+			Listen:      fmt.Sprint(8080),
+			Destination: getVariableName(8080),
+			ProxyPass:   false,
+			SSLPreread:  true,
+		},
 	}
 
-	g.Expect(SSLPrereadCount).To(Equal(2))
-	g.Expect(ProxyPassCount).To(Equal(3))
+	for i := range streamServers {
+		g.Expect(streamServers[i]).To(Equal(expectedStreamServers[i]))
+	}
 }

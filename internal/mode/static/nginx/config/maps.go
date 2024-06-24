@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 	gotemplate "text/template"
 
@@ -43,7 +42,7 @@ func createStreamMaps(conf dataplane.Configuration) []http.Map {
 		if !ok {
 			m := http.Map{
 				Source:   "$ssl_preread_server_name",
-				Variable: fmt.Sprintf("dest_%d", server.Port),
+				Variable: getVariableName(server.Port),
 				Parameters: []http.MapParameter{
 					{
 						Value:  server.Hostname,
