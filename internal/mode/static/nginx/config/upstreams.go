@@ -36,14 +36,7 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 }
 
 func (g GeneratorImpl) executeStreamUpstreams(_ dataplane.Configuration) []executeResult {
-	upstreams := []http.Upstream{
-		{
-			Name: "backend1",
-			Servers: []http.UpstreamServer{{
-				Address: "10.244.0.7:8443",
-			}},
-		},
-	}
+	var upstreams []http.Upstream
 
 	result := executeResult{
 		dest: streamConfigFile,
