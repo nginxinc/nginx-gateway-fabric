@@ -48,19 +48,19 @@ func BuildConfiguration(
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
 	baseHTTPConfig := buildBaseHTTPConfig(g)
-	var tlsServers []Layer4Server
+	var tlsServers []Layer4VirtualServer
 
 	config := Configuration{
-		HTTPServers:    httpServers,
-		SSLServers:     sslServers,
-		TLSServers:     tlsServers,
-		Upstreams:      upstreams,
-		BackendGroups:  backendGroups,
-		SSLKeyPairs:    keyPairs,
-		Version:        configVersion,
-		CertBundles:    certBundles,
-		Telemetry:      telemetry,
-		BaseHTTPConfig: baseHTTPConfig,
+		HTTPServers:           httpServers,
+		SSLServers:            sslServers,
+		TLSPassthroughServers: tlsServers,
+		Upstreams:             upstreams,
+		BackendGroups:         backendGroups,
+		SSLKeyPairs:           keyPairs,
+		Version:               configVersion,
+		CertBundles:           certBundles,
+		Telemetry:             telemetry,
+		BaseHTTPConfig:        baseHTTPConfig,
 	}
 
 	return config

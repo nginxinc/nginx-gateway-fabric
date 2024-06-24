@@ -191,7 +191,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 func TestExecuteStreamMaps(t *testing.T) {
 	g := NewWithT(t)
 	conf := dataplane.Configuration{
-		TLSServers: []dataplane.Layer4Server{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
 				Hostname:     "example.com",
 				Port:         8081,
@@ -229,7 +229,7 @@ func TestExecuteStreamMaps(t *testing.T) {
 func TestCreateStreamMaps(t *testing.T) {
 	g := NewWithT(t)
 	conf := dataplane.Configuration{
-		TLSServers: []dataplane.Layer4Server{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
 				Hostname:     "example.com",
 				Port:         8081,

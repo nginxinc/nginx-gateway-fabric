@@ -29,8 +29,8 @@ type Configuration struct {
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
 	SSLServers []VirtualServer
-	// TLSServers hold all TLSServers
-	TLSServers []Layer4Server
+	// TLSPassthroughServers hold all TLSPassthroughServers
+	TLSPassthroughServers []Layer4VirtualServer
 	// Upstreams holds all unique Upstreams.
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
@@ -78,8 +78,8 @@ type VirtualServer struct {
 	IsDefault bool
 }
 
-// Layer4Server is a virtual server for Layer 4 traffic.
-type Layer4Server struct {
+// Layer4VirtualServer is a virtual server for Layer 4 traffic.
+type Layer4VirtualServer struct {
 	// Hostname is the hostname of the server.
 	Hostname string
 	// UpstreamName refers to the name of the upstream that is used.

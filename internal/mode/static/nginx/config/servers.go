@@ -58,7 +58,7 @@ var grpcBaseHeaders = []http.Header{
 }
 
 func executeServers(conf dataplane.Configuration) []executeResult {
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSServers)
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSPassthroughServers)
 
 	serverResult := executeResult{
 		dest: httpConfigFile,
@@ -143,7 +143,7 @@ func createIncludes(additions []dataplane.Addition) []string {
 
 func createServers(
 	httpServers, sslServers []dataplane.VirtualServer,
-	tlsServers []dataplane.Layer4Server,
+	tlsServers []dataplane.Layer4VirtualServer,
 ) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)

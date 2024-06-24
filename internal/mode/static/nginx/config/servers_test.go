@@ -1058,7 +1058,7 @@ func TestCreateServers(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers, []dataplane.Layer4Server{})
+	result, httpMatchPair := createServers(httpServers, sslServers, []dataplane.Layer4VirtualServer{})
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1267,7 +1267,7 @@ func TestCreateServersConflicts(t *testing.T) {
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, []dataplane.Layer4Server{})
+			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, []dataplane.Layer4VirtualServer{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}

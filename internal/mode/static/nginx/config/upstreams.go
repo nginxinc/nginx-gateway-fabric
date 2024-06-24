@@ -35,8 +35,8 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 	return []executeResult{result}
 }
 
-func (g GeneratorImpl) executeStreamUpstreams(_ dataplane.Configuration) []executeResult {
-	var upstreams []http.Upstream
+func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []executeResult {
+	upstreams := g.createStreamUpstreams(conf.Upstreams)
 
 	result := executeResult{
 		dest: streamConfigFile,
@@ -44,6 +44,19 @@ func (g GeneratorImpl) executeStreamUpstreams(_ dataplane.Configuration) []execu
 	}
 
 	return []executeResult{result}
+}
+
+func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
+	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
+	ups := make([]http.Upstream, 0, len(upstreams)+1)
+
+	for _, u := range upstreams {
+		ups = append(ups, g.createUpstream(u))
+	}
+
+	ups = append(ups, createInvalidBackendRefUpstream())
+
+	return ups
 }
 
 func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {

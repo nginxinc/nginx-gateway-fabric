@@ -13,7 +13,7 @@ import (
 
 func TestExecuteStreamServers(t *testing.T) {
 	conf := dataplane.Configuration{
-		TLSServers: []dataplane.Layer4Server{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
 				Hostname:     "example.com",
 				Port:         8081,
@@ -54,7 +54,7 @@ func TestExecuteStreamServers(t *testing.T) {
 
 func TestCreateStreamServers(t *testing.T) {
 	conf := dataplane.Configuration{
-		TLSServers: []dataplane.Layer4Server{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
 				Hostname:     "example.com",
 				Port:         8081,
@@ -81,18 +81,18 @@ func TestCreateStreamServers(t *testing.T) {
 
 	expectedStreamServers := []stream.Server{
 		{
-			Listen:     getSocketName(conf.TLSServers[0].Port, conf.TLSServers[0].Hostname),
-			ProxyPass:  conf.TLSServers[0].UpstreamName,
+			Listen:     getSocketName(conf.TLSPassthroughServers[0].Port, conf.TLSPassthroughServers[0].Hostname),
+			ProxyPass:  conf.TLSPassthroughServers[0].UpstreamName,
 			SSLPreread: false,
 		},
 		{
-			Listen:     getSocketName(conf.TLSServers[1].Port, conf.TLSServers[1].Hostname),
-			ProxyPass:  conf.TLSServers[1].UpstreamName,
+			Listen:     getSocketName(conf.TLSPassthroughServers[1].Port, conf.TLSPassthroughServers[1].Hostname),
+			ProxyPass:  conf.TLSPassthroughServers[1].UpstreamName,
 			SSLPreread: false,
 		},
 		{
-			Listen:     getSocketName(conf.TLSServers[2].Port, conf.TLSServers[2].Hostname),
-			ProxyPass:  conf.TLSServers[2].UpstreamName,
+			Listen:     getSocketName(conf.TLSPassthroughServers[2].Port, conf.TLSPassthroughServers[2].Hostname),
+			ProxyPass:  conf.TLSPassthroughServers[2].UpstreamName,
 			SSLPreread: false,
 		},
 		{
