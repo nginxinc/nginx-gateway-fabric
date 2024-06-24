@@ -44,6 +44,8 @@ func TestExecuteStreamServers(t *testing.T) {
 	g.Expect(results).To(HaveLen(1))
 	result := results[0]
 
+	fmt.Println(string(result.data))
+
 	g.Expect(result.dest).To(Equal(streamConfigFile))
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(strings.Count(string(result.data), expSubStr)).To(Equal(expCount))
@@ -79,34 +81,29 @@ func TestCreateStreamServers(t *testing.T) {
 
 	expectedStreamServers := []stream.Server{
 		{
-			Listen:      getSocketName(conf.TLSServers[0].Port, conf.TLSServers[0].Hostname),
-			Destination: conf.TLSServers[0].UpstreamName,
-			ProxyPass:   true,
-			SSLPreread:  false,
+			Listen:     getSocketName(conf.TLSServers[0].Port, conf.TLSServers[0].Hostname),
+			ProxyPass:  conf.TLSServers[0].UpstreamName,
+			SSLPreread: false,
 		},
 		{
-			Listen:      getSocketName(conf.TLSServers[1].Port, conf.TLSServers[1].Hostname),
-			Destination: conf.TLSServers[1].UpstreamName,
-			ProxyPass:   true,
-			SSLPreread:  false,
+			Listen:     getSocketName(conf.TLSServers[1].Port, conf.TLSServers[1].Hostname),
+			ProxyPass:  conf.TLSServers[1].UpstreamName,
+			SSLPreread: false,
 		},
 		{
-			Listen:      getSocketName(conf.TLSServers[2].Port, conf.TLSServers[2].Hostname),
-			Destination: conf.TLSServers[2].UpstreamName,
-			ProxyPass:   true,
-			SSLPreread:  false,
+			Listen:     getSocketName(conf.TLSServers[2].Port, conf.TLSServers[2].Hostname),
+			ProxyPass:  conf.TLSServers[2].UpstreamName,
+			SSLPreread: false,
 		},
 		{
-			Listen:      fmt.Sprint(8081),
-			Destination: getVariableName(8081),
-			ProxyPass:   false,
-			SSLPreread:  true,
+			Listen:     fmt.Sprint(8081),
+			Pass:       getVariableName(8081),
+			SSLPreread: true,
 		},
 		{
-			Listen:      fmt.Sprint(8080),
-			Destination: getVariableName(8080),
-			ProxyPass:   false,
-			SSLPreread:  true,
+			Listen:     fmt.Sprint(8080),
+			Pass:       getVariableName(8080),
+			SSLPreread: true,
 		},
 	}
 

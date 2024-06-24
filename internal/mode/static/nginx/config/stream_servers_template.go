@@ -6,9 +6,11 @@ server {
 	listen {{ $s.Listen }};
 
 	{{- if $s.ProxyPass }}
-	proxy_pass {{ $s.Destination }};
-	{{- else }}
-	pass {{ $s.Destination }};
+	proxy_pass {{ $s.ProxyPass }};
+	{{- end }}
+
+	{{- if $s.Pass }}
+	pass {{ $s.Pass }};
 	{{- end }}
 
 	{{- if $s.SSLPreread }}

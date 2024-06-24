@@ -5,10 +5,11 @@ import (
 	"strings"
 )
 
-var forbiddenChars = map[string]string{":": "::", "*": ":s"}
+var forbiddenChars = map[string]string{"*": ":s"}
 
 // Swap forbidden characters treating ":" as an escape character
 func swapCharacters(name string) string {
+	name = strings.Replace(name, ":", "::", -1)
 	for old, replace := range forbiddenChars {
 		name = strings.Replace(name, old, replace, -1)
 	}
@@ -21,5 +22,5 @@ func getSocketName(port int32, hostname string) string {
 }
 
 func getVariableName(port int32) string {
-	return fmt.Sprintf("dest%d", port)
+	return fmt.Sprintf("$dest%d", port)
 }
