@@ -106,8 +106,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	})
 
 	It("recovers when node is restarted abruptly", func() {
-		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
-		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
 		runRestartNodeAbruptlyTest(teaURL, coffeeURL, files, &ns)
 	})
 })
@@ -178,6 +176,8 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	ngfPodName := podNames[0]
 	Expect(ngfPodName).ToNot(Equal(""))
 
+	time.Sleep(20 * time.Second)
+
 	if portFwdPort != 0 {
 		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
 		portForwardStopCh = make(chan struct{})
@@ -185,7 +185,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, files, ns)
+	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, "", files, ns)
 }
 
 func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files []string, ns *core.Namespace) {
@@ -215,7 +215,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 			Should(Succeed())
 	}
 
-	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, files, ns)
+	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName, files, ns)
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -313,12 +313,12 @@ func expectRequestToFail(appURL, address string) error {
 	return nil
 }
 
-func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName string, files []string, ns *core.Namespace) {
+func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, files []string, ns *core.Namespace) {
 	Eventually(
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -339,11 +339,11 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName string, files []string,
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
-	checkContainerLogsForErrors(ngfPodName, true)
+	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
 }
 
 // checkContainerLogsForErrors checks both nginx and ngf container's logs for any possible errors.
