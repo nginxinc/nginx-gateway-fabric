@@ -44,7 +44,7 @@ func TestExecuteUpstreams(t *testing.T) {
 		"upstream invalid-backend-ref",
 		"server 10.0.0.0:80;",
 		"server 11.0.0.0:80;",
-		"server unix:/var/lib/nginx/nginx-502-server.sock;",
+		"server unix:/var/run/nginx/nginx-502-server.sock;",
 	}
 
 	upstreamResults := gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams})

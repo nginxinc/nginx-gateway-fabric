@@ -27,7 +27,7 @@ const (
 )
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
-// documentation), this test is recommended to be run separate from other nfr tests.
+// documentation), this test is recommended to be run separate from other tests.
 var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
@@ -81,7 +81,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 			func() error {
 				return checkForWorkingTraffic(teaURL, coffeeURL)
 			}).
-			WithTimeout(timeoutConfig.RequestTimeout).
+			WithTimeout(timeoutConfig.RequestTimeout * 2).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 	})
@@ -96,8 +96,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	})
 
 	It("recovers when nginx container is restarted", func() {
-		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
-		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
 		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, &ns)
 	})
 })
@@ -154,11 +152,11 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
-	checkContainerLogsForErrors(ngfPodName)
+	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -260,15 +258,17 @@ func expectRequestToFail(appURL, address string) error {
 // Since this function retrieves all the logs from both containers and the NGF pod may be shared between tests,
 // the logs retrieved may contain log messages from previous tests, thus any errors in the logs from previous tests
 // may cause an interference with this test and cause this test to fail.
-func checkContainerLogsForErrors(ngfPodName string) {
-	logs, err := resourceManager.GetPodLogs(
+// Additionally, when the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
+// NGINX container to be restarted.
+func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
+	nginxLogs, err := resourceManager.GetPodLogs(
 		ngfNamespace,
 		ngfPodName,
 		&core.PodLogOptions{Container: nginxContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	for _, line := range strings.Split(logs, "\n") {
+	for _, line := range strings.Split(nginxLogs, "\n") {
 		Expect(line).ToNot(ContainSubstring("[crit]"), line)
 		Expect(line).ToNot(ContainSubstring("[alert]"), line)
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
@@ -281,18 +281,20 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		}
 	}
 
-	logs, err = resourceManager.GetPodLogs(
-		ngfNamespace,
-		ngfPodName,
-		&core.PodLogOptions{Container: ngfContainerName},
-	)
-	Expect(err).ToNot(HaveOccurred())
+	if !checkNginxLogsOnly {
+		ngfLogs, err := resourceManager.GetPodLogs(
+			ngfNamespace,
+			ngfPodName,
+			&core.PodLogOptions{Container: ngfContainerName},
+		)
+		Expect(err).ToNot(HaveOccurred())
 
-	for _, line := range strings.Split(logs, "\n") {
-		if *plusEnabled && strings.Contains(line, "\"level\":\"error\"") {
-			Expect(line).To(ContainSubstring("Usage reporting must be enabled when using NGINX Plus"), line)
-		} else {
-			Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
+		for _, line := range strings.Split(ngfLogs, "\n") {
+			if *plusEnabled && strings.Contains(line, "\"level\":\"error\"") {
+				Expect(line).To(ContainSubstring("Usage reporting must be enabled when using NGINX Plus"), line)
+			} else {
+				Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
+			}
 		}
 	}
 }

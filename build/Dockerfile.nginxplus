@@ -38,4 +38,4 @@ USER 101:1001
 
 LABEL org.nginx.ngf.image.build.agent="${BUILD_AGENT}"
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "rm -rf /var/run/nginx/*.sock && nginx -g 'daemon off;'"]

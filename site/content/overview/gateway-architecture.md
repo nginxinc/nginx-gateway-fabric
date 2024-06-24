@@ -82,7 +82,7 @@ The following list describes the connections, preceeded by their types in parent
    - Write: The _NGINX master_ writes its PID to the `nginx.pid` file stored in the `nginx-run` volume.
    - Read: The _NGINX master_ reads _configuration files_  and the _TLS cert and keys_ referenced in the configuration when it starts or during a reload. These files, certificates, and keys are stored in the `nginx-conf` and `nginx-secrets` volumes that are mounted to both the `nginx-gateway` and `nginx` containers.
 1. (File I/O)
-   - Write: The _NGINX master_ writes to the auxiliary Unix sockets folder, which is located in the `/var/lib/nginx`
+   - Write: The _NGINX master_ writes to the auxiliary Unix sockets folder, which is located in the `/var/run/nginx`
      directory.
    - Read: The _NGINX master_ reads the `nginx.conf` file from the `/etc/nginx` directory. This [file](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.3.0/internal/mode/static/nginx/conf/nginx.conf) contains the global and http configuration settings for NGINX. In addition, _NGINX master_ reads the NJS modules referenced in the configuration when it starts or during a reload. NJS modules are stored in the `/usr/lib/nginx/modules` directory.
 1. (File I/O) The _NGINX master_ sends logs to its _stdout_ and _stderr_, which are collected by the container runtime.
