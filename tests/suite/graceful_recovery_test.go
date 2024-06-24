@@ -173,7 +173,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		Should(BeTrue())
 
 	ngfPodName := podNames[0]
-	Expect(ngfPodName).ToNot(Equal(""))
+	Expect(ngfPodName).ToNot(BeEmpty())
 
 	time.Sleep(20 * time.Second)
 
