@@ -30,7 +30,7 @@ const (
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
 // documentation), this test is recommended to be run separate from other tests.
-var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
+var _ = Describe("Graceful Recovery test", Ordered, Label("graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
 		"graceful-recovery/cafe-secret.yaml",
@@ -142,7 +142,6 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 
 	containerName := *clusterName + "-control-plane"
-	fmt.Println("This is the containerName: " + containerName)
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
 	Expect(err).ToNot(HaveOccurred())
 
