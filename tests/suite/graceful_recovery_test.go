@@ -142,6 +142,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 
 	containerName := *clusterName + "-control-plane"
+	fmt.Println("This is the containerName: " + containerName)
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
 	Expect(err).ToNot(HaveOccurred())
 
