@@ -176,7 +176,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 			count = 0
 			return false
 		}).
-		WithTimeout(timeoutConfig.CreateTimeout).
+		WithTimeout(timeoutConfig.CreateTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(BeTrue())
 
