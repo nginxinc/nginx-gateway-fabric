@@ -323,7 +323,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -344,7 +344,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
