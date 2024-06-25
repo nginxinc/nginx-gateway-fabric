@@ -31,8 +31,10 @@ type Configuration struct {
 	SSLServers []VirtualServer
 	// TLSPassthroughServers hold all TLSPassthroughServers
 	TLSPassthroughServers []Layer4VirtualServer
-	// Upstreams holds all unique Upstreams.
+	// Upstreams holds all unique http Upstreams.
 	Upstreams []Upstream
+	// StreamUpstreams holds all unique stream Upstreams
+	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
 	// Telemetry holds the Otel configuration.

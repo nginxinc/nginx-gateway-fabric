@@ -88,19 +88,6 @@ type SplitClientDistribution struct {
 	Value   string
 }
 
-// Map defines an NGINX map.
-type Map struct {
-	Source     string
-	Variable   string
-	Parameters []MapParameter
-}
-
-// Parameter defines a Value and Result pair in a Map.
-type MapParameter struct {
-	Value  string
-	Result string
-}
-
 // ProxySSLVerify holds the proxied HTTPS server verification configuration.
 type ProxySSLVerify struct {
 	TrustedCertificate string

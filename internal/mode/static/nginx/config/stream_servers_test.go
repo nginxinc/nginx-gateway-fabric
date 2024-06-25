@@ -44,8 +44,6 @@ func TestExecuteStreamServers(t *testing.T) {
 	g.Expect(results).To(HaveLen(1))
 	result := results[0]
 
-	fmt.Println(string(result.data))
-
 	g.Expect(result.dest).To(Equal(streamConfigFile))
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(strings.Count(string(result.data), expSubStr)).To(Equal(expCount))
@@ -81,17 +79,17 @@ func TestCreateStreamServers(t *testing.T) {
 
 	expectedStreamServers := []stream.Server{
 		{
-			Listen:     getSocketName(conf.TLSPassthroughServers[0].Port, conf.TLSPassthroughServers[0].Hostname),
+			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[0].Port, conf.TLSPassthroughServers[0].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[0].UpstreamName,
 			SSLPreread: false,
 		},
 		{
-			Listen:     getSocketName(conf.TLSPassthroughServers[1].Port, conf.TLSPassthroughServers[1].Hostname),
+			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[1].Port, conf.TLSPassthroughServers[1].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[1].UpstreamName,
 			SSLPreread: false,
 		},
 		{
-			Listen:     getSocketName(conf.TLSPassthroughServers[2].Port, conf.TLSPassthroughServers[2].Hostname),
+			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[2].Port, conf.TLSPassthroughServers[2].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[2].UpstreamName,
 			SSLPreread: false,
 		},

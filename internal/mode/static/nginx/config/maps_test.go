@@ -4,9 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -159,11 +160,11 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 			IsDefault: true,
 		},
 	}
-	expectedMap := []http.Map{
+	expectedMap := []shared.Map{
 		{
 			Source:   "${http_my_add_header}",
 			Variable: "$my_add_header_header_var",
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "default", Result: "''"},
 				{
 					Value:  "~.*",
@@ -174,7 +175,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 		{
 			Source:   "${http_my_second_add_header}",
 			Variable: "$my_second_add_header_header_var",
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "default", Result: "''"},
 				{
 					Value:  "~.*",
@@ -256,18 +257,18 @@ func TestCreateStreamMaps(t *testing.T) {
 
 	maps := createStreamMaps(conf)
 
-	expectedMaps := []http.Map{
+	expectedMaps := []shared.Map{
 		{
 			Source:   "$ssl_preread_server_name",
 			Variable: getVariableName(8081),
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8081.sock"},
 			},
 		},
 		{
 			Source:   "$ssl_preread_server_name",
 			Variable: getVariableName(8080),
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
 				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
 				{Value: "app.example.com", Result: "unix:/var/run/nginx/app.example.com8080.sock"},

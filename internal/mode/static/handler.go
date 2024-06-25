@@ -169,7 +169,7 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 
 func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
 	start := time.Now()
-	logger.V(1).Info("Started processing event batch")
+	logger.V(1).Info("Started processing event batch hello", "name", "sarthak")
 
 	defer func() {
 		duration := time.Since(start)

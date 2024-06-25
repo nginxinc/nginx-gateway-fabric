@@ -6,6 +6,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -36,7 +37,7 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 }
 
 func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []executeResult {
-	upstreams := g.createStreamUpstreams(conf.Upstreams)
+	upstreams := g.createStreamUpstreams(conf.StreamUpstreams)
 
 	result := executeResult{
 		dest: streamConfigFile,
@@ -46,17 +47,47 @@ func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []ex
 	return []executeResult{result}
 }
 
-func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
+func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []stream.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
-	ups := make([]http.Upstream, 0, len(upstreams)+1)
+	ups := make([]stream.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, g.createUpstream(u))
+		ups = append(ups, g.createStreamUpstream(u))
 	}
 
-	ups = append(ups, createInvalidBackendRefUpstream())
-
 	return ups
+}
+
+func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstream {
+	zoneSize := ossZoneSize
+	if g.plus {
+		zoneSize = plusZoneSize
+	}
+
+	if len(up.Endpoints) == 0 {
+		return stream.Upstream{
+			Name:     up.Name,
+			ZoneSize: zoneSize,
+			Servers: []stream.UpstreamServer{
+				{
+					Address: nginx502Server,
+				},
+			},
+		}
+	}
+
+	upstreamServers := make([]stream.UpstreamServer, len(up.Endpoints))
+	for idx, ep := range up.Endpoints {
+		upstreamServers[idx] = stream.UpstreamServer{
+			Address: fmt.Sprintf("%s:%d", ep.Address, ep.Port),
+		}
+	}
+
+	return stream.Upstream{
+		Name:     up.Name,
+		ZoneSize: zoneSize,
+		Servers:  upstreamServers,
+	}
 }
 
 func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
