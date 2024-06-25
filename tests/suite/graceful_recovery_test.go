@@ -141,7 +141,9 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		Expect(err).ToNot(HaveOccurred())
 	}
 
+	Expect(*clusterName).ToNot(BeEmpty())
 	containerName := *clusterName + "-control-plane"
+
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
 	Expect(err).ToNot(HaveOccurred())
 
@@ -161,11 +163,18 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		WithPolling(500 * time.Millisecond).
 		Should(BeTrue())
 
+	// ngf can often oscillate between ready and error, so we wait for a stable readiness in ngf
 	var podNames []string
+	var count int
 	Eventually(
 		func() bool {
 			podNames, err = framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetStatusTimeout)
-			return len(podNames) == 1 && err == nil
+			if len(podNames) == 1 {
+				count++
+				return count == 10 && err == nil
+			}
+			count = 0
+			return false
 		}).
 		WithTimeout(timeoutConfig.CreateTimeout).
 		WithPolling(500 * time.Millisecond).
@@ -173,8 +182,6 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 
 	ngfPodName := podNames[0]
 	Expect(ngfPodName).ToNot(BeEmpty())
-
-	time.Sleep(20 * time.Second)
 
 	if portFwdPort != 0 {
 		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
@@ -316,7 +323,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.RequestTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -337,7 +344,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.RequestTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -345,10 +352,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 }
 
 // checkContainerLogsForErrors checks both nginx and ngf container's logs for any possible errors.
-// Since this function retrieves all the logs from both containers and the NGF pod may be shared between tests,
-// the logs retrieved may contain log messages from previous tests, thus any errors in the logs from previous tests
-// may cause an interference with this test and cause this test to fail.
-// Additionally, when the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
+// When the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
 // NGINX container to be restarted.
 func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 	nginxLogs, err := resourceManager.GetPodLogs(
