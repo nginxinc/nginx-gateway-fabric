@@ -12,7 +12,7 @@ GW_SVC_GKE_INTERNAL = false
 NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
 PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
-SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
+SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteBackendRequestHeaderModification,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
