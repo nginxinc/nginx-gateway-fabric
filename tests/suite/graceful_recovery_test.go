@@ -171,7 +171,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 			podNames, err = framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetStatusTimeout)
 			if len(podNames) == 1 {
 				count++
-				return count == 30 && err == nil
+				return count == 20 && err == nil
 			}
 			count = 0
 			return false
