@@ -139,6 +139,10 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		Skip("GW_SERVICE_TYPE must be 'LoadBalancer' for NFR tests")
 	}
 
+	if clusterInfo.IsGKE && strings.Contains(GinkgoLabelFilter(), "graceful-recovery") {
+		Skip("Graceful Recovery test must be run on Kind")
+	}
+
 	if *versionUnderTest != "" {
 		version = *versionUnderTest
 	} else if *imageTag != "" {
