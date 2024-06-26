@@ -167,19 +167,14 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 
 	// ngf can often oscillate between ready and error, so we wait for a stable readiness in ngf
 	var podNames []string
-	var count int
 	Eventually(
 		func() bool {
 			podNames, err = framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetStatusTimeout)
-			if len(podNames) == 1 {
-				count++
-				return count == 20 && err == nil
-			}
-			count = 0
-			return false
+			return len(podNames) == 1 && err == nil
 		}).
 		WithTimeout(timeoutConfig.CreateTimeout * 2).
 		WithPolling(500 * time.Millisecond).
+		MustPassRepeatedly(20).
 		Should(BeTrue())
 
 	ngfPodName := podNames[0]
