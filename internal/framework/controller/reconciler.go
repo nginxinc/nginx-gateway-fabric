@@ -53,7 +53,7 @@ func NewReconciler(cfg ReconcilerConfig) *Reconciler {
 	}
 }
 
-func (r *Reconciler) newObject(objectType ngftypes.ObjectType) ngftypes.ObjectType {
+func (r *Reconciler) mustCreateNewObject(objectType ngftypes.ObjectType) ngftypes.ObjectType {
 	if r.cfg.OnlyMetadata {
 		partialObj := &metav1.PartialObjectMetadata{}
 		partialObj.SetGroupVersionKind(objectType.GetObjectKind().GroupVersionKind())
@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	obj := r.newObject(r.cfg.ObjectType)
+	obj := r.mustCreateNewObject(r.cfg.ObjectType)
 
 	if err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
