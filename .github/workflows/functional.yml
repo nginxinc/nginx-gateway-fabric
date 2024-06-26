@@ -119,6 +119,13 @@ jobs:
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry GW_SERVICE_TYPE=LoadBalancer
         working-directory: ./tests
 
+      - name: Run functional graceful-recovery tests
+        run: |
+          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=graceful-recovery GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }}
+        working-directory: ./tests
+
       - name: Run functional tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric

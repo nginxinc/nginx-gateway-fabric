@@ -124,7 +124,7 @@ test: ## Runs the functional tests on your default k8s cluster
 		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
-		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL) --cluster-name=$(CLUSTER_NAME)
 
 .PHONY: test-with-plus
 test-with-plus: PLUS_ENABLED=true

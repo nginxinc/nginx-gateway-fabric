@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -28,7 +30,7 @@ const (
 
 // Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
 // documentation), this test is recommended to be run separate from other tests.
-var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "graceful-recovery"), func() {
+var _ = Describe("Graceful Recovery test", Ordered, Label("graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
 		"graceful-recovery/cafe-secret.yaml",
@@ -45,10 +47,11 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 
 	var ngfPodName string
 
-	BeforeAll(func() {
+	BeforeEach(func() {
 		// this test is unique in that it will check the entire log of both ngf and nginx containers
 		// for any errors, so in order to avoid errors generated in previous tests we will uninstall
-		// NGF installed at the suite level, then re-deploy our own
+		// NGF installed at the suite level, then re-deploy our own. We will also uninstall and re-install
+		// NGF between each graceful-recovery test for the same reason.
 		teardown(releaseName)
 
 		setup(getDefaultSetupCfg())
@@ -64,9 +67,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 		if portFwdHTTPSPort != 0 {
 			teaURL = fmt.Sprintf("%s:%d/tea", baseHTTPSURL, portFwdHTTPSPort)
 		}
-	})
 
-	BeforeEach(func() {
 		ns = core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "graceful-recovery",
@@ -98,7 +99,96 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("functional", "gracefu
 	It("recovers when nginx container is restarted", func() {
 		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, &ns)
 	})
+
+	It("recovers when drained node is restarted", func() {
+		runRestartNodeWithDrainingTest(teaURL, coffeeURL, files, &ns)
+	})
+
+	It("recovers when node is restarted abruptly", func() {
+		runRestartNodeAbruptlyTest(teaURL, coffeeURL, files, &ns)
+	})
 })
+
+func runRestartNodeWithDrainingTest(teaURL, coffeeURL string, files []string, ns *core.Namespace) {
+	runRestartNodeTest(teaURL, coffeeURL, files, ns, true)
+}
+
+func runRestartNodeAbruptlyTest(teaURL, coffeeURL string, files []string, ns *core.Namespace) {
+	runRestartNodeTest(teaURL, coffeeURL, files, ns, false)
+}
+
+func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Namespace, drain bool) {
+	nodeNames, err := getNodeNames()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(nodeNames).To(HaveLen(1))
+
+	kindNodeName := nodeNames[0]
+
+	Expect(clusterName).ToNot(BeNil(), "clusterName variable not set")
+	Expect(*clusterName).ToNot(BeEmpty())
+	containerName := *clusterName + "-control-plane"
+
+	if portFwdPort != 0 {
+		close(portForwardStopCh)
+	}
+
+	if drain {
+		_, err := exec.Command(
+			"kubectl",
+			"drain",
+			kindNodeName,
+			"--ignore-daemonsets",
+			"--delete-local-data",
+		).CombinedOutput()
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
+	Expect(err).ToNot(HaveOccurred())
+
+	// need to wait for docker container to restart and be running before polling for ready NGF Pods or else we will error
+	Eventually(
+		func() bool {
+			output, err := exec.Command(
+				"docker",
+				"inspect",
+				"-f",
+				"{{.State.Running}}",
+				containerName,
+			).CombinedOutput()
+			return strings.TrimSpace(string(output)) == "true" && err == nil
+		}).
+		WithTimeout(timeoutConfig.CreateTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(BeTrue())
+
+	// ngf can often oscillate between ready and error, so we wait for a stable readiness in ngf
+	var podNames []string
+	Eventually(
+		func() bool {
+			podNames, err = framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetStatusTimeout)
+			return len(podNames) == 1 && err == nil
+		}).
+		WithTimeout(timeoutConfig.CreateTimeout * 2).
+		WithPolling(500 * time.Millisecond).
+		MustPassRepeatedly(20).
+		Should(BeTrue())
+
+	ngfPodName := podNames[0]
+	Expect(ngfPodName).ToNot(BeEmpty())
+
+	if portFwdPort != 0 {
+		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
+		portForwardStopCh = make(chan struct{})
+		err = framework.PortForward(ctlr.GetConfigOrDie(), ngfNamespace, ngfPodName, ports, portForwardStopCh)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, "", files, ns)
+}
 
 func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files []string, ns *core.Namespace) {
 	var (
@@ -127,36 +217,7 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 			Should(Succeed())
 	}
 
-	Eventually(
-		func() error {
-			return checkForWorkingTraffic(teaURL, coffeeURL)
-		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
-		WithPolling(500 * time.Millisecond).
-		Should(Succeed())
-
-	Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-
-	Eventually(
-		func() error {
-			return checkForFailingTraffic(teaURL, coffeeURL)
-		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
-		WithPolling(500 * time.Millisecond).
-		Should(Succeed())
-
-	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-	Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
-
-	Eventually(
-		func() error {
-			return checkForWorkingTraffic(teaURL, coffeeURL)
-		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
-		WithPolling(500 * time.Millisecond).
-		Should(Succeed())
-
-	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
+	checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName, files, ns)
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -254,11 +315,41 @@ func expectRequestToFail(appURL, address string) error {
 	return nil
 }
 
-// checkContainerLogsForErrors checks both nginx and ngf container's logs for any possible errors.
-// Since this function retrieves all the logs from both containers and the NGF pod may be shared between tests,
-// the logs retrieved may contain log messages from previous tests, thus any errors in the logs from previous tests
-// may cause an interference with this test and cause this test to fail.
-// Additionally, when the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
+func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, files []string, ns *core.Namespace) {
+	Eventually(
+		func() error {
+			return checkForWorkingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithPolling(500 * time.Millisecond).
+		Should(Succeed())
+
+	Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
+
+	Eventually(
+		func() error {
+			return checkForFailingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(Succeed())
+
+	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+	Expect(resourceManager.WaitForAppsToBeReadyWithPodCount(ns.Name, 2)).To(Succeed())
+
+	Eventually(
+		func() error {
+			return checkForWorkingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithPolling(500 * time.Millisecond).
+		Should(Succeed())
+
+	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
+}
+
+// checkContainerLogsForErrors checks both nginx and NGF container's logs for any possible errors.
+// When the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
 // NGINX container to be restarted.
 func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 	nginxLogs, err := resourceManager.GetPodLogs(
@@ -347,6 +438,24 @@ func getContainerRestartCount(ngfPodName, containerName string) (int, error) {
 	}
 
 	return restartCount, nil
+}
+
+func getNodeNames() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
+	var nodes core.NodeList
+
+	if err := k8sClient.List(ctx, &nodes); err != nil {
+		return nil, fmt.Errorf("error listing nodes: %w", err)
+	}
+
+	names := make([]string, 0, len(nodes.Items))
+
+	for _, node := range nodes.Items {
+		names = append(names, node.Name)
+	}
+
+	return names, nil
 }
 
 func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
