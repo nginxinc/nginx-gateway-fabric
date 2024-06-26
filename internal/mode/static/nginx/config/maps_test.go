@@ -264,6 +264,7 @@ func TestCreateStreamMaps(t *testing.T) {
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8081.sock"},
 			},
+			UseHostnames: true,
 		},
 		{
 			Source:   "$ssl_preread_server_name",
@@ -271,8 +272,9 @@ func TestCreateStreamMaps(t *testing.T) {
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
 				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
-				{Value: "app.example.com", Result: "unix:/var/run/nginx/app.example.com8080.sock"},
+				{Value: "app.example.com", Result: "unix:/var/run/nginx/https8080.sock"},
 			},
+			UseHostnames: true,
 		},
 	}
 	g.Expect(maps).To(Equal(expectedMaps))
