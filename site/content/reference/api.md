@@ -568,7 +568,7 @@ ClientKeepAliveTimeout
 </p>
 <p>
 <p>ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
-Default: Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout</a>.</p>
+Default: <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout</a>.</p>
 </p>
 <table class="table table-bordered table-striped">
 <thead>
