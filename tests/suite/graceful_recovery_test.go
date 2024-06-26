@@ -50,7 +50,8 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("graceful-recovery"), 
 	BeforeEach(func() {
 		// this test is unique in that it will check the entire log of both ngf and nginx containers
 		// for any errors, so in order to avoid errors generated in previous tests we will uninstall
-		// NGF installed at the suite level, then re-deploy our own
+		// NGF installed at the suite level, then re-deploy our own. We will also uninstall and re-install
+		// NGF between each graceful-recovery test for the same reason.
 		teardown(releaseName)
 
 		setup(getDefaultSetupCfg())
