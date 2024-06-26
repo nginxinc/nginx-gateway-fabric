@@ -142,6 +142,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		Expect(err).ToNot(HaveOccurred())
 	}
 
+	Expect(clusterName).ToNot(BeNil(), "clusterName variable not set")
 	Expect(*clusterName).ToNot(BeEmpty())
 	containerName := *clusterName + "-control-plane"
 
