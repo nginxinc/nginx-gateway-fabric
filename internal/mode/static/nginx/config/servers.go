@@ -165,7 +165,7 @@ func createServers(
 
 		_, portInUse := sharedPorts[s.Port]
 		if portInUse {
-			listen = getSocketNameTLS(s.Port, s.Hostname)
+			listen = getSocketNameHTTPS(s.Port)
 		}
 		sslServer, matchPair := createSSLServer(s, serverID, listen)
 		servers = append(servers, sslServer)

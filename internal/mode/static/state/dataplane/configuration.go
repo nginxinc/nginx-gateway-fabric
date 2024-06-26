@@ -29,7 +29,7 @@ const (
 func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
-	resolver resolver.ServiceResolver,
+	serviceResolver resolver.ServiceResolver,
 	generator policies.ConfigGenerator,
 	configVersion int,
 ) Configuration {
@@ -41,20 +41,39 @@ func BuildConfiguration(
 		return Configuration{Version: configVersion}
 	}
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver)
 	httpServers, sslServers := buildServers(g, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
 	baseHTTPConfig := buildBaseHTTPConfig(g)
-	var tlsServers []Layer4VirtualServer
+	tlsServers := []Layer4VirtualServer{
+		{
+			Hostname:     "app.example.com",
+			UpstreamName: "backend1",
+			Port:         443,
+		},
+	}
+	streamUpstreams := []Upstream{
+		{
+			Name:     "backend1",
+			ErrorMsg: "error",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "10.244.0.7",
+					Port:    8443,
+				},
+			},
+		},
+	}
 
 	config := Configuration{
 		HTTPServers:           httpServers,
 		SSLServers:            sslServers,
 		TLSPassthroughServers: tlsServers,
 		Upstreams:             upstreams,
+		StreamUpstreams:       streamUpstreams,
 		BackendGroups:         backendGroups,
 		SSLKeyPairs:           keyPairs,
 		Version:               configVersion,

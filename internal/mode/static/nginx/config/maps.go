@@ -50,6 +50,7 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 						Result: getSocketNameTLS(server.Port, server.Hostname),
 					},
 				},
+				UseHostnames: true,
 			}
 			maps = append(maps, m)
 			portsToMap[server.Port] = len(maps) - 1
@@ -61,11 +62,8 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 		}
 	}
 
-	coveredPorts := make(map[int32]struct{})
-
 	for _, server := range conf.SSLServers {
 		mapInd, ok := portsToMap[server.Port]
-		_, covered := coveredPorts[server.Port]
 
 		hostname := server.Hostname
 
@@ -73,12 +71,11 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 			hostname = "default"
 		}
 
-		if ok && !covered {
+		if ok {
 			maps[mapInd].Parameters = append(maps[mapInd].Parameters, shared.MapParameter{
 				Value:  hostname,
 				Result: getSocketNameHTTPS(server.Port),
 			})
-			coveredPorts[server.Port] = struct{}{}
 		}
 	}
 
