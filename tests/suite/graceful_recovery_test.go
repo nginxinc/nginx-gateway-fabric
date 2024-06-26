@@ -124,6 +124,10 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 
 	kindNodeName := nodeNames[0]
 
+	Expect(clusterName).ToNot(BeNil(), "clusterName variable not set")
+	Expect(*clusterName).ToNot(BeEmpty())
+	containerName := *clusterName + "-control-plane"
+
 	if portFwdPort != 0 {
 		close(portForwardStopCh)
 	}
@@ -141,10 +145,6 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 		_, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
 		Expect(err).ToNot(HaveOccurred())
 	}
-
-	Expect(clusterName).ToNot(BeNil(), "clusterName variable not set")
-	Expect(*clusterName).ToNot(BeEmpty())
-	containerName := *clusterName + "-control-plane"
 
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
 	Expect(err).ToNot(HaveOccurred())
