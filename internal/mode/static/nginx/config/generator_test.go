@@ -127,4 +127,7 @@ func TestGenerate(t *testing.T) {
 		Path:    "/etc/nginx/secrets/test-keypair.pem",
 		Content: []byte("test-cert\ntest-key"),
 	}))
+
+	g.Expect(files[6].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
+	g.Expect(files[6].Type).To(Equal(file.TypeRegular))
 }
