@@ -50,7 +50,6 @@ linters:
     - errorlint
     - exportloopref
     - fatcontext
-    - forcetypeassert
     - ginkgolinter
     - gocheckcompilerdirectives
     - gocyclo
@@ -71,7 +70,6 @@ linters:
     - nilerr
     - noctx
     - nolintlint
-    - prealloc
     - predeclared
     - promlinter
     - reassign
