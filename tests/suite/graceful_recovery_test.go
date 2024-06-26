@@ -451,7 +451,7 @@ func getNodeNames() ([]string, error) {
 	var nodes core.NodeList
 
 	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return nil, fmt.Errorf("error getting nodes: %w", err)
+		return nil, fmt.Errorf("error listing nodes: %w", err)
 	}
 
 	names := make([]string, 0, len(nodes.Items))
