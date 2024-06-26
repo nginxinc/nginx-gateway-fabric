@@ -348,7 +348,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
 }
 
-// checkContainerLogsForErrors checks both nginx and ngf container's logs for any possible errors.
+// checkContainerLogsForErrors checks both nginx and NGF container's logs for any possible errors.
 // When the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
 // NGINX container to be restarted.
 func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
