@@ -14,6 +14,7 @@ import (
 	k8sversion "k8s.io/apimachinery/pkg/util/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -71,6 +72,15 @@ type NGFResourceCounts struct {
 	GRPCRouteCount int64
 	// BackendTLSPolicyCount is the number of relevant BackendTLSPolicies.
 	BackendTLSPolicyCount int64
+	// GatewayAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies
+	// attached at the Gateway level.
+	GatewayAttachedClientSettingsPolicyCount int64
+	// RouteAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies attached at the Route level.
+	RouteAttachedClientSettingsPolicyCount int64
+	// ObservabilityPolicyCount is the number of relevant ObservabilityPolicies.
+	ObservabilityPolicyCount int64
+	// NGINXProxyCount is the number of NGINXProxies.
+	NGINXProxyCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -189,6 +199,27 @@ func collectGraphResourceCount(
 	}
 
 	ngfResourceCounts.BackendTLSPolicyCount = int64(len(g.BackendTLSPolicies))
+
+	for policyKey, policy := range g.NGFPolicies {
+		switch gvk := policyKey.GVK; gvk.Kind {
+		case kinds.ClientSettingsPolicy:
+			if policy.TargetRefs == nil {
+				continue
+			}
+
+			if policy.TargetRefs[0].Kind == kinds.Gateway {
+				ngfResourceCounts.GatewayAttachedClientSettingsPolicyCount++
+			} else {
+				ngfResourceCounts.RouteAttachedClientSettingsPolicyCount++
+			}
+		case kinds.ObservabilityPolicy:
+			ngfResourceCounts.ObservabilityPolicyCount++
+		}
+	}
+
+	if g.NginxProxy != nil {
+		ngfResourceCounts.NGINXProxyCount = 1
+	}
 
 	return ngfResourceCounts, nil
 }
