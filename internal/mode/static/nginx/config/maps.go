@@ -34,36 +34,34 @@ func executeStreamMaps(conf dataplane.Configuration) []executeResult {
 }
 
 func createStreamMaps(conf dataplane.Configuration) []shared.Map {
-	maps := make([]shared.Map, 0)
-	portsToMap := make(map[int32]int)
+	portsToMap := make(map[int32]shared.Map)
 
 	for _, server := range conf.TLSPassthroughServers {
-		mapInd, ok := portsToMap[server.Port]
+		streamMap, portInUse := portsToMap[server.Port]
 
-		if !ok {
+		mapParam := shared.MapParameter{
+			Value:  server.Hostname,
+			Result: getSocketNameTLS(server.Port, server.Hostname),
+		}
+
+		if !portInUse {
 			m := shared.Map{
 				Source:   "$ssl_preread_server_name",
 				Variable: getVariableName(server.Port),
 				Parameters: []shared.MapParameter{
-					{
-						Value:  server.Hostname,
-						Result: getSocketNameTLS(server.Port, server.Hostname),
-					},
+					mapParam,
 				},
 				UseHostnames: true,
 			}
-			maps = append(maps, m)
-			portsToMap[server.Port] = len(maps) - 1
+			portsToMap[server.Port] = m
 		} else {
-			maps[mapInd].Parameters = append(maps[mapInd].Parameters, shared.MapParameter{
-				Value:  server.Hostname,
-				Result: getSocketNameTLS(server.Port, server.Hostname),
-			})
+			streamMap.Parameters = append(streamMap.Parameters, mapParam)
+			portsToMap[server.Port] = streamMap
 		}
 	}
 
 	for _, server := range conf.SSLServers {
-		mapInd, ok := portsToMap[server.Port]
+		streamMap, portInUse := portsToMap[server.Port]
 
 		hostname := server.Hostname
 
@@ -71,12 +69,18 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 			hostname = "default"
 		}
 
-		if ok {
-			maps[mapInd].Parameters = append(maps[mapInd].Parameters, shared.MapParameter{
+		if portInUse {
+			streamMap.Parameters = append(streamMap.Parameters, shared.MapParameter{
 				Value:  hostname,
 				Result: getSocketNameHTTPS(server.Port),
 			})
 		}
+	}
+
+	maps := make([]shared.Map, 0, len(portsToMap))
+
+	for _, m := range portsToMap {
+		maps = append(maps, m)
 	}
 
 	return maps
