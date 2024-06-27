@@ -142,7 +142,8 @@ func createIncludes(additions []dataplane.Addition) []string {
 }
 
 func createServers(
-	httpServers, sslServers []dataplane.VirtualServer,
+	httpServers,
+	sslServers []dataplane.VirtualServer,
 	tlsServers []dataplane.Layer4VirtualServer,
 ) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
