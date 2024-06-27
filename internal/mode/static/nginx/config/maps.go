@@ -47,7 +47,7 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 		if !portInUse {
 			m := shared.Map{
 				Source:   "$ssl_preread_server_name",
-				Variable: getVariableName(server.Port),
+				Variable: getTLSPassthroughVarName(server.Port),
 				Parameters: []shared.MapParameter{
 					mapParam,
 				},
@@ -74,6 +74,7 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 				Value:  hostname,
 				Result: getSocketNameHTTPS(server.Port),
 			})
+			portsToMap[server.Port] = streamMap
 		}
 	}
 

@@ -260,7 +260,7 @@ func TestCreateStreamMaps(t *testing.T) {
 	expectedMaps := []shared.Map{
 		{
 			Source:   "$ssl_preread_server_name",
-			Variable: getVariableName(8081),
+			Variable: getTLSPassthroughVarName(8081),
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8081.sock"},
 			},
@@ -268,7 +268,7 @@ func TestCreateStreamMaps(t *testing.T) {
 		},
 		{
 			Source:   "$ssl_preread_server_name",
-			Variable: getVariableName(8080),
+			Variable: getTLSPassthroughVarName(8080),
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
 				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},

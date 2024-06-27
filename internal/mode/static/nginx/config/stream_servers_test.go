@@ -95,12 +95,12 @@ func TestCreateStreamServers(t *testing.T) {
 		},
 		{
 			Listen:     fmt.Sprint(8081),
-			Pass:       getVariableName(8081),
+			Pass:       getTLSPassthroughVarName(8081),
 			SSLPreread: true,
 		},
 		{
 			Listen:     fmt.Sprint(8080),
-			Pass:       getVariableName(8080),
+			Pass:       getTLSPassthroughVarName(8080),
 			SSLPreread: true,
 		},
 	}

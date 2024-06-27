@@ -12,6 +12,6 @@ func getSocketNameHTTPS(port int32) string {
 	return fmt.Sprintf("unix:/var/run/nginx/https%d.sock", port)
 }
 
-func getVariableName(port int32) string {
+func getTLSPassthroughVarName(port int32) string {
 	return fmt.Sprintf("$dest%d", port)
 }

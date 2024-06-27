@@ -47,7 +47,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		portSet[server.Port] = struct{}{}
 		streamServers = append(streamServers, stream.Server{
 			Listen:     fmt.Sprint(server.Port),
-			Pass:       getVariableName(server.Port),
+			Pass:       getTLSPassthroughVarName(server.Port),
 			SSLPreread: true,
 		})
 	}
