@@ -58,6 +58,7 @@ var (
 	serviceType              = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
 	isGKEInternalLB          = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
 	plusEnabled              = flag.Bool("plus-enabled", false, "Is NGINX Plus enabled")
+	clusterName              = flag.String("cluster-name", "kind", "Cluster name")
 )
 
 var (
@@ -136,6 +137,10 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	if cfg.nfr && *serviceType != "LoadBalancer" {
 		skipNFRTests = true
 		Skip("GW_SERVICE_TYPE must be 'LoadBalancer' for NFR tests")
+	}
+
+	if clusterInfo.IsGKE && strings.Contains(GinkgoLabelFilter(), "graceful-recovery") {
+		Skip("Graceful Recovery test must be run on Kind")
 	}
 
 	if *versionUnderTest != "" {
