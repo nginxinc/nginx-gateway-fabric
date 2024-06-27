@@ -208,12 +208,20 @@ func TestExecuteStreamMaps(t *testing.T) {
 				UpstreamName: "backend2",
 			},
 		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "app.example.com",
+				Port:     8080,
+			},
+		},
 	}
 
 	expSubStrings := map[string]int{
 		"example.com unix:/var/run/nginx/example.com8081.sock;":           1,
 		"example.com unix:/var/run/nginx/example.com8080.sock;":           1,
 		"cafe.example.com unix:/var/run/nginx/cafe.example.com8080.sock;": 1,
+		"app.example.com unix:/var/run/nginx/https8080.sock;":             1,
+		"hostnames": 2,
 	}
 
 	results := executeStreamMaps(conf)
@@ -251,6 +259,10 @@ func TestCreateStreamMaps(t *testing.T) {
 				Hostname: "app.example.com",
 				Port:     8080,
 			},
+			{
+				Port:      8080,
+				IsDefault: true,
+			},
 		},
 	}
 
@@ -272,6 +284,7 @@ func TestCreateStreamMaps(t *testing.T) {
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
 				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
 				{Value: "app.example.com", Result: "unix:/var/run/nginx/https8080.sock"},
+				{Value: "default", Result: "unix:/var/run/nginx/https8080.sock"},
 			},
 			UseHostnames: true,
 		},
