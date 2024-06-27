@@ -68,6 +68,19 @@ Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-
 		/** BackendTLSPolicyCount is the number of relevant BackendTLSPolicies. */
 		long? BackendTLSPolicyCount = null;
 		
+		/** GatewayAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies
+attached at the Gateway level. */
+		long? GatewayAttachedClientSettingsPolicyCount = null;
+		
+		/** RouteAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies attached at the Route level. */
+		long? RouteAttachedClientSettingsPolicyCount = null;
+		
+		/** ObservabilityPolicyCount is the number of relevant ObservabilityPolicies. */
+		long? ObservabilityPolicyCount = null;
+		
+		/** NGINXProxyCount is the number of NGINXProxies. */
+		long? NGINXProxyCount = null;
+		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
 		
