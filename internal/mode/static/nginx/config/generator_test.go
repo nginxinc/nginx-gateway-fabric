@@ -47,9 +47,22 @@ func TestGenerate(t *testing.T) {
 				Port: 443,
 			},
 		},
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
+			{
+				Hostname:     "app.example.com",
+				Port:         443,
+				UpstreamName: "stream_up",
+			},
+		},
 		Upstreams: []dataplane.Upstream{
 			{
 				Name:      "up",
+				Endpoints: nil,
+			},
+		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name:      "stream_up",
 				Endpoints: nil,
 			},
 		},
@@ -98,7 +111,7 @@ func TestGenerate(t *testing.T) {
 	// Note: this only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
 	// It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
 	g.Expect(httpCfg).To(ContainSubstring("listen 80"))
-	g.Expect(httpCfg).To(ContainSubstring("listen 443"))
+	g.Expect(httpCfg).To(ContainSubstring("listen unix:/var/run/nginx/https443.sock"))
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
 
@@ -130,4 +143,9 @@ func TestGenerate(t *testing.T) {
 
 	g.Expect(files[6].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
 	g.Expect(files[6].Type).To(Equal(file.TypeRegular))
+	streamCfg := string(files[6].Content)
+	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com443.sock"))
+	g.Expect(streamCfg).To(ContainSubstring("listen 443"))
+	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com443.sock"))
+	g.Expect(streamCfg).To(ContainSubstring("example.com unix:/var/run/nginx/https443.sock"))
 }
