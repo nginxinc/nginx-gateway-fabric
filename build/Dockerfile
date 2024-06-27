@@ -1,33 +1,33 @@
-# syntax=docker/dockerfile:1.7
-FROM golang:1.22 as builder
+# syntax=docker/dockerfile:1.8
+FROM golang:1.22 AS builder
 
 WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric
 
-COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-fabric
+COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-fabric/
 RUN go mod download
 
 COPY . /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN make build
 
-FROM golang:1.22 as ca-certs-provider
+FROM golang:1.22 AS ca-certs-provider
 
-FROM alpine:3.20 as capabilizer
+FROM alpine:3.20 AS capabilizer
 RUN apk add --no-cache libcap
 
-FROM capabilizer as local-capabilizer
+FROM capabilizer AS local-capabilizer
 COPY ./build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
-FROM capabilizer as container-capabilizer
+FROM capabilizer AS container-capabilizer
 COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-fabric/build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
-FROM capabilizer as goreleaser-capabilizer
+FROM capabilizer AS goreleaser-capabilizer
 ARG TARGETARCH
 COPY dist/gateway_linux_$TARGETARCH*/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
-FROM scratch as common
+FROM scratch AS common
 # CA certs are needed for telemetry report and NGINX Plus usage report features, so that
 # NGF can verify the server's certificate.
 COPY --from=ca-certs-provider --link /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -36,11 +36,11 @@ ARG BUILD_AGENT
 ENV BUILD_AGENT=${BUILD_AGENT}
 ENTRYPOINT [ "/usr/bin/gateway" ]
 
-FROM common as container
+FROM common AS container
 COPY --from=container-capabilizer /usr/bin/gateway /usr/bin/
 
-FROM common as local
+FROM common AS local
 COPY --from=local-capabilizer /usr/bin/gateway /usr/bin/
 
-FROM common as goreleaser
+FROM common AS goreleaser
 COPY --from=goreleaser-capabilizer /usr/bin/gateway /usr/bin/
