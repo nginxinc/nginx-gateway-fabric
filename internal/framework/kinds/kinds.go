@@ -9,9 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
-// Gateway API Kinds
+// Gateway API Kinds.
 const (
-	// Gateway is the Gateway Kind
+	// Gateway is the Gateway Kind.
 	Gateway = "Gateway"
 	// GatewayClass is the GatewayClass Kind.
 	GatewayClass = "GatewayClass"

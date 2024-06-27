@@ -15,7 +15,7 @@ type ControllerCollector struct {
 	eventBatchProcessDuration prometheus.Histogram
 }
 
-// NewControllerCollector creates a new ControllerCollector
+// NewControllerCollector creates a new ControllerCollector.
 func NewControllerCollector(constLabels map[string]string) *ControllerCollector {
 	nc := &ControllerCollector{
 		eventBatchProcessDuration: prometheus.NewHistogram(

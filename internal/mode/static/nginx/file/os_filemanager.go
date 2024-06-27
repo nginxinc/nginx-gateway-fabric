@@ -25,7 +25,7 @@ func (s *StdLibOSFileManager) Remove(name string) error {
 	return os.Remove(name)
 }
 
-// Write wraps os.File.Write
+// Write wraps os.File.Write.
 func (s *StdLibOSFileManager) Write(file *os.File, contents []byte) error {
 	_, err := file.Write(contents)
 

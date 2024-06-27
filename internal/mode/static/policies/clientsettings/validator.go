@@ -72,7 +72,6 @@ func conflicts(a, b ngfAPI.ClientSettingsPolicySpec) bool {
 		if a.KeepAlive.Timeout != nil && b.KeepAlive.Timeout != nil {
 			return true
 		}
-
 	}
 
 	return false

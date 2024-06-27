@@ -35,7 +35,6 @@ func PrepareRouteRequests(
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
 	for routeKey, r := range routes {
-
 		routeStatus := prepareRouteStatus(
 			gatewayCtlrName,
 			r.ParentRefs,
@@ -72,7 +71,6 @@ func PrepareRouteRequests(
 		} else {
 			panic(fmt.Sprintf("Unknown route type: %s", r.RouteType))
 		}
-
 	}
 
 	return reqs

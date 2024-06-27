@@ -50,7 +50,7 @@ func (ServicePortsChangedPredicate) Update(e event.UpdateEvent) bool {
 	oldPortSet := make(map[ports]struct{})
 	newPortSet := make(map[ports]struct{})
 
-	for i := 0; i < len(oldSvc.Spec.Ports); i++ {
+	for i := range len(oldSvc.Spec.Ports) {
 		oldPortSet[ports{servicePort: oldPorts[i].Port, targetPort: oldPorts[i].TargetPort}] = struct{}{}
 		newPortSet[ports{servicePort: newPorts[i].Port, targetPort: newPorts[i].TargetPort}] = struct{}{}
 	}

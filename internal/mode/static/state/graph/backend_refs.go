@@ -255,7 +255,6 @@ func findBackendTLSPolicyForService(
 				}
 			}
 		}
-
 	}
 
 	if beTLSPolicy != nil {

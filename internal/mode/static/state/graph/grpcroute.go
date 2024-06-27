@@ -274,7 +274,7 @@ func validateGRPCFilter(
 }
 
 // convertGRPCFilters converts GRPCRouteFilters (a subset of HTTPRouteFilter) to HTTPRouteFilters
-// so we can reuse the logic from HTTPRoute filter validation and processing
+// so we can reuse the logic from HTTPRoute filter validation and processing.
 func convertGRPCFilters(filters []v1.GRPCRouteFilter) []v1.HTTPRouteFilter {
 	if len(filters) == 0 {
 		return nil

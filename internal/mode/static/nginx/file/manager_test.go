@@ -169,7 +169,7 @@ var _ = Describe("EventHandler", func() {
 					Content: []byte("secret"),
 				},
 			}
-			testErr = errors.New("test error")
+			errTest = errors.New("test error")
 		)
 
 		DescribeTable(
@@ -186,13 +186,13 @@ var _ = Describe("EventHandler", func() {
 
 				err := mgr.ReplaceFiles(files)
 				Expect(err).Should(HaveOccurred())
-				Expect(err).To(MatchError(testErr))
+				Expect(err).To(MatchError(errTest))
 			},
 			Entry(
 				"Remove",
 				&filefakes.FakeOSFileManager{
 					RemoveStub: func(_ string) error {
-						return testErr
+						return errTest
 					},
 				},
 			),
@@ -200,7 +200,7 @@ var _ = Describe("EventHandler", func() {
 				"Create",
 				&filefakes.FakeOSFileManager{
 					CreateStub: func(_ string) (*os.File, error) {
-						return nil, testErr
+						return nil, errTest
 					},
 				},
 			),
@@ -208,7 +208,7 @@ var _ = Describe("EventHandler", func() {
 				"Chmod",
 				&filefakes.FakeOSFileManager{
 					ChmodStub: func(_ *os.File, _ os.FileMode) error {
-						return testErr
+						return errTest
 					},
 				},
 			),
@@ -216,7 +216,7 @@ var _ = Describe("EventHandler", func() {
 				"Write",
 				&filefakes.FakeOSFileManager{
 					WriteStub: func(_ *os.File, _ []byte) error {
-						return testErr
+						return errTest
 					},
 				},
 			),

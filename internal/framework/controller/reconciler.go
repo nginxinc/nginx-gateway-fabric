@@ -53,7 +53,7 @@ func NewReconciler(cfg ReconcilerConfig) *Reconciler {
 	}
 }
 
-func (r *Reconciler) newObject(objectType ngftypes.ObjectType) ngftypes.ObjectType {
+func (r *Reconciler) mustCreateNewObject(objectType ngftypes.ObjectType) ngftypes.ObjectType {
 	if r.cfg.OnlyMetadata {
 		partialObj := &metav1.PartialObjectMetadata{}
 		partialObj.SetGroupVersionKind(objectType.GetObjectKind().GroupVersionKind())
@@ -65,7 +65,11 @@ func (r *Reconciler) newObject(objectType ngftypes.ObjectType) ngftypes.ObjectTy
 	t := reflect.TypeOf(objectType).Elem()
 
 	// We could've used objectType.DeepCopyObject() here, but it's a bit slower confirmed by benchmarks.
-	return reflect.New(t).Interface().(client.Object)
+	obj, ok := reflect.New(t).Interface().(client.Object)
+	if !ok {
+		panic("failed to create a new object")
+	}
+	return obj
 }
 
 // Reconcile implements the reconcile.Reconciler Reconcile method.
@@ -83,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	obj := r.newObject(r.cfg.ObjectType)
+	obj := r.mustCreateNewObject(r.cfg.ObjectType)
 
 	if err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !apierrors.IsNotFound(err) {

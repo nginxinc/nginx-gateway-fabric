@@ -108,7 +108,7 @@ type ClientKeepAlive struct {
 }
 
 // ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
-// Default: Default: https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout.
+// Default: https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout.
 type ClientKeepAliveTimeout struct {
 	// Server sets the timeout during which a keep-alive client connection will stay open on the server side.
 	// Setting this value to 0 disables keep-alive client connections.

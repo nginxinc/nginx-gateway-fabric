@@ -240,7 +240,7 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 	return httpServers, sslServers
 }
 
-// portPathRules keeps track of hostPathRules per port
+// portPathRules keeps track of hostPathRules per port.
 type portPathRules map[v1.PortNumber]*hostPathRules
 
 func (p portPathRules) buildServers() []VirtualServer {
@@ -478,7 +478,6 @@ func buildUpstreams(
 	uniqueUpstreams := make(map[string]Upstream)
 
 	for _, l := range listeners {
-
 		if !l.Valid {
 			continue
 		}

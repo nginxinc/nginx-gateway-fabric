@@ -488,7 +488,7 @@ func generateEndpointSliceList(n int) discoveryV1.EndpointSliceList {
 			},
 		}
 
-		for j := 0; j < c; j++ {
+		for j := range c {
 			slice.Endpoints[j] = discoveryV1.Endpoint{
 				Addresses: []string{fmt.Sprintf("10.0.%d.%d", i, j)},
 				Conditions: discoveryV1.EndpointConditions{
@@ -540,6 +540,7 @@ func BenchmarkResolve(b *testing.B) {
 func bench(b *testing.B, svcNsName types.NamespacedName,
 	list discoveryV1.EndpointSliceList, initSet initEndpointSetFunc, n int,
 ) {
+	b.Helper()
 	for i := 0; i < b.N; i++ {
 		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet)
 		if len(res) != n {

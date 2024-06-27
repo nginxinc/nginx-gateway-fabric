@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -25,7 +24,7 @@ import (
 
 // This test can be flaky when waiting to see traces show up in the collector logs.
 // Sometimes they get there right away, sometimes it takes 30 seconds. Retries were
-// added to attempt to mitigate the issue, but it didn't fix it 100%
+// added to attempt to mitigate the issue, but it didn't fix it 100%.
 var _ = Describe("Tracing", FlakeAttempts(2), Label("functional", "tracing"), func() {
 	var (
 		files = []string{
@@ -222,7 +221,7 @@ func verifyGatewayClassResolvedRefs() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
 	defer cancel()
 
-	var gc v1.GatewayClass
+	var gc gatewayv1.GatewayClass
 	if err := k8sClient.Get(ctx, types.NamespacedName{Name: gatewayClassName}, &gc); err != nil {
 		return err
 	}

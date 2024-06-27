@@ -37,7 +37,7 @@ func NewCronJob(cfg CronJobConfig) *CronJob {
 }
 
 // Start starts the cronjob.
-// Implements controller-runtime manager.Runnable
+// Implements controller-runtime manager.Runnable.
 func (j *CronJob) Start(ctx context.Context) error {
 	select {
 	case <-j.cfg.ReadyCh:

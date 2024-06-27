@@ -45,7 +45,7 @@ func (c *verifyClient) getConfigVersion() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://config-version/version", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://config-version/version", nil)
 	if err != nil {
 		return 0, fmt.Errorf("error creating request: %w", err)
 	}
