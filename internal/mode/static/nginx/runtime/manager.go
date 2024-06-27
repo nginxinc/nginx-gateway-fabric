@@ -19,8 +19,11 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 const (
-	PidFile            = "/var/run/nginx/nginx.pid"
-	pidFileTimeout     = 10000 * time.Millisecond
+	// PidFile specifies the location of the PID file for the Nginx process
+	PidFile = "/var/run/nginx/nginx.pid"
+	// pidFileTimeout defines the timeout duration for accessing the PID file
+	pidFileTimeout = 10000 * time.Millisecond
+	/// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
 	NginxReloadTimeout = 60000 * time.Millisecond
 )
 
@@ -60,8 +63,6 @@ type ProcessHandler interface {
 	EnsureNginxRunning(ctx context.Context) error
 }
 
-type ProcessHandlerImpl struct{}
-
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
 // Manager manages the runtime of NGINX.
@@ -91,7 +92,7 @@ type MetricsCollector interface {
 type ManagerImpl struct {
 	processHandler   ProcessHandler
 	metricsCollector MetricsCollector
-	verifyClient     verifyClient
+	verifyClient     nginxConfigVerifier
 	ngxPlusClient    nginxPlusClient
 	logger           logr.Logger
 }
@@ -102,7 +103,7 @@ func NewManagerImpl(
 	collector MetricsCollector,
 	logger logr.Logger,
 	processHandler ProcessHandler,
-	verifyClient verifyClient,
+	verifyClient nginxConfigVerifier,
 ) *ManagerImpl {
 	return &ManagerImpl{
 		processHandler:   processHandler,
@@ -189,6 +190,8 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 
 	return *upstreams, nil
 }
+
+type ProcessHandlerImpl struct{}
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
 func (p *ProcessHandlerImpl) EnsureNginxRunning(ctx context.Context) error {

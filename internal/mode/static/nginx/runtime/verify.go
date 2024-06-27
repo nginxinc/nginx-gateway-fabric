@@ -21,7 +21,7 @@ var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes sta
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . verifyClient
 
-type verifyClient interface {
+type nginxConfigVerifier interface {
 	GetConfigVersion() (int, error)
 	WaitForCorrectVersion(
 		ctx context.Context,

@@ -51,15 +51,18 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 		})
 
-		It("NGINX configuration reload is successful", func() {
-			Expect(manager.Reload(context.Background(), 1)).To(Succeed())
+		When("MetricsCollector is nil", func() {
+			It("NGINX configuration reload is successful", func() {
+				Expect(manager.Reload(context.Background(), 1)).To(Succeed())
 
-			Expect(process.FindMainProcessCallCount()).To(Equal(1))
-			Expect(process.ReadFileCallCount()).To(Equal(1))
-			Expect(process.KillCallCount()).To(Equal(1))
-			Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
-			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
-			Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
+				Expect(process.FindMainProcessCallCount()).To(Equal(1))
+				Expect(process.ReadFileCallCount()).To(Equal(1))
+				Expect(process.KillCallCount()).To(Equal(1))
+				Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
+				Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
+				Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
+				Expect(metrics.IncReloadErrorsCallCount()).To(Equal(0))
+			})
 		})
 
 		When("NGINX configuration reload is not successful", func() {
@@ -100,11 +103,21 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
 		})
 
-		It("returns no upstreams from NGINX Plus API", func() {
+		It("returns no upstreams from NGINX Plus API when upstreams are nil", func() {
 			upstreams, err := manager.GetUpstreams()
 
 			Expect(err).To(HaveOccurred())
 			Expect(upstreams).To(BeEmpty())
+		})
+
+		It("returns an error when GetUpstreams fails", func() {
+			ngxPlusClient.GetUpstreamsReturns(nil, errors.New("failed to get upstreams"))
+
+			upstreams, err := manager.GetUpstreams()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("failed to get upstreams"))
+			Expect(upstreams).To(BeNil())
 		})
 	})
 
