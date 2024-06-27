@@ -16,7 +16,7 @@ type transport struct{}
 
 func (c transport) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return &http.Response{
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewBufferString("42")),
 		Header:     make(http.Header),
 	}, nil

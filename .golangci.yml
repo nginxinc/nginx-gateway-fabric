@@ -37,33 +37,55 @@ linters-settings:
       - fieldalignment
   lll:
     line-length: 120
+  dupword:
+    ignore:
+      - "test"
 linters:
   enable:
+    - asasalint
     - asciicheck
+    - dupword
     - errcheck
+    - errname
     - errorlint
+    - exportloopref
+    - fatcontext
     - ginkgolinter
+    - gocheckcompilerdirectives
     - gocyclo
+    - godot
     - gofmt
     - gofumpt
     - goimports
     - gosec
     - gosimple
+    - gosmopolitan
     - govet
     - ineffassign
+    - intrange
     - lll
+    - loggercheck
     - makezero
     - misspell
     - nilerr
     - noctx
+    - nolintlint
     - predeclared
+    - promlinter
+    - reassign
     - revive
+    - spancheck
     - staticcheck
+    - stylecheck
+    - tenv
+    - thelper
     - typecheck
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
     - wastedassign
+    - whitespace
   disable-all: true
 issues:
   max-issues-per-linter: 0

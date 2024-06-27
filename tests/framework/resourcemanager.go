@@ -54,7 +54,7 @@ type ResourceManager struct {
 	TimeoutConfig  TimeoutConfig
 }
 
-// ClusterInfo holds the cluster metadata
+// ClusterInfo holds the cluster metadata.
 type ClusterInfo struct {
 	K8sVersion string
 	// ID is the UID of kube-system namespace
@@ -482,7 +482,7 @@ func (rm *ResourceManager) waitForLBStatusToBeReady(ctx context.Context, svcNsNa
 	)
 }
 
-// GetClusterInfo retrieves node info and Kubernetes version from the cluster
+// GetClusterInfo retrieves node info and Kubernetes version from the cluster.
 func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
 	defer cancel()
@@ -575,7 +575,7 @@ func (rm *ResourceManager) GetPod(namespace, name string) (*core.Pod, error) {
 	return &pod, nil
 }
 
-// GetPodLogs returns the logs from the specified Pod
+// GetPodLogs returns the logs from the specified Pod.
 func (rm *ResourceManager) GetPodLogs(namespace, name string, opts *core.PodLogOptions) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
 	defer cancel()

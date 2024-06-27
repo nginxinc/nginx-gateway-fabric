@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// Set during go build
+// Set during go build.
 var (
 	version string
 	commit  string

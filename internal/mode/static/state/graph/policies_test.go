@@ -925,7 +925,7 @@ func createTestPolicyWithAncestors(numAncestors int) policies.Policy {
 
 	ancestors := make([]v1alpha2.PolicyAncestorStatus, numAncestors)
 
-	for i := 0; i < numAncestors; i++ {
+	for i := range numAncestors {
 		ancestors[i] = v1alpha2.PolicyAncestorStatus{ControllerName: "some-other-controller"}
 	}
 

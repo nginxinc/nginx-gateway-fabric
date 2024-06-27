@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
-	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,7 +19,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -75,7 +74,7 @@ type eventHandlerConfig struct {
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
 	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
-	usageReportConfig *config.UsageReportConfig
+	usageReportConfig *ngfConfig.UsageReportConfig
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// gatewayPodConfig contains information about this Pod.
@@ -89,7 +88,7 @@ type eventHandlerConfig struct {
 }
 
 const (
-	// groups for GroupStatusUpdater
+	// groups for GroupStatusUpdater.
 	groupAllExceptGateways = "all-graphs-except-gateways"
 	groupGateways          = "gateways"
 	groupControlPlane      = "control-plane"
@@ -308,7 +307,7 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 	}
 }
 
-// updateNginxConf updates nginx conf files and reloads nginx
+// updateNginxConf updates nginx conf files and reloads nginx.
 func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.Configuration) error {
 	files := h.cfg.generator.Generate(conf)
 	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
@@ -324,7 +323,7 @@ func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.C
 
 // updateUpstreamServers is called only when endpoints have changed. It updates nginx conf files and then:
 // - if using NGINX Plus, determines which servers have changed and uses the N+ API to update them;
-// - otherwise if not using NGINX Plus, or an error was returned from the API, reloads nginx
+// - otherwise if not using NGINX Plus, or an error was returned from the API, reloads nginx.
 func (h *eventHandlerImpl) updateUpstreamServers(
 	ctx context.Context,
 	logger logr.Logger,
@@ -410,7 +409,7 @@ func serversEqual(newServers []ngxclient.UpstreamServer, oldServers []ngxclient.
 }
 
 // updateControlPlaneAndSetStatus updates the control plane configuration and then sets the status
-// based on the outcome
+// based on the outcome.
 func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(
 	ctx context.Context,
 	logger logr.Logger,
@@ -429,7 +428,7 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(
 		logger.Error(err, msg)
 		h.cfg.eventRecorder.Eventf(
 			cfg,
-			apiv1.EventTypeWarning,
+			v1.EventTypeWarning,
 			"UpdateFailed",
 			msg+": %s",
 			err.Error(),
@@ -454,7 +453,7 @@ func getGatewayAddresses(
 	ctx context.Context,
 	k8sClient client.Client,
 	svc *v1.Service,
-	podConfig config.GatewayPodConfig,
+	podConfig ngfConfig.GatewayPodConfig,
 ) ([]gatewayv1.GatewayStatusAddress, error) {
 	podAddress := []gatewayv1.GatewayStatusAddress{
 		{

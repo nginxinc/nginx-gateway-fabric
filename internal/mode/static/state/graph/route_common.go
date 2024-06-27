@@ -49,13 +49,13 @@ type ParentRefAttachmentStatus struct {
 type RouteType string
 
 const (
-	// RouteTypeHTTP indicates that the RouteType of the L7Route is HTTP
+	// RouteTypeHTTP indicates that the RouteType of the L7Route is HTTP.
 	RouteTypeHTTP RouteType = "http"
-	// RouteTypeGRPC indicates that the RouteType of the L7Route is gRPC
+	// RouteTypeGRPC indicates that the RouteType of the L7Route is gRPC.
 	RouteTypeGRPC RouteType = "grpc"
 )
 
-// RouteKey is the unique identifier for a L7Route
+// RouteKey is the unique identifier for a L7Route.
 type RouteKey struct {
 	// NamespacedName is the NamespacedName of the Route.
 	NamespacedName types.NamespacedName
@@ -63,7 +63,7 @@ type RouteKey struct {
 	RouteType RouteType
 }
 
-// L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute
+// L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute.
 type L7Route struct {
 	// Source is the source Gateway API object of the Route.
 	Source client.Object
@@ -111,7 +111,7 @@ type RouteBackendRef struct {
 	Filters []any
 }
 
-// CreateRouteKey takes a client.Object and creates a RouteKey
+// CreateRouteKey takes a client.Object and creates a RouteKey.
 func CreateRouteKey(obj client.Object) RouteKey {
 	nsName := types.NamespacedName{
 		Name:      obj.GetName(),
@@ -267,7 +267,7 @@ func bindRouteToListeners(
 		return
 	}
 
-	for i := 0; i < len(route.ParentRefs); i++ {
+	for i := range route.ParentRefs {
 		attachment := &ParentRefAttachmentStatus{
 			AcceptedHostnames: make(map[string][]string),
 		}
@@ -467,7 +467,7 @@ func match(listenerHost, routeHost string) bool {
 //
 // This function assumes that the two hostnames match each other, either:
 // - Exactly
-// - One as a substring of the other
+// - One as a substring of the other.
 func GetMoreSpecificHostname(hostname1, hostname2 string) string {
 	if hostname1 == hostname2 {
 		return hostname1

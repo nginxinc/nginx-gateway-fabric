@@ -16,7 +16,7 @@ const (
 	nginxStatusURI  = "http://config-status/stub_status"
 )
 
-// NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
+// NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket.
 func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) prometheus.Collector {
 	httpClient := runtime.GetSocketClient(nginxStatusSock)
 	ngxClient := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
@@ -24,7 +24,7 @@ func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) 
 	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, logger)
 }
 
-// NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket
+// NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket.
 func NewNginxPlusMetricsCollector(
 	plusClient *client.NginxClient,
 	constLabels map[string]string,

@@ -188,7 +188,7 @@ check-golangci-lint:
 
 .PHONY: lint
 lint: check-golangci-lint ## Run golangci-lint against code
-	golangci-lint run
+	golangci-lint run --fix
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code

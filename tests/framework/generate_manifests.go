@@ -53,7 +53,7 @@ spec:
     - name: {{ .BackendName }}
       port: 80`
 
-// nolint:all
+//nolint:all
 const secretTmplTxt = `apiVersion: v1
 kind: Secret
 metadata:
@@ -157,7 +157,7 @@ func GenerateScaleListenerObjects(numListeners int, tls bool) (ScaleObjects, err
 	backends := make([]string, 0)
 	secrets := make([]string, 0)
 
-	for i := 0; i < numListeners; i++ {
+	for i := range numListeners {
 		listenerName := fmt.Sprintf("listener-%d", i)
 		hostnamePrefix := fmt.Sprintf("%d", i)
 		backendName := fmt.Sprintf("backend-%d", i)
@@ -240,7 +240,7 @@ func GenerateScaleHTTPRouteObjects(numRoutes int) (ScaleObjects, error) {
 
 	backendName := "backend"
 
-	for i := 0; i < numRoutes; i++ {
+	for i := range numRoutes {
 		r := route{
 			Name:           fmt.Sprintf("route-%d", i),
 			HostnamePrefix: fmt.Sprintf("%d", i),
