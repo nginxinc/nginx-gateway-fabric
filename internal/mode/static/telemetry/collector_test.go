@@ -530,6 +530,10 @@ var _ = Describe("Collector", Ordered, func() {
 						GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
 					}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.HTTPRoute}}},
 					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-empty"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+					}: {},
+					{
 						NsName: types.NamespacedName{Namespace: "test", Name: "ObservabilityPolicy-1"},
 						GVK:    schema.GroupVersionKind{Kind: kinds.ObservabilityPolicy},
 					}: {},
