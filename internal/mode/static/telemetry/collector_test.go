@@ -374,7 +374,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayAttachedClientSettingsPolicyCount: 1,
 					RouteAttachedClientSettingsPolicyCount:   2,
 					ObservabilityPolicyCount:                 1,
-					NGINXProxyCount:                          1,
+					NginxProxyCount:                          1,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
@@ -610,7 +610,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayAttachedClientSettingsPolicyCount: 1,
 					RouteAttachedClientSettingsPolicyCount:   1,
 					ObservabilityPolicyCount:                 1,
-					NGINXProxyCount:                          1,
+					NginxProxyCount:                          1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -634,7 +634,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayAttachedClientSettingsPolicyCount: 0,
 					RouteAttachedClientSettingsPolicyCount:   0,
 					ObservabilityPolicyCount:                 0,
-					NGINXProxyCount:                          0,
+					NginxProxyCount:                          0,
 				}
 
 				data, err := dataCollector.Collect(ctx)

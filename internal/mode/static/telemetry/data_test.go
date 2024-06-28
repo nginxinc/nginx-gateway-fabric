@@ -35,7 +35,7 @@ func TestDataAttributes(t *testing.T) {
 			GatewayAttachedClientSettingsPolicyCount: 9,
 			RouteAttachedClientSettingsPolicyCount:   10,
 			ObservabilityPolicyCount:                 11,
-			NGINXProxyCount:                          12,
+			NginxProxyCount:                          12,
 		},
 		NGFReplicaCount: 3,
 	}
@@ -64,7 +64,7 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("GatewayAttachedClientSettingsPolicyCount", 9),
 		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 10),
 		attribute.Int64("ObservabilityPolicyCount", 11),
-		attribute.Int64("NGINXProxyCount", 12),
+		attribute.Int64("NginxProxyCount", 12),
 		attribute.Int64("NGFReplicaCount", 3),
 	}
 
@@ -101,7 +101,7 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("GatewayAttachedClientSettingsPolicyCount", 0),
 		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 0),
 		attribute.Int64("ObservabilityPolicyCount", 0),
-		attribute.Int64("NGINXProxyCount", 0),
+		attribute.Int64("NginxProxyCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
 	}
 
