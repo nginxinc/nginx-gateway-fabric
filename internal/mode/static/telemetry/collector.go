@@ -79,8 +79,8 @@ type NGFResourceCounts struct {
 	RouteAttachedClientSettingsPolicyCount int64
 	// ObservabilityPolicyCount is the number of relevant ObservabilityPolicies.
 	ObservabilityPolicyCount int64
-	// NGINXProxyCount is the number of NGINXProxies.
-	NGINXProxyCount int64
+	// NginxProxyCount is the number of NginxProxies.
+	NginxProxyCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -218,7 +218,7 @@ func collectGraphResourceCount(
 	}
 
 	if g.NginxProxy != nil {
-		ngfResourceCounts.NGINXProxyCount = 1
+		ngfResourceCounts.NginxProxyCount = 1
 	}
 
 	return ngfResourceCounts, nil
