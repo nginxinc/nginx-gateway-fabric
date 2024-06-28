@@ -201,9 +201,9 @@ func collectGraphResourceCount(
 	ngfResourceCounts.BackendTLSPolicyCount = int64(len(g.BackendTLSPolicies))
 
 	for policyKey, policy := range g.NGFPolicies {
-		switch gvk := policyKey.GVK; gvk.Kind {
+		switch policyKey.GVK.Kind {
 		case kinds.ClientSettingsPolicy:
-			if policy.TargetRefs == nil {
+			if len(policy.TargetRefs) == 0 {
 				continue
 			}
 
