@@ -52,7 +52,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		})
 
 		When("MetricsCollector is nil", func() {
-			It("NGINX configuration reload is successful", func() {
+			It("Is successful", func() {
 				Expect(manager.Reload(context.Background(), 1)).To(Succeed())
 
 				Expect(process.FindMainProcessCallCount()).To(Equal(1))
@@ -65,8 +65,8 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			})
 		})
 
-		When("NGINX configuration reload is not successful", func() {
-			It("should panic if MetricsCollector not enabled", func() {
+		When("MetricsCollector is nil", func() {
+			It("panics", func() {
 				metrics = nil
 				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 
@@ -77,8 +77,10 @@ var _ = Describe("NGINX Runtime Manager", func() {
 				Expect(reload).To(Panic())
 				Expect(err).ToNot(HaveOccurred())
 			})
+		})
 
-			It("should panic if VerifyClient not enabled", func() {
+		When("VerifyClient is nil", func() {
+			It("panics", func() {
 				metrics = &runtimefakes.FakeMetricsCollector{}
 				verifyClient = nil
 				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
