@@ -20,7 +20,7 @@ const (
 	// PidFile specifies the location of the PID file for the Nginx process
 	PidFile = "/var/run/nginx/nginx.pid"
 	// pidFileTimeout defines the timeout duration for accessing the PID file
-	pidFileTimeout = 10000 * time.Millisecond
+	PidFileTimeout = 10000 * time.Millisecond
 	/// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
 	NginxReloadTimeout = 60000 * time.Millisecond
 )
@@ -47,9 +47,9 @@ type nginxPlusClient interface {
 	GetUpstreams() (*ngxclient.Upstreams, error)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ProcessHandler
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . processHandler
 
-type ProcessHandler interface {
+type processHandler interface {
 	FindMainProcess(
 		ctx context.Context,
 		checkFile CheckFileFunc,
@@ -58,7 +58,6 @@ type ProcessHandler interface {
 	) (int, error)
 	ReadFile(file string) ([]byte, error)
 	Kill(pid int) error
-	EnsureNginxRunning(ctx context.Context) error
 }
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
@@ -88,7 +87,7 @@ type MetricsCollector interface {
 
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
-	processHandler   ProcessHandler
+	processHandler   processHandler
 	metricsCollector MetricsCollector
 	verifyClient     nginxConfigVerifier
 	ngxPlusClient    nginxPlusClient
@@ -100,7 +99,7 @@ func NewManagerImpl(
 	ngxPlusClient nginxPlusClient,
 	collector MetricsCollector,
 	logger logr.Logger,
-	processHandler ProcessHandler,
+	processHandler processHandler,
 	verifyClient nginxConfigVerifier,
 ) *ManagerImpl {
 	return &ManagerImpl{
@@ -120,7 +119,7 @@ func (m *ManagerImpl) IsPlus() bool {
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	start := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := m.processHandler.FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
+	pid, err := m.processHandler.FindMainProcess(ctx, os.Stat, os.ReadFile, PidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -189,11 +188,18 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 	return *upstreams, nil
 }
 
-type ProcessHandlerImpl struct{}
+type ProcessHandlerImpl struct {
+	readFile  ReadFileFunc
+	checkFile CheckFileFunc
+}
 
-// EnsureNginxRunning ensures NGINX is running by locating the main process.
-func (p *ProcessHandlerImpl) EnsureNginxRunning(ctx context.Context) error {
-	if _, err := p.FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
+func NewProcessHandlerImpl(readFileFunc ReadFileFunc, checkFileFunc CheckFileFunc) *ProcessHandlerImpl {
+	return &ProcessHandlerImpl{readFile: readFileFunc, checkFile: checkFileFunc}
+}
+
+// FindProcess ensures NGINX is running by locating the main process.
+func (p *ProcessHandlerImpl) FindProcess(ctx context.Context) error {
+	if _, err := p.FindMainProcess(ctx, os.Stat, os.ReadFile, PidFileTimeout); err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 	return nil
