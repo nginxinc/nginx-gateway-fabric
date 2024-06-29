@@ -62,10 +62,7 @@ const (
 	clusterTimeout = 10 * time.Second
 )
 
-var (
-	scheme         = runtime.NewScheme()
-	processHandler = &ngxruntime.ProcessHandlerImpl{}
-)
+var scheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
@@ -135,6 +132,8 @@ func StartManager(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
 	}
+
+	var processHandler = &ngxruntime.ProcessHandlerImpl{}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
 	if err := processHandler.EnsureNginxRunning(ctx); err != nil {
