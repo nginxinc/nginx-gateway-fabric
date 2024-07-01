@@ -100,7 +100,7 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 
 1. Error Logs
 
-    For _nginx-gateway_ container, you can `grep` for the word `error` or change the log level to `error` by following steps in Modify log levels (Section 4).
+    For _nginx-gateway_ container, you can `grep` the logs for the word `error`:
 
     ```shell
     kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway | grep error
