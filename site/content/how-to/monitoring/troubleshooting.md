@@ -78,7 +78,7 @@ kubectl exec -it -n nginx-gateway  <ngf-pod-name> -c nginx /bin/sh
 
 #### Logs
 
-Logs from the NGINX Gateway Fabric control plane and data plane can contain information that isn't available to status or events. These can include errors in processing or passing traffic. 
+Logs from the NGINX Gateway Fabric control plane and data plane can contain information that isn't available to status or events. These can include errors in processing or passing traffic.
 
 {{< note >}}
 You can see logs for a crashed or killed container by adding the `-p` flag to the `kubectl logs` commands below.
@@ -134,11 +134,9 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 
 1. Modify Log Levels
 
-    To see debug logs for control plane in NGINX Gateway Fabric, enable verbose logging by editing the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
+    To modify log levels for control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
+    To check error logs, modify the log level to `error` to view error logs. Similarly, change the log level to `debug` and `grep` for the word `debug` to view debug logs.
 
-1. Debug Logs
-
-    Once you have modified log levels for NGINX Gateway Fabric, you can `grep` for the word `debug` to check debug logs for further investigation.
 
 
 #### Understanding the generated NGINX config
