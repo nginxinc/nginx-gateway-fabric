@@ -7,7 +7,7 @@ docs: "DOCS-1419"
 
 {{< custom-styles >}}
 
-This topic describes general troubleshooting techniques when users run into problems using NGINX Gateway Fabric. When possible, suggested workarounds are provided.
+This topic describes possible issues when using NGINX Gateway Fabric and general troubleshooting techniques. When possible, suggested workarounds are provided.
 
 
 ### General troubleshooting
