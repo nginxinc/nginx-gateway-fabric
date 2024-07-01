@@ -137,8 +137,6 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
     To modify log levels for control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
     To check error logs, modify the log level to `error` to view error logs. Similarly, change the log level to `debug` and `grep` for the word `debug` to view debug logs.
 
-
-
 #### Understanding the generated NGINX config
 
 Understanding the NGINX configuration is key for fixing issues because it shows how NGINX handles requests. This helps tweak settings to make sure NGINX behaves the way you want it to for your application. To see your current configuration, you can open a shell in the _nginx_ container by following these [steps](#get-shell-access-to-nginx-container) and run `nginx -T`. To understand the usage of NGINX directives in the configuration file, consult this list of [NGINX directives](https://nginx.org/en/docs/dirindex.html).
