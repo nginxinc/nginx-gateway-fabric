@@ -21,6 +21,8 @@ jobs:
   functional-tests:
     name: Run Tests
     runs-on: ubuntu-22.04
+    env:
+      DOCKER_BUILD_NO_SUMMARY: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
