@@ -664,6 +664,14 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	tlsServers := []dataplane.Layer4VirtualServer{
+		{
+			Hostname:     "app.example.com",
+			Port:         8443,
+			UpstreamName: "sup",
+		},
+	}
+
 	expMatchPairs := httpMatchPairs{
 		"1_0": {
 			{Method: "POST", RedirectPath: "@rule0-route0"},
@@ -1038,7 +1046,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			IsDefaultSSL: true,
-			Listen:       "8443",
+			Listen:       getSocketNameHTTPS(8443),
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1047,7 +1055,7 @@ func TestCreateServers(t *testing.T) {
 				CertificateKey: expectedPEMPath,
 			},
 			Locations: getExpectedLocations(true),
-			Listen:    "8443",
+			Listen:    getSocketNameHTTPS(8443),
 			GRPC:      true,
 			Includes: []string{
 				includesFolder + "/server-addition-1.conf",
@@ -1058,7 +1066,7 @@ func TestCreateServers(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers, []dataplane.Layer4VirtualServer{})
+	result, httpMatchPair := createServers(httpServers, sslServers, tlsServers)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())

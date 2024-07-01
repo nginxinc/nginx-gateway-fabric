@@ -4,7 +4,6 @@ const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
-# this is a comment
 server {
     listen {{ $s.Listen }} ssl default_server;
 

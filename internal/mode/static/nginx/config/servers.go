@@ -149,10 +149,10 @@ func createServers(
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
-	sharedPorts := make(map[int32]struct{})
+	sharedTLSPorts := make(map[int32]struct{})
 
 	for _, tlsServer := range tlsServers {
-		sharedPorts[tlsServer.Port] = struct{}{}
+		sharedTLSPorts[tlsServer.Port] = struct{}{}
 	}
 
 	for serverID, s := range httpServers {
@@ -164,8 +164,7 @@ func createServers(
 	for serverID, s := range sslServers {
 		listen := fmt.Sprint(s.Port)
 
-		_, portInUse := sharedPorts[s.Port]
-		if portInUse {
+		if _, portInUse := sharedTLSPorts[s.Port]; portInUse {
 			listen = getSocketNameHTTPS(s.Port)
 		}
 		sslServer, matchPair := createSSLServer(s, serverID, listen)

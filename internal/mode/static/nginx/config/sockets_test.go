@@ -19,3 +19,10 @@ func TestGetSocketNameHTTPS(t *testing.T) {
 	g := NewGomegaWithT(t)
 	g.Expect(res).To(Equal("unix:/var/run/nginx/https800.sock"))
 }
+
+func TestGetTLSPassthroughVarName(t *testing.T) {
+	res := getTLSPassthroughVarName(800)
+
+	g := NewGomegaWithT(t)
+	g.Expect(res).To(Equal("$dest800"))
+}

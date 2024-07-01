@@ -32,6 +32,7 @@ spec:
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
         - --product-telemetry-disable
+        - --gateway-api-experimental-features
         env:
         - name: POD_IP
           valueFrom:
@@ -45,8 +46,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
-        imagePullPolicy: Always
+        image: nginx-gateway-fabric:edge
+        imagePullPolicy: Never
         name: nginx-gateway
         ports:
         - name: health
@@ -80,8 +81,8 @@ spec:
           mountPath: /var/run/nginx
         - name: nginx-includes
           mountPath: /etc/nginx/includes
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
-        imagePullPolicy: Always
+      - image: nginx-gateway-fabric/nginx:edge
+        imagePullPolicy: Never
         name: nginx
         ports:
         - containerPort: 80

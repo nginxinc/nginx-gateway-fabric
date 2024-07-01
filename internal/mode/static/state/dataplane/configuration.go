@@ -48,21 +48,41 @@ func BuildConfiguration(
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
 	baseHTTPConfig := buildBaseHTTPConfig(g)
-	var tlsServers []Layer4VirtualServer
-	var streamUpstreams []Upstream
 
 	config := Configuration{
-		HTTPServers:           httpServers,
-		SSLServers:            sslServers,
-		TLSPassthroughServers: tlsServers,
-		Upstreams:             upstreams,
-		StreamUpstreams:       streamUpstreams,
-		BackendGroups:         backendGroups,
-		SSLKeyPairs:           keyPairs,
-		Version:               configVersion,
-		CertBundles:           certBundles,
-		Telemetry:             telemetry,
-		BaseHTTPConfig:        baseHTTPConfig,
+		HTTPServers: httpServers,
+		SSLServers:  sslServers,
+		TLSPassthroughServers: []Layer4VirtualServer{
+			{
+				Hostname:     "app.example.com",
+				Port:         443,
+				UpstreamName: "backend",
+			},
+			{
+				Hostname:     "cafe.example.com",
+				Port:         443,
+				UpstreamName: "rfj",
+			},
+		},
+
+		StreamUpstreams: []Upstream{
+			{
+				Name: "backend",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.244.0.12",
+						Port:    8443,
+					},
+				},
+			},
+		},
+		Upstreams:      upstreams,
+		BackendGroups:  backendGroups,
+		SSLKeyPairs:    keyPairs,
+		Version:        configVersion,
+		CertBundles:    certBundles,
+		Telemetry:      telemetry,
+		BaseHTTPConfig: baseHTTPConfig,
 	}
 
 	return config

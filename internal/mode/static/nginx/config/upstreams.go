@@ -19,6 +19,10 @@ const (
 	nginx500Server = "unix:/var/run/nginx/nginx-500-server.sock"
 	// invalidBackendRef is used as an upstream name for invalid backend references.
 	invalidBackendRef = "invalid-backend-ref"
+	// nginxConnectionClosedServer is used as a stream backend that will close the connection
+	nginxConnectionClosedServer = "unix:/var/run/nginx/connection-closed-server.sock"
+	// invalidBackendRef is used as an upstream name for invalid backend references in stream.
+	invalidBackendRefStream = "invalid-backend-ref-stream"
 	// ossZoneSize is the upstream zone size for nginx open source.
 	ossZoneSize = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
@@ -55,6 +59,8 @@ func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []s
 		ups = append(ups, g.createStreamUpstream(u))
 	}
 
+	ups = append(ups, createInvalidStreamBackendRefUpstream())
+
 	return ups
 }
 
@@ -70,7 +76,7 @@ func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstre
 			ZoneSize: zoneSize,
 			Servers: []stream.UpstreamServer{
 				{
-					Address: nginx502Server,
+					Address: nginxConnectionClosedServer,
 				},
 			},
 		}
@@ -132,6 +138,18 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 		Name:     up.Name,
 		ZoneSize: zoneSize,
 		Servers:  upstreamServers,
+	}
+}
+
+func createInvalidStreamBackendRefUpstream() stream.Upstream {
+	// ZoneSize is omitted since we will only ever proxy to one destination/backend.
+	return stream.Upstream{
+		Name: invalidBackendRefStream,
+		Servers: []stream.UpstreamServer{
+			{
+				Address: nginxConnectionClosedServer,
+			},
+		},
 	}
 }
 

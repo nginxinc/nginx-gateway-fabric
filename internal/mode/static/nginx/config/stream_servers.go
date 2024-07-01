@@ -27,23 +27,35 @@ func executeStreamServers(conf dataplane.Configuration) []executeResult {
 }
 
 func createStreamServers(conf dataplane.Configuration) []stream.Server {
-	streamServers := make([]stream.Server, 0, len(conf.TLSPassthroughServers)*2)
-	for _, server := range conf.TLSPassthroughServers {
-		listen := getSocketNameTLS(server.Port, server.Hostname)
-		streamServers = append(streamServers, stream.Server{
-			Listen:    listen,
-			ProxyPass: server.UpstreamName,
-		})
-
+	if len(conf.TLSPassthroughServers) == 0 {
+		return nil
 	}
 
-	portSet := make(map[int32]struct{}, len(streamServers))
+	streamServers := make([]stream.Server, 0, len(conf.TLSPassthroughServers)*2)
+	portSet := make(map[int32]struct{})
+	upstreamNameSet := make(map[string]struct{})
+
+	for _, u := range conf.StreamUpstreams {
+		upstreamNameSet[u.Name] = struct{}{}
+	}
 
 	for _, server := range conf.TLSPassthroughServers {
+		proxyPass := server.UpstreamName
+
+		if _, nameExists := upstreamNameSet[proxyPass]; !nameExists {
+			proxyPass = invalidBackendRefStream
+		}
+		streamServers = append(streamServers, stream.Server{
+			Listen:    getSocketNameTLS(server.Port, server.Hostname),
+			ProxyPass: proxyPass,
+		})
+
 		_, inPortSet := portSet[server.Port]
+
 		if inPortSet {
 			continue
 		}
+
 		portSet[server.Port] = struct{}{}
 		streamServers = append(streamServers, stream.Server{
 			Listen:     fmt.Sprint(server.Port),

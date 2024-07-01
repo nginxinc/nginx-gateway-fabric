@@ -8,7 +8,7 @@ type Map struct {
 	UseHostnames bool
 }
 
-// MapParameter Parameter defines a Value and Result pair in a Map.
+// MapParameter defines a Value and Result pair in a Map.
 type MapParameter struct {
 	Value  string
 	Result string

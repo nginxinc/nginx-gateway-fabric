@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -105,7 +106,10 @@ func TestCreateStreamServers(t *testing.T) {
 		},
 	}
 
-	for i := range streamServers {
-		g.Expect(streamServers[i]).To(Equal(expectedStreamServers[i]))
-	}
+	sort.Slice(expectedStreamServers, func(i, j int) bool {
+		return expectedStreamServers[i].Listen < expectedStreamServers[j].Listen
+	})
+	sort.Slice(streamServers, func(i, j int) bool { return streamServers[i].Listen < streamServers[j].Listen })
+
+	g.Expect(streamServers).To(Equal(expectedStreamServers))
 }
