@@ -18,9 +18,4 @@ server {
 	{{- end }}
 }
 {{- end }}
-
-server {
-	listen unix:/var/run/nginx/connection-closed-server.sock;
-	return "";
-}
 `

@@ -50,32 +50,8 @@ func BuildConfiguration(
 	baseHTTPConfig := buildBaseHTTPConfig(g)
 
 	config := Configuration{
-		HTTPServers: httpServers,
-		SSLServers:  sslServers,
-		TLSPassthroughServers: []Layer4VirtualServer{
-			{
-				Hostname:     "app.example.com",
-				Port:         443,
-				UpstreamName: "backend",
-			},
-			{
-				Hostname:     "cafe.example.com",
-				Port:         443,
-				UpstreamName: "rfj",
-			},
-		},
-
-		StreamUpstreams: []Upstream{
-			{
-				Name: "backend",
-				Endpoints: []resolver.Endpoint{
-					{
-						Address: "10.244.0.12",
-						Port:    8443,
-					},
-				},
-			},
-		},
+		HTTPServers:    httpServers,
+		SSLServers:     sslServers,
 		Upstreams:      upstreams,
 		BackendGroups:  backendGroups,
 		SSLKeyPairs:    keyPairs,

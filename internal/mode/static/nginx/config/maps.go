@@ -38,14 +38,26 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 		return []shared.Map{}
 	}
 
+	upstreamNameSet := make(map[string]struct{})
+
+	for _, u := range conf.StreamUpstreams {
+		upstreamNameSet[u.Name] = struct{}{}
+	}
+
 	portsToMap := make(map[int32]shared.Map)
 
 	for _, server := range conf.TLSPassthroughServers {
 		streamMap, portInUse := portsToMap[server.Port]
 
+		socket := "\"\""
+
+		if _, nameExists := upstreamNameSet[server.UpstreamName]; nameExists {
+			socket = getSocketNameTLS(server.Port, server.Hostname)
+		}
+
 		mapParam := shared.MapParameter{
 			Value:  server.Hostname,
-			Result: getSocketNameTLS(server.Port, server.Hostname),
+			Result: socket,
 		}
 
 		if !portInUse {

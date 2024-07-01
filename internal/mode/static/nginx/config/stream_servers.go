@@ -40,15 +40,12 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	}
 
 	for _, server := range conf.TLSPassthroughServers {
-		proxyPass := server.UpstreamName
-
-		if _, nameExists := upstreamNameSet[proxyPass]; !nameExists {
-			proxyPass = invalidBackendRefStream
+		if _, nameExists := upstreamNameSet[server.UpstreamName]; nameExists {
+			streamServers = append(streamServers, stream.Server{
+				Listen:    getSocketNameTLS(server.Port, server.Hostname),
+				ProxyPass: server.UpstreamName,
+			})
 		}
-		streamServers = append(streamServers, stream.Server{
-			Listen:    getSocketNameTLS(server.Port, server.Hostname),
-			ProxyPass: proxyPass,
-		})
 
 		_, inPortSet := portSet[server.Port]
 
