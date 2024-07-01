@@ -78,7 +78,11 @@ kubectl exec -it -n nginx-gateway  <ngf-pod-name> -c nginx /bin/sh
 
 #### Logs
 
-Logs from the NGINX Gateway Fabric control plane and data plane can contain information that isn't available to status or events. These can include errors in processing or passing traffic. You can see logs for a crashed or killed container by adding the `-p` flag to the above commands.
+Logs from the NGINX Gateway Fabric control plane and data plane can contain information that isn't available to status or events. These can include errors in processing or passing traffic. 
+
+{{< note >}}
+You can see logs for a crashed or killed container by adding the `-p` flag to the `kubectl logs` commands below.
+{{< /note >}}
 
 1. Container Logs
 
