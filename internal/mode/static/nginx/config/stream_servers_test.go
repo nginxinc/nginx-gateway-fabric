@@ -31,6 +31,14 @@ func TestExecuteStreamServers(t *testing.T) {
 				UpstreamName: "backend2",
 			},
 		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+			},
+			{
+				Name: "backend2",
+			},
+		},
 	}
 
 	expSubStrings := map[string]int{
@@ -68,6 +76,14 @@ func TestCreateStreamServers(t *testing.T) {
 				Hostname:     "cafe.example.com",
 				Port:         8080,
 				UpstreamName: "backend2",
+			},
+		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+			},
+			{
+				Name: "backend2",
 			},
 		},
 	}

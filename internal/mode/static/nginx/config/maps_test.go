@@ -214,6 +214,14 @@ func TestExecuteStreamMaps(t *testing.T) {
 				Port:     8080,
 			},
 		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+			},
+			{
+				Name: "backend2",
+			},
+		},
 	}
 
 	expSubStrings := map[string]int{
@@ -262,6 +270,14 @@ func TestCreateStreamMaps(t *testing.T) {
 			{
 				Port:      8080,
 				IsDefault: true,
+			},
+		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+			},
+			{
+				Name: "backend2",
 			},
 		},
 	}
