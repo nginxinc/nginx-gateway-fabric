@@ -14,6 +14,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	bg := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 0,

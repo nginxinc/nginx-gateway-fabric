@@ -29,6 +29,7 @@ import (
 )
 
 func TestBuildGraph(t *testing.T) {
+	t.Parallel()
 	const (
 		gcName         = "my-class"
 		controllerName = "my.controller"
@@ -655,7 +656,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			fakePolicyValidator := &validationfakes.FakePolicyValidator{}
@@ -678,6 +681,7 @@ func TestBuildGraph(t *testing.T) {
 }
 
 func TestIsReferenced(t *testing.T) {
+	t.Parallel()
 	baseSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNs,
@@ -970,7 +974,9 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		// test := test
 		t.Run(test.name, func(t *testing.T) {
+			// t.Parallel()
 			g := NewWithT(t)
 
 			test.graph.GatewayClass = test.gc
@@ -981,6 +987,7 @@ func TestIsReferenced(t *testing.T) {
 }
 
 func TestIsNGFPolicyRelevant(t *testing.T) {
+	t.Parallel()
 	policyGVK := schema.GroupVersionKind{Kind: "MyKind"}
 	existingPolicyNsName := types.NamespacedName{Namespace: "test", Name: "pol"}
 
@@ -1122,7 +1129,9 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
@@ -1132,6 +1141,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 }
 
 func TestIsNGFPolicyRelevantPanics(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	graph := &Graph{}
 	nsname := types.NamespacedName{Namespace: "test", Name: "pol"}

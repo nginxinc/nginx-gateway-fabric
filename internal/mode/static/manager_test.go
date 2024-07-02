@@ -21,6 +21,7 @@ import (
 )
 
 func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
+	t.Parallel()
 	const gcName = "nginx"
 
 	partialObjectMetadataList := &metav1.PartialObjectMetadataList{}
@@ -114,7 +115,9 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			objects, objectLists := prepareFirstEventBatchPreparerArgs(gcName, test.gwNsName, test.experimentalEnabled)
@@ -126,6 +129,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 }
 
 func TestGetMetricsOptions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		expectedOptions metricsserver.Options
@@ -163,7 +167,9 @@ func TestGetMetricsOptions(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			metricsServerOptions := getMetricsOptions(test.metricsConfig)

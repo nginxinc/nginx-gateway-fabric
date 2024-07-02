@@ -22,6 +22,7 @@ import (
 )
 
 func TestCreateUsageJobWorker(t *testing.T) {
+	t.Parallel()
 	replicas := int32(1)
 	ngfReplicaSet := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -138,7 +139,9 @@ func TestCreateUsageJobWorker(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClientReader := &eventsfakes.FakeReader{}
@@ -178,6 +181,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 }
 
 func TestGetTotalNGFPodCount(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	rs1Replicas := int32(1)
@@ -241,6 +245,7 @@ func TestGetTotalNGFPodCount(t *testing.T) {
 }
 
 func TestCollectNodeCount(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	node1 := &v1.Node{

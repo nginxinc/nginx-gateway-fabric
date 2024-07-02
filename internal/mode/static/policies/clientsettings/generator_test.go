@@ -13,6 +13,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	maxSize := helpers.GetPointer[ngfAPI.Size]("10m")
 	bodyTimeout := helpers.GetPointer[ngfAPI.Duration]("600ms")
 	keepaliveRequests := helpers.GetPointer[int32](900)
@@ -150,7 +151,9 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			cfgString := string(clientsettings.Generate(test.policy, nil))
@@ -163,6 +166,7 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestGeneratePanics(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	generate := func() {

@@ -15,6 +15,7 @@ import (
 )
 
 func TestCreateTelemetryJobWorker_Succeeds(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	exporter := &telemetryfakes.FakeExporter{}
@@ -39,6 +40,7 @@ func TestCreateTelemetryJobWorker_Succeeds(t *testing.T) {
 }
 
 func TestCreateTelemetryJobWorker_CollectFails(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	exporter := &telemetryfakes.FakeExporter{}

@@ -23,6 +23,7 @@ import (
 var testNs = "test"
 
 func TestAttachPolicies(t *testing.T) {
+	t.Parallel()
 	policyGVK := schema.GroupVersionKind{Group: "Group", Version: "Version", Kind: "Policy"}
 
 	gwPolicyKey := createTestPolicyKey(policyGVK, "gw-policy")
@@ -219,7 +220,9 @@ func TestAttachPolicies(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			test.graph.attachPolicies("nginx-gateway")
@@ -229,6 +232,7 @@ func TestAttachPolicies(t *testing.T) {
 }
 
 func TestAttachPolicyToRoute(t *testing.T) {
+	t.Parallel()
 	routeNsName := types.NamespacedName{Namespace: testNs, Name: "hr-route"}
 
 	createRoute := func(routeType RouteType, valid, attachable, parentRefs bool) *L7Route {
@@ -360,7 +364,9 @@ func TestAttachPolicyToRoute(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			attachPolicyToRoute(test.policy, test.route, "nginx-gateway")
@@ -377,6 +383,7 @@ func TestAttachPolicyToRoute(t *testing.T) {
 }
 
 func TestAttachPolicyToGateway(t *testing.T) {
+	t.Parallel()
 	gatewayNsName := types.NamespacedName{Namespace: testNs, Name: "gateway"}
 	gateway2NsName := types.NamespacedName{Namespace: testNs, Name: "gateway2"}
 	ignoredGatewayNsName := types.NamespacedName{Namespace: testNs, Name: "ignored"}
@@ -524,7 +531,9 @@ func TestAttachPolicyToGateway(t *testing.T) {
 			ignoredGatewayNsName: nil,
 		}
 
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			attachPolicyToGateway(test.policy, test.policy.TargetRefs[0], test.gw, ignoredGateways, "nginx-gateway")
@@ -541,6 +550,7 @@ func TestAttachPolicyToGateway(t *testing.T) {
 }
 
 func TestProcessPolicies(t *testing.T) {
+	t.Parallel()
 	policyGVK := schema.GroupVersionKind{Group: "Group", Version: "Version", Kind: "MyPolicy"}
 
 	// These refs reference objects that belong to NGF.
@@ -758,7 +768,9 @@ func TestProcessPolicies(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			processed := processPolicies(test.policies, test.validator, gateways, routes, nil)
@@ -768,6 +780,7 @@ func TestProcessPolicies(t *testing.T) {
 }
 
 func TestMarkConflictedPolicies(t *testing.T) {
+	t.Parallel()
 	hrRef := createTestRef(kinds.HTTPRoute, v1.GroupName, "hr")
 	hrTargetRef := PolicyTargetRef{
 		Kind:   hrRef.Kind,
@@ -895,7 +908,9 @@ func TestMarkConflictedPolicies(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			markConflictedPolicies(test.policies, test.fakeValidator)

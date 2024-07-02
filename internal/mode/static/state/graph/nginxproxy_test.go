@@ -16,6 +16,7 @@ import (
 )
 
 func TestGetNginxProxy(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		nps   map[types.NamespacedName]*ngfAPI.NginxProxy
 		gc    *v1.GatewayClass
@@ -79,7 +80,9 @@ func TestGetNginxProxy(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(buildNginxProxy(test.nps, test.gc, &validationfakes.FakeGenericValidator{})).To(Equal(test.expNP))
@@ -88,6 +91,7 @@ func TestGetNginxProxy(t *testing.T) {
 }
 
 func TestIsNginxProxyReferenced(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		gc     *GatewayClass
 		npName types.NamespacedName
@@ -143,7 +147,9 @@ func TestIsNginxProxyReferenced(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(isNginxProxyReferenced(test.npName, test.gc)).To(Equal(test.expRes))
@@ -152,6 +158,7 @@ func TestIsNginxProxyReferenced(t *testing.T) {
 }
 
 func TestGCReferencesAnyNginxProxy(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		gc     *v1.GatewayClass
 		name   string
@@ -211,7 +218,9 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(gcReferencesAnyNginxProxy(test.gc)).To(Equal(test.expRes))
@@ -220,6 +229,7 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 }
 
 func TestValidateNginxProxy(t *testing.T) {
+	t.Parallel()
 	createValidValidator := func() *validationfakes.FakeGenericValidator {
 		v := &validationfakes.FakeGenericValidator{}
 		v.ValidateEscapedStringNoVarExpansionReturns(nil)
@@ -329,7 +339,9 @@ func TestValidateNginxProxy(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			allErrs := validateNginxProxy(test.validator, test.np)

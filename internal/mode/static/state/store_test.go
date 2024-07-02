@@ -10,6 +10,7 @@ import (
 )
 
 func TestSetChangeType(t *testing.T) {
+	t.Parallel()
 	ctu := newChangeTrackingUpdater(nil, nil)
 
 	// Order matters for these cases.
@@ -44,7 +45,9 @@ func TestSetChangeType(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		// test := test
 		t.Run(test.name, func(t *testing.T) {
+			// t.Parallel()
 			g := NewWithT(t)
 			ctu.setChangeType(test.obj, test.changed)
 			g.Expect(ctu.changeType).To(Equal(test.exp))

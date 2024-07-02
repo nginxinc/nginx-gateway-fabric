@@ -9,6 +9,7 @@ import (
 )
 
 func TestGetPlatform(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		node             *v1.Node
 		namespaces       *v1.NamespaceList
@@ -127,7 +128,9 @@ func TestGetPlatform(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			platform := getPlatform(*test.node, *test.namespaces)

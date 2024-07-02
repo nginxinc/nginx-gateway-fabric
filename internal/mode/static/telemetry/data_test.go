@@ -9,6 +9,7 @@ import (
 )
 
 func TestDataAttributes(t *testing.T) {
+	t.Parallel()
 	data := Data{
 		ImageSource: "local",
 		Data: tel.Data{
@@ -67,6 +68,7 @@ func TestDataAttributes(t *testing.T) {
 }
 
 func TestDataAttributesWithEmptyData(t *testing.T) {
+	t.Parallel()
 	data := Data{}
 
 	expected := []attribute.KeyValue{

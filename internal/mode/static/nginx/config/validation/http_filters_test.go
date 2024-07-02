@@ -6,6 +6,7 @@ import (
 )
 
 func TestValidateRedirectScheme(t *testing.T) {
+	t.Parallel()
 	validator := HTTPRedirectValidator{}
 
 	testValidValuesForSupportedValuesValidator(
@@ -24,6 +25,7 @@ func TestValidateRedirectScheme(t *testing.T) {
 }
 
 func TestValidateRedirectPort(t *testing.T) {
+	t.Parallel()
 	validator := HTTPRedirectValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -35,6 +37,7 @@ func TestValidateRedirectPort(t *testing.T) {
 }
 
 func TestValidateRedirectStatusCode(t *testing.T) {
+	t.Parallel()
 	validator := HTTPRedirectValidator{}
 
 	testValidValuesForSupportedValuesValidator(
@@ -52,6 +55,7 @@ func TestValidateRedirectStatusCode(t *testing.T) {
 }
 
 func TestValidateHostname(t *testing.T) {
+	t.Parallel()
 	validator := HTTPRedirectValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -68,6 +72,7 @@ func TestValidateHostname(t *testing.T) {
 }
 
 func TestValidateRewritePath(t *testing.T) {
+	t.Parallel()
 	validator := HTTPURLRewriteValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -89,6 +94,7 @@ func TestValidateRewritePath(t *testing.T) {
 }
 
 func TestValidateFilterHeaderName(t *testing.T) {
+	t.Parallel()
 	validator := HTTPHeaderValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -102,6 +108,7 @@ func TestValidateFilterHeaderName(t *testing.T) {
 }
 
 func TestValidateFilterHeaderValue(t *testing.T) {
+	t.Parallel()
 	validator := HTTPHeaderValidator{}
 
 	testValidValuesForSimpleValidator(
