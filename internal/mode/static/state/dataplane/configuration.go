@@ -29,7 +29,7 @@ const (
 func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
-	resolver resolver.ServiceResolver,
+	serviceResolver resolver.ServiceResolver,
 	generator policies.ConfigGenerator,
 	configVersion int,
 ) Configuration {
@@ -41,7 +41,7 @@ func BuildConfiguration(
 		return Configuration{Version: configVersion}
 	}
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver)
 	httpServers, sslServers := buildServers(g, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)

@@ -5,13 +5,13 @@ js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-    listen {{ $s.Port }} ssl default_server;
+    listen {{ $s.Listen }} ssl default_server;
 
     ssl_reject_handshake on;
 }
     {{- else if $s.IsDefaultHTTP }}
 server {
-    listen {{ $s.Port }} default_server;
+    listen {{ $s.Listen }} default_server;
 
     default_type text/html;
     return 404;
@@ -19,7 +19,7 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-    listen {{ $s.Port }} ssl;
+    listen {{ $s.Listen }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
 
@@ -27,7 +27,7 @@ server {
         return 421;
     }
         {{- else }}
-    listen {{ $s.Port }};
+    listen {{ $s.Listen }};
         {{- end }}
 
     server_name {{ $s.ServerName }};
