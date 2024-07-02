@@ -134,7 +134,7 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 
 1. Modify Log Levels
 
-    To modify log levels for control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
+    To modify log levels for the control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
     To check error logs, modify the log level to `error` to view error logs. Similarly, change the log level to `debug` and `grep` for the word `debug` to view debug logs.
 
 #### Understanding the generated NGINX config
