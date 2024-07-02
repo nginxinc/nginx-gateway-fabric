@@ -50,7 +50,7 @@ Status:
 
 If a resource has errors relating to its configuration or relationship to other resources, they can likely be read in the status. The `ObservedGeneration` in the status should match the `ObservedGeneration` of the resource. Otherwise, this could mean that the resource hasn't been processed yet or that the status failed to update.
 
-If no `Status` is written on the resource, further debug by checking if the referenced resources exists and belong to NGINX Gateway Fabric.
+If no `Status` is written on the resource, further debug by checking if the referenced resources exist and belong to NGINX Gateway Fabric.
 
 #### Events
 
