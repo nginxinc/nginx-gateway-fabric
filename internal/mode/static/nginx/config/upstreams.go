@@ -19,8 +19,6 @@ const (
 	nginx500Server = "unix:/var/run/nginx/nginx-500-server.sock"
 	// invalidBackendRef is used as an upstream name for invalid backend references.
 	invalidBackendRef = "invalid-backend-ref"
-	// nginxConnectionClosedServer is used as a stream backend that will close the connection.
-	nginxConnectionClosedServer = "unix:/var/run/nginx/connection-closed-server.sock"
 	// ossZoneSize is the upstream zone size for nginx open source.
 	ossZoneSize = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
@@ -54,7 +52,9 @@ func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []s
 	ups := make([]stream.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, g.createStreamUpstream(u))
+		if len(u.Endpoints) != 0 {
+			ups = append(ups, g.createStreamUpstream(u))
+		}
 	}
 
 	return ups
@@ -64,18 +64,6 @@ func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstre
 	zoneSize := ossZoneSize
 	if g.plus {
 		zoneSize = plusZoneSize
-	}
-
-	if len(up.Endpoints) == 0 {
-		return stream.Upstream{
-			Name:     up.Name,
-			ZoneSize: zoneSize,
-			Servers: []stream.UpstreamServer{
-				{
-					Address: nginxConnectionClosedServer,
-				},
-			},
-		}
 	}
 
 	upstreamServers := make([]stream.UpstreamServer, len(up.Endpoints))
