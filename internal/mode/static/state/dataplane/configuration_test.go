@@ -633,6 +633,27 @@ func TestBuildConfiguration(t *testing.T) {
 					ServiceName: helpers.GetPointer("my-svc"),
 				},
 				DisableHTTP2: true,
+				IPFamily:     ngfAPI.Dual,
+			},
+		},
+		Valid: true,
+	}
+
+	nginxProxyIPv4 := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{},
+				IPFamily:  ngfAPI.IPv4,
+			},
+		},
+		Valid: true,
+	}
+
+	nginxProxyIPv6 := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			Spec: ngfAPI.NginxProxySpec{
+				Telemetry: &ngfAPI.Telemetry{},
+				IPFamily:  ngfAPI.IPv6,
 			},
 		},
 		Valid: true,
@@ -660,7 +681,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "no listeners and routes",
 		},
@@ -693,7 +714,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "http listener with no routes",
 		},
@@ -757,7 +778,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "http and https listeners with no valid routes",
 		},
@@ -821,7 +842,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "https listeners with no routes",
 		},
@@ -855,7 +876,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "invalid https listener with resolved secret",
 		},
@@ -928,7 +949,7 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups:  []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "one http listener with two routes for different hostnames",
 		},
@@ -984,7 +1005,7 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups:  []BackendGroup{expGRGroups[0]},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "one http listener with one grpc route",
 		},
@@ -1105,7 +1126,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "two https listeners each with routes for different hostnames",
 		},
@@ -1266,7 +1287,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
 		},
@@ -1480,7 +1501,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 
 			msg: "multiple http and https listener; different ports",
@@ -1613,7 +1634,7 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups:  []BackendGroup{expHR5Groups[0], expHR5Groups[1]},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "one http listener with one route with filters",
 		},
@@ -1716,7 +1737,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "one http and one https listener with routes with valid and invalid rules",
 		},
@@ -1781,7 +1802,7 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups:  []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "duplicate paths with different types",
 		},
@@ -1870,7 +1891,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
 		},
@@ -1947,7 +1968,7 @@ func TestBuildConfiguration(t *testing.T) {
 				CertBundles: map[CertBundleID]CertBundle{
 					"cert_bundle_test_configmap-1": []byte("cert-1"),
 				},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "https listener with httproute with backend that has a backend TLS policy attached",
 		},
@@ -2024,7 +2045,7 @@ func TestBuildConfiguration(t *testing.T) {
 				CertBundles: map[CertBundleID]CertBundle{
 					"cert_bundle_test_configmap-2": []byte("cert-2"),
 				},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "https listener with httproute with backend that has a backend TLS policy with binaryData attached",
 		},
@@ -2063,7 +2084,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false, IPFamily: ngfAPI.Dual},
 				Telemetry: Telemetry{
 					Endpoint:    "my-otel.svc:4563",
 					Interval:    "5s",
@@ -2103,6 +2124,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &ngfAPI.NginxProxy{
 						Spec: ngfAPI.NginxProxySpec{
 							DisableHTTP2: true,
+							IPFamily:     ngfAPI.Dual,
 							Telemetry: &ngfAPI.Telemetry{
 								Exporter: &ngfAPI.TelemetryExporter{
 									Endpoint: "some-endpoint",
@@ -2122,7 +2144,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 				Telemetry:      Telemetry{},
 			},
 			msg: "invalid NginxProxy",
@@ -2289,11 +2311,89 @@ func TestBuildConfiguration(t *testing.T) {
 					expHRWithPolicyGroups[0],
 					expHTTPSHRWithPolicyGroups[0],
 				},
-				BaseHTTPConfig: BaseHTTPConfig{
-					HTTP2: true,
-				},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.Dual},
 			},
 			msg: "Simple Gateway and HTTPRoute with policies attached",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{},
+						},
+					},
+				},
+				Routes:     map[graph.RouteKey]*graph.L7Route{},
+				NginxProxy: nginxProxyIPv4,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:     []VirtualServer{},
+				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:    map[CertBundleID]CertBundle{},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.IPv4},
+				Telemetry:      Telemetry{},
+			},
+			msg: "NginxProxy with IPv4 IPFamily and no routes",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[graph.RouteKey]*graph.L7Route{},
+						},
+					},
+				},
+				Routes:     map[graph.RouteKey]*graph.L7Route{},
+				NginxProxy: nginxProxyIPv6,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:     []VirtualServer{},
+				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:    map[CertBundleID]CertBundle{},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: ngfAPI.IPv6},
+				Telemetry:      Telemetry{},
+			},
+			msg: "NginxProxy with IPv6 IPFamily",
 		},
 	}
 

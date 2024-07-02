@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -33,10 +34,10 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
-	// Telemetry holds the Otel configuration.
-	Telemetry Telemetry
 	// BaseHTTPConfig holds the configuration options at the http context.
 	BaseHTTPConfig BaseHTTPConfig
+	// Telemetry holds the Otel configuration.
+	Telemetry Telemetry
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -296,6 +297,8 @@ type SpanAttribute struct {
 
 // BaseHTTPConfig holds the configuration options at the http context.
 type BaseHTTPConfig struct {
+	// IPFamily specifies the IP family for all servers.
+	IPFamily ngfAPI.IPFamilyType
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }

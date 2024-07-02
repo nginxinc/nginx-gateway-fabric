@@ -658,7 +658,8 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	baseConfig := BaseHTTPConfig{
 		// HTTP2 should be enabled by default
-		HTTP2: true,
+		HTTP2:    true,
+		IPFamily: ngfAPI.Dual,
 	}
 	if g.NginxProxy == nil || !g.NginxProxy.Valid {
 		return baseConfig
@@ -666,6 +667,13 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 
 	if g.NginxProxy.Source.Spec.DisableHTTP2 {
 		baseConfig.HTTP2 = false
+	}
+
+	switch ipFamily := g.NginxProxy.Source.Spec.IPFamily; ipFamily {
+	case ngfAPI.IPv4:
+		baseConfig.IPFamily = ngfAPI.IPv4
+	case ngfAPI.IPv6:
+		baseConfig.IPFamily = ngfAPI.IPv6
 	}
 
 	return baseConfig

@@ -16,10 +16,16 @@ import (
 var (
 	svcPortName = "svc-port"
 
-	addresses = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+	addresses     = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+	addressesIPv6 = []string{"2001:db8::1", "2001:db8::2", "2001:db8::3"}
 
 	readyEndpoint1 = discoveryV1.Endpoint{
 		Addresses:  addresses,
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
+	}
+
+	readyEndpoint2 = discoveryV1.Endpoint{
+		Addresses:  addressesIPv6,
 		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
 
@@ -59,8 +65,19 @@ var (
 		},
 	}
 
-	invalidAddressTypeEndpointSlice = discoveryV1.EndpointSlice{
+	validIPv6EndpointSlice = discoveryV1.EndpointSlice{
 		AddressType: discoveryV1.AddressTypeIPv6,
+		Endpoints:   []discoveryV1.Endpoint{readyEndpoint2},
+		Ports: []discoveryV1.EndpointPort{
+			{
+				Name: &svcPortName,
+				Port: helpers.GetPointer[int32](80),
+			},
+		},
+	}
+
+	invalidAddressTypeEndpointSlice = discoveryV1.EndpointSlice{
+		AddressType: discoveryV1.AddressTypeFQDN,
 		Endpoints:   []discoveryV1.Endpoint{readyEndpoint1},
 		Ports: []discoveryV1.EndpointPort{
 			{
@@ -86,6 +103,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	sliceList := discoveryV1.EndpointSliceList{
 		Items: []discoveryV1.EndpointSlice{
 			validEndpointSlice,
+			validIPv6EndpointSlice,
 			invalidAddressTypeEndpointSlice,
 			invalidPortEndpointSlice,
 			nilEndpoints,
@@ -99,7 +117,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 		TargetPort: intstr.FromInt(80),
 	}
 
-	expFilteredList := []discoveryV1.EndpointSlice{validEndpointSlice, mixedValidityEndpointSlice}
+	expFilteredList := []discoveryV1.EndpointSlice{validEndpointSlice, validIPv6EndpointSlice, mixedValidityEndpointSlice}
 
 	filteredSliceList := filterEndpointSliceList(sliceList, svcPort)
 	g := NewWithT(t)
@@ -171,7 +189,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 				Port:       80,
 				TargetPort: intstr.FromInt(8080),
 			},
-			ignore: true,
+			ignore: false,
 		},
 		{
 			msg: "FQDN address type",

@@ -134,8 +134,27 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
 
 1. Create a `kind` cluster:
 
+   To create a `kind` cluster with IPv4 enabled:
+
    ```makefile
    make create-kind-cluster
+   ```
+
+   To create a `kind` cluster with IPv6 or Dual IPFamily enabled, use this `config.yaml`:
+
+   ```yaml
+   kind: Cluster
+   apiVersion: kind.x-k8s.io/v1alpha4
+   nodes:
+   - role: control-plane
+   networking:
+     ipFamily: dual
+     # ipFamily: ipv6
+     apiServerAddress: 127.0.0.1
+   ```
+
+   ```shell
+   kind create cluster --config ~/cluster.yaml
    ```
 
 2. Load the previously built images onto your `kind` cluster:

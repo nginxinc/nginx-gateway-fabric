@@ -10,6 +10,13 @@ type Server struct {
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
+	IPFamily      IPFamily
+}
+
+// IPFamily holds the IP family configuration for all servers.
+type IPFamily struct {
+	IPv4 bool
+	IPv6 bool
 }
 
 // Location holds all configuration for an HTTP location.

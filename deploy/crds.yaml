@@ -697,6 +697,15 @@ spec:
                   DisableHTTP2 defines if http2 should be disabled for all servers.
                   Default is false, meaning http2 will be enabled for all servers.
                 type: boolean
+              ipFamily:
+                description: |-
+                  IPFamily specifies the IP family to be used by the server.
+                  Default is "dual", meaning the server will use both IPv4 and IPv6.
+                enum:
+                - dual
+                - ipv4
+                - ipv6
+                type: string
               telemetry:
                 description: Telemetry specifies the OpenTelemetry configuration.
                 properties:

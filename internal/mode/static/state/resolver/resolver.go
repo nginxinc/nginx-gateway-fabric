@@ -28,6 +28,8 @@ type Endpoint struct {
 	Address string
 	// Port is the port of the endpoint.
 	Port int32
+	// IPv6 is true if the endpoint is an IPv6 address.
+	IPv6 bool
 }
 
 // ServiceResolverImpl implements ServiceResolver.
@@ -109,6 +111,10 @@ func resolveEndpoints(
 	endpointSet := initEndpointsSet(filteredSlices)
 
 	for _, eps := range filteredSlices {
+		var ipv6 bool
+		if eps.AddressType == discoveryV1.AddressTypeIPv6 {
+			ipv6 = true
+		}
 		for _, endpoint := range eps.Endpoints {
 			if !endpointReady(endpoint) {
 				continue
@@ -119,7 +125,7 @@ func resolveEndpoints(
 			endpointPort := findPort(eps.Ports, svcPort)
 
 			for _, address := range endpoint.Addresses {
-				ep := Endpoint{Address: address, Port: endpointPort}
+				ep := Endpoint{Address: address, Port: endpointPort, IPv6: ipv6}
 				endpointSet[ep] = struct{}{}
 			}
 		}
@@ -149,7 +155,7 @@ func getDefaultPort(svcPort v1.ServicePort) int32 {
 }
 
 func ignoreEndpointSlice(endpointSlice discoveryV1.EndpointSlice, port v1.ServicePort) bool {
-	if endpointSlice.AddressType != discoveryV1.AddressTypeIPv4 {
+	if endpointSlice.AddressType == discoveryV1.AddressTypeFQDN {
 		return true
 	}
 

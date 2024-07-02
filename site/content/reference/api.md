@@ -313,6 +313,21 @@ Telemetry
 </tr>
 <tr>
 <td>
+<code>ipFamily</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
+IPFamilyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamily specifies the IP family to be used by the server.
+Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>disableHTTP2</code><br/>
 <em>
 bool
@@ -715,6 +730,34 @@ Support: Gateway, HTTPRoute, GRPCRoute.</p>
 Duration can be specified in milliseconds (ms) or seconds (s) A value without a suffix is seconds.
 Examples: 120s, 50ms.</p>
 </p>
+<h3 id="gateway.nginx.org/v1alpha1.IPFamilyType">IPFamilyType
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.IPFamilyType" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
+</p>
+<p>
+<p>IPFamilyType specifies the IP family to be used by the server.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;dual&#34;</p></td>
+<td><p>Dual specifies that the server will use both IPv4 and IPv6.</p>
+</td>
+</tr><tr><td><p>&#34;ipv4&#34;</p></td>
+<td><p>IPv4 specifies that the server will use only IPv4.</p>
+</td>
+</tr><tr><td><p>&#34;ipv6&#34;</p></td>
+<td><p>IPv6 specifies that the server will use only IPv6.</p>
+</td>
+</tr></tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.Logging">Logging
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Logging" title="Permanent link">¶</a>
 </h3>
@@ -888,6 +931,21 @@ Telemetry
 <td>
 <em>(Optional)</em>
 <p>Telemetry specifies the OpenTelemetry configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipFamily</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
+IPFamilyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamily specifies the IP family to be used by the server.
+Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
 </td>
 </tr>
 <tr>
