@@ -19,11 +19,9 @@ func executeStreamServers(conf dataplane.Configuration) []executeResult {
 		data: helpers.MustExecuteTemplate(streamServersTemplate, streamServers),
 	}
 
-	result := []executeResult{
+	return []executeResult{
 		streamServerResult,
 	}
-
-	return result
 }
 
 func createStreamServers(conf dataplane.Configuration) []stream.Server {
