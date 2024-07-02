@@ -1,6 +1,7 @@
 package config
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -261,6 +262,11 @@ func TestCreateStreamMaps(t *testing.T) {
 				Port:         8080,
 				UpstreamName: "backend2",
 			},
+			{
+				Hostname:     "wrong.example.com",
+				Port:         8080,
+				UpstreamName: "",
+			},
 		},
 		SSLServers: []dataplane.VirtualServer{
 			{
@@ -299,11 +305,28 @@ func TestCreateStreamMaps(t *testing.T) {
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
 				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
+				{Value: "wrong.example.com", Result: "\"\""},
 				{Value: "app.example.com", Result: "unix:/var/run/nginx/https8080.sock"},
 				{Value: "default", Result: "unix:/var/run/nginx/https8080.sock"},
 			},
 			UseHostnames: true,
 		},
 	}
+
+	sort.Slice(expectedMaps, func(i, j int) bool { return expectedMaps[i].Source < expectedMaps[j].Source })
+	sort.Slice(maps, func(i, j int) bool { return maps[i].Source < maps[j].Source })
+	g.Expect(maps).To(Equal(expectedMaps))
+}
+
+func TestCreateStreamMapsWithEmpty(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSPassthroughServers: nil,
+	}
+
+	maps := createStreamMaps(conf)
+
+	var expectedMaps []shared.Map
+
 	g.Expect(maps).To(Equal(expectedMaps))
 }

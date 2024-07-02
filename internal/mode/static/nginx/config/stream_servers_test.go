@@ -77,6 +77,11 @@ func TestCreateStreamServers(t *testing.T) {
 				Port:         8080,
 				UpstreamName: "backend2",
 			},
+			{
+				Hostname:     "wrong.example.com",
+				Port:         8081,
+				UpstreamName: "",
+			},
 		},
 		StreamUpstreams: []dataplane.Upstream{
 			{
@@ -91,8 +96,6 @@ func TestCreateStreamServers(t *testing.T) {
 	streamServers := createStreamServers(conf)
 
 	g := NewWithT(t)
-
-	g.Expect(streamServers).To(HaveLen(5))
 
 	expectedStreamServers := []stream.Server{
 		{
@@ -126,6 +129,20 @@ func TestCreateStreamServers(t *testing.T) {
 		return expectedStreamServers[i].Listen < expectedStreamServers[j].Listen
 	})
 	sort.Slice(streamServers, func(i, j int) bool { return streamServers[i].Listen < streamServers[j].Listen })
+
+	g.Expect(streamServers).To(Equal(expectedStreamServers))
+}
+
+func TestCreateStreamServersWithNone(t *testing.T) {
+	conf := dataplane.Configuration{
+		TLSPassthroughServers: nil,
+	}
+
+	streamServers := createStreamServers(conf)
+
+	g := NewWithT(t)
+
+	var expectedStreamServers []stream.Server
 
 	g.Expect(streamServers).To(Equal(expectedStreamServers))
 }

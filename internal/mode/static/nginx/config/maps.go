@@ -4,13 +4,15 @@ import (
 	"strings"
 	gotemplate "text/template"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
-
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText))
+
+// emptyStringSocket is used when we want NGINX to show a 500 error in logs.
+const emptyStringSocket = "\"\""
 
 func executeMaps(conf dataplane.Configuration) []executeResult {
 	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
@@ -35,23 +37,16 @@ func executeStreamMaps(conf dataplane.Configuration) []executeResult {
 
 func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 	if len(conf.TLSPassthroughServers) == 0 {
-		return []shared.Map{}
+		return nil
 	}
-
-	upstreamNameSet := make(map[string]struct{})
-
-	for _, u := range conf.StreamUpstreams {
-		upstreamNameSet[u.Name] = struct{}{}
-	}
-
 	portsToMap := make(map[int32]shared.Map)
 
 	for _, server := range conf.TLSPassthroughServers {
 		streamMap, portInUse := portsToMap[server.Port]
 
-		socket := "\"\""
+		socket := emptyStringSocket
 
-		if _, nameExists := upstreamNameSet[server.UpstreamName]; nameExists {
+		if server.UpstreamName != "" {
 			socket = getSocketNameTLS(server.Port, server.Hostname)
 		}
 
