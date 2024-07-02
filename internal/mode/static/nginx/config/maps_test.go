@@ -1,7 +1,6 @@
 package config
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
@@ -215,14 +214,6 @@ func TestExecuteStreamMaps(t *testing.T) {
 				Port:     8080,
 			},
 		},
-		StreamUpstreams: []dataplane.Upstream{
-			{
-				Name: "backend1",
-			},
-			{
-				Name: "backend2",
-			},
-		},
 	}
 
 	expSubStrings := map[string]int{
@@ -278,14 +269,6 @@ func TestCreateStreamMaps(t *testing.T) {
 				IsDefault: true,
 			},
 		},
-		StreamUpstreams: []dataplane.Upstream{
-			{
-				Name: "backend1",
-			},
-			{
-				Name: "backend2",
-			},
-		},
 	}
 
 	maps := createStreamMaps(conf)
@@ -313,9 +296,7 @@ func TestCreateStreamMaps(t *testing.T) {
 		},
 	}
 
-	sort.Slice(expectedMaps, func(i, j int) bool { return expectedMaps[i].Source < expectedMaps[j].Source })
-	sort.Slice(maps, func(i, j int) bool { return maps[i].Source < maps[j].Source })
-	g.Expect(maps).To(Equal(expectedMaps))
+	g.Expect(maps).To(ConsistOf(expectedMaps))
 }
 
 func TestCreateStreamMapsWithEmpty(t *testing.T) {
@@ -326,7 +307,5 @@ func TestCreateStreamMapsWithEmpty(t *testing.T) {
 
 	maps := createStreamMaps(conf)
 
-	var expectedMaps []shared.Map
-
-	g.Expect(maps).To(Equal(expectedMaps))
+	g.Expect(maps).To(BeNil())
 }

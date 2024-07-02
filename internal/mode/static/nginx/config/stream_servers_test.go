@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"testing"
 
@@ -29,14 +28,6 @@ func TestExecuteStreamServers(t *testing.T) {
 				Hostname:     "cafe.example.com",
 				Port:         8080,
 				UpstreamName: "backend2",
-			},
-		},
-		StreamUpstreams: []dataplane.Upstream{
-			{
-				Name: "backend1",
-			},
-			{
-				Name: "backend2",
 			},
 		},
 	}
@@ -83,14 +74,6 @@ func TestCreateStreamServers(t *testing.T) {
 				UpstreamName: "",
 			},
 		},
-		StreamUpstreams: []dataplane.Upstream{
-			{
-				Name: "backend1",
-			},
-			{
-				Name: "backend2",
-			},
-		},
 	}
 
 	streamServers := createStreamServers(conf)
@@ -124,13 +107,7 @@ func TestCreateStreamServers(t *testing.T) {
 			SSLPreread: true,
 		},
 	}
-
-	sort.Slice(expectedStreamServers, func(i, j int) bool {
-		return expectedStreamServers[i].Listen < expectedStreamServers[j].Listen
-	})
-	sort.Slice(streamServers, func(i, j int) bool { return streamServers[i].Listen < streamServers[j].Listen })
-
-	g.Expect(streamServers).To(Equal(expectedStreamServers))
+	g.Expect(streamServers).To(ConsistOf(expectedStreamServers))
 }
 
 func TestCreateStreamServersWithNone(t *testing.T) {
@@ -142,7 +119,5 @@ func TestCreateStreamServersWithNone(t *testing.T) {
 
 	g := NewWithT(t)
 
-	var expectedStreamServers []stream.Server
-
-	g.Expect(streamServers).To(Equal(expectedStreamServers))
+	g.Expect(streamServers).To(BeNil())
 }

@@ -368,7 +368,7 @@ func TestCreateStreamUpstreams(t *testing.T) {
 	g.Expect(result).To(Equal(expUpstreams))
 }
 
-func TestCreatStreamUpstream(t *testing.T) {
+func TestCreateStreamUpstream(t *testing.T) {
 	gen := GeneratorImpl{}
 	tests := []struct {
 		msg              string

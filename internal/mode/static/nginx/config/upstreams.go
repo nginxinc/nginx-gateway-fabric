@@ -48,8 +48,7 @@ func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []ex
 }
 
 func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []stream.Upstream {
-	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
-	ups := make([]stream.Upstream, 0, len(upstreams)+1)
+	ups := make([]stream.Upstream, 0, len(upstreams))
 
 	for _, u := range upstreams {
 		if len(u.Endpoints) != 0 {
