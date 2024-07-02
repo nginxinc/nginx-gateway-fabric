@@ -86,7 +86,7 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 
 1. Container Logs
 
-    To see logs for control plane container:
+    To see logs for the control plane container:
 
     ```shell
     kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway
