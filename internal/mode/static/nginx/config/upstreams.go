@@ -19,7 +19,7 @@ const (
 	nginx500Server = "unix:/var/run/nginx/nginx-500-server.sock"
 	// invalidBackendRef is used as an upstream name for invalid backend references.
 	invalidBackendRef = "invalid-backend-ref"
-	// nginxConnectionClosedServer is used as a stream backend that will close the connection
+	// nginxConnectionClosedServer is used as a stream backend that will close the connection.
 	nginxConnectionClosedServer = "unix:/var/run/nginx/connection-closed-server.sock"
 	// ossZoneSize is the upstream zone size for nginx open source.
 	ossZoneSize = "512k"
