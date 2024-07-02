@@ -32,7 +32,7 @@ practices to ensure a successful feature development process.
    the [testing](/docs/developer/testing.md#unit-test-guidelines) documentation.
 9. **Manually verify your changes**: Refer to the [manual testing](/docs/developer/testing.md#manual-testing) section of
    the testing documentation for instructions on how to manually test your changes.
-10. **Update any relevant documentation**: See the [documentation](/docs/developer/documentation.md) guide for in-depth information about the workflow to update the docs and how we publish them.
+10. **Update any relevant documentation**: See the [documentation](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/site/README.md) guide for in-depth information about the workflow to update the docs and how we publish them.
    Here are some basic guidelines for updating documentation:
     - **Gateway API Feature**: If you are implementing a Gateway API feature, make sure to update
       the [Gateway API Compatibility](/site/content/concepts/gateway-api-compatibility.md) documentation.
