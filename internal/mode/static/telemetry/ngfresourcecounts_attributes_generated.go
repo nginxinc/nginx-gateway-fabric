@@ -23,6 +23,10 @@ func (d *NGFResourceCounts) Attributes() []attribute.KeyValue {
 	attrs = append(attrs, attribute.Int64("EndpointCount", d.EndpointCount))
 	attrs = append(attrs, attribute.Int64("GRPCRouteCount", d.GRPCRouteCount))
 	attrs = append(attrs, attribute.Int64("BackendTLSPolicyCount", d.BackendTLSPolicyCount))
+	attrs = append(attrs, attribute.Int64("GatewayAttachedClientSettingsPolicyCount", d.GatewayAttachedClientSettingsPolicyCount))
+	attrs = append(attrs, attribute.Int64("RouteAttachedClientSettingsPolicyCount", d.RouteAttachedClientSettingsPolicyCount))
+	attrs = append(attrs, attribute.Int64("ObservabilityPolicyCount", d.ObservabilityPolicyCount))
+	attrs = append(attrs, attribute.Int64("NginxProxyCount", d.NginxProxyCount))
 	
 
 	return attrs
