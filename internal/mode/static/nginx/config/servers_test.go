@@ -664,7 +664,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	tlsServers := []dataplane.Layer4VirtualServer{
+	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
 		{
 			Hostname:     "app.example.com",
 			Port:         8443,
@@ -1066,7 +1066,7 @@ func TestCreateServers(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers, tlsServers)
+	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())

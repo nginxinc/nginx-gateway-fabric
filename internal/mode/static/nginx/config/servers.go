@@ -144,15 +144,15 @@ func createIncludes(additions []dataplane.Addition) []string {
 func createServers(
 	httpServers,
 	sslServers []dataplane.VirtualServer,
-	tlsServers []dataplane.Layer4VirtualServer,
+	tlsPassthroughServers []dataplane.Layer4VirtualServer,
 ) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
 	sharedTLSPorts := make(map[int32]struct{})
 
-	for _, tlsServer := range tlsServers {
-		sharedTLSPorts[tlsServer.Port] = struct{}{}
+	for _, passthroughServer := range tlsPassthroughServers {
+		sharedTLSPorts[passthroughServer.Port] = struct{}{}
 	}
 
 	for serverID, s := range httpServers {
