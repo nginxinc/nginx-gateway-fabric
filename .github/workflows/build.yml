@@ -80,6 +80,23 @@ jobs:
           password: ${{ github.actor }}
         if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
 
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          # if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
+
+      - name: Login to GAR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: us-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+          # if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
@@ -88,6 +105,7 @@ jobs:
             name=ghcr.io/nginxinc/nginx-gateway-fabric,enable=${{ inputs.image == 'ngf' && github.event_name != 'pull_request' }}
             name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx,enable=${{ inputs.image == 'nginx' && github.event_name != 'pull_request' }}
             name=docker-mgmt.nginx.com/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'plus' && github.event_name != 'pull_request' }}
+            name=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'plus' }} # && github.event_name != 'pull_request' }}
             name=localhost:5000/nginx-gateway-fabric/${{ inputs.image }}
           flavor: |
             latest=${{ (inputs.tag != '' && 'true') || 'auto' }}
