@@ -45,7 +45,7 @@ type ObservabilityPolicySpec struct {
 
 	// TargetRefs identifies the API object(s) to apply the policy to.
 	// Objects must be in the same namespace as the policy.
-	// Support: HTTPRoute
+	// Support: HTTPRoute, GRPCRoute.
 	//
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be: HTTPRoute or GRPCRoute",rule="(self.exists(t, t.kind=='HTTPRoute') || self.exists(t, t.kind=='GRPCRoute'))"
