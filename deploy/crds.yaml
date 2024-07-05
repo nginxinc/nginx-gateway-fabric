@@ -836,7 +836,7 @@ spec:
                 description: |-
                   TargetRefs identifies the API object(s) to apply the policy to.
                   Objects must be in the same namespace as the policy.
-                  Support: HTTPRoute
+                  Support: HTTPRoute, GRPCRoute.
                 items:
                   description: |-
                     LocalPolicyTargetReference identifies an API object to apply a direct or
