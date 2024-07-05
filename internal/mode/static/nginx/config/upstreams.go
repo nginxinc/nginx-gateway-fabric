@@ -23,6 +23,10 @@ const (
 	ossZoneSize = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
 	plusZoneSize = "1m"
+	// ossZoneSize is the upstream zone size for nginx open source.
+	ossZoneSizeStream = "512k"
+	// plusZoneSize is the upstream zone size for nginx plus.
+	plusZoneSizeStream = "1m"
 )
 
 func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
@@ -60,9 +64,9 @@ func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []s
 }
 
 func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstream {
-	zoneSize := ossZoneSize
+	zoneSize := ossZoneSizeStream
 	if g.plus {
-		zoneSize = plusZoneSize
+		zoneSize = plusZoneSizeStream
 	}
 
 	upstreamServers := make([]stream.UpstreamServer, len(up.Endpoints))

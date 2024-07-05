@@ -370,55 +370,43 @@ func TestCreateStreamUpstreams(t *testing.T) {
 
 func TestCreateStreamUpstream(t *testing.T) {
 	gen := GeneratorImpl{}
-	tests := []struct {
-		msg              string
-		stateUpstream    dataplane.Upstream
-		expectedUpstream stream.Upstream
-	}{
-		{
-			stateUpstream: dataplane.Upstream{
-				Name: "multiple-endpoints",
-				Endpoints: []resolver.Endpoint{
-					{
-						Address: "10.0.0.1",
-						Port:    80,
-					},
-					{
-						Address: "10.0.0.2",
-						Port:    80,
-					},
-					{
-						Address: "10.0.0.3",
-						Port:    80,
-					},
-				},
+	up := dataplane.Upstream{
+		Name: "multiple-endpoints",
+		Endpoints: []resolver.Endpoint{
+			{
+				Address: "10.0.0.1",
+				Port:    80,
 			},
-			expectedUpstream: stream.Upstream{
-				Name:     "multiple-endpoints",
-				ZoneSize: ossZoneSize,
-				Servers: []stream.UpstreamServer{
-					{
-						Address: "10.0.0.1:80",
-					},
-					{
-						Address: "10.0.0.2:80",
-					},
-					{
-						Address: "10.0.0.3:80",
-					},
-				},
+			{
+				Address: "10.0.0.2",
+				Port:    80,
 			},
-			msg: "multiple endpoints",
+			{
+				Address: "10.0.0.3",
+				Port:    80,
+			},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			g := NewWithT(t)
-			result := gen.createStreamUpstream(test.stateUpstream)
-			g.Expect(result).To(Equal(test.expectedUpstream))
-		})
+	expectedUpstream := stream.Upstream{
+		Name:     "multiple-endpoints",
+		ZoneSize: ossZoneSize,
+		Servers: []stream.UpstreamServer{
+			{
+				Address: "10.0.0.1:80",
+			},
+			{
+				Address: "10.0.0.2:80",
+			},
+			{
+				Address: "10.0.0.3:80",
+			},
+		},
 	}
+
+	g := NewWithT(t)
+	result := gen.createStreamUpstream(up)
+	g.Expect(result).To(Equal(expectedUpstream))
 }
 
 func TestCreateStreamUpstreamPlus(t *testing.T) {
