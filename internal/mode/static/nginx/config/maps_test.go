@@ -217,10 +217,10 @@ func TestExecuteStreamMaps(t *testing.T) {
 	}
 
 	expSubStrings := map[string]int{
-		"example.com unix:/var/run/nginx/example.com8081.sock;":           1,
-		"example.com unix:/var/run/nginx/example.com8080.sock;":           1,
-		"cafe.example.com unix:/var/run/nginx/cafe.example.com8080.sock;": 1,
-		"app.example.com unix:/var/run/nginx/https8080.sock;":             1,
+		"example.com unix:/var/run/nginx/example.com-8081.sock;":           1,
+		"example.com unix:/var/run/nginx/example.com-8080.sock;":           1,
+		"cafe.example.com unix:/var/run/nginx/cafe.example.com-8080.sock;": 1,
+		"app.example.com unix:/var/run/nginx/https8080.sock;":              1,
 		"hostnames": 2,
 	}
 
@@ -278,7 +278,7 @@ func TestCreateStreamMaps(t *testing.T) {
 			Source:   "$ssl_preread_server_name",
 			Variable: getTLSPassthroughVarName(8081),
 			Parameters: []shared.MapParameter{
-				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8081.sock"},
+				{Value: "example.com", Result: getSocketNameTLS(8081, "example.com")},
 			},
 			UseHostnames: true,
 		},
@@ -286,11 +286,11 @@ func TestCreateStreamMaps(t *testing.T) {
 			Source:   "$ssl_preread_server_name",
 			Variable: getTLSPassthroughVarName(8080),
 			Parameters: []shared.MapParameter{
-				{Value: "example.com", Result: "unix:/var/run/nginx/example.com8080.sock"},
-				{Value: "cafe.example.com", Result: "unix:/var/run/nginx/cafe.example.com8080.sock"},
-				{Value: "wrong.example.com", Result: "\"\""},
-				{Value: "app.example.com", Result: "unix:/var/run/nginx/https8080.sock"},
-				{Value: "default", Result: "unix:/var/run/nginx/https8080.sock"},
+				{Value: "example.com", Result: getSocketNameTLS(8080, "example.com")},
+				{Value: "cafe.example.com", Result: getSocketNameTLS(8080, "cafe.example.com")},
+				{Value: "wrong.example.com", Result: `""`},
+				{Value: "app.example.com", Result: getSocketNameHTTPS(8080)},
+				{Value: "default", Result: getSocketNameHTTPS(8080)},
 			},
 			UseHostnames: true,
 		},

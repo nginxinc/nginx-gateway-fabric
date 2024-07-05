@@ -144,8 +144,8 @@ func TestGenerate(t *testing.T) {
 	g.Expect(files[6].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
 	g.Expect(files[6].Type).To(Equal(file.TypeRegular))
 	streamCfg := string(files[6].Content)
-	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com443.sock"))
+	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com-443.sock"))
 	g.Expect(streamCfg).To(ContainSubstring("listen 443"))
-	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com443.sock"))
+	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com-443.sock"))
 	g.Expect(streamCfg).To(ContainSubstring("example.com unix:/var/run/nginx/https443.sock"))
 }

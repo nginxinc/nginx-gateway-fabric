@@ -11,8 +11,11 @@ import (
 
 var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText))
 
-// emptyStringSocket is used when the stream server has an invalid upstream. In this case, we route the request
-// to a socket that doesn't exist so that NGINX will return an error status code (500).
+// emptyStringSocket is used when the stream server has an invalid upstream. In this case, we pass the connection
+// to the empty socket so that NGINX will close the connection with an error in the error log --
+// no host in pass "" -- and set $status variable to 500 (logged by stream access log),
+// which will indicate the problem to the user.
+// https://nginx.org/en/docs/stream/ngx_stream_core_module.html#var_status
 const emptyStringSocket = `""`
 
 func executeMaps(conf dataplane.Configuration) []executeResult {

@@ -5,7 +5,7 @@ import (
 )
 
 func getSocketNameTLS(port int32, hostname string) string {
-	return fmt.Sprintf("unix:/var/run/nginx/%s%d.sock", hostname, port)
+	return fmt.Sprintf("unix:/var/run/nginx/%s-%d.sock", hostname, port)
 }
 
 func getSocketNameHTTPS(port int32) string {

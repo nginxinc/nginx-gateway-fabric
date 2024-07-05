@@ -10,7 +10,7 @@ func TestGetSocketNameTLS(t *testing.T) {
 	res := getSocketNameTLS(800, "*.cafe.example.com")
 
 	g := NewGomegaWithT(t)
-	g.Expect(res).To(Equal("unix:/var/run/nginx/*.cafe.example.com800.sock"))
+	g.Expect(res).To(Equal("unix:/var/run/nginx/*.cafe.example.com-800.sock"))
 }
 
 func TestGetSocketNameHTTPS(t *testing.T) {
