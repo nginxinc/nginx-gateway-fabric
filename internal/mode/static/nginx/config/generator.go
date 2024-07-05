@@ -46,7 +46,7 @@ const (
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder, streamFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.

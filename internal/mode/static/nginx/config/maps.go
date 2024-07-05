@@ -13,7 +13,7 @@ var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText
 
 // emptyStringSocket is used when the stream server has an invalid upstream. In this case, we route the request
 // to a socket that doesn't exist so that NGINX will return an error status code (500).
-const emptyStringSocket = "\"\""
+const emptyStringSocket = `""`
 
 func executeMaps(conf dataplane.Configuration) []executeResult {
 	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
