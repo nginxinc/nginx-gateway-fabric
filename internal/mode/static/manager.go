@@ -147,7 +147,7 @@ func StartManager(cfg config.Config) error {
 	processHandler := &ngxruntime.NewProcessHandlerImpl{}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := processHandler.EnsureNginxRunning(ctx); err != nil {
+	if _, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout); err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 

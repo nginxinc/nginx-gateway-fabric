@@ -10,17 +10,6 @@ import (
 )
 
 type FakeProcessHandler struct {
-	EnsureNginxRunningStub        func(context.Context) error
-	ensureNginxRunningMutex       sync.RWMutex
-	ensureNginxRunningArgsForCall []struct {
-		arg1 context.Context
-	}
-	ensureNginxRunningReturns struct {
-		result1 error
-	}
-	ensureNginxRunningReturnsOnCall map[int]struct {
-		result1 error
-	}
 	FindMainProcessStub        func(context.Context, time.Duration) (int, error)
 	findMainProcessMutex       sync.RWMutex
 	findMainProcessArgsForCall []struct {
@@ -46,7 +35,7 @@ type FakeProcessHandler struct {
 	killReturnsOnCall map[int]struct {
 		result1 error
 	}
-	readFileStub        func(string) ([]byte, error)
+	ReadFileStub        func(string) ([]byte, error)
 	readFileMutex       sync.RWMutex
 	readFileArgsForCall []struct {
 		arg1 string
@@ -61,67 +50,6 @@ type FakeProcessHandler struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunning(arg1 context.Context) error {
-	fake.ensureNginxRunningMutex.Lock()
-	ret, specificReturn := fake.ensureNginxRunningReturnsOnCall[len(fake.ensureNginxRunningArgsForCall)]
-	fake.ensureNginxRunningArgsForCall = append(fake.ensureNginxRunningArgsForCall, struct {
-		arg1 context.Context
-	}{arg1})
-	stub := fake.EnsureNginxRunningStub
-	fakeReturns := fake.ensureNginxRunningReturns
-	fake.recordInvocation("EnsureNginxRunning", []interface{}{arg1})
-	fake.ensureNginxRunningMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunningCallCount() int {
-	fake.ensureNginxRunningMutex.RLock()
-	defer fake.ensureNginxRunningMutex.RUnlock()
-	return len(fake.ensureNginxRunningArgsForCall)
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunningCalls(stub func(context.Context) error) {
-	fake.ensureNginxRunningMutex.Lock()
-	defer fake.ensureNginxRunningMutex.Unlock()
-	fake.EnsureNginxRunningStub = stub
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunningArgsForCall(i int) context.Context {
-	fake.ensureNginxRunningMutex.RLock()
-	defer fake.ensureNginxRunningMutex.RUnlock()
-	argsForCall := fake.ensureNginxRunningArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunningReturns(result1 error) {
-	fake.ensureNginxRunningMutex.Lock()
-	defer fake.ensureNginxRunningMutex.Unlock()
-	fake.EnsureNginxRunningStub = nil
-	fake.ensureNginxRunningReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeProcessHandler) EnsureNginxRunningReturnsOnCall(i int, result1 error) {
-	fake.ensureNginxRunningMutex.Lock()
-	defer fake.ensureNginxRunningMutex.Unlock()
-	fake.EnsureNginxRunningStub = nil
-	if fake.ensureNginxRunningReturnsOnCall == nil {
-		fake.ensureNginxRunningReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.ensureNginxRunningReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakeProcessHandler) FindMainProcess(arg1 context.Context, arg2 time.Duration) (int, error) {
@@ -250,15 +178,15 @@ func (fake *FakeProcessHandler) KillReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeProcessHandler) readFile(arg1 string) ([]byte, error) {
+func (fake *FakeProcessHandler) ReadFile(arg1 string) ([]byte, error) {
 	fake.readFileMutex.Lock()
 	ret, specificReturn := fake.readFileReturnsOnCall[len(fake.readFileArgsForCall)]
 	fake.readFileArgsForCall = append(fake.readFileArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.readFileStub
+	stub := fake.ReadFileStub
 	fakeReturns := fake.readFileReturns
-	fake.recordInvocation("readFile", []interface{}{arg1})
+	fake.recordInvocation("ReadFile", []interface{}{arg1})
 	fake.readFileMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -278,7 +206,7 @@ func (fake *FakeProcessHandler) ReadFileCallCount() int {
 func (fake *FakeProcessHandler) ReadFileCalls(stub func(string) ([]byte, error)) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.readFileStub = stub
+	fake.ReadFileStub = stub
 }
 
 func (fake *FakeProcessHandler) ReadFileArgsForCall(i int) string {
@@ -291,7 +219,7 @@ func (fake *FakeProcessHandler) ReadFileArgsForCall(i int) string {
 func (fake *FakeProcessHandler) ReadFileReturns(result1 []byte, result2 error) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.readFileStub = nil
+	fake.ReadFileStub = nil
 	fake.readFileReturns = struct {
 		result1 []byte
 		result2 error
@@ -301,7 +229,7 @@ func (fake *FakeProcessHandler) ReadFileReturns(result1 []byte, result2 error) {
 func (fake *FakeProcessHandler) ReadFileReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.readFileStub = nil
+	fake.ReadFileStub = nil
 	if fake.readFileReturnsOnCall == nil {
 		fake.readFileReturnsOnCall = make(map[int]struct {
 			result1 []byte
@@ -317,8 +245,6 @@ func (fake *FakeProcessHandler) ReadFileReturnsOnCall(i int, result1 []byte, res
 func (fake *FakeProcessHandler) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.ensureNginxRunningMutex.RLock()
-	defer fake.ensureNginxRunningMutex.RUnlock()
 	fake.findMainProcessMutex.RLock()
 	defer fake.findMainProcessMutex.RUnlock()
 	fake.killMutex.RLock()

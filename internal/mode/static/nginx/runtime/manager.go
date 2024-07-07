@@ -22,7 +22,7 @@ const (
 	// PidFile specifies the location of the PID file for the Nginx process
 	PidFile = "/var/run/nginx/nginx.pid"
 	// pidFileTimeout defines the timeout duration for accessing the PID file
-	pidFileTimeout = 10000 * time.Millisecond
+	PidFileTimeout = 10000 * time.Millisecond
 	/// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
 	NginxReloadTimeout = 60000 * time.Millisecond
 )
@@ -56,9 +56,13 @@ type ProcessHandler interface {
 		ctx context.Context,
 		timeout time.Duration,
 	) (int, error)
-	readFile(file string) ([]byte, error)
+	ReadFile(file string) ([]byte, error)
 	Kill(pid int) error
-	EnsureNginxRunning(ctx context.Context) error
+}
+
+type ProcessHandlerImpl struct {
+	ReadFile  ReadFileFunc
+	checkFile CheckFileFunc
 }
 
 //counterfeiter:generate . Manager
@@ -120,13 +124,13 @@ func (m *ManagerImpl) IsPlus() bool {
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	start := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := m.processHandler.FindMainProcess(ctx, pidFileTimeout)
+	pid, err := m.processHandler.FindMainProcess(ctx, PidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
 	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
-	previousChildProcesses, err := m.processHandler.readFile(childProcFile)
+	previousChildProcesses, err := m.processHandler.ReadFile(childProcFile)
 	if err != nil {
 		return err
 	}
@@ -189,14 +193,8 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 	return *upstreams, nil
 }
 
-type NewProcessHandlerImpl struct{}
-
-// EnsureNginxRunning ensures NGINX is running by locating the main process.
-func (p *NewProcessHandlerImpl) EnsureNginxRunning(ctx context.Context) error {
-	if _, err := p.FindMainProcess(ctx, pidFileTimeout); err != nil {
-		return fmt.Errorf("failed to find NGINX main process: %w", err)
-	}
-	return nil
+type NewProcessHandlerImpl struct {
+	checkFile func(file string) (string, error)
 }
 
 func (p *NewProcessHandlerImpl) FindMainProcess(
@@ -224,7 +222,7 @@ func (p *NewProcessHandlerImpl) FindMainProcess(
 		return 0, err
 	}
 
-	content, err := p.readFile(PidFile)
+	content, err := p.ReadFile(PidFile)
 	if err != nil {
 		return 0, err
 	}
@@ -237,8 +235,8 @@ func (p *NewProcessHandlerImpl) FindMainProcess(
 	return pid, nil
 }
 
-func (p *NewProcessHandlerImpl) readFile(file string) ([]byte, error) {
-	return p.readFile(file)
+func (p *NewProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
+	return p.ReadFile(file)
 }
 
 func (p *NewProcessHandlerImpl) Kill(pid int) error {
