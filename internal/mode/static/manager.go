@@ -144,7 +144,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
 	}
 
-	var processHandler = &ngxruntime.ProcessHandlerImpl{}
+	processHandler := &ngxruntime.NewProcessHandlerImpl{}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
 	if err := processHandler.EnsureNginxRunning(ctx); err != nil {

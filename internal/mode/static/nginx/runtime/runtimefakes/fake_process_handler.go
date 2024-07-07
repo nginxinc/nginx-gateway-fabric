@@ -21,13 +21,11 @@ type FakeProcessHandler struct {
 	ensureNginxRunningReturnsOnCall map[int]struct {
 		result1 error
 	}
-	FindMainProcessStub        func(context.Context, runtime.CheckFileFunc, runtime.ReadFileFunc, time.Duration) (int, error)
+	FindMainProcessStub        func(context.Context, time.Duration) (int, error)
 	findMainProcessMutex       sync.RWMutex
 	findMainProcessArgsForCall []struct {
 		arg1 context.Context
-		arg2 runtime.CheckFileFunc
-		arg3 runtime.ReadFileFunc
-		arg4 time.Duration
+		arg2 time.Duration
 	}
 	findMainProcessReturns struct {
 		result1 int
@@ -48,7 +46,7 @@ type FakeProcessHandler struct {
 	killReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ReadFileStub        func(string) ([]byte, error)
+	readFileStub        func(string) ([]byte, error)
 	readFileMutex       sync.RWMutex
 	readFileArgsForCall []struct {
 		arg1 string
@@ -126,21 +124,19 @@ func (fake *FakeProcessHandler) EnsureNginxRunningReturnsOnCall(i int, result1 e
 	}{result1}
 }
 
-func (fake *FakeProcessHandler) FindMainProcess(arg1 context.Context, arg2 runtime.CheckFileFunc, arg3 runtime.ReadFileFunc, arg4 time.Duration) (int, error) {
+func (fake *FakeProcessHandler) FindMainProcess(arg1 context.Context, arg2 time.Duration) (int, error) {
 	fake.findMainProcessMutex.Lock()
 	ret, specificReturn := fake.findMainProcessReturnsOnCall[len(fake.findMainProcessArgsForCall)]
 	fake.findMainProcessArgsForCall = append(fake.findMainProcessArgsForCall, struct {
 		arg1 context.Context
-		arg2 runtime.CheckFileFunc
-		arg3 runtime.ReadFileFunc
-		arg4 time.Duration
-	}{arg1, arg2, arg3, arg4})
+		arg2 time.Duration
+	}{arg1, arg2})
 	stub := fake.FindMainProcessStub
 	fakeReturns := fake.findMainProcessReturns
-	fake.recordInvocation("FindMainProcess", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("FindMainProcess", []interface{}{arg1, arg2})
 	fake.findMainProcessMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -154,17 +150,17 @@ func (fake *FakeProcessHandler) FindMainProcessCallCount() int {
 	return len(fake.findMainProcessArgsForCall)
 }
 
-func (fake *FakeProcessHandler) FindMainProcessCalls(stub func(context.Context, runtime.CheckFileFunc, runtime.ReadFileFunc, time.Duration) (int, error)) {
+func (fake *FakeProcessHandler) FindMainProcessCalls(stub func(context.Context, time.Duration) (int, error)) {
 	fake.findMainProcessMutex.Lock()
 	defer fake.findMainProcessMutex.Unlock()
 	fake.FindMainProcessStub = stub
 }
 
-func (fake *FakeProcessHandler) FindMainProcessArgsForCall(i int) (context.Context, runtime.CheckFileFunc, runtime.ReadFileFunc, time.Duration) {
+func (fake *FakeProcessHandler) FindMainProcessArgsForCall(i int) (context.Context, time.Duration) {
 	fake.findMainProcessMutex.RLock()
 	defer fake.findMainProcessMutex.RUnlock()
 	argsForCall := fake.findMainProcessArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeProcessHandler) FindMainProcessReturns(result1 int, result2 error) {
@@ -254,15 +250,15 @@ func (fake *FakeProcessHandler) KillReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeProcessHandler) ReadFile(arg1 string) ([]byte, error) {
+func (fake *FakeProcessHandler) readFile(arg1 string) ([]byte, error) {
 	fake.readFileMutex.Lock()
 	ret, specificReturn := fake.readFileReturnsOnCall[len(fake.readFileArgsForCall)]
 	fake.readFileArgsForCall = append(fake.readFileArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.ReadFileStub
+	stub := fake.readFileStub
 	fakeReturns := fake.readFileReturns
-	fake.recordInvocation("ReadFile", []interface{}{arg1})
+	fake.recordInvocation("readFile", []interface{}{arg1})
 	fake.readFileMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -282,7 +278,7 @@ func (fake *FakeProcessHandler) ReadFileCallCount() int {
 func (fake *FakeProcessHandler) ReadFileCalls(stub func(string) ([]byte, error)) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.ReadFileStub = stub
+	fake.readFileStub = stub
 }
 
 func (fake *FakeProcessHandler) ReadFileArgsForCall(i int) string {
@@ -295,7 +291,7 @@ func (fake *FakeProcessHandler) ReadFileArgsForCall(i int) string {
 func (fake *FakeProcessHandler) ReadFileReturns(result1 []byte, result2 error) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.ReadFileStub = nil
+	fake.readFileStub = nil
 	fake.readFileReturns = struct {
 		result1 []byte
 		result2 error
@@ -305,7 +301,7 @@ func (fake *FakeProcessHandler) ReadFileReturns(result1 []byte, result2 error) {
 func (fake *FakeProcessHandler) ReadFileReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.readFileMutex.Lock()
 	defer fake.readFileMutex.Unlock()
-	fake.ReadFileStub = nil
+	fake.readFileStub = nil
 	if fake.readFileReturnsOnCall == nil {
 		fake.readFileReturnsOnCall = make(map[int]struct {
 			result1 []byte
