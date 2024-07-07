@@ -23,6 +23,42 @@ var _ = Describe("NGINX Runtime Manager", func() {
 	})
 })
 
+func TestEnsureNginxRunning(t *testing.T) {
+	ctx := context.Background()
+	cancellingCtx, cancel := context.WithCancel(ctx)
+	time.AfterFunc(1*time.Millisecond, cancel)
+	tests := []struct {
+		ctx         context.Context
+		name        string
+		expectError bool
+	}{
+		{
+			ctx:         ctx,
+			name:        "context exceeded",
+			expectError: true,
+		},
+		{
+			ctx:         cancellingCtx,
+			name:        "context cancelled",
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := EnsureNginxRunning(test.ctx)
+
+			if test.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+		})
+	}
+}
+
 func TestFindMainProcess(t *testing.T) {
 	readFileFuncGen := func(content []byte) readFileFunc {
 		return func(name string) ([]byte, error) {
