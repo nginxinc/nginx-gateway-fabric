@@ -27,7 +27,7 @@ type NginxProxyList struct {
 	Items           []NginxProxy `json:"items"`
 }
 
-// IPFamilyType specifies the IP family to be used by the server.
+// IPFamilyType specifies the IP family to be used by NGINX.
 //
 // +kubebuilder:validation:Enum=dual;ipv4;ipv6
 type IPFamilyType string
