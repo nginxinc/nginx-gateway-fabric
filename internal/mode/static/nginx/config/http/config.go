@@ -1,5 +1,7 @@
 package http
 
+import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+
 const InternalRoutePathPrefix = "/_ngf-internal"
 
 // Server holds all configuration for an HTTP server.
@@ -12,12 +14,7 @@ type Server struct {
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
-}
-
-// IPFamily holds the IP family configuration to be used by NGINX.
-type IPFamily struct {
-	IPv4 bool
-	IPv6 bool
+	IsSocket      bool
 }
 
 type LocationType string
@@ -113,7 +110,7 @@ type ProxySSLVerify struct {
 // ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
 type ServerConfig struct {
 	Servers  []Server
-	IPFamily IPFamily
+	IPFamily shared.IPFamily
 }
 
 // Include defines a file that's included via the include directive.

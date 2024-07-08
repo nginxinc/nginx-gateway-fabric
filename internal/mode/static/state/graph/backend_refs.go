@@ -19,7 +19,7 @@ import (
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
-// BackendRef is an internal representation of a backendRef in an HTTP/GRPCRoute.
+// BackendRef is an internal representation of a backendRef in an HTTP/GRPC/TLSRoute.
 type BackendRef struct {
 	// BackendTLSPolicy is the BackendTLSPolicy of the Service which is referenced by the backendRef.
 	BackendTLSPolicy *BackendTLSPolicy

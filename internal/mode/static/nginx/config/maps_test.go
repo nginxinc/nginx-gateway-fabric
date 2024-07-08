@@ -8,6 +8,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 func TestExecuteMaps(t *testing.T) {
@@ -217,6 +218,26 @@ func TestExecuteStreamMaps(t *testing.T) {
 				Port:     8080,
 			},
 		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name: "backend2",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+		},
 	}
 
 	expSubStrings := map[string]int{
@@ -225,6 +246,7 @@ func TestExecuteStreamMaps(t *testing.T) {
 		"cafe.example.com unix:/var/run/nginx/cafe.example.com-8080.sock;": 1,
 		"app.example.com unix:/var/run/nginx/https8080.sock;":              1,
 		"hostnames": 2,
+		"default":   2,
 	}
 
 	results := executeStreamMaps(conf)
@@ -257,9 +279,23 @@ func TestCreateStreamMaps(t *testing.T) {
 				UpstreamName: "backend2",
 			},
 			{
-				Hostname:     "wrong.example.com",
+				Hostname:     "dne.example.com",
 				Port:         8080,
-				UpstreamName: "",
+				UpstreamName: "backend-dne",
+			},
+			{
+				Port:     8082,
+				Hostname: "",
+			},
+			{
+				Hostname:  "*.example.com",
+				Port:      8080,
+				IsDefault: true,
+			},
+			{
+				Hostname:     "no-endpoints.example.com",
+				Port:         8080,
+				UpstreamName: "backend3",
 			},
 		},
 		SSLServers: []dataplane.VirtualServer{
@@ -272,6 +308,30 @@ func TestCreateStreamMaps(t *testing.T) {
 				IsDefault: true,
 			},
 		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name: "backend2",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name:      "backend3",
+				Endpoints: nil,
+			},
+		},
 	}
 
 	maps := createStreamMaps(conf)
@@ -279,9 +339,18 @@ func TestCreateStreamMaps(t *testing.T) {
 	expectedMaps := []shared.Map{
 		{
 			Source:   "$ssl_preread_server_name",
+			Variable: getTLSPassthroughVarName(8082),
+			Parameters: []shared.MapParameter{
+				{Value: "default", Result: connectionClosedStreamServerSocket},
+			},
+			UseHostnames: true,
+		},
+		{
+			Source:   "$ssl_preread_server_name",
 			Variable: getTLSPassthroughVarName(8081),
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: getSocketNameTLS(8081, "example.com")},
+				{Value: "default", Result: connectionClosedStreamServerSocket},
 			},
 			UseHostnames: true,
 		},
@@ -291,7 +360,9 @@ func TestCreateStreamMaps(t *testing.T) {
 			Parameters: []shared.MapParameter{
 				{Value: "example.com", Result: getSocketNameTLS(8080, "example.com")},
 				{Value: "cafe.example.com", Result: getSocketNameTLS(8080, "cafe.example.com")},
-				{Value: "wrong.example.com", Result: `""`},
+				{Value: "dne.example.com", Result: emptyStringSocket},
+				{Value: "*.example.com", Result: connectionClosedStreamServerSocket},
+				{Value: "no-endpoints.example.com", Result: emptyStringSocket},
 				{Value: "app.example.com", Result: getSocketNameHTTPS(8080)},
 				{Value: "default", Result: getSocketNameHTTPS(8080)},
 			},

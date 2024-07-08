@@ -11,6 +11,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -99,15 +100,15 @@ func executeServers(conf dataplane.Configuration, generator policies.Generator) 
 }
 
 // getIPFamily returns whether the server should be configured for IPv4, IPv6, or both.
-func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
+func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) shared.IPFamily {
 	switch baseHTTPConfig.IPFamily {
 	case dataplane.IPv4:
-		return http.IPFamily{IPv4: true}
+		return shared.IPFamily{IPv4: true}
 	case dataplane.IPv6:
-		return http.IPFamily{IPv6: true}
+		return shared.IPFamily{IPv6: true}
 	}
 
-	return http.IPFamily{IPv4: true, IPv6: true}
+	return shared.IPFamily{IPv4: true, IPv6: true}
 }
 
 func createIncludeFileResults(servers []http.Server) []executeResult {
@@ -160,12 +161,12 @@ func createServers(
 
 	for idx, s := range sslServers {
 		serverID := fmt.Sprintf("SSL_%d", idx)
-		listen := fmt.Sprint(s.Port)
 
+		sslServer, matchPairs := createSSLServer(s, serverID, generator)
 		if _, portInUse := sharedTLSPorts[s.Port]; portInUse {
-			listen = getSocketNameHTTPS(s.Port)
+			sslServer.Listen = getSocketNameHTTPS(s.Port)
+			sslServer.IsSocket = true
 		}
-		sslServer, matchPairs := createSSLServer(s, serverID, listen, generator)
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
@@ -176,9 +177,9 @@ func createServers(
 func createSSLServer(
 	virtualServer dataplane.VirtualServer,
 	serverID string,
-	listen string,
 	generator policies.Generator,
 ) (http.Server, httpMatchPairs) {
+	listen := fmt.Sprint(virtualServer.Port)
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,

@@ -13,3 +13,9 @@ type MapParameter struct {
 	Value  string
 	Result string
 }
+
+// IPFamily holds the IP family configuration to be used by NGINX.
+type IPFamily struct {
+	IPv4 bool
+	IPv6 bool
+}

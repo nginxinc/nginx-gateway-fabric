@@ -11,6 +11,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 func TestGenerate(t *testing.T) {
@@ -62,8 +63,13 @@ func TestGenerate(t *testing.T) {
 		},
 		StreamUpstreams: []dataplane.Upstream{
 			{
-				Name:      "stream_up",
-				Endpoints: nil,
+				Name: "stream_up",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
 			},
 		},
 		BackendGroups: []dataplane.BackendGroup{bg},
