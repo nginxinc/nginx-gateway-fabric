@@ -3,9 +3,13 @@ package config
 const mapsTemplateText = `
 {{ range $m := . }}
 map {{ $m.Source }} {{ $m.Variable }} {
-    {{ range $p := $m.Parameters }}
-    {{ $p.Value }} {{ $p.Result }};
-    {{ end }}
+	{{- if $m.UseHostnames -}}
+	hostnames;
+	{{ end }}
+
+	{{ range $p := $m.Parameters }}
+	{{ $p.Value }} {{ $p.Result }};
+	{{ end }}
 }
 {{- end }}
 

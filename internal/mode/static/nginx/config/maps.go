@@ -5,11 +5,18 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText))
+
+// emptyStringSocket is used when the stream server has an invalid upstream. In this case, we pass the connection
+// to the empty socket so that NGINX will close the connection with an error in the error log --
+// no host in pass "" -- and set $status variable to 500 (logged by stream access log),
+// which will indicate the problem to the user.
+// https://nginx.org/en/docs/stream/ngx_stream_core_module.html#var_status
+const emptyStringSocket = `""`
 
 func executeMaps(conf dataplane.Configuration) []executeResult {
 	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
@@ -21,7 +28,81 @@ func executeMaps(conf dataplane.Configuration) []executeResult {
 	return []executeResult{result}
 }
 
-func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {
+func executeStreamMaps(conf dataplane.Configuration) []executeResult {
+	maps := createStreamMaps(conf)
+
+	result := executeResult{
+		dest: streamConfigFile,
+		data: helpers.MustExecuteTemplate(mapsTemplate, maps),
+	}
+
+	return []executeResult{result}
+}
+
+func createStreamMaps(conf dataplane.Configuration) []shared.Map {
+	if len(conf.TLSPassthroughServers) == 0 {
+		return nil
+	}
+	portsToMap := make(map[int32]shared.Map)
+
+	for _, server := range conf.TLSPassthroughServers {
+		streamMap, portInUse := portsToMap[server.Port]
+
+		socket := emptyStringSocket
+
+		if server.UpstreamName != "" {
+			socket = getSocketNameTLS(server.Port, server.Hostname)
+		}
+
+		mapParam := shared.MapParameter{
+			Value:  server.Hostname,
+			Result: socket,
+		}
+
+		if !portInUse {
+			m := shared.Map{
+				Source:   "$ssl_preread_server_name",
+				Variable: getTLSPassthroughVarName(server.Port),
+				Parameters: []shared.MapParameter{
+					mapParam,
+				},
+				UseHostnames: true,
+			}
+			portsToMap[server.Port] = m
+		} else {
+			streamMap.Parameters = append(streamMap.Parameters, mapParam)
+			portsToMap[server.Port] = streamMap
+		}
+	}
+
+	for _, server := range conf.SSLServers {
+		streamMap, portInUse := portsToMap[server.Port]
+
+		hostname := server.Hostname
+
+		if server.IsDefault {
+			hostname = "default"
+		}
+
+		if portInUse {
+			streamMap.Parameters = append(streamMap.Parameters, shared.MapParameter{
+				Value:  hostname,
+				Result: getSocketNameHTTPS(server.Port),
+			})
+			portsToMap[server.Port] = streamMap
+		}
+	}
+
+	maps := make([]shared.Map, 0, len(portsToMap))
+
+	for _, m := range portsToMap {
+		maps = append(maps, m)
+	}
+
+	return maps
+}
+
+func buildAddHeaderMaps(servers []dataplane.VirtualServer) []shared.Map {
 	addHeaderNames := make(map[string]struct{})
 
 	for _, s := range servers {
@@ -39,7 +120,7 @@ func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {
 		}
 	}
 
-	maps := make([]http.Map, 0, len(addHeaderNames))
+	maps := make([]shared.Map, 0, len(addHeaderNames))
 	for m := range addHeaderNames {
 		maps = append(maps, createAddHeadersMap(m))
 	}
@@ -52,11 +133,11 @@ const (
 	anyStringFmt = `~.*`
 )
 
-func createAddHeadersMap(name string) http.Map {
+func createAddHeadersMap(name string) shared.Map {
 	underscoreName := convertStringToSafeVariableName(name)
 	httpVarSource := "${http_" + underscoreName + "}"
 	mapVarName := generateAddHeaderMapVariableName(name)
-	params := []http.MapParameter{
+	params := []shared.MapParameter{
 		{
 			Value:  "default",
 			Result: "''",
@@ -66,7 +147,7 @@ func createAddHeadersMap(name string) http.Map {
 			Result: httpVarSource + ",",
 		},
 	}
-	return http.Map{
+	return shared.Map{
 		Source:     httpVarSource,
 		Variable:   "$" + mapVarName,
 		Parameters: params,

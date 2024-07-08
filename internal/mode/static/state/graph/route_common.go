@@ -290,7 +290,7 @@ func bindRouteToListeners(
 			continue
 		}
 
-		// Case 2: Attachment is not possible due to unsupported configuration
+		// Case 2: Attachment is not possible due to unsupported configuration.
 
 		if ref.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")

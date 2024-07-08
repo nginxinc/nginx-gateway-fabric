@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -162,11 +162,11 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 			IsDefault: true,
 		},
 	}
-	expectedMap := []http.Map{
+	expectedMap := []shared.Map{
 		{
 			Source:   "${http_my_add_header}",
 			Variable: "$my_add_header_header_var",
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "default", Result: "''"},
 				{
 					Value:  "~.*",
@@ -177,7 +177,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 		{
 			Source:   "${http_my_second_add_header}",
 			Variable: "$my_second_add_header_header_var",
-			Parameters: []http.MapParameter{
+			Parameters: []shared.MapParameter{
 				{Value: "default", Result: "''"},
 				{
 					Value:  "~.*",
@@ -189,4 +189,126 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 	maps := buildAddHeaderMaps(testServers)
 
 	g.Expect(maps).To(ConsistOf(expectedMap))
+}
+
+func TestExecuteStreamMaps(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
+			{
+				Hostname:     "example.com",
+				Port:         8081,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "example.com",
+				Port:         8080,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "cafe.example.com",
+				Port:         8080,
+				UpstreamName: "backend2",
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "app.example.com",
+				Port:     8080,
+			},
+		},
+	}
+
+	expSubStrings := map[string]int{
+		"example.com unix:/var/run/nginx/example.com-8081.sock;":           1,
+		"example.com unix:/var/run/nginx/example.com-8080.sock;":           1,
+		"cafe.example.com unix:/var/run/nginx/cafe.example.com-8080.sock;": 1,
+		"app.example.com unix:/var/run/nginx/https8080.sock;":              1,
+		"hostnames": 2,
+	}
+
+	results := executeStreamMaps(conf)
+	g.Expect(results).To(HaveLen(1))
+	result := results[0]
+
+	g.Expect(result.dest).To(Equal(streamConfigFile))
+	for expSubStr, expCount := range expSubStrings {
+		g.Expect(strings.Count(string(result.data), expSubStr)).To(Equal(expCount))
+	}
+}
+
+func TestCreateStreamMaps(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
+			{
+				Hostname:     "example.com",
+				Port:         8081,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "example.com",
+				Port:         8080,
+				UpstreamName: "backend1",
+			},
+			{
+				Hostname:     "cafe.example.com",
+				Port:         8080,
+				UpstreamName: "backend2",
+			},
+			{
+				Hostname:     "wrong.example.com",
+				Port:         8080,
+				UpstreamName: "",
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "app.example.com",
+				Port:     8080,
+			},
+			{
+				Port:      8080,
+				IsDefault: true,
+			},
+		},
+	}
+
+	maps := createStreamMaps(conf)
+
+	expectedMaps := []shared.Map{
+		{
+			Source:   "$ssl_preread_server_name",
+			Variable: getTLSPassthroughVarName(8081),
+			Parameters: []shared.MapParameter{
+				{Value: "example.com", Result: getSocketNameTLS(8081, "example.com")},
+			},
+			UseHostnames: true,
+		},
+		{
+			Source:   "$ssl_preread_server_name",
+			Variable: getTLSPassthroughVarName(8080),
+			Parameters: []shared.MapParameter{
+				{Value: "example.com", Result: getSocketNameTLS(8080, "example.com")},
+				{Value: "cafe.example.com", Result: getSocketNameTLS(8080, "cafe.example.com")},
+				{Value: "wrong.example.com", Result: `""`},
+				{Value: "app.example.com", Result: getSocketNameHTTPS(8080)},
+				{Value: "default", Result: getSocketNameHTTPS(8080)},
+			},
+			UseHostnames: true,
+		},
+	}
+
+	g.Expect(maps).To(ConsistOf(expectedMaps))
+}
+
+func TestCreateStreamMapsWithEmpty(t *testing.T) {
+	g := NewWithT(t)
+	conf := dataplane.Configuration{
+		TLSPassthroughServers: nil,
+	}
+
+	maps := createStreamMaps(conf)
+
+	g.Expect(maps).To(BeNil())
 }

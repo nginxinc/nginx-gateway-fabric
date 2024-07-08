@@ -6,9 +6,9 @@ const InternalRoutePathPrefix = "/_ngf-internal"
 type Server struct {
 	SSL           *SSL
 	ServerName    string
+	Listen        string
 	Locations     []Location
 	Includes      []Include
-	Port          int32
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
@@ -102,19 +102,6 @@ type SplitClient struct {
 type SplitClientDistribution struct {
 	Percent string
 	Value   string
-}
-
-// Map defines an NGINX map.
-type Map struct {
-	Source     string
-	Variable   string
-	Parameters []MapParameter
-}
-
-// MapParameter defines a Value and Result pair in a Map.
-type MapParameter struct {
-	Value  string
-	Result string
 }
 
 // ProxySSLVerify holds the proxied HTTPS server verification configuration.

@@ -761,6 +761,14 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
+		{
+			Hostname:     "app.example.com",
+			Port:         8443,
+			UpstreamName: "sup",
+		},
+	}
+
 	expMatchPairs := httpMatchPairs{
 		"1_0": {
 			{Method: "POST", RedirectPath: "/_ngf-internal-rule0-route0"},
@@ -1197,17 +1205,17 @@ func TestCreateServers(t *testing.T) {
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
-			Port:          8080,
+			Listen:        "8080",
 		},
 		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
-			Port:       8080,
+			Listen:     "8080",
 			GRPC:       true,
 		},
 		{
 			IsDefaultSSL: true,
-			Port:         8443,
+			Listen:       getSocketNameHTTPS(8443),
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1216,7 +1224,7 @@ func TestCreateServers(t *testing.T) {
 				CertificateKey: expectedPEMPath,
 			},
 			Locations: getExpectedLocations(true),
-			Port:      8443,
+			Listen:    getSocketNameHTTPS(8443),
 			GRPC:      true,
 		},
 	}
@@ -1237,7 +1245,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	})
 
-	result, httpMatchPair := createServers(httpServers, sslServers, fakeGenerator)
+	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers, fakeGenerator)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1441,18 +1449,23 @@ func TestCreateServersConflicts(t *testing.T) {
 			expectedServers := []http.Server{
 				{
 					IsDefaultHTTP: true,
-					Port:          8080,
+					Listen:        "8080",
 				},
 				{
 					ServerName: "cafe.example.com",
 					Locations:  test.expLocs,
-					Port:       8080,
+					Listen:     "8080",
 				},
 			}
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, &policiesfakes.FakeGenerator{})
+			result, _ := createServers(
+				httpServers,
+				[]dataplane.VirtualServer{},
+				[]dataplane.Layer4VirtualServer{},
+				&policiesfakes.FakeGenerator{},
+			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
