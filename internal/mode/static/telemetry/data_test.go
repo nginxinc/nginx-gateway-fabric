@@ -24,14 +24,18 @@ func TestDataAttributes(t *testing.T) {
 		FlagNames:  []string{"test-flag"},
 		FlagValues: []string{"test-value"},
 		NGFResourceCounts: NGFResourceCounts{
-			GatewayCount:          1,
-			GatewayClassCount:     2,
-			HTTPRouteCount:        3,
-			SecretCount:           4,
-			ServiceCount:          5,
-			EndpointCount:         6,
-			GRPCRouteCount:        7,
-			BackendTLSPolicyCount: 8,
+			GatewayCount:                             1,
+			GatewayClassCount:                        2,
+			HTTPRouteCount:                           3,
+			SecretCount:                              4,
+			ServiceCount:                             5,
+			EndpointCount:                            6,
+			GRPCRouteCount:                           7,
+			BackendTLSPolicyCount:                    8,
+			GatewayAttachedClientSettingsPolicyCount: 9,
+			RouteAttachedClientSettingsPolicyCount:   10,
+			ObservabilityPolicyCount:                 11,
+			NginxProxyCount:                          12,
 		},
 		NGFReplicaCount: 3,
 	}
@@ -57,6 +61,10 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("EndpointCount", 6),
 		attribute.Int64("GRPCRouteCount", 7),
 		attribute.Int64("BackendTLSPolicyCount", 8),
+		attribute.Int64("GatewayAttachedClientSettingsPolicyCount", 9),
+		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 10),
+		attribute.Int64("ObservabilityPolicyCount", 11),
+		attribute.Int64("NginxProxyCount", 12),
 		attribute.Int64("NGFReplicaCount", 3),
 	}
 
@@ -90,6 +98,10 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("EndpointCount", 0),
 		attribute.Int64("GRPCRouteCount", 0),
 		attribute.Int64("BackendTLSPolicyCount", 0),
+		attribute.Int64("GatewayAttachedClientSettingsPolicyCount", 0),
+		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 0),
+		attribute.Int64("ObservabilityPolicyCount", 0),
+		attribute.Int64("NginxProxyCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
 	}
 
