@@ -291,7 +291,7 @@ In such situations, it's advisable to review the logs of both NGINX and NGINX Ga
 
 #### Access the NGINX Plus Dashboard
 
-If you have NGINX Gateway Fabric installed with NGINX Plus, you can access the N+ dashboard at `http://localhost:8080/dashboard.html`.
+If you have NGINX Gateway Fabric installed with NGINX Plus, you can access the NGINX Plus dashboard at `http://localhost:8080/dashboard.html`.
 Note that, the port number i.e `8080` matches the port number you have port-forwarded your NGINX Gateway Fabric Pod. For further details, see the [dashboard guide]({{< relref "dashboard.md" >}})
 
 ### Common Errors
