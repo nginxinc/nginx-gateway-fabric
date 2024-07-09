@@ -283,7 +283,7 @@ The configuration may change in future releases. This configuration is valid for
 
 #### Metrics for Troubleshooting
 
-Metrics can be useful to identify performance bottlenecks and pinpoint areas of high resource consumption within NGINX Gateway Fabric. To set up metrics collection, refer to this [guide]({{< relref "prometheus.md" >}}). The metrics dashboard will help you understand problems with the way NGINX Gateway Fabric is set up or potential issues that could show up with time.
+Metrics can be useful to identify performance bottlenecks and pinpoint areas of high resource consumption within NGINX Gateway Fabric. To set up metrics collection, refer to the [Prometheus Metrics guide]({{< relref "prometheus.md" >}}). The metrics dashboard will help you understand problems with the way NGINX Gateway Fabric is set up or potential issues that could show up with time.
 
 For example, metrics `nginx_reloads_total` and `nginx_reload_errors_total` offer valuable insights into the system's stability and reliability. A high `nginx_reloads_total` value indicates frequent updates or configuration changes, while a high `nginx_reload_errors_total` value suggests issues with the configuration or other problems preventing successful reloads. Monitoring these metrics helps identify and resolve configuration errors, ensuring consistent service reliability.
 
