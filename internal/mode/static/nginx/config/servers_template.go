@@ -2,13 +2,13 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
-{{- range $s := . -}}
+{{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-        {{- if $s.IPFamily.IPv4 }}
+        {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }} ssl default_server;
         {{- end }}
-        {{- if $s.IPFamily.IPv6 }}
+        {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }} ssl default_server;
         {{- end }}
 
@@ -16,10 +16,10 @@ server {
 }
     {{- else if $s.IsDefaultHTTP }}
 server {
-        {{- if $s.IPFamily.IPv4 }}
+        {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }} default_server;
         {{- end }}
-        {{- if $s.IPFamily.IPv6 }}
+        {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }} default_server;
         {{- end }}
 
@@ -29,10 +29,10 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-        {{- if $s.IPFamily.IPv4 }}
+        {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }} ssl;
         {{- end }}
-        {{- if $s.IPFamily.IPv6 }}
+        {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }} ssl;
         {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
@@ -42,10 +42,10 @@ server {
         return 421;
     }
         {{- else }}
-        {{- if $s.IPFamily.IPv4 }}
+        {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }};
         {{- end }}
-        {{- if $s.IPFamily.IPv6 }}
+        {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }};
         {{- end }}
         {{- end }}

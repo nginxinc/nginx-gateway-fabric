@@ -8,7 +8,6 @@ import (
 	"strings"
 	gotemplate "text/template"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -58,13 +57,23 @@ var grpcBaseHeaders = []http.Header{
 	},
 }
 
+type serverConfig struct {
+	Servers  []http.Server
+	IPFamily http.IPFamily
+}
+
 func executeServers(conf dataplane.Configuration) []executeResult {
 	ipFamily := getIPFamily(conf.BaseHTTPConfig)
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, ipFamily)
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
+
+	serverConfig := serverConfig{
+		Servers:  servers,
+		IPFamily: ipFamily,
+	}
 
 	serverResult := executeResult{
 		dest: httpConfigFile,
-		data: helpers.MustExecuteTemplate(serversTemplate, servers),
+		data: helpers.MustExecuteTemplate(serversTemplate, serverConfig),
 	}
 
 	// create httpMatchPair conf
@@ -91,9 +100,9 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 // getIPFamily returns whether the server should be configured for IPv4, IPv6, or both.
 func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
 	switch ip := baseHTTPConfig.IPFamily; ip {
-	case ngfAPI.IPv4:
+	case dataplane.IPv4:
 		return http.IPFamily{IPv4: true}
-	case ngfAPI.IPv6:
+	case dataplane.IPv6:
 		return http.IPFamily{IPv6: true}
 	}
 
@@ -155,22 +164,18 @@ func createIncludes(additions []dataplane.Addition) []string {
 	return includes
 }
 
-func createServers(
-	httpServers,
-	sslServers []dataplane.VirtualServer,
-	ipFamily http.IPFamily,
-) ([]http.Server, httpMatchPairs) {
+func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
 	for serverID, s := range httpServers {
-		httpServer, matchPairs := createServer(s, serverID, ipFamily)
+		httpServer, matchPairs := createServer(s, serverID)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
 	for serverID, s := range sslServers {
-		sslServer, matchPair := createSSLServer(s, serverID, ipFamily)
+		sslServer, matchPair := createSSLServer(s, serverID)
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPair)
 	}
@@ -178,16 +183,11 @@ func createServers(
 	return servers, finalMatchPairs
 }
 
-func createSSLServer(
-	virtualServer dataplane.VirtualServer,
-	serverID int,
-	ipFamily http.IPFamily,
-) (http.Server, httpMatchPairs) {
+func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
 			Port:         virtualServer.Port,
-			IPFamily:     ipFamily,
 		}, nil
 	}
 
@@ -203,20 +203,14 @@ func createSSLServer(
 		Port:      virtualServer.Port,
 		GRPC:      grpc,
 		Includes:  createIncludes(virtualServer.Additions),
-		IPFamily:  ipFamily,
 	}, matchPairs
 }
 
-func createServer(
-	virtualServer dataplane.VirtualServer,
-	serverID int,
-	ipFamily http.IPFamily,
-) (http.Server, httpMatchPairs) {
+func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultHTTP: true,
 			Port:          virtualServer.Port,
-			IPFamily:      ipFamily,
 		}, nil
 	}
 
@@ -228,7 +222,6 @@ func createServer(
 		Port:       virtualServer.Port,
 		GRPC:       grpc,
 		Includes:   createIncludes(virtualServer.Additions),
-		IPFamily:   ipFamily,
 	}, matchPairs
 }
 

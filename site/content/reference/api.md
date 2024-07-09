@@ -313,6 +313,19 @@ Telemetry
 </tr>
 <tr>
 <td>
+<code>disableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHTTP2 defines if http2 should be disabled for all servers.
+Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ipFamily</code><br/>
 <em>
 <a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
@@ -324,19 +337,6 @@ IPFamilyType
 <em>(Optional)</em>
 <p>IPFamily specifies the IP family to be used by the server.
 Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>disableHTTP2</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DisableHTTP2 defines if http2 should be disabled for all servers.
-Default is false, meaning http2 will be enabled for all servers.</p>
 </td>
 </tr>
 </table>
@@ -738,7 +738,7 @@ Examples: 120s, 50ms.</p>
 <a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
 </p>
 <p>
-<p>IPFamilyType specifies the IP family to be used by the server.</p>
+<p>IPFamilyType specifies the IP family to be used by NGINX.</p>
 </p>
 <table class="table table-bordered table-striped">
 <thead>
@@ -935,6 +935,19 @@ Telemetry
 </tr>
 <tr>
 <td>
+<code>disableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHTTP2 defines if http2 should be disabled for all servers.
+Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ipFamily</code><br/>
 <em>
 <a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
@@ -946,19 +959,6 @@ IPFamilyType
 <em>(Optional)</em>
 <p>IPFamily specifies the IP family to be used by the server.
 Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>disableHTTP2</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DisableHTTP2 defines if http2 should be disabled for all servers.
-Default is false, meaning http2 will be enabled for all servers.</p>
 </td>
 </tr>
 </tbody>

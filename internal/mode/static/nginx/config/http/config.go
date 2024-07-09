@@ -10,7 +10,6 @@ type Server struct {
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
-	IPFamily      IPFamily
 }
 
 // IPFamily holds the IP family configuration for all servers.

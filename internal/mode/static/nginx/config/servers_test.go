@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -50,7 +49,7 @@ func TestExecuteServers(t *testing.T) {
 					},
 				},
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
-					IPFamily: ngfAPI.IPv4,
+					IPFamily: dataplane.IPv4,
 				},
 			},
 			expectedHTTPConfig: map[string]int{
@@ -145,7 +144,7 @@ func TestExecuteServers(t *testing.T) {
 					},
 				},
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
-					IPFamily: ngfAPI.Dual,
+					IPFamily: dataplane.Dual,
 				},
 			},
 			expectedHTTPConfig: map[string]int{
@@ -1092,7 +1091,6 @@ func TestCreateServers(t *testing.T) {
 		{
 			IsDefaultHTTP: true,
 			Port:          8080,
-			IPFamily:      http.IPFamily{},
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1103,12 +1101,10 @@ func TestCreateServers(t *testing.T) {
 				includesFolder + "/server-addition-1.conf",
 				includesFolder + "/server-addition-2.conf",
 			},
-			IPFamily: http.IPFamily{},
 		},
 		{
 			IsDefaultSSL: true,
 			Port:         8443,
-			IPFamily:     http.IPFamily{},
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1123,13 +1119,12 @@ func TestCreateServers(t *testing.T) {
 				includesFolder + "/server-addition-1.conf",
 				includesFolder + "/server-addition-3.conf",
 			},
-			IPFamily: http.IPFamily{},
 		},
 	}
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers, http.IPFamily{})
+	result, httpMatchPair := createServers(httpServers, sslServers)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1338,7 +1333,7 @@ func TestCreateServersConflicts(t *testing.T) {
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, http.IPFamily{})
+			result, _ := createServers(httpServers, []dataplane.VirtualServer{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}

@@ -174,24 +174,6 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 		ignore      bool
 	}{
 		{
-			msg: "IPV6 address type",
-			slice: discoveryV1.EndpointSlice{
-				AddressType: discoveryV1.AddressTypeIPv6,
-				Ports: []discoveryV1.EndpointPort{
-					{
-						Name: &svcPortName,
-						Port: &port8080,
-					},
-				},
-			},
-			servicePort: v1.ServicePort{
-				Name:       svcPortName,
-				Port:       80,
-				TargetPort: intstr.FromInt(8080),
-			},
-			ignore: false,
-		},
-		{
 			msg: "FQDN address type",
 			slice: discoveryV1.EndpointSlice{
 				AddressType: discoveryV1.AddressTypeFQDN,
@@ -248,6 +230,24 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 			msg: "normal",
 			slice: discoveryV1.EndpointSlice{
 				AddressType: discoveryV1.AddressTypeIPv4,
+				Ports: []discoveryV1.EndpointPort{
+					{
+						Name: &svcPortName,
+						Port: &port8080,
+					},
+				},
+			},
+			servicePort: v1.ServicePort{
+				Name:       svcPortName,
+				Port:       80,
+				TargetPort: intstr.FromInt(8080),
+			},
+			ignore: false,
+		},
+		{
+			msg: "normal IPV6 address type",
+			slice: discoveryV1.EndpointSlice{
+				AddressType: discoveryV1.AddressTypeIPv6,
 				Ports: []discoveryV1.EndpointPort{
 					{
 						Name: &svcPortName,

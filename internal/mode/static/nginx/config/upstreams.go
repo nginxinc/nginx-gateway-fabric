@@ -68,13 +68,12 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 
 	upstreamServers := make([]http.UpstreamServer, len(up.Endpoints))
 	for idx, ep := range up.Endpoints {
-		upstreamServers[idx] = http.UpstreamServer{
-			Address: fmt.Sprintf("%s:%d", ep.Address, ep.Port),
-		}
+		format := "%s:%d"
 		if ep.IPv6 {
-			upstreamServers[idx] = http.UpstreamServer{
-				Address: fmt.Sprintf("[%s]:%d", ep.Address, ep.Port),
-			}
+			format = "[%s]:%d"
+		}
+		upstreamServers[idx] = http.UpstreamServer{
+			Address: fmt.Sprintf(format, ep.Address, ep.Port),
 		}
 	}
 

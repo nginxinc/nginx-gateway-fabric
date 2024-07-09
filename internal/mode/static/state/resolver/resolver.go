@@ -111,10 +111,7 @@ func resolveEndpoints(
 	endpointSet := initEndpointsSet(filteredSlices)
 
 	for _, eps := range filteredSlices {
-		var ipv6 bool
-		if eps.AddressType == discoveryV1.AddressTypeIPv6 {
-			ipv6 = true
-		}
+		ipv6 := eps.AddressType == discoveryV1.AddressTypeIPv6
 		for _, endpoint := range eps.Endpoints {
 			if !endpointReady(endpoint) {
 				continue

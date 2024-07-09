@@ -6,7 +6,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -298,10 +297,22 @@ type SpanAttribute struct {
 // BaseHTTPConfig holds the configuration options at the http context.
 type BaseHTTPConfig struct {
 	// IPFamily specifies the IP family for all servers.
-	IPFamily ngfAPI.IPFamilyType
+	IPFamily IPFamilyType
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
+
+// IPFamilyType specifies the IP family to be used by NGINX.
+type IPFamilyType string
+
+const (
+	// Dual specifies that the server will use both IPv4 and IPv6.
+	Dual IPFamilyType = "dual"
+	// IPv4 specifies that the server will use only IPv4.
+	IPv4 IPFamilyType = "ipv4"
+	// IPv6 specifies that the server will use only IPv6.
+	IPv6 IPFamilyType = "ipv6"
+)
 
 // Ratio represents a tracing sampling ratio used in an nginx config with the otel_module.
 type Ratio struct {

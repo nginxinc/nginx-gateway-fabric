@@ -10,12 +10,13 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
 // to configure global settings for all Gateways defined from the GatewayClass.
-type NginxProxy struct {
-	metav1.TypeMeta   `json:",inline"`
+type NginxProxy struct { //nolint:govet // standard field alignment, don't change it
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of the NginxProxy.
 	Spec NginxProxySpec `json:"spec"`
+
+	metav1.TypeMeta `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
@@ -43,15 +44,15 @@ const (
 
 // NginxProxySpec defines the desired state of the NginxProxy.
 type NginxProxySpec struct {
-	// Telemetry specifies the OpenTelemetry configuration.
-	//
-	// +optional
-	Telemetry *Telemetry `json:"telemetry,omitempty"`
 	// IPFamily specifies the IP family to be used by the server.
 	// Default is "dual", meaning the server will use both IPv4 and IPv6.
 	//
 	// +optional
-	IPFamily IPFamilyType `json:"ipFamily,omitempty"`
+	IPFamily *IPFamilyType `json:"ipFamily,omitempty"`
+	// Telemetry specifies the OpenTelemetry configuration.
+	//
+	// +optional
+	Telemetry *Telemetry `json:"telemetry,omitempty"`
 	// DisableHTTP2 defines if http2 should be disabled for all servers.
 	// Default is false, meaning http2 will be enabled for all servers.
 	//
