@@ -231,7 +231,7 @@ upstream default_coffee_80 {
 }
 ```
 
-Some key things to note here:
+Key information to note is:
 
 1. A new `server` block is created with the hostname of the HTTPRoute. When a request is sent to this hostname, it will be handled by this `server` block.
 2. Within the `server` block, three new `location` blocks are added for *coffee*, each with distinct prefix and exact paths. Requests directed to the *coffee* application with a path prefix `/coffee/hello` will be managed by the first location block, while those with an exact path `/coffee` will be handled by the second location block. Any other requests not recognized by the server block for this hostname will default to the third location block, returning a 404 Not Found status.
