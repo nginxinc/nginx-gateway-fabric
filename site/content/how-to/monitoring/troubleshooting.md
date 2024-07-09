@@ -155,7 +155,7 @@ server {
 }
 ```
 
-Once a HTTPRoute with path matches and rules are defined, the nginx.conf is updated accordingly to determine which location block will manage incoming requests. To demonstrate how `nginx.conf` is changed, let's create some resources:
+Once a HTTPRoute with path matches and rules are defined, nginx.conf is updated accordingly to determine which location block will manage incoming requests. To demonstrate how `nginx.conf` is changed, create some resources:
 
 1. A Gateway with single listener with the hostname `*.example.com` on port 80.
 2. A simple `coffee` application.
