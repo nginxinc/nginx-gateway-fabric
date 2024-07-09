@@ -408,4 +408,4 @@ To **resolve** this, you can configure the `client_max_body_size` using the `Cli
 
 ### Further Reading
 
-You can check out the [Kubernetes Troubleshooting Guide](https://kubernetes.io/docs/tasks/debug/debug-application/) for further assistance
+You can view the [Kubernetes Troubleshooting Guide](https://kubernetes.io/docs/tasks/debug/debug-application/) for more debugging guidance.
