@@ -281,7 +281,7 @@ Handling connection for 8080
 The configuration may change in future releases. This configuration is valid for version 1.3.
 {{< /warning >}}
 
-#### Metrics for Troubleshooting
+#### Metrics for troubleshooting
 
 Metrics can be useful to identify performance bottlenecks and pinpoint areas of high resource consumption within NGINX Gateway Fabric. To set up metrics collection, refer to the [Prometheus Metrics guide]({{< relref "prometheus.md" >}}). The metrics dashboard will help you understand problems with the way NGINX Gateway Fabric is set up or potential issues that could show up with time.
 
