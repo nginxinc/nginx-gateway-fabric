@@ -406,6 +406,6 @@ The request body exceeds the [client_max_body_size](https://nginx.org/en/docs/ht
 To **resolve** this, you can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. Read the [Client Settings Policy]({{< relref "how-to/traffic-management/client-settings.md" >}}) documentation for more information.
 
 
-### Further Reading
+### Further reading
 
 You can view the [Kubernetes Troubleshooting Guide](https://kubernetes.io/docs/tasks/debug/debug-application/) for more debugging guidance.
