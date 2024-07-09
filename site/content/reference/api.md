@@ -299,6 +299,21 @@ NginxProxySpec
 <table class="table table-bordered table-striped">
 <tr>
 <td>
+<code>ipFamily</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
+IPFamilyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamily specifies the IP family to be used by the server.
+Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>telemetry</code><br/>
 <em>
 <a href="#gateway.nginx.org/v1alpha1.Telemetry">
@@ -322,21 +337,6 @@ bool
 <em>(Optional)</em>
 <p>DisableHTTP2 defines if http2 should be disabled for all servers.
 Default is false, meaning http2 will be enabled for all servers.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ipFamily</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
-IPFamilyType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>IPFamily specifies the IP family to be used by the server.
-Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
 </td>
 </tr>
 </table>
@@ -921,6 +921,21 @@ Logging
 <tbody>
 <tr>
 <td>
+<code>ipFamily</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
+IPFamilyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamily specifies the IP family to be used by the server.
+Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>telemetry</code><br/>
 <em>
 <a href="#gateway.nginx.org/v1alpha1.Telemetry">
@@ -944,21 +959,6 @@ bool
 <em>(Optional)</em>
 <p>DisableHTTP2 defines if http2 should be disabled for all servers.
 Default is false, meaning http2 will be enabled for all servers.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ipFamily</code><br/>
-<em>
-<a href="#gateway.nginx.org/v1alpha1.IPFamilyType">
-IPFamilyType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>IPFamily specifies the IP family to be used by the server.
-Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
 </td>
 </tr>
 </tbody>

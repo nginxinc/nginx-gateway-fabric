@@ -31,6 +31,7 @@ type NginxProxyList struct {
 // IPFamilyType specifies the IP family to be used by NGINX.
 //
 // +kubebuilder:validation:Enum=dual;ipv4;ipv6
+// +kubebuilder:default:=dual
 type IPFamilyType string
 
 const (

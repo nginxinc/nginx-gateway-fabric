@@ -1,0 +1,9 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+networking:
+  ipFamily: dual
+  # ipFamily: ipv6
+  # ipFamily: ipv4
+  apiServerAddress: 127.0.0.1
