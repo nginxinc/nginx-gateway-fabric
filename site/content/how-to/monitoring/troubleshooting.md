@@ -238,7 +238,7 @@ Key information to note is:
 3. Each `location` block has headers and directives that configure the NGINX proxy to forward requests to the `/coffee` path correctly, preserving important client information and ensuring compatibility with the upstream server.
 4. The `upstream` block in the given NGINX configuration defines a group of backend servers and configures how NGINX should load balance requests among them.
 
-Now let's check the behaviour when curl request is sent to the `coffee` application:
+Review the behaviour when a curl request is sent to the `coffee` application:
 
 Matches location /coffee/ block
 
