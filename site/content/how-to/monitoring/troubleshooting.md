@@ -161,7 +161,7 @@ Once a HTTPRoute with path matches and rules are defined, nginx.conf is updated 
 2. A simple `coffee` application.
 3. An HTTPRoute that exposes the `coffee` application outside the cluster using the listener created in step 1. The path and rule matches create different location blocks in `nginx.conf` to route requests as needed.
 
-For example, this `coffee` route matches requests with path `/coffee` and type `prefix`. Lets see how the `nginx.conf` is modified.
+For example, this `coffee` route matches requests with path `/coffee` and type `prefix`. Examine how the `nginx.conf` is modified:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
