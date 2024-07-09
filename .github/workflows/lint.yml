@@ -54,7 +54,7 @@ jobs:
           echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/mode/static/nginx/modules/package.json)" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version-file: .nvmrc
 
@@ -82,7 +82,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Lint Actions
-        uses: reviewdog/action-actionlint@afad3b6ab835e5611bda8c8193377e2d5c21413d # v1.51.0
+        uses: reviewdog/action-actionlint@d99f1ceaf59e7db022a790dc308ccccb68dda71a # v1.53.0
         with:
           actionlint_flags: -shellcheck ""
 
@@ -129,4 +129,4 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Lint YAML
-        uses: reviewdog/action-yamllint@508148c0d959b166798f9792d1b29dddcac37348 # v1.16.0
+        uses: reviewdog/action-yamllint@c23c5d4cd45b5cc16fa3e6e34073068b228cabeb # v1.17.0
