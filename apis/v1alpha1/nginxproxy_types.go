@@ -11,12 +11,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
 // to configure global settings for all Gateways defined from the GatewayClass.
 type NginxProxy struct { //nolint:govet // standard field alignment, don't change it
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of the NginxProxy.
 	Spec NginxProxySpec `json:"spec"`
-
-	metav1.TypeMeta `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
