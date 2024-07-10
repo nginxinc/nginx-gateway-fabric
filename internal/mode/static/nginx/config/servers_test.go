@@ -2608,7 +2608,6 @@ func TestGetIPFamily(t *testing.T) {
 	for _, tc := range test {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
-
 			result := getIPFamily(tc.baseHTTPConfig)
 			g.Expect(result).To(Equal(tc.expected))
 		})
