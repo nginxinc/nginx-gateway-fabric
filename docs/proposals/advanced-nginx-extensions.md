@@ -400,7 +400,7 @@ spec:
 ```
 
 As a consequence, creating SnippetsPolicy should only be allowed for the privileged users -- the Cluster operator.
-As a further precaution, we can disable SnippetsPolicy by default similarly
+As a further precaution, we will disable SnippetsPolicy by default similarly
 to [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/configuration/security/#snippets).
 
 It is also possible to add validation of snippets to disallow certain directives (like `root` and `autoindex`)
