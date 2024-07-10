@@ -80,8 +80,11 @@ type SnippetsPolicySpec struct {
 	//
 	// Support: Gateway, HTTPRoute, GRPCRoute, TLSRoute
 	//
-	// For HTTPRoute and GRPCRoute, only http* contexts are supported.
-	// For TLSRoute, only stream* contexts are supported.
+	// Supported contexts depend on the targetRef Kind:
+	//
+	// * HTTPRoute and GRPCRoute: http, http.server and http.server.location.
+	// * TLSRoute: stream and stream.server.
+	// * Gateway: all contexts.
 	TargetRefs []gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRefs"`
 }
 
