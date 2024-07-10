@@ -824,7 +824,7 @@ TO-DO(pleshakov) - Add support for filters to the API section in the GEP after d
 
 ### Personas
 
-- The Cluster operator creates a SnippetsTemplate.
+- The Cluster operator creates a SnippetsTemplate and the values CRD.
 - The Application developer uses it by creating a Custom resource of the values CRD of the SnippetsTemplate.
 
 ### Validation
