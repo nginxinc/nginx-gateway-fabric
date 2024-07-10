@@ -603,7 +603,6 @@ use that extension with the ability to further customize it.
 First, a Cluster operator comes up with NGINX configuration for the rate-limiting feature asked by an Application developer:
 
 ```text
-```text
 # http context
 limit_req_zone $binary_remote_addr zone=myzone:10m rate=1r/s;
 
