@@ -65,8 +65,8 @@ NGINX use cases. To allow them to implement those use cases, we need to bring a 
 
 - Allow users to insert NGINX configuration not supported via Gateway API resources or NGINX extensions.
 - Support configuration from modules not loaded in NGINX by default or third-party modules.
-- Most of the configuration complexity should fall onto the cluster operator persona, not the application developer.
-- Provide security controls to prevent application developers from injecting arbitrary NGINX configuration.
+- Most of the configuration complexity should fall onto the Cluster operator persona, not the Application developer.
+- Provide security controls to prevent Application developers from injecting arbitrary NGINX configuration.
 - Ensure adequate configuration validation to prevent NGINX outages due to invalid configuration.
 - Advanced NGINX extensions can be used without source code modification.
 
@@ -81,9 +81,9 @@ NGINX use cases. To allow them to implement those use cases, we need to bring a 
 This proposal brings two extension mechanisms:
 
 - [SnippetsPolicy](#snippetspolicy) which allows to quickly bring unsupported NGINX configuration to NGF. However,
-  because of its implications for reliability and security, SnippetsPolicy is mostly applicable for Cluster operator.
+  because of its implications for reliability and security, SnippetsPolicy is mostly applicable for the Cluster operator.
 - [SnippetsTemplate](#snippetstemplate) which allows to bring unsupported NGINX configuration to NGF by Application
-  developers in a safe and uncomplicated manner. However, SnippetsTemplates require some up-front work from Cluster
+  developers in a safe and uncomplicated manner. However, SnippetsTemplates require some up-front work from a Cluster
   operator, meaning it cannot be implemented quickly, in contrast with SnippetsPolicy.
 
 ### SnippetsPolicy
@@ -385,10 +385,10 @@ GRPCRoute. [TLSRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.ne
 doesn't support filters, so it needs to be added to the Gateway API first.
 
 Although SnippetsFilter applicability is limited compared to SnippetsPolicy, SnippetsFilter creates
-a natural split of responsibilities between Cluster operator and Application developers:
+a natural split of responsibilities between the Cluster operator and the Application developer:
 
-- Cluster operator creates a SnippetsFilter.
-- Application developers reference the SnippetsFilter to enable it.
+- The Cluster operator creates a SnippetsFilter.
+- The Application developer references the SnippetsFilter to enable it.
 
 Note that with the SnippetsPolicy, because the targetRef is part of the SnippetsPolicy, it is not possible to have
 such a split of responsibilities.
@@ -397,7 +397,7 @@ TO-DO(pleshakov) - Add SnippetsFilter to the GEP after discussions about it.
 
 ### Personas
 
-The target persona of snippets is Cluster operator. They will create and manage snippets.
+The target persona of snippets is the Cluster operator. They will create and manage snippets.
 
 Snippets are not intended for Application developers, because:
 
@@ -448,7 +448,7 @@ spec:
       }
 ```
 
-As a consequence, creating SnippetsPolicy should only be allowed for the privileged users -- Cluster operator.
+As a consequence, creating SnippetsPolicy should only be allowed for the privileged users -- the Cluster operator.
 As a further precaution, we can disable SnippetsPolicy by default similarly
 to [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/configuration/security/#snippets).
 
@@ -477,17 +477,17 @@ operator upgrades NGF to the next version. Such risk shall be clearly documented
 
 ### Summary
 
-- Snippets allow Cluster operator to quickly configure NGINX features not available via NGF.
-- SnippetsPolicy should be used only by Cluster operator, because of reliability and security implications.
-- SnippetsFilter, it is possible to split the responsibility of creating snippets (Cluster operator) and enabling
-  snippets (Application Developer).
+- Snippets allow the Cluster operator to quickly configure NGINX features not available via NGF.
+- SnippetsPolicy should be used only by the Cluster operator, because of reliability and security implications.
+- SnippetsFilter, it is possible to split the responsibility of creating snippets (the Cluster operator) and enabling
+  snippets (the Application Developer).
 
 ## SnippetsTemplate
 
 SnippetsTemplate is similar to SnippetsPolicy: it allows inserting NGINX configuration into various NGINX contexts.
 However, in contrast with SnippetsPolicy, it allows Application developers to safely use them without the risk of
 breaking NGINX config. At the same time, that safety comes with a cost: creating a SnippetsTemplate is more involved
-for Cluster operators compared to SnippetsPolicy.
+for the Cluster operator compared to SnippetsPolicy.
 
 ### API
 
@@ -636,24 +636,24 @@ struct, which NGF uses to generate location config.
 
 ### How to Use SnippetsTemplate
 
-1. Cluster operator comes up with NGINX configuration that configures an NGINX feature needed by Application
+1. A Cluster operator comes up with NGINX configuration that configures an NGINX feature needed by an Application
    developer.
-2. Cluster operator thinks about what values Application developer might want to customize in that configuration.
-3. Cluster operator creates a CRD that defines fields and validation for those values and creates the CRD in the
+2. The Cluster operator thinks about what values the Application developer might want to customize in that configuration.
+3. The Cluster operator creates a CRD that defines fields and validation for those values and creates the CRD in the
    cluster.
-4. Cluster operator creates a go template that generates the NGINX configuration based on the fields of the CRD.
-5. Cluster operator allows Application developer to use the feature by creating a SnippetsTemplate, which binds
+4. The Cluster operator creates a go template that generates the NGINX configuration based on the fields of the CRD.
+5. The Cluster operator allows the Application developer to use the feature by creating a SnippetsTemplate, which binds
    the CRD with the template(s).
-6. Application developer creates a Custom resource of the CRD to enable that NGINX feature with the desired values.
+6. The Application developer creates a Custom resource of the CRD to enable that NGINX feature with the desired values.
 
-Essentially, Cluster operator creates an extension for a particular NGINX feature. Application developers can
+Essentially, the Cluster operator creates an extension for a particular NGINX feature. The Application developer can
 use that extension with the ability to further customize it.
 
 ### Examples
 
 #### Rate Limiting
 
-First, Cluster operator comes up with NGINX configuration for the rate-limiting feature asked by Application developers:
+First, a Cluster operator comes up with NGINX configuration for the rate-limiting feature asked by an Application developer:
 
 ```text
 ```text
@@ -668,10 +668,10 @@ server {
   }
 ```
 
-Next, Cluster operator decides that Application developers might want to customize the rate-limiting `rate` and `burst`
+Next, the Cluster operator decides that the Application developer might want to customize the rate-limiting `rate` and `burst`
 values.
 
-Next, Cluster operator defines the following CRD for those values. Note that the values are validated to prevent invalid
+Next, the Cluster operator defines the following CRD for those values. Note that the values are validated to prevent invalid
 or
 malicious values from being propagated into the NGINX config:
 
@@ -723,9 +723,9 @@ type RateLimitingPolicySpec struct {
 }
 ```
 
-Next, Cluster operator generates a CRD manifest from that go code and creates the CRD in the cluster.
+Next, the Cluster operator generates a CRD manifest from that go code and creates the CRD in the cluster.
 
-Next, Cluster operator creates templates that generate the NGINX configuration based on the fields of the CRD:
+Next, the Cluster operator creates templates that generate the NGINX configuration based on the fields of the CRD:
 
 - For http context:
 
@@ -743,7 +743,7 @@ Next, Cluster operator creates templates that generate the NGINX configuration b
   limit_req zone={{ $zoneName }}{{ if $burst }}burst={{ $burst }}{{ end }};
   ```
 
-Next, Cluster operator allows Application developer to use the feature by creating a SnippetsTemplate, which binds
+Next, the Cluster operator allows the Application developer to use the feature by creating a SnippetsTemplate, which binds
 the CRD with the templates:
 
 ```yaml
@@ -769,9 +769,9 @@ spec:
       limit_req zone={{ $zoneName }}{{ if $burst }}burst={{ $burst }}{{ end }};
 ```
 
-As a result, Cluster operator created an extension, and now it is ready to be used by Application developers.
+As a result, the Cluster operator created an extension, and now it is ready to be used by the Application developer.
 
-Next, Application developer creates a Custom resource of the CRD to enable that NGINX feature with the desired values:
+Next, the Application developer creates a Custom resource of the CRD to enable that NGINX feature with the desired values:
 
 ```yaml
 apiVersion: example.org/v1alpha1
@@ -878,14 +878,14 @@ TO-DO(pleshakov) - Add support for filters to the API section in the GEP after d
 
 ### Personas
 
-- Cluster operator creates a SnippetsTemplate.
-- Application developer uses it by creating a Custom resource of the values CRD of the SnippetsTemplate.
+- The Cluster operator creates a SnippetsTemplate.
+- The Application developer uses it by creating a Custom resource of the values CRD of the SnippetsTemplate.
 
 ### Validation
 
 #### NGINX Values
 
-When Cluster operator defines a values CRD, they should define validation rules to prevent invalid or malicious values
+When a Cluster operator defines a values CRD, they should define validation rules to prevent invalid or malicious values
 propagating into NGINX config. The Kubernetes API server will perform that validation when an Application developer
 creates
 a Custom resource of the CRD.
@@ -898,15 +898,15 @@ and also not crash when executing them.
 A template can generate invalid NGINX configuration. When this happens, NGINX will continue to use the last valid
 configuration.
 However, any subsequent configuration updates (for example, caused by changes to an HTTPRoute) will not be possible
-until the invalid configuration is removed. Thus, Cluster operator must carefully design the template.
+until the invalid configuration is removed. Thus, a Cluster operator must carefully design the template.
 
 ### Security Considerations
 
-As mentioned in the previous section, Cluster operator should define validation rules to prevent invalid/malicious
+As mentioned in the previous section, the Cluster operator should define validation rules to prevent invalid/malicious
 values from
 Custom resources created by Application developers from propagating into the NGINX config.
 
-However, it is possible that a template generates malicious values. Because of that, only Cluster operator (a privileged
+However, it is possible that a template generates malicious values. Because of that, only the Cluster operator (a privileged
 user) should be able to create SnippetsTemplates.
 
 ### Upgrades
@@ -917,7 +917,7 @@ the surrounding configuration, so that it doesn't break that configuration and v
 
 As we develop NGF, that surrounding configuration will expand (because we will implement more NGINX features) and also
 might change (for example, due to improvements). As a result, there is a risk that SnippetsTemplate break after
-Cluster operator upgrades NGF to the next version. Such risk shall be clearly documented in the SnippetsTemplate
+a Cluster operator upgrades NGF to the next version. Such risk shall be clearly documented in the SnippetsTemplate
 documentation.
 
 ### Prior Arts
@@ -933,8 +933,8 @@ documentation.
 
 ### Summary
 
-SnippetsTemplate allows Application developers to safely and easily use NGINX configuration created by Cluster operator.
-Cluster operator retains full control of that NGINX configuration, but at the same time allows Application
+SnippetsTemplate allows Application developers to safely and easily use NGINX configuration created by a Cluster operator.
+The Cluster operator retains full control of that NGINX configuration, but at the same time allows Application
 developers to provide custom
 values. Kubernetes API will validate such values, which leads to better security and reliability compared to
 SnippetsPolicy.
