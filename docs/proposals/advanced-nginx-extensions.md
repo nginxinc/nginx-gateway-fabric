@@ -43,7 +43,8 @@ Snippets allow inserting NGINX configuration into various NGINX contexts.
 
 #### API
 
-> Field validation rules are intentionally left out of this proposal.
+> Specific field validation rules like CEL rules are intentionally left out of this proposal. However, important
+> values restrictions are documented in the comments of the types.
 
 ```go
 // SnippetsPolicy is a Direct Attached Policy. It allows inserting NGINX configuration into the generated NGINX
@@ -363,12 +364,19 @@ Snippets are not intended for Application developers, because:
 As mentioned in the [Policy or Filter](#policy-or-filter), when snippets are used via SnippetsFilter, Application
 developers can still control whether they want to enable or disable snippets by referencing them in an HTTPRoute.
 
-### NGINX Config Validation
+### Validation
+
+#### SnippetsPolicy
+
+NGF will validate the fields of SnippetsPolicy resources based on the restrictions mentioned in the [API section](#api).
+
+NGF will not validate the values of snippets. See the next section.
+
+#### NGINX Values
 
 An invalid snippet can break NGINX config. When this happens, NGINX will continue to use the last valid configuration.
 However, any subsequent configuration updates (for example, caused by changes to an HTTPRoute) will not be possible
-until the
-invalid snippet is removed.
+until the invalid snippet is removed.
 
 Before injecting snippets in NGINX config, it is possible to validate snippets
 using [crossplane](https://github.com/nginxinc/nginx-go-crossplane),
@@ -447,7 +455,8 @@ for the Cluster operator compared to SnippetsPolicy.
 
 #### SnippetsTemplate
 
-> Field validation rules are intentionally left out of this proposal.
+> Specific field validation rules like CEL rules are intentionally left out of this proposal. However, important
+> values restrictions are documented in the comments of the types.
 
 ```go
 // SnippetsTemplate configures an NGINX Gateway Fabric extension based on the templated NGINX configuration snippets.
@@ -836,18 +845,20 @@ TO-DO(pleshakov) - Add support for filters to the API section in the GEP after d
 
 When a Cluster operator defines a values CRD, they should define validation rules to prevent invalid or malicious values
 propagating into NGINX config. The Kubernetes API server will perform that validation when an Application developer
-creates
-a Custom resource of the CRD.
+creates a Custom resource of the CRD.
 
-#### Template
+#### SnippetsTemplate
 
-A template can be invalid (not follow go template or panic when executed). NGF must reject such templates
-and also not crash when executing them.
+A template defined in SnippetsTemplate can be invalid (not follow go template or panic when executed). NGF must reject
+such templates and also not crash when executing them.
 
 A template can generate invalid NGINX configuration. When this happens, NGINX will continue to use the last valid
 configuration.
 However, any subsequent configuration updates (for example, caused by changes to an HTTPRoute) will not be possible
 until the invalid configuration is removed. Thus, a Cluster operator must carefully design the template.
+
+NGF will also validate the rest of SnippetsTemplate fields based on the restrictions mentioned in
+the [API section](#api-1).
 
 ### Security Considerations
 
