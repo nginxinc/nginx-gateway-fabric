@@ -12,55 +12,6 @@ the subset will grow. However, it will take time. Additionally, because the numb
 and parameters is huge, not all of them will be supported that way. As a result, users are not able to implement certain
 NGINX use cases. To allow them to implement those use cases, we need to bring a new extension mechanism to NGF.
 
-## Table of Contents
-
-<!-- TOC -->
-
-- [Enhancement Proposal-2035: Advanced NGINX Extensions](#enhancement-proposal-2035-advanced-nginx-extensions)
-  - [Summary](#summary)
-  - [Table of Contents](#table-of-contents)
-  - [Goals](#goals)
-  - [Non-Goals](#non-goals)
-  - [Advanced Extensions](#advanced-extensions)
-    - [SnippetsPolicy](#snippetspolicy)
-      - [API](#api)
-      - [Supported NGINX Contexts](#supported-nginx-contexts)
-      - [Examples](#examples)
-        - [Rate-limiting](#rate-limiting)
-        - [Proxy Buffering](#proxy-buffering)
-        - [Access Control](#access-control)
-        - [Third-Party Module](#third-party-module)
-    - [Inheritance and Conflicts](#inheritance-and-conflicts)
-    - [Policy or Filter](#policy-or-filter)
-    - [Personas](#personas)
-    - [NGINX Config Validation](#nginx-config-validation)
-    - [Security Considerations](#security-considerations)
-    - [Upgrades](#upgrades)
-    - [Prior Arts](#prior-arts)
-    - [Alternatives](#alternatives)
-    - [Summary](#summary-1)
-  - [SnippetsTemplate](#snippetstemplate)
-    - [API](#api-1)
-      - [SnippetsTemplate](#snippetstemplate-1)
-      - [Templates](#templates)
-    - [How to Use SnippetsTemplate](#how-to-use-snippetstemplate)
-    - [Examples](#examples-1)
-      - [Rate Limiting](#rate-limiting-1)
-    - [Inheritance and Conflicts](#inheritance-and-conflicts-1)
-    - [Policy or Filter](#policy-or-filter-1)
-    - [Personas](#personas-1)
-    - [Validation](#validation)
-      - [NGINX Values](#nginx-values)
-      - [Template](#template)
-    - [Security Considerations](#security-considerations-1)
-    - [Upgrades](#upgrades-1)
-    - [Prior Arts](#prior-arts-1)
-    - [Alternatives](#alternatives-1)
-    - [Summary](#summary-2)
-  - [NGINX Features Supported by Proposed Extensions](#nginx-features-supported-by-proposed-extensions)
-
-<!-- TOC -->
-
 ## Goals
 
 - Allow users to insert NGINX configuration not supported via Gateway API resources or NGINX extensions.
