@@ -10,7 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,6 +22,10 @@ var _ = Describe("Reconfiguration Performance Testing", Label("reconfiguration")
 	var ()
 
 	BeforeEach(func() {
+		// possibly instead of teardown, can scale to 0 replicas.
+		teardown(releaseName)
+
+		setup(getDefaultSetupCfg())
 	})
 
 	AfterEach(func() {
@@ -29,10 +34,14 @@ var _ = Describe("Reconfiguration Performance Testing", Label("reconfiguration")
 
 	It("test 1", func() {
 		Expect(createResourcesGWLast(30)).To(Succeed())
+		Expect(checkResourceCreation(30)).To(Succeed())
+		cleanupResources(30)
 	})
 
 	It("test 2", func() {
 		Expect(createResourcesRoutesLast(30)).To(Succeed())
+		Expect(checkResourceCreation(30)).To(Succeed())
+		cleanupResources(30)
 	})
 })
 
@@ -41,7 +50,7 @@ func createResourcesGWLast(resourceCount int) error {
 	defer cancel()
 
 	for i := 1; i <= resourceCount; i++ {
-		ns := v1.Namespace{
+		ns := core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "namespace" + strconv.Itoa(i),
 			},
@@ -49,7 +58,7 @@ func createResourcesGWLast(resourceCount int) error {
 		Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
 	}
 
-	ns := v1.Namespace{
+	ns := core.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "reconfig",
 		},
@@ -78,7 +87,7 @@ func createResourcesRoutesLast(resourceCount int) error {
 	defer cancel()
 
 	for i := 1; i <= resourceCount; i++ {
-		ns := v1.Namespace{
+		ns := core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "namespace" + strconv.Itoa(i),
 			},
@@ -90,7 +99,7 @@ func createResourcesRoutesLast(resourceCount int) error {
 
 	time.Sleep(60 * time.Second)
 
-	ns := v1.Namespace{
+	ns := core.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "reconfig",
 		},
@@ -140,6 +149,46 @@ func createUniqueResources(resourceCount int, fileName string) error {
 	return nil
 }
 
-// function to confirm resources were created
+func checkResourceCreation(resourceCount int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
 
-// function to delete resources
+	var namespaces core.NamespaceList
+	if err := k8sClient.List(ctx, &namespaces); err != nil {
+		return fmt.Errorf("error getting namespaces: %w", err)
+	}
+	Expect(len(namespaces.Items)).To(BeNumerically(">=", resourceCount))
+
+	var routes v1.HTTPRouteList
+	if err := k8sClient.List(ctx, &routes); err != nil {
+		return fmt.Errorf("error getting HTTPRoutes: %w", err)
+	}
+	Expect(len(routes.Items)).To(BeNumerically(">=", resourceCount*3))
+
+	var pods core.PodList
+	if err := k8sClient.List(ctx, &pods); err != nil {
+		return fmt.Errorf("error getting Pods: %w", err)
+	}
+	Expect(len(pods.Items)).To(BeNumerically(">=", resourceCount*2))
+
+	return nil
+}
+
+func cleanupResources(resourceCount int) {
+	for i := 1; i <= resourceCount; i++ {
+		nsName := "namespace" + strconv.Itoa(i)
+		Expect(resourceManager.DeleteNamespace(nsName)).To(Succeed())
+	}
+
+	ns := core.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "reconfig",
+		},
+	}
+
+	Expect(resourceManager.DeleteFromFiles([]string{
+		"reconfig/certificate-ns-and-cafe-secret.yaml",
+		"reconfig/reference-grant.yaml",
+		"reconfig/gateway.yaml",
+	}, ns.Name)).To(Succeed())
+}
