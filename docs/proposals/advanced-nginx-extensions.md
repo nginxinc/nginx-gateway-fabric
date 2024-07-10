@@ -853,7 +853,8 @@ values from
 Custom resources created by Application developers from propagating into the NGINX config.
 
 However, it is possible that a template generates malicious values. Because of that, only the Cluster operator (a privileged
-user) should be able to create SnippetsTemplates.
+user) should be able to create SnippetsTemplates. As a further precaution, we will disable SnippetsTemplate by default
+similarly to [SnippetsPolicy](#security-considerations).
 
 ### Upgrades
 
