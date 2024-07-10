@@ -541,10 +541,6 @@ const (
 	// SnippetsTemplateConditionReasonCRDNotFound is used with the Accepted condition type when
 	// the referenced CRD is not found.
 	SnippetsTemplateConditionReasonCRDNotFound SnippetsTemplateConditionReason = "CRDNotFound"
-
-	// SnippetsTemplateConditionReasonTargetNotFound is used with the Accepted condition type when
-	// the target is not found.
-	SnippetsTemplateConditionReasonTargetNotFound SnippetsTemplateConditionReason = "TargetNotFound"
 )
 ```
 
