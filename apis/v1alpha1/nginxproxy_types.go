@@ -44,7 +44,7 @@ const (
 
 // NginxProxySpec defines the desired state of the NginxProxy.
 type NginxProxySpec struct {
-	// IPFamily specifies the IP family to be used by the server.
+	// IPFamily specifies the IP family to be used by the NGINX.
 	// Default is "dual", meaning the server will use both IPv4 and IPv6.
 	//
 	// +optional

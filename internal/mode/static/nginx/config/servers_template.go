@@ -29,12 +29,12 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-        {{- if $.IPFamily.IPv4 }}
+          {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }} ssl;
-        {{- end }}
-        {{- if $.IPFamily.IPv6 }}
+          {{- end }}
+          {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }} ssl;
-        {{- end }}
+          {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
 
@@ -42,12 +42,12 @@ server {
         return 421;
     }
         {{- else }}
-        {{- if $.IPFamily.IPv4 }}
+          {{- if $.IPFamily.IPv4 }}
     listen {{ $s.Port }};
-        {{- end }}
-        {{- if $.IPFamily.IPv6 }}
+          {{- end }}
+          {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Port }};
-        {{- end }}
+          {{- end }}
         {{- end }}
 
     server_name {{ $s.ServerName }};

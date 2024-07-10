@@ -2581,3 +2581,36 @@ func TestAdditionFilename(t *testing.T) {
 	name := createAdditionFileName(dataplane.Addition{Identifier: "my-addition"})
 	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
 }
+
+func TestGetIPFamily(t *testing.T) {
+	test := []struct {
+		msg            string
+		baseHTTPConfig dataplane.BaseHTTPConfig
+		expected       http.IPFamily
+	}{
+		{
+			msg:            "ipv4",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv4},
+			expected:       http.IPFamily{IPv4: true, IPv6: false},
+		},
+		{
+			msg:            "ipv6",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv6},
+			expected:       http.IPFamily{IPv4: false, IPv6: true},
+		},
+		{
+			msg:            "dual",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.Dual},
+			expected:       http.IPFamily{IPv4: true, IPv6: true},
+		},
+	}
+
+	for _, tc := range test {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := getIPFamily(tc.baseHTTPConfig)
+			g.Expect(result).To(Equal(tc.expected))
+		})
+	}
+}

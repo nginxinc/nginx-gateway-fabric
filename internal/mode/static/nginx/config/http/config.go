@@ -12,7 +12,7 @@ type Server struct {
 	GRPC          bool
 }
 
-// IPFamily holds the IP family configuration for all servers.
+// IPFamily holds the IP family configuration to be used by NGINX.
 type IPFamily struct {
 	IPv4 bool
 	IPv6 bool
@@ -111,4 +111,10 @@ type MapParameter struct {
 type ProxySSLVerify struct {
 	TrustedCertificate string
 	Name               string
+}
+
+// ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
+type ServerConfig struct {
+	Servers  []Server
+	IPFamily IPFamily
 }

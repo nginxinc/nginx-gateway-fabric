@@ -308,7 +308,7 @@ IPFamilyType
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamily specifies the IP family to be used by the server.
+<p>IPFamily specifies the IP family to be used by the NGINX.
 Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
 </td>
 </tr>
@@ -930,7 +930,7 @@ IPFamilyType
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamily specifies the IP family to be used by the server.
+<p>IPFamily specifies the IP family to be used by the NGINX.
 Default is &ldquo;dual&rdquo;, meaning the server will use both IPv4 and IPv6.</p>
 </td>
 </tr>

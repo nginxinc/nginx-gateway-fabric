@@ -57,16 +57,11 @@ var grpcBaseHeaders = []http.Header{
 	},
 }
 
-type serverConfig struct {
-	Servers  []http.Server
-	IPFamily http.IPFamily
-}
-
 func executeServers(conf dataplane.Configuration) []executeResult {
 	ipFamily := getIPFamily(conf.BaseHTTPConfig)
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
 
-	serverConfig := serverConfig{
+	serverConfig := http.ServerConfig{
 		Servers:  servers,
 		IPFamily: ipFamily,
 	}
