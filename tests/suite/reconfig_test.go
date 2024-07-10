@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
+	"path/filepath"
 	"strconv"
+	"text/template"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,10 +19,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Reconfiguration Performance Testing", Label("reconfiguration"), func() {
+var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration"), func() {
 	var ()
+
+	BeforeAll(func() {
+		resultsDir, err := framework.CreateResultsDir("reconfig", version)
+		Expect(err).ToNot(HaveOccurred())
+
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
+		outFile, err := framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
+
+	})
 
 	BeforeEach(func() {
 		// possibly instead of teardown, can scale to 0 replicas.
@@ -37,12 +53,12 @@ var _ = Describe("Reconfiguration Performance Testing", Label("reconfiguration")
 		Expect(checkResourceCreation(30)).To(Succeed())
 		cleanupResources(30)
 	})
-
-	It("test 2", func() {
-		Expect(createResourcesRoutesLast(30)).To(Succeed())
-		Expect(checkResourceCreation(30)).To(Succeed())
-		cleanupResources(30)
-	})
+	//
+	//It("test 2", func() {
+	//	Expect(createResourcesRoutesLast(30)).To(Succeed())
+	//	Expect(checkResourceCreation(30)).To(Succeed())
+	//	cleanupResources(30)
+	//})
 })
 
 func createResourcesGWLast(resourceCount int) error {
@@ -191,4 +207,54 @@ func cleanupResources(resourceCount int) {
 		"reconfig/reference-grant.yaml",
 		"reconfig/gateway.yaml",
 	}, ns.Name)).To(Succeed())
+
+}
+
+type reconfigTestResults struct {
+	Name                 string
+	EventsBuckets        []bucket
+	ReloadBuckets        []bucket
+	NumResources         int
+	TimeToReadyTotal     int
+	TimeToReadyAvgSingle int
+	NGINXReloads         int
+	NGINXReloadAvgTime   int
+	EventsCount          int
+	EventsAvgTime        int
+}
+
+const reconfigResultTemplate = `
+## Test {{ .Name }}
+
+- NumResources: {{ .NumResources }}
+
+### Reloads and Time to Ready
+
+- TimeToReadyTotal: {{ .TimeToReadyTotal }}
+- TimeToReadyAvgSingle: {{ .TimeToReadyAvgSingle }}
+- NGINX Reloads: {{ .NGINXReloads }}
+- NGINX Reload Average Time: {{ .NGINXReloadAvgTime }}
+- Reload distribution:
+{{- range .ReloadBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
+
+### Event Batch Processing
+
+- Event Batch Total: {{ .EventsCount }}
+- Event Batch Processing Average Time: {{ .EventsAvgTime }}ms
+- Event Batch Processing distribution:
+{{- range .EventsBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
+
+`
+
+func writeReconfigResults(dest io.Writer, results reconfigTestResults) error {
+	tmpl, err := template.New("results").Parse(reconfigResultTemplate)
+	if err != nil {
+		return err
+	}
+
+	return tmpl.Execute(dest, results)
 }
