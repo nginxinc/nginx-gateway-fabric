@@ -503,12 +503,65 @@ operator upgrades NGF to the next version. Such risk shall be clearly documented
 
 ### Alternatives
 
-- See the next section - [SnippetsTemplate](#snippetstemplate).
+#### Splitting Snippets from SnippetsPolicy
+
+In the example below, SnippetsPolicy reference the snippet, which is defined in a separate resource.
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxSnippet
+metadata:
+  name: buffering-snippet
+spec:
+  snippets:
+  - context: http.server.location
+    value: proxy_buffering off;
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsPolicy
+metadata:
+  name: buffering-snippet-policy
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: cafe-route
+  snippetRef:
+    name: buffering-snippet
+```
+
+This way the Cluster operator is still responsible for creating the snippet, and the Application developer can
+apply the snippet to the required target. This way, the Application developer cannot create an unsafe snippet, but
+has the full control over the target.
+
+However, the Application developer can still target a Gateway resource, even though it is managed by the Cluster operator:
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsPolicy
+metadata:
+  name: buffering-snippet-policy
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: my-gateway
+  snippetRef:
+    name: buffering-snippet
+```
+
+As a result, that SnippetPolicy will affect all HTTPRoutes, not only HTTPRoutes of their application. At the same time,
+inherited policies like ClientSettingsPolicy has the same issue.
+
+We're not pursuing this approach for two reasons:
+- Splitting snippets is already possible with SnippetsFilter.
+- Splitting snippets complicates SnippetsPolicy, because now the Cluster operator needs to manage two resources.
+
 
 ### Summary
 
 - Snippets allow the Cluster operator to quickly configure NGINX features not available via NGF.
-- SnippetsPolicy should be used only by the Cluster operator, because of reliability and security implications.
+- SnippetsPolicy and should be used only by the Cluster operator, because of reliability and security implications.
 - SnippetsFilter, it is possible to split the responsibility of creating snippets (the Cluster operator) and enabling
   snippets (the Application Developer).
 
