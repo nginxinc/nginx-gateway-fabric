@@ -203,7 +203,7 @@ var _ = Describe("ServiceResolver", func() {
 				},
 			}
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, true, true)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(endpoints).To(ConsistOf(expectedEndpoints))
 		})
@@ -214,7 +214,7 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, true, true)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
@@ -222,19 +222,19 @@ var _ = Describe("ServiceResolver", func() {
 			// delete remaining endpoint slices
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceNoMatchingPortName)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, true, true)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("panics if the service NamespacedName is empty", func() {
 			resolve := func() {
-				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svcPort)
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svcPort, true, true)
 			}
 			Expect(resolve).Should(Panic())
 		})
 		It("panics if the ServicePort is empty", func() {
 			resolve := func() {
-				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{})
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{}, true, true)
 			}
 			Expect(resolve).Should(Panic())
 		})

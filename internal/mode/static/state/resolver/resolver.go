@@ -19,7 +19,13 @@ import (
 // ServiceResolver resolves a Service's NamespacedName and ServicePort to a list of Endpoints.
 // Returns an error if the Service or Service Port cannot be resolved.
 type ServiceResolver interface {
-	Resolve(ctx context.Context, svcNsName types.NamespacedName, svcPort v1.ServicePort) ([]Endpoint, error)
+	Resolve(
+		ctx context.Context,
+		svcNsName types.NamespacedName,
+		svcPort v1.ServicePort,
+		ipv4Enabled bool,
+		ipv6Enabled bool,
+	) ([]Endpoint, error)
 }
 
 // Endpoint is the internal representation of a Kubernetes endpoint.
@@ -48,6 +54,7 @@ func (e *ServiceResolverImpl) Resolve(
 	ctx context.Context,
 	svcNsName types.NamespacedName,
 	svcPort v1.ServicePort,
+	ipv4Enabled, ipv6Enabled bool,
 ) ([]Endpoint, error) {
 	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
 		panic(fmt.Errorf("expected the following fields to be non-empty: name: %s, ns: %s, port: %d",
@@ -68,7 +75,14 @@ func (e *ServiceResolverImpl) Resolve(
 		return nil, fmt.Errorf("no endpoints found for Service %s", svcNsName)
 	}
 
-	return resolveEndpoints(svcNsName, svcPort, endpointSliceList, initEndpointSetWithCalculatedSize)
+	return resolveEndpoints(
+		svcNsName,
+		svcPort,
+		endpointSliceList,
+		initEndpointSetWithCalculatedSize,
+		ipv4Enabled,
+		ipv6Enabled,
+	)
 }
 
 type initEndpointSetFunc func([]discoveryV1.EndpointSlice) map[Endpoint]struct{}
@@ -99,8 +113,9 @@ func resolveEndpoints(
 	svcPort v1.ServicePort,
 	endpointSliceList discoveryV1.EndpointSliceList,
 	initEndpointsSet initEndpointSetFunc,
+	ipv4Enabled, ipv6Enabled bool,
 ) ([]Endpoint, error) {
-	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort)
+	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort, ipv4Enabled, ipv6Enabled)
 
 	if len(filteredSlices) == 0 {
 		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %d", svcNsName, svcPort.Port)
@@ -151,8 +166,20 @@ func getDefaultPort(svcPort v1.ServicePort) int32 {
 	return svcPort.Port
 }
 
-func ignoreEndpointSlice(endpointSlice discoveryV1.EndpointSlice, port v1.ServicePort) bool {
+func ignoreEndpointSlice(
+	endpointSlice discoveryV1.EndpointSlice,
+	port v1.ServicePort,
+	ipv4Enabled, ipv6Enabled bool,
+) bool {
 	if endpointSlice.AddressType == discoveryV1.AddressTypeFQDN {
+		return true
+	}
+
+	if endpointSlice.AddressType == discoveryV1.AddressTypeIPv4 && !ipv4Enabled {
+		return true
+	}
+
+	if endpointSlice.AddressType == discoveryV1.AddressTypeIPv6 && !ipv6Enabled {
 		return true
 	}
 
@@ -168,11 +195,13 @@ func endpointReady(endpoint discoveryV1.Endpoint) bool {
 func filterEndpointSliceList(
 	endpointSliceList discoveryV1.EndpointSliceList,
 	port v1.ServicePort,
+	ipv4Enabled bool,
+	ipv6Enabled bool,
 ) []discoveryV1.EndpointSlice {
 	filtered := make([]discoveryV1.EndpointSlice, 0, len(endpointSliceList.Items))
 
 	for _, endpointSlice := range endpointSliceList.Items {
-		if !ignoreEndpointSlice(endpointSlice, port) {
+		if !ignoreEndpointSlice(endpointSlice, port, ipv4Enabled, ipv6Enabled) {
 			filtered = append(filtered, endpointSlice)
 		}
 	}

@@ -748,13 +748,13 @@ Examples: 120s, 50ms.</p>
 </tr>
 </thead>
 <tbody><tr><td><p>&#34;dual&#34;</p></td>
-<td><p>Dual specifies that the server will use both IPv4 and IPv6.</p>
+<td><p>Dual specifies that NGINX will use both IPv4 and IPv6.</p>
 </td>
 </tr><tr><td><p>&#34;ipv4&#34;</p></td>
-<td><p>IPv4 specifies that the server will use only IPv4.</p>
+<td><p>IPv4 specifies that NGINX will use only IPv4.</p>
 </td>
 </tr><tr><td><p>&#34;ipv6&#34;</p></td>
-<td><p>IPv6 specifies that the server will use only IPv6.</p>
+<td><p>IPv6 specifies that NGINX will use only IPv6.</p>
 </td>
 </tr></tbody>
 </table>

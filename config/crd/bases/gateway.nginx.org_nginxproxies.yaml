@@ -53,6 +53,7 @@ spec:
                   Default is false, meaning http2 will be enabled for all servers.
                 type: boolean
               ipFamily:
+                default: dual
                 description: |-
                   IPFamily specifies the IP family to be used by the NGINX.
                   Default is "dual", meaning the server will use both IPv4 and IPv6.

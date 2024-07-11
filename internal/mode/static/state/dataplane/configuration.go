@@ -41,13 +41,13 @@ func BuildConfiguration(
 		return Configuration{Version: configVersion}
 	}
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
+	baseHTTPConfig := buildBaseHTTPConfig(g)
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig)
 	httpServers, sslServers := buildServers(g, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
-	baseHTTPConfig := buildBaseHTTPConfig(g)
 
 	config := Configuration{
 		HTTPServers:    httpServers,
@@ -472,10 +472,14 @@ func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
 	resolver resolver.ServiceResolver,
+	baseHTTPConfig BaseHTTPConfig,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
 	// We use a map to deduplicate them.
 	uniqueUpstreams := make(map[string]Upstream)
+
+	// We need to build endpoints based on the IPFamily of NGINX.
+	ipv4, ipv6 := getIPFamily(baseHTTPConfig)
 
 	for _, l := range listeners {
 		if !l.Valid {
@@ -503,7 +507,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, ipv4, ipv6)
 						if err != nil {
 							errMsg = err.Error()
 						}
@@ -529,6 +533,13 @@ func buildUpstreams(
 		upstreams = append(upstreams, up)
 	}
 	return upstreams
+}
+
+func getIPFamily(config BaseHTTPConfig) (bool, bool) {
+	ipv4 := config.IPFamily == IPv4 || config.IPFamily == Dual
+	ipv6 := config.IPFamily == IPv6 || config.IPFamily == Dual
+
+	return ipv4, ipv6
 }
 
 func getListenerHostname(h *v1.Hostname) string {
@@ -669,11 +680,13 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		baseConfig.HTTP2 = false
 	}
 
-	switch ipFamily := g.NginxProxy.Source.Spec.IPFamily; *ipFamily {
-	case ngfAPI.IPv4:
-		baseConfig.IPFamily = IPv4
-	case ngfAPI.IPv6:
-		baseConfig.IPFamily = IPv6
+	if g.NginxProxy.Source.Spec.IPFamily != nil {
+		switch ipFamily := g.NginxProxy.Source.Spec.IPFamily; *ipFamily {
+		case ngfAPI.IPv4:
+			baseConfig.IPFamily = IPv4
+		case ngfAPI.IPv6:
+			baseConfig.IPFamily = IPv6
+		}
 	}
 
 	return baseConfig

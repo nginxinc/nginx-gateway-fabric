@@ -11,12 +11,14 @@ import (
 )
 
 type FakeServiceResolver struct {
-	ResolveStub        func(context.Context, types.NamespacedName, v1.ServicePort) ([]resolver.Endpoint, error)
+	ResolveStub        func(context.Context, types.NamespacedName, v1.ServicePort, bool, bool) ([]resolver.Endpoint, error)
 	resolveMutex       sync.RWMutex
 	resolveArgsForCall []struct {
 		arg1 context.Context
 		arg2 types.NamespacedName
 		arg3 v1.ServicePort
+		arg4 bool
+		arg5 bool
 	}
 	resolveReturns struct {
 		result1 []resolver.Endpoint
@@ -30,20 +32,22 @@ type FakeServiceResolver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeServiceResolver) Resolve(arg1 context.Context, arg2 types.NamespacedName, arg3 v1.ServicePort) ([]resolver.Endpoint, error) {
+func (fake *FakeServiceResolver) Resolve(arg1 context.Context, arg2 types.NamespacedName, arg3 v1.ServicePort, arg4 bool, arg5 bool) ([]resolver.Endpoint, error) {
 	fake.resolveMutex.Lock()
 	ret, specificReturn := fake.resolveReturnsOnCall[len(fake.resolveArgsForCall)]
 	fake.resolveArgsForCall = append(fake.resolveArgsForCall, struct {
 		arg1 context.Context
 		arg2 types.NamespacedName
 		arg3 v1.ServicePort
-	}{arg1, arg2, arg3})
+		arg4 bool
+		arg5 bool
+	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.ResolveStub
 	fakeReturns := fake.resolveReturns
-	fake.recordInvocation("Resolve", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Resolve", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.resolveMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -57,17 +61,17 @@ func (fake *FakeServiceResolver) ResolveCallCount() int {
 	return len(fake.resolveArgsForCall)
 }
 
-func (fake *FakeServiceResolver) ResolveCalls(stub func(context.Context, types.NamespacedName, v1.ServicePort) ([]resolver.Endpoint, error)) {
+func (fake *FakeServiceResolver) ResolveCalls(stub func(context.Context, types.NamespacedName, v1.ServicePort, bool, bool) ([]resolver.Endpoint, error)) {
 	fake.resolveMutex.Lock()
 	defer fake.resolveMutex.Unlock()
 	fake.ResolveStub = stub
 }
 
-func (fake *FakeServiceResolver) ResolveArgsForCall(i int) (context.Context, types.NamespacedName, v1.ServicePort) {
+func (fake *FakeServiceResolver) ResolveArgsForCall(i int) (context.Context, types.NamespacedName, v1.ServicePort, bool, bool) {
 	fake.resolveMutex.RLock()
 	defer fake.resolveMutex.RUnlock()
 	argsForCall := fake.resolveArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeServiceResolver) ResolveReturns(result1 []resolver.Endpoint, result2 error) {

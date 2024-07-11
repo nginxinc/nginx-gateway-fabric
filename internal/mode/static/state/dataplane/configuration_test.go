@@ -2707,6 +2707,10 @@ func TestBuildUpstreams(t *testing.T) {
 			Address: "10.0.0.2",
 			Port:    8080,
 		},
+		{
+			Address: "fd00:10:244::6",
+			Port:    8080,
+		},
 	}
 
 	barEndpoints := []resolver.Endpoint{
@@ -2733,6 +2737,10 @@ func TestBuildUpstreams(t *testing.T) {
 			Address: "12.0.0.0",
 			Port:    80,
 		},
+		{
+			Address: "fd00:10:244::9",
+			Port:    80,
+		},
 	}
 
 	baz2Endpoints := []resolver.Endpoint{
@@ -2745,6 +2753,21 @@ func TestBuildUpstreams(t *testing.T) {
 	abcEndpoints := []resolver.Endpoint{
 		{
 			Address: "14.0.0.0",
+			Port:    80,
+		},
+	}
+
+	ipv6Endpoints := []resolver.Endpoint{
+		{
+			Address: "fd00:10:244::7",
+			Port:    80,
+		},
+		{
+			Address: "fd00:10:244::8",
+			Port:    80,
+		},
+		{
+			Address: "fd00:10:244::9",
 			Port:    80,
 		},
 	}
@@ -2774,6 +2797,8 @@ func TestBuildUpstreams(t *testing.T) {
 	hr4Refs0 := createBackendRefs("empty-endpoints", "")
 
 	hr4Refs1 := createBackendRefs("baz2")
+
+	hr5Refs0 := createBackendRefs("ipv6-endpoints")
 
 	nonExistingRefs := createBackendRefs("non-existing")
 
@@ -2805,6 +2830,15 @@ func TestBuildUpstreams(t *testing.T) {
 			Valid: true,
 			Spec: graph.L7RouteSpec{
 				Rules: refsToValidRules(hr4Refs0, hr4Refs1),
+			},
+		},
+	}
+
+	routes3 := map[graph.RouteKey]*graph.L7Route{
+		{NamespacedName: types.NamespacedName{Name: "hr4", Namespace: "test"}}: {
+			Valid: true,
+			Spec: graph.L7RouteSpec{
+				Rules: refsToValidRules(hr5Refs0, hr2Refs1),
 			},
 		},
 	}
@@ -2848,6 +2882,11 @@ func TestBuildUpstreams(t *testing.T) {
 			Valid:  true,
 			Routes: invalidRoutes, // shouldn't be included since routes are invalid
 		},
+		{
+			Name:   "listener-4",
+			Valid:  true,
+			Routes: routes3,
+		},
 	}
 
 	emptyEndpointsErrMsg := "empty endpoints error"
@@ -2880,6 +2919,10 @@ func TestBuildUpstreams(t *testing.T) {
 			Endpoints: nil,
 			ErrorMsg:  nilEndpointsErrMsg,
 		},
+		{
+			Name:      "test_ipv6-endpoints_80",
+			Endpoints: ipv6Endpoints,
+		},
 	}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
@@ -2887,6 +2930,8 @@ func TestBuildUpstreams(t *testing.T) {
 		_ context.Context,
 		svcNsName types.NamespacedName,
 		_ apiv1.ServicePort,
+		_ bool,
+		_ bool,
 	) ([]resolver.Endpoint, error) {
 		switch svcNsName.Name {
 		case "bar":
@@ -2903,6 +2948,8 @@ func TestBuildUpstreams(t *testing.T) {
 			return nil, errors.New(nilEndpointsErrMsg)
 		case "abc":
 			return abcEndpoints, nil
+		case "ipv6-endpoints":
+			return ipv6Endpoints, nil
 		default:
 			return nil, fmt.Errorf("unexpected service %s", svcNsName.Name)
 		}
@@ -2910,7 +2957,9 @@ func TestBuildUpstreams(t *testing.T) {
 
 	g := NewWithT(t)
 
-	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver)
+	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver, BaseHTTPConfig{
+		IPFamily: Dual,
+	})
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
 }
 
