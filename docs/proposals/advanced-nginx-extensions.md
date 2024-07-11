@@ -370,6 +370,9 @@ developers can still control whether they want to enable or disable snippets by 
 
 NGF will validate the fields of SnippetsPolicy resources based on the restrictions mentioned in the [API section](#api).
 
+We will only allow one snippet per context because it will be easier to comprehend a SnippetsPolicy this way: compare
+one `http` snippet with multiple `http` snippets scattered around in the spec.
+
 NGF will not validate the values of snippets. See the next section.
 
 #### NGINX Values
@@ -859,6 +862,9 @@ until the invalid configuration is removed. Thus, a Cluster operator must carefu
 
 NGF will also validate the rest of SnippetsTemplate fields based on the restrictions mentioned in
 the [API section](#api-1).
+
+We will only allow one template per context because it will be easier to comprehend a SnippetsTemplate this way: compare
+one `http` template with multiple `http` templates scattered around in the spec.
 
 ### Security Considerations
 
