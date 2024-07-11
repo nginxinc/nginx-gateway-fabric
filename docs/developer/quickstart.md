@@ -4,6 +4,26 @@ This guide will assist you in setting up your development environment for NGINX 
 to build, install, and execute tasks necessary for submitting pull requests. By following this guide, you'll have a
 fully prepared development environment that allows you to contribute to the project effectively.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Table of Contents
+
+- [Setup Your Development Environment](#setup-your-development-environment)
+- [Build the Binary and Images](#build-the-binary-and-images)
+  - [Setting GOARCH](#setting-goarch)
+  - [Build the Binary](#build-the-binary)
+  - [Build the Images](#build-the-images)
+  - [Build the Images with NGINX Plus](#build-the-images-with-nginx-plus)
+- [Deploy on Kind](#deploy-on-kind)
+  - [Run Examples](#run-examples)
+- [Run the Unit Tests](#run-the-unit-tests)
+- [Gateway API Conformance Testing](#gateway-api-conformance-testing)
+- [Run the Linter](#run-the-linter)
+- [Run the Helm Linter](#run-the-helm-linter)
+- [Update all the generated files](#update-all-the-generated-files)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Setup Your Development Environment
 
 Follow these steps to set up your development environment.
