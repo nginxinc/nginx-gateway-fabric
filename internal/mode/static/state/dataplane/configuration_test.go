@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -2930,8 +2931,7 @@ func TestBuildUpstreams(t *testing.T) {
 		_ context.Context,
 		svcNsName types.NamespacedName,
 		_ apiv1.ServicePort,
-		_ bool,
-		_ bool,
+		_ []discoveryV1.AddressType,
 	) ([]resolver.Endpoint, error) {
 		switch svcNsName.Name {
 		case "bar":
@@ -2957,9 +2957,7 @@ func TestBuildUpstreams(t *testing.T) {
 
 	g := NewWithT(t)
 
-	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver, BaseHTTPConfig{
-		IPFamily: Dual,
-	})
+	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver, Dual)
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
 }
 

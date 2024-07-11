@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +43,7 @@ func BuildConfiguration(
 	}
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig)
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig.IPFamily)
 	httpServers, sslServers := buildServers(g, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
@@ -472,14 +473,14 @@ func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
 	resolver resolver.ServiceResolver,
-	baseHTTPConfig BaseHTTPConfig,
+	ipFamily IPFamilyType,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
 	// We use a map to deduplicate them.
 	uniqueUpstreams := make(map[string]Upstream)
 
 	// We need to build endpoints based on the IPFamily of NGINX.
-	ipv4, ipv6 := getIPFamily(baseHTTPConfig)
+	allowedAddressType := getAllowedAddressType(ipFamily)
 
 	for _, l := range listeners {
 		if !l.Valid {
@@ -507,7 +508,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, ipv4, ipv6)
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
 						if err != nil {
 							errMsg = err.Error()
 						}
@@ -535,11 +536,16 @@ func buildUpstreams(
 	return upstreams
 }
 
-func getIPFamily(config BaseHTTPConfig) (bool, bool) {
-	ipv4 := config.IPFamily == IPv4 || config.IPFamily == Dual
-	ipv6 := config.IPFamily == IPv6 || config.IPFamily == Dual
+func getAllowedAddressType(ipFamily IPFamilyType) []discoveryV1.AddressType {
+	allowedAddressType := make([]discoveryV1.AddressType, 0)
+	if ipFamily == IPv4 || ipFamily == Dual {
+		allowedAddressType = append(allowedAddressType, discoveryV1.AddressTypeIPv4)
+	}
+	if ipFamily == IPv6 || ipFamily == Dual {
+		allowedAddressType = append(allowedAddressType, discoveryV1.AddressTypeIPv6)
+	}
 
-	return ipv4, ipv6
+	return allowedAddressType
 }
 
 func getListenerHostname(h *v1.Hostname) string {

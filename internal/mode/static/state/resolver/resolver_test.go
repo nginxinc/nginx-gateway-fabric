@@ -14,7 +14,11 @@ import (
 )
 
 var (
-	svcPortName = "svc-port"
+	svcPortName     = "svc-port"
+	dualAddressType = []discoveryV1.AddressType{
+		discoveryV1.AddressTypeIPv4,
+		discoveryV1.AddressTypeIPv6,
+	}
 
 	addresses     = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
 	addressesIPv6 = []string{"2001:db8::1", "2001:db8::2", "2001:db8::3"}
@@ -101,11 +105,10 @@ var (
 
 func TestFilterEndpointSliceList(t *testing.T) {
 	test := []struct {
-		msg       string
-		sliceList discoveryV1.EndpointSliceList
-		expList   []discoveryV1.EndpointSlice
-		ipv4      bool
-		ipv6      bool
+		msg                string
+		sliceList          discoveryV1.EndpointSliceList
+		expList            []discoveryV1.EndpointSlice
+		allowedAddressType []discoveryV1.AddressType
 	}{
 		{
 			msg: "only ipv4 enabled",
@@ -118,8 +121,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 			expList: []discoveryV1.EndpointSlice{
 				validIPv4EndpontSlice,
 			},
-			ipv4: true,
-			ipv6: false,
+			allowedAddressType: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4},
 		},
 		{
 			msg: "only ipv6 enabled",
@@ -132,8 +134,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 			expList: []discoveryV1.EndpointSlice{
 				validIPv6EndpointSlice,
 			},
-			ipv4: false,
-			ipv6: true,
+			allowedAddressType: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6},
 		},
 		{
 			msg: "ipv4 and ipv6 enabled",
@@ -150,8 +151,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 			expList: []discoveryV1.EndpointSlice{
 				validIPv4EndpontSlice, validIPv6EndpointSlice, mixedValidityEndpointSlice,
 			},
-			ipv4: true,
-			ipv6: true,
+			allowedAddressType: dualAddressType,
 		},
 	}
 
@@ -162,7 +162,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	}
 
 	for _, tc := range test {
-		filteredSliceList := filterEndpointSliceList(tc.sliceList, svcPort, tc.ipv4, tc.ipv6)
+		filteredSliceList := filterEndpointSliceList(tc.sliceList, svcPort, tc.allowedAddressType)
 		g := NewWithT(t)
 		g.Expect(filteredSliceList).To(Equal(tc.expList))
 	}
@@ -309,7 +309,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		g := NewWithT(t)
-		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort, true, true)).To(Equal(tc.ignore))
+		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort, dualAddressType)).To(Equal(tc.ignore))
 	}
 }
 
@@ -604,7 +604,7 @@ func bench(b *testing.B, svcNsName types.NamespacedName,
 ) {
 	b.Helper()
 	for i := 0; i < b.N; i++ {
-		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet, true, true)
+		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet, dualAddressType)
 		if len(res) != n {
 			b.Fatalf("expected %d endpoints, got %d", n, len(res))
 		}
