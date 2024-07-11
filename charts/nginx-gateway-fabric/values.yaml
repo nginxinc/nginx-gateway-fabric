@@ -22,10 +22,6 @@ nginxGateway:
 
   # -- Set of custom annotations for NginxGateway objects.
   configAnnotations: {}
-  resources:
-    requests:
-      cpu: 0.001
-      memory: 50Mi
 
   # -- The number of replicas of the NGINX Gateway Fabric Deployment.
   replicaCount: 1
