@@ -40,6 +40,7 @@ You will need the following items from [MyF5](https://my.f5.com) for these instr
     kubectl get secret nginx-plus-registry-secret --output=yaml
     ```
 
+{{< include "installation/jwt-password-note.md" >}}
 
 ## Install NGINX Gateway Fabric
 
