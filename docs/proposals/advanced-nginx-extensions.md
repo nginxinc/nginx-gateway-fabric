@@ -31,15 +31,17 @@ NGINX use cases. To allow them to implement those use cases, we need to bring a 
 
 This proposal brings two extension mechanisms:
 
-- [SnippetsPolicy](#snippetspolicy) which allows to quickly bring unsupported NGINX configuration to NGF. However,
-  because of its implications for reliability and security, SnippetsPolicy is mostly applicable for the Cluster operator.
+- [Snippets](#snippets) which allow to quickly bring unsupported NGINX configuration to NGF. However,
+  because of its implications for reliability and security, Snippets are mostly applicable for the Cluster operator.
 - [SnippetsTemplate](#snippetstemplate) which allows to bring unsupported NGINX configuration to NGF by Application
   developers in a safe and uncomplicated manner. However, SnippetsTemplates require some up-front work from a Cluster
-  operator, meaning it cannot be implemented quickly, in contrast with SnippetsPolicy.
+  operator, meaning it cannot be implemented quickly, in contrast with Snippets.
 
-### SnippetsPolicy
+### Snippets
 
-Snippets allow inserting NGINX configuration into various NGINX contexts.
+Snippets allow inserting NGINX configuration into various NGINX contexts. They come in two flavours:
+- SnippetsPolicy
+- SnippetsFilter
 
 #### API
 
@@ -76,15 +78,12 @@ type SnippetsPolicySpec struct {
 	// TargetRefs identifies the API object(s) to apply the policy to.
 	// Objects must be in the same namespace as the policy.
 	// Objects must be of the same Kinds.
-	// TO-DO(pleshakov): Remove the line below.
-	// why same Kinds? Because different kinds allow mutually exclusive snippets.
 	//
-	// Support: Gateway, HTTPRoute, GRPCRoute, TLSRoute
+	// Support: Gateway, HTTPRoute, GRPCRoute
 	//
 	// Supported contexts depend on the targetRef Kind:
 	//
 	// * HTTPRoute and GRPCRoute: http, http.server and http.server.location.
-	// * TLSRoute: stream and stream.server.
 	// * Gateway: all contexts.
 	TargetRefs []gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRefs"`
 }
@@ -122,6 +121,66 @@ type Snippet struct {
 	// Value is the NGINX configuration snippet.
 	Value string `json:"value"`
 }
+
+// SnippetsFilter allows inserting NGINX configuration into the generated NGINX config for HTTPRoute and GRPCRoute
+// resources.
+// To implement authentication-like features, it is recommended to use SnippetsFilter instead of SnippetsPolicy.
+// Since a Filter is referenced from a routing rule, it makes it clear to the Application Developer that authentication
+// is applied to the route, whereas due to the discoverability issues around Policies, it wouldn't be clear to the
+// Application Developer that authentication exists for their routes. Furthermore, if the referenced Filter does not
+// exist, NGINX will return a 500 and the protected path will not be exposed. This isn't the case for a Policy, since
+// a missing Policy would have no effect on routes and the protected path will be exposed to all users.
+type SnippetsFilter struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Spec defines the desired state of the SnippetsFilter.
+	Spec SnippetsFilterSpec `json:"spec"`
+
+	// Status defines the state of the SnippetsFilter.
+	Status SnippetsFilterStatus `json:"status,omitempty"`
+}
+
+// SnippetsFilterSpec defines the desired state of the SnippetsFilter.
+type SnippetsFilterSpec struct {
+	// Snippets is a list of NGINX configuration snippets.
+	// There can only be one snippet per context.
+	// Allowed contexts: http, http.server, http.server.location.
+	Snippets []Snippet `json:"snippets"`
+}
+
+// SnippetsFilterStatus defines the state of SnippetsFilter.
+type SnippetsFilterStatus struct {
+	// Conditions describes the state of the SnippetsFilter.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// SnippetsFilterConditionType is a type of condition associated with SnippetsFilter
+type SnippetsFilterConditionType string
+
+// SnippetsFilterConditionReason is a reason for a SnippetsFilter condition type.
+type SnippetsFilterConditionReason string
+
+const (
+	// SnippetsFilterConditionTypeAccepted indicates that the SnippetsFilter is accepted.
+	//
+	// Possible reasons for this condition to be True:
+	//
+	// * Accepted
+	//
+	// Possible reasons for this condition to be False:
+	//
+	// * Invalid
+	SnippetsFilterConditionTypeAccepted SnippetsFilterConditionType = "Accepted"
+
+	// SnippetsFilterConditionReasonAccepted is used with the Accepted condition type when
+	// the condition is true.
+	SnippetsFilterConditionReasonAccepted SnippetsFilterConditionReason = "Accepted"
+
+	// SnippetsFilterConditionTypeInvalid is used with the Accepted condition type when
+	// SnippetsFilter is invalid.
+	SnippetsFilterConditionTypeInvalid SnippetsFilterConditionType = "Invalid"
+)
 ```
 
 #### Supported NGINX Contexts
@@ -147,17 +206,25 @@ SnippetsPolicy supports the following NGINX configuration contexts:
 - stream module - there are not any features in https://nginx.org/en/docs/stream/ngx_stream_upstream_module.html
 
 Note: because NGF already inserts the `random` load-balancing method, an `upstream` snippet will not be able to
-configure
-a different method.
+configure a different method.
 
 If we choose to introduce upstream snippets, the SnippetsPolicy will need to support targeting a Service, because NGF
 generates one upstream per Service.
 
+> We don't support routes that correspond the NGINX stream module -- TLSRoute, TCPRoute and UDPRoute. However,
+> because we're going to support them in the future, this proposal for SnippetsPolicy includes `stream` and `server`
+> contexts of the stream module.
+
+SnippetsFilter supports `http`, `server` and `location` contexts of the stream module.
+
+> TLSRoute, TCPRoute and UPDRoute don't support filters. As a result, SnippetsFilter doesn't support stream-related
+> contexts.
+
 #### Examples
 
-Below are a few examples of using the SnippetsPolicy to bring unsupported NGINX configuration into NGF.
+Below are a few examples of using snippets to bring unsupported NGINX configuration into NGF.
 
-##### Rate-limiting
+##### Rate-limiting SnippetPolicy
 
 We use NGINX [limit req module](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html) to configure rate
 limiting.
@@ -203,7 +270,7 @@ server {
   }
 ```
 
-##### Proxy Buffering
+##### Proxy Buffering SnippetPolicy
 
 We configure [proxy_buffering](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering) directive
 to disable buffering.
@@ -225,7 +292,7 @@ spec:
 
 As a result, NGF will insert the provided config into the generated locations for the cafe-route HTTPRoute.
 
-##### Access Control
+##### Access Control SnippetPolicy
 
 We use NGINX [access module](https://nginx.org/en/docs/http/ngx_http_access_module.html) to configure access based
 on client IPs.
@@ -250,7 +317,55 @@ spec:
 As a result, NGF will insert the provided NGINX config into the server context of all generated HTTP servers for
 the Gateway cafe.
 
-##### Third-Party Module
+##### Access Control SnippetsFilter
+
+We use NGINX [access module](https://nginx.org/en/docs/http/ngx_http_access_module.html) to configure access based
+on client IPs.
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: access-control
+spec:
+  snippets:
+  - context: http.server.location
+    value: |
+      allow 10.0.0.0/8;
+      deny all;
+```
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coffee
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  hostnames:
+  - "cafe.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /coffee
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org/v1alpha1
+        kind: SnippetsFilter
+        name: access-control
+    backendRefs:
+    - name: headers
+      port: 80
+```
+
+As a result, NGF will insert the provided NGINX config into all generated locations for the
+`/coffee` path.
+
+##### Third-Party Module SnippetPolicy
 
 We use the third-party [Brotli module](https://docs.nginx.com/nginx/admin-guide/dynamic-modules/brotli/).
 
@@ -279,7 +394,7 @@ As a result, NGF will:
 - Insert `load_module` into the main context to load the module.
 - Configure all `server` blocks belonging to the Gateway cafe to enable the module features.
 
-### Inheritance and Conflicts
+### Inheritance and Conflicts of SnippetsPolicy
 
 SnippetsPolicy is general-purpose: it can configure different NGINX features as shown in the
 examples before. It is expected that several SnippetPolicies will exist in the cluster, with some of them targeting
@@ -290,65 +405,14 @@ Although a SnippetsPolicy can target different Kinds (like Gateway and HTTPRoute
 (1) each SnippetPolicy is independent of any other and (2) a single SnippetPolicy can only affect resources of the
 same Kind, SnippetsPolicy is a [Direct Attached Policy](https://gateway-api.sigs.k8s.io/geps/gep-2648/).
 
-### Policy or Filter
+### Why Both Policy and Filter
 
-Considering that SnippetPolicy can be used to implement authentication and authorization, because of the reasons
-mentioned
-[here](nginx-extensions.md#authentication) it makes sense to also introduce SnippetsFilter, which will be the same as
-SnippetsPolicy but without the `targetRefs` field:
-
-```yaml
-apiVersion: gateway.nginx.org/v1alpha1
-kind: SnippetsFilter
-metadata:
-  name: access-control
-spec:
-  snippets:
-  - context: http.server
-    value: |
-      allow 10.0.0.0/8;
-      deny all;
-```
-
-An HTTPRoute can include that filter:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: my-app
-spec:
-  . . .
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.nginx.org/v1alpha1
-        kind: SnippetsFilter
-        name: access-control
-    backendRefs:
-    - name: headers
-      port: 80
-```
-
-SnippetsFilter can also be used in
-GRPCRoute. [TLSRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute)
-doesn't support filters, so it needs to be added to the Gateway API first.
-
-Although SnippetsFilter applicability is limited compared to SnippetsPolicy, SnippetsFilter creates
-a natural split of responsibilities between the Cluster operator and the Application developer:
-
-- The Cluster operator creates a SnippetsFilter.
-- The Application developer references the SnippetsFilter to enable it.
-
-Note that with the SnippetsPolicy, because the targetRef is part of the SnippetsPolicy, it is not possible to have
-such a split of responsibilities.
-
-TO-DO(pleshakov) - Add SnippetsFilter to the GEP after discussions about it.
+We introduce both SnippetsPolicy and SnippetsFilter because:
+- The usage and error handling of SnippetsFilter is more explicit, as explained [here](nginx-extensions.md#authentication).
+- SnippetsFilter creates a natural split of responsibilities between the Cluster operator and the Application developer:
+  the Cluster operator creates a SnippetsFilter; the Application developer references the SnippetsFilter to enable it.
+  Note that with the SnippetsPolicy, because the targetRef is part of the SnippetsPolicy, it is not possible to have
+  such a split of responsibilities.
 
 ### Personas
 
@@ -361,12 +425,13 @@ Snippets are not intended for Application developers, because:
   [Config Validation section](#nginx-config-validation) below.
 - Snippets can be used to exploit NGF. (See [Security Considerations section](#security-considerations) below)
 
-As mentioned in the [Policy or Filter](#policy-or-filter), when snippets are used via SnippetsFilter, Application
-developers can still control whether they want to enable or disable snippets by referencing them in an HTTPRoute.
+As mentioned in the [Why Both Policy and Filter](#why-both-policy-and-filter), when snippets are used
+via SnippetsFilter, Application developers can still control whether they want to enable or disable snippets by
+referencing them in an HTTPRoute.
 
 ### Validation
 
-#### SnippetsPolicy
+#### SnippetsPolicy/SnippetsFilter
 
 NGF will validate the fields of SnippetsPolicy resources based on the restrictions mentioned in the [API section](#api).
 
@@ -413,8 +478,8 @@ spec:
       }
 ```
 
-As a consequence, creating SnippetsPolicy should only be allowed for the privileged users -- the Cluster operator.
-As a further precaution, we will disable SnippetsPolicy by default similarly
+As a consequence, creating SnippetsPolicy/SnippetsFilter should only be allowed for the privileged users -- the Cluster operator.
+As a further precaution, we will disable SnippetsPolicy/SnippetsFilter by default similarly
 to [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/configuration/security/#snippets).
 
 It is also possible to add validation of snippets to disallow certain directives (like `root` and `autoindex`)
