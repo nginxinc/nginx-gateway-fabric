@@ -567,10 +567,10 @@ We're not pursuing this approach for two reasons:
 
 ## SnippetsTemplate
 
-SnippetsTemplate is similar to SnippetsPolicy: it allows inserting NGINX configuration into various NGINX contexts.
-However, in contrast with SnippetsPolicy, it allows Application developers to safely use them without the risk of
+SnippetsTemplate is similar to Snippets: it allows inserting NGINX configuration into various NGINX contexts.
+However, in contrast with Snippets, it allows Application developers to safely use them without the risk of
 breaking NGINX config. At the same time, that safety comes with a cost: creating a SnippetsTemplate is more involved
-for the Cluster operator compared to SnippetsPolicy.
+for the Cluster operator compared to Snippets.
 
 ### API
 
@@ -602,20 +602,41 @@ type SnippetsTemplateList struct {
 
 // SnippetsTemplateSpec defines the desired state of the SnippetsTemplate.
 type SnippetsTemplateSpec struct {
-	// ValuesCRD is the name of the CRD which provides values for the templates.
+	// ValuesCRD describes the CRD which provides values for the templates.
 	ValuesCRD string `json:"valuesCRD"`
-
-	// AllowedTargets is a list of allowed target resources that the CRD can target.
-	// Only one target is allowed.
-	AllowedTargets []AllowedTarget `json:"allowedTargets"`
 
 	// Templates is a list of NGINX configuration templates to insert into the generated NGINX config.
 	// There can only be one template per context.
 	Templates []Template `json:"templates"`
 }
 
-// AllowedTarget represents an allowed target.
-type AllowedTarget struct {
+// ValuesCRD describes the CRD which provides values for the templates.
+type ValuesCRD struct {
+	// Name is the name of the CRD.
+	Name string `json:"name"`
+
+	// Type is the type of the CRD.
+	Type ValuesCRDType `json:"type"`
+
+	// AllowedKinds is a list of allowed kinds that can be used with the CRD.
+	// If the type is 'DirectAttachedPolicy', allowedKinds are the kinds that the policy can target.
+	// If the type is 'Filter', allowedKinds are the kinds that can reference the filter.
+	AllowedKinds []AllowedKind `json:"allowedKinds"`
+}
+
+// ValuesCRDType is the type of the CRD which provides values for the templates.
+type ValuesCRDType string
+
+const (
+	// ValuesCRDDirectAttachedPolicy corresponds to the DirectAttachedPolicy CRD.
+	ValuesCRDDirectAttachedPolicy ValuesCRDType = "DirectAttachedPolicy"
+
+	// ValuesCRDFilter corresponds to the Filter CRD.
+	ValuesCRDFilter ValuesCRDType = "Filter"
+)
+
+// AllowedKind represents an allowed kind.
+type AllowedKind struct {
 	// Group is the group of the target resource.
 	Group gatewayv1.Group `json:"group"`
 
@@ -719,8 +740,8 @@ struct, which NGF uses to generate location config.
 1. A Cluster operator comes up with NGINX configuration that configures an NGINX feature needed by an Application
    developer.
 2. The Cluster operator thinks about what values the Application developer might want to customize in that configuration.
-3. The Cluster operator creates a CRD that defines fields and validation for those values and creates the CRD in the
-   cluster.
+3. The Cluster operator creates a CRD that defines fields and validation for those values, and choose whether the CRD
+   should be a Policy or a Filter. Then, the operator creates the CRD in the cluster.
 4. The Cluster operator creates a go template that generates the NGINX configuration based on the fields of the CRD.
 5. The Cluster operator allows the Application developer to use the feature by creating a SnippetsTemplate, which binds
    the CRD with the template(s).
@@ -751,8 +772,8 @@ Next, the Cluster operator decides that the Application developer might want to 
 values.
 
 Next, the Cluster operator defines the following CRD for those values. Note that the values are validated to prevent invalid
-or
-malicious values from being propagated into the NGINX config:
+or malicious values from being propagated into the NGINX config. The Cluster operator also decided to use a Policy
+for this use case.
 
 ```go
 // RateLimitingPolicy is a Direct Attached Policy to configure rate-limiting of client requests.
@@ -893,20 +914,10 @@ server {
 ```
 
 > For brevity, the proposal doesn't include more examples. However, SnippetsTemplate can also implement all examples
-> used for SnippetsPolicy.
+> used for SnippetsPolicy. Additionally, the values CRD can also be a Filter rather than a Policy (see a short
+> example below).
 
-### Inheritance and Conflicts
-
-The CRD that provides values must be a [Direct Attached Policy](https://gateway-api.sigs.k8s.io/geps/gep-2648/).
-Specifically, it must
-only allow target the same Kinds.
-
-NGF will perform conflict resolution if the Custom resources of the CRD target the same resources.
-
-If requested by users, this proposal can be extended to allow the CRD to follow
-[Inhereted Policy Attachment](https://gateway-api.sigs.k8s.io/geps/gep-2649/).
-
-### Policy or Filter
+### Why Both Policy and Filter
 
 Similarly to SnippetsPolicy, considering that SnippetsTemplate can be used to implement authentication and
 authorization, because of the reasons mentioned
@@ -950,10 +961,18 @@ spec:
 ```
 
 Similarly, such filters can also be used in
-GRPCRoute. [TLSRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute)
-doesn't support filters, so it needs to be added to the Gateway API first.
+GRPCRoute. TLSRoute, TCPRoute and UDPRoute
+don't support filters, so it needs to be added to the Gateway API first.
 
-TO-DO(pleshakov) - Add support for filters to the API section in the GEP after discussions about it.
+### Inheritance and Conflicts
+
+If the values CRD is a Policy, it must be a [Direct Attached Policy](https://gateway-api.sigs.k8s.io/geps/gep-2648/).
+Specifically, it must only allow target the same Kinds.
+
+NGF will perform conflict resolution if the Custom resources of the CRD target the same resources.
+
+If requested by users, this proposal can be extended to allow the CRD to also allow
+[Inhereted Policy Attachment](https://gateway-api.sigs.k8s.io/geps/gep-2649/).
 
 ### Personas
 
@@ -1022,13 +1041,13 @@ SnippetsTemplate allows Application developers to safely and easily use NGINX co
 The Cluster operator retains full control of that NGINX configuration, but at the same time allows Application
 developers to provide custom
 values. Kubernetes API will validate such values, which leads to better security and reliability compared to
-SnippetsPolicy.
+SnippetsPolicy/SnippetsFilter.
 
 ## NGINX Features Supported by Proposed Extensions
 
 > Note: the list is from [NGINX Extensions](nginx-extensions.md#prioritized-nginx-features).
 
-| Features                                                                                         | Supported by SnippetsPolicy/SnippetsTemplate                           | Requires NGINX Plus |
+| Features                                                                                         | Supported by SnippetsPolicy/SnippetsFilter/SnippetsTemplate            | Requires NGINX Plus |
 |--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|---------------------|
 | Log level and format                                                                             | X (limited, only extra logs on top of the default one)                 |                     |
 | Passive health checks                                                                            |                                                                        |                     |
