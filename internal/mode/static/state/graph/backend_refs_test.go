@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
@@ -266,6 +268,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 					Port: 80,
 				},
 			},
+			IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
 		},
 	}
 	svc1NsName := types.NamespacedName{
@@ -285,6 +288,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		expServiceNsName types.NamespacedName
 		name             string
 		expServicePort   v1.ServicePort
+		expSvcIPFamily   []v1.IPFamily
 		expErr           bool
 	}{
 		{
@@ -292,6 +296,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			ref:              getNormalRef(),
 			expServiceNsName: svc1NsName,
 			expServicePort:   v1.ServicePort{Port: 80},
+			expSvcIPFamily:   []v1.IPFamily{v1.IPv4Protocol},
 		},
 		{
 			name: "service does not exist",
@@ -302,6 +307,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			expErr:           true,
 			expServiceNsName: types.NamespacedName{Name: "does-not-exist", Namespace: "test"},
 			expServicePort:   v1.ServicePort{},
+			expSvcIPFamily:   []v1.IPFamily{},
 		},
 		{
 			name: "no matching port for service and port",
@@ -312,6 +318,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			expErr:           true,
 			expServiceNsName: svc1NsName,
 			expServicePort:   v1.ServicePort{},
+			expSvcIPFamily:   []v1.IPFamily{},
 		},
 	}
 
@@ -326,11 +333,69 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			svcNsName, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
+			svcNsName, servicePort, svcIPFamily, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
 			g.Expect(err != nil).To(Equal(test.expErr))
 			g.Expect(svcNsName).To(Equal(test.expServiceNsName))
 			g.Expect(servicePort).To(Equal(test.expServicePort))
+			g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
+		})
+	}
+}
+
+func TestVerifyIPFamily(t *testing.T) {
+	test := []struct {
+		name        string
+		expErr      error
+		npCfg       *NginxProxy
+		svcIPFamily []v1.IPFamily
+	}{
+		{
+			name: "Valid - IPv6 and IPv4 configured for NGINX, service has only IPv4",
+			npCfg: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.Dual),
+					},
+				},
+			},
+			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
+		},
+		{
+			name: "Invalid - IPv4 configured for NGINX, service has only IPv6",
+			npCfg: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.IPv4),
+					},
+				},
+			},
+			svcIPFamily: []v1.IPFamily{v1.IPv6Protocol},
+			expErr:      fmt.Errorf("service configured with IPv6 stack but NGINX only supports IPv4"),
+		},
+		{
+			name: "Invalid - IPv6 configured for NGINX, service has only IPv4",
+			npCfg: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.IPv6),
+					},
+				},
+			},
+			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
+			expErr:      fmt.Errorf("service configured with IPv4 stack but NGINX only supports IPv6"),
+		},
+	}
+
+	for _, test := range test {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			err := verifyIPFamily(test.npCfg, test.svcIPFamily)
+			if test.expErr != nil {
+				g.Expect(err).To(Equal(test.expErr))
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
 		})
 	}
 }
@@ -680,7 +745,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
-			addBackendRefsToRules(test.route, resolver, services, test.policies)
+			addBackendRefsToRules(test.route, resolver, services, test.policies, &NginxProxy{})
 
 			var actual []BackendRef
 			if test.route.Spec.Rules != nil {
@@ -940,6 +1005,7 @@ func TestCreateBackend(t *testing.T) {
 				services,
 				refPath,
 				policies,
+				&NginxProxy{},
 			)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())

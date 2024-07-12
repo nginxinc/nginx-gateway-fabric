@@ -10,6 +10,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
@@ -44,9 +46,10 @@ func addBackendRefsToRouteRules(
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) {
 	for _, r := range routes {
-		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
+		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies, npCfg)
 	}
 }
 
@@ -57,6 +60,7 @@ func addBackendRefsToRules(
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) {
 	if !route.Valid {
 		return
@@ -87,6 +91,7 @@ func addBackendRefsToRules(
 				services,
 				refPath,
 				backendTLSPolicies,
+				npCfg,
 			)
 
 			backendRefs = append(backendRefs, ref)
@@ -116,6 +121,7 @@ func createBackendRef(
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) (BackendRef, *conditions.Condition) {
 	// Data plane will handle invalid ref by responding with 500.
 	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
@@ -142,7 +148,7 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svcNsName, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcNsName, svcPort, svcIPFamilies, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
@@ -152,6 +158,19 @@ func createBackendRef(
 		}
 
 		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
+		return backendRef, &cond
+	}
+
+	err = verifyIPFamily(npCfg, svcIPFamilies)
+	if err != nil {
+		backendRef = BackendRef{
+			SvcNsName:   svcNsName,
+			ServicePort: svcPort,
+			Weight:      weight,
+			Valid:       false,
+		}
+
+		cond := staticConds.NewRouteInvalidIPFamily(err.Error())
 		return backendRef, &cond
 	}
 
@@ -278,7 +297,7 @@ func getServiceAndPortFromRef(
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (types.NamespacedName, v1.ServicePort, error) {
+) (types.NamespacedName, v1.ServicePort, []v1.IPFamily, error) {
 	ns := routeNamespace
 	if ref.Namespace != nil {
 		ns = string(*ref.Namespace)
@@ -288,16 +307,39 @@ func getServiceAndPortFromRef(
 
 	svc, ok := services[svcNsName]
 	if !ok {
-		return svcNsName, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
+		return svcNsName, v1.ServicePort{}, []v1.IPFamily{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
 	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
 	svcPort, err := getServicePort(svc, int32(*ref.Port))
 	if err != nil {
-		return svcNsName, v1.ServicePort{}, err
+		return svcNsName, v1.ServicePort{}, []v1.IPFamily{}, err
 	}
 
-	return svcNsName, svcPort, nil
+	svcIPFamilies := svc.Spec.IPFamilies
+
+	return svcNsName, svcPort, svcIPFamilies, nil
+}
+
+func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
+	if npCfg.Source == nil {
+		return nil
+	}
+
+	// we can access this field since we have already validated that ipFamily is not nil in validateNginxProxy.
+	npIPFamily := npCfg.Source.Spec.IPFamily
+	if *npIPFamily == ngfAPI.IPv4 {
+		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
+			return fmt.Errorf("service configured with IPv6 stack but NGINX only supports IPv4")
+		}
+	}
+	if *npIPFamily == ngfAPI.IPv6 {
+		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
+			return fmt.Errorf("service configured with IPv4 stack but NGINX only supports IPv6")
+		}
+	}
+
+	return nil
 }
 
 func validateRouteBackendRef(
