@@ -85,15 +85,20 @@ const (
 	// PolicyMessageTelemetryNotEnabled is a message used with the PolicyReasonNginxProxyConfigNotSet reason
 	// when telemetry is not enabled in the NginxProxy resource.
 	PolicyMessageTelemetryNotEnabled = "Telemetry is not enabled in the NginxProxy resource"
+
+	// GatewayIgnoredReason is used with v1.RouteConditionAccepted when the route references a Gateway that is ignored
+	// by NGF.
+	GatewayIgnoredReason v1.RouteConditionReason = "GatewayIgnored"
 )
 
-// NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
-func NewTODO(msg string) conditions.Condition {
+// NewRouteNotAcceptedGatewayIgnored returns a Condition that indicates that the Route is not accepted by the Gateway
+// because the Gateway is ignored by NGF.
+func NewRouteNotAcceptedGatewayIgnored() conditions.Condition {
 	return conditions.Condition{
-		Type:    "TODO",
-		Status:  metav1.ConditionTrue,
-		Reason:  "TODO",
-		Message: fmt.Sprintf("The condition for this has not been implemented yet: %s", msg),
+		Type:    string(v1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayIgnoredReason),
+		Message: "The Gateway is ignored by the controller",
 	}
 }
 

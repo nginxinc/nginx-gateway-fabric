@@ -301,7 +301,7 @@ func bindRouteToListeners(
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
 		if !referencesWinningGw {
-			attachment.FailedCondition = staticConds.NewTODO("Gateway is ignored")
+			attachment.FailedCondition = staticConds.NewRouteNotAcceptedGatewayIgnored()
 			continue
 		}
 
