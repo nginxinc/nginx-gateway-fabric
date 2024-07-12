@@ -867,7 +867,7 @@ metadata:
   name: rate-limiting-template
 spec:
   valuesCRD:
-    name: ratelimitingpolicy
+    name: ratelimitingpolicy.example.org
     type: DirectAttachedPolicy
     allowedKinds:
     - group: gateway.networking.k8s.io
