@@ -736,6 +736,9 @@ it can pass the data from
 the [`Location`](https://github.com/nginxinc/nginx-gateway-fabric/blob/7bc0b6e6c5131920ac18f41359dd1eba7f53a8ba/internal/mode/static/nginx/config/http/config.go#L16)
 struct, which NGF uses to generate location config.
 
+NGF will unmarshall the values CRD spec into the `Spec` field of `TemplateData`. This way the template can access
+the spec of the Custom resource of the CRD.
+
 ### How to Use SnippetsTemplate
 
 1. A Cluster operator comes up with NGINX configuration that configures an NGINX feature needed by an Application
