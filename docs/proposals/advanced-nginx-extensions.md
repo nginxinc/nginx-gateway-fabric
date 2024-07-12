@@ -794,10 +794,10 @@ type RateLimitingPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the ClientSettingsPolicy.
+	// Spec defines the desired state of the RateLimitingPolicy.
 	Spec RateLimitingPolicySpec `json:"spec"`
 
-	// Status defines the state of the ClientSettingsPolicy.
+	// Status defines the state of the RateLimitingPolicy.
 	Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
 }
 
@@ -807,7 +807,7 @@ type RateLimitingPolicy struct {
 type RateLimitingPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClientSettingsPolicy `json:"items"`
+	Items           []RateLimitingPolicy `json:"items"`
 }
 
 // RateLimitingPolicySpec defines the desired state of RateLimitingPolicy.
@@ -1054,7 +1054,7 @@ kind: SnippetsTemplate
 metadata:
   name: rate-limiting-template
 spec:
-  kind: ClientSettingsPolicy
+  kind: RateLimitingPolicy
   type: DirectAttachedPolicy
   allowedKinds:
   - group: gateway.networking.k8s.io
@@ -1080,7 +1080,7 @@ metadata:
 spec:
   values: # values field is a container
     apiVersion: example.com/v1alpha1
-    kind: ClientSettingsPolicy # must match kind in SnippetsTemplate.spec.kind
+    kind: RateLimitingPolicy # must match kind in SnippetsTemplate.spec.kind
     spec:
       rate: 10
       burst: 5
@@ -1093,10 +1093,10 @@ spec:
 Embedding values is possible by embedding a resource.
 See https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#rawextension
 
-> Note: The cluster operator doesn't need to register the ClientSettingsPolicy CRD. However, when embedding a resource
+> Note: The cluster operator doesn't need to register the RateLimitingPolicy CRD. However, when embedding a resource
 > into a Custom resource field, it is always necessary to provide the apiVersion and kind.
 
-As a result, NGF will execute the templates from the SnippetsTemplate registered for the ClientSettingsPolicy,
+As a result, NGF will execute the templates from the SnippetsTemplate registered for the RateLimitingPolicy,
 providing the values from Values.spec.values.spec to the templates.
 
 Pros:
