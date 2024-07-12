@@ -685,7 +685,6 @@ const (
 	// * Invalid
 	// * CRDInvalid
 	// * CRDNotFound
-	// * TargetNotFound
 	SnippetsTemplateConditionTypeAccepted SnippetsTemplateConditionType = "Accepted"
 
 	// SnippetsTemplateConditionReasonAccepted is used with the Accepted condition type when
