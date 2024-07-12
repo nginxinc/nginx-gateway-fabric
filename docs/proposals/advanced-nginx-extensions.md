@@ -613,6 +613,7 @@ type SnippetsTemplateSpec struct {
 // ValuesCRD describes the CRD which provides values for the templates.
 type ValuesCRD struct {
 	// Name is the name of the CRD.
+	// NGF will watch for resources of the CRD group and kind using the version for which 'storage: true'.
 	Name string `json:"name"`
 
 	// Type is the type of the CRD.
