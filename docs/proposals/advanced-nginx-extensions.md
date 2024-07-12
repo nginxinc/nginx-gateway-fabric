@@ -218,6 +218,11 @@ SnippetsFilter supports `http`, `server`, and `location` contexts of the stream 
 > TLSRoute, TCPRoute, and UPDRoute don't support filters. As a result, SnippetsFilter doesn't support stream-related
 > contexts.
 
+> Snippets for location might share the same problem as mentioned in the issue https://github.com/nginxinc/nginx-gateway-fabric/issues/207,
+> depending on the NGINX directives being used in the snippets. This proposal doesn't address the problem but
+> anticipates the solution to https://github.com/nginxinc/nginx-gateway-fabric/issues/2079 will also solve the problem
+> for Snippets.
+
 #### Examples
 
 Below are a few examples of using snippets to bring unsupported NGINX configuration into NGF.
