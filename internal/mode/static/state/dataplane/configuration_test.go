@@ -2394,7 +2394,7 @@ func TestBuildConfiguration(t *testing.T) {
 				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: IPv6},
 				Telemetry:      Telemetry{},
 			},
-			msg: "NginxProxy with IPv6 IPFamily",
+			msg: "NginxProxy with IPv6 IPFamily and no routes",
 		},
 	}
 
