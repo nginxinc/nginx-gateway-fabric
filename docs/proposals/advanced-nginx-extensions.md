@@ -854,12 +854,14 @@ the CRD with the templates:
 apiVersion: gateway.nginx.org/v1alpha1
 kind: SnippetsTemplate
 metadata:
-  name: expose
+  name: rate-limiting-template
 spec:
-  valuesCRD: ratelimitingpolicy
-  allowedTargets:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
+  valuesCRD:
+    name: ratelimitingpolicy
+    type: DirectAttachedPolicy
+    allowedKinds:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
   templates:
   - context: http
     value: |
@@ -1037,7 +1039,69 @@ documentation.
 
 ### Alternatives
 
-- SnippetsPolicy
+Instead of asking the Cluster operator to design a CRD, we can provide a ready container CRD. For example:
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsTemplate
+metadata:
+  name: rate-limiting-template
+spec:
+  kind: ClientSettingsPolicy
+  type: DirectAttachedPolicy
+  allowedKinds:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+  templates:
+  - context: http
+    value: |
+      {{ $rate := index $.Data "rate" }}
+      {{ $zoneName := $.Metadata.UID }}
+      limit_req_zone $binary_remote_addr zone={{ $zoneName }}:10m rate={{ $rate }}r/s;
+  - context: http.server.location
+    value: |
+      {{ $zoneName := $.Metadata.UID }}
+      {{ $burst := index $.Data "burst }}
+      limit_req zone={{ $zoneName }}{{ if $burst }}burst={{ $burst }}{{ end }};
+```
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: Values
+metadata:
+  name: rate-limit
+spec:
+  values: # values field is a container
+    apiVersion: example.com/v1alpha1
+    kind: ClientSettingsPolicy # must match kind in SnippetsTemplate.spec.kind
+    spec:
+      rate: 10
+      burst: 5
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: cafe-route
+```
+
+Embedding values is possible by embedding a resource. See https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#rawextension
+
+> Note: The cluster operator doesn't need to register the ClientSettingsPolicy CRD. However, when embedding a resource
+> into a Custom resource field, it is always necessary to provide the apiVersion and kind.
+
+As a result, NGF will execute the templates from the SnippetsTemplate registered for the ClientSettingsPolicy,
+providing the values from Values.spec.values.spec to the templates.
+
+Pros:
+- The Cluster operator doesn't need to design and create a CRD.
+- The Cluster operator doesn't need to change NGF RBAC rules to allow for it to watch for the CRD resource type.
+
+Cons:
+- Lack of CRD validation. Kubernetes API will not be able to perform validation of the values.
+- More complex validation. Because we still want to support validation, we will need to design a mechanism to allow
+  the Cluster operator to define a scheme with the structure and validation rules for the values. Because we will not
+  be relying on the already available validation mechanism (CRD validation), this will result into extra complexity.
+
+We're not going to pursue this approach because of its cons.
 
 ### Summary
 
