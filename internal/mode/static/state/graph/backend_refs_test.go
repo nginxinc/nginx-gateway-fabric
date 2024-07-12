@@ -358,8 +358,21 @@ func TestVerifyIPFamily(t *testing.T) {
 						IPFamily: helpers.GetPointer(ngfAPI.Dual),
 					},
 				},
+				Valid: true,
 			},
 			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
+		},
+		{
+			name: "Valid - IPv6 and IPv4 configured for NGINX, service has only IPv6",
+			npCfg: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.Dual),
+					},
+				},
+				Valid: true,
+			},
+			svcIPFamily: []v1.IPFamily{v1.IPv6Protocol},
 		},
 		{
 			name: "Invalid - IPv4 configured for NGINX, service has only IPv6",
@@ -369,9 +382,10 @@ func TestVerifyIPFamily(t *testing.T) {
 						IPFamily: helpers.GetPointer(ngfAPI.IPv4),
 					},
 				},
+				Valid: true,
 			},
 			svcIPFamily: []v1.IPFamily{v1.IPv6Protocol},
-			expErr:      fmt.Errorf("service configured with IPv6 stack but NGINX only supports IPv4"),
+			expErr:      fmt.Errorf("service configured with IPv6 family but NginxProxy is configured with IPv4"),
 		},
 		{
 			name: "Invalid - IPv6 configured for NGINX, service has only IPv4",
@@ -381,9 +395,15 @@ func TestVerifyIPFamily(t *testing.T) {
 						IPFamily: helpers.GetPointer(ngfAPI.IPv6),
 					},
 				},
+				Valid: true,
 			},
 			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
-			expErr:      fmt.Errorf("service configured with IPv4 stack but NGINX only supports IPv6"),
+			expErr:      fmt.Errorf("service configured with IPv4 family but NginxProxy is configured with IPv6"),
+		},
+		{
+			name:        "Invalid - When NginxProxy is nil",
+			npCfg:       &NginxProxy{},
+			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
 		},
 	}
 

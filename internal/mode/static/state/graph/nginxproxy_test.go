@@ -71,6 +71,9 @@ func TestGetNginxProxy(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "np2",
 					},
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.Dual),
+					},
 				},
 				Valid: true,
 			},

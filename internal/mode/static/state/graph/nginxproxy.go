@@ -6,6 +6,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -122,6 +123,8 @@ func validateNginxProxy(
 				[]string{string(ngfAPI.Dual), string(ngfAPI.IPv4), string(ngfAPI.IPv6)}),
 			)
 		}
+	} else {
+		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)
 	}
 
 	return allErrs

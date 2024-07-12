@@ -322,7 +322,7 @@ func getServiceAndPortFromRef(
 }
 
 func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
-	if npCfg.Source == nil {
+	if npCfg == nil || npCfg.Source == nil || !npCfg.Valid {
 		return nil
 	}
 
@@ -330,12 +330,12 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 	npIPFamily := npCfg.Source.Spec.IPFamily
 	if *npIPFamily == ngfAPI.IPv4 {
 		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
-			return fmt.Errorf("service configured with IPv6 stack but NGINX only supports IPv4")
+			return fmt.Errorf("service configured with IPv6 family but NginxProxy is configured with IPv4")
 		}
 	}
 	if *npIPFamily == ngfAPI.IPv6 {
 		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
-			return fmt.Errorf("service configured with IPv4 stack but NGINX only supports IPv6")
+			return fmt.Errorf("service configured with IPv4 family but NginxProxy is configured with IPv6")
 		}
 	}
 
