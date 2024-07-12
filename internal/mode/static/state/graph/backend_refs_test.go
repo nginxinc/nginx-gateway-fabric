@@ -385,7 +385,7 @@ func TestVerifyIPFamily(t *testing.T) {
 				Valid: true,
 			},
 			svcIPFamily: []v1.IPFamily{v1.IPv6Protocol},
-			expErr:      fmt.Errorf("service configured with IPv6 family but NginxProxy is configured with IPv4"),
+			expErr:      errors.New("service configured with IPv6 family but NginxProxy is configured with IPv4"),
 		},
 		{
 			name: "Invalid - IPv6 configured for NGINX, service has only IPv4",
