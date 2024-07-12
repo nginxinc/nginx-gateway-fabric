@@ -213,7 +213,7 @@ generates one upstream per Service.
 > because we're going to support them in the future, this proposal for SnippetsPolicy includes `stream` and `server`
 > contexts of the stream module.
 
-SnippetsFilter supports `http`, `server`, and `location` contexts of the stream module.
+SnippetsFilter supports `http`, `server`, and `location` contexts of the http module.
 
 > TLSRoute, TCPRoute, and UPDRoute don't support filters. As a result, SnippetsFilter doesn't support stream-related
 > contexts.
