@@ -610,7 +610,7 @@ type SnippetsTemplateList struct {
 // SnippetsTemplateSpec defines the desired state of the SnippetsTemplate.
 type SnippetsTemplateSpec struct {
 	// ValuesCRD describes the CRD which provides values for the templates.
-	ValuesCRD string `json:"valuesCRD"`
+	ValuesCRD ValuesCRD `json:"valuesCRD"`
 
 	// Templates is a list of NGINX configuration templates to insert into the generated NGINX config.
 	// There can only be one template per context.
