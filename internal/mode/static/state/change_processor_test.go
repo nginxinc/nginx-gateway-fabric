@@ -886,11 +886,11 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Routes[routeKey2] = expRouteHR2
 					expGraph.Routes[routeKey2].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
 					}
 					expGraph.Routes[routeKey2].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
 					}
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,
