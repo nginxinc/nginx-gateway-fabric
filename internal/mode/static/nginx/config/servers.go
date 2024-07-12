@@ -63,7 +63,7 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 
 	serverConfig := http.ServerConfig{
 		Servers:  servers,
-		IPFamily: ipFamily,
+		IPFamily: getIPFamily(conf.BaseHTTPConfig),
 	}
 
 	serverResult := executeResult{
