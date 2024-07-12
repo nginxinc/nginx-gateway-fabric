@@ -27,6 +27,7 @@ import (
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration"), func() {
 	var (
 		scrapeInterval        = 15 * time.Second
+		queryRangeStep        = 15 * time.Second
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
 
@@ -226,26 +227,48 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}, ns.Name)).To(Succeed())
 	}
 
-	getFirstValueOfVector := func(query string) float64 {
-		result, err := promInstance.Query(query)
-		Expect(err).ToNot(HaveOccurred())
-
-		val, err := framework.GetFirstValueOfPrometheusVector(result)
-		Expect(err).ToNot(HaveOccurred())
-
-		return val
-	}
-
 	runTestWithMetrics := func(resourceCount int, test func(resourceCount int) error, startWithNGFSetup bool) {
+
+		var (
+			metricExistTimeout = 2 * time.Minute
+			metricExistPolling = 1 * time.Second
+			ngfPodName         string
+		)
+
+		startTime := time.Now()
+
+		getStartTime := func() time.Time { return startTime }
+		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
+
 		if startWithNGFSetup {
 			setup(getDefaultSetupCfg())
 
 			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(podNames).To(HaveLen(1))
+			ngfPodName = podNames[0]
+			startTime = time.Now()
 		} else {
 			output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
 			Expect(err).ToNot(HaveOccurred(), string(output))
+		}
+
+		queries := []string{
+			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
+			fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
+			// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
+			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
+		}
+
+		for _, q := range queries {
+			Eventually(
+				framework.CreateMetricExistChecker(
+					promInstance,
+					q,
+					getStartTime,
+					modifyStartTime,
+				),
+			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
 		Expect(test(resourceCount)).To(Succeed())
@@ -257,15 +280,45 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(podNames).To(HaveLen(1))
+			ngfPodName = podNames[0]
+			startTime = time.Now()
 		}
 
-		// lowest scrape interval on prometheus is 10 seconds, so we sleep here to make sure we get at least a single
-		// scrape
 		time.Sleep(2 * scrapeInterval)
 
-		reloadCount := getFirstValueOfVector(
-			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_milliseconds_count`),
-		)
+		endTime := time.Now()
+
+		Eventually(
+			framework.CreateEndTimeFinder(
+				promInstance,
+				fmt.Sprintf(`rate(container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}[2m])`, ngfPodName),
+				startTime,
+				&endTime,
+				queryRangeStep,
+			),
+		).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
+
+		getEndTime := func() time.Time { return endTime }
+		noOpModifier := func() {}
+
+		queries = []string{
+			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
+			// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
+			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
+		}
+
+		for _, q := range queries {
+			Eventually(
+				framework.CreateMetricExistChecker(
+					promInstance,
+					q,
+					getEndTime,
+					noOpModifier,
+				),
+			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
+		}
+
+		reloadCount := framework.GetReloadCount(promInstance, ngfPodName, startTime)
 
 		fmt.Println(reloadCount)
 		cleanupResources(30)
