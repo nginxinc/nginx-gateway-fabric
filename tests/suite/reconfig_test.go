@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
+	ctlr "sigs.k8s.io/controller-runtime"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +25,13 @@ import (
 )
 
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration"), func() {
-	var ()
+	var (
+		scrapeInterval        = 15 * time.Second
+		promInstance          framework.PrometheusInstance
+		promPortForwardStopCh = make(chan struct{})
+
+		//ngfPodName string
+	)
 
 	BeforeAll(func() {
 		resultsDir, err := framework.CreateResultsDir("reconfig", version)
@@ -35,180 +42,246 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(err).ToNot(HaveOccurred())
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
 
+		promCfg := framework.PrometheusConfig{
+			ScrapeInterval: scrapeInterval,
+		}
+
+		promInstance, err = framework.InstallPrometheus(resourceManager, promCfg)
+		Expect(err).ToNot(HaveOccurred())
+
+		k8sConfig := ctlr.GetConfigOrDie()
+
+		if !clusterInfo.IsGKE {
+			Expect(promInstance.PortForward(k8sConfig, promPortForwardStopCh)).To(Succeed())
+		}
 	})
 
 	BeforeEach(func() {
 		// possibly instead of teardown, can scale to 0 replicas.
 		teardown(releaseName)
 
-		setup(getDefaultSetupCfg())
+		//setup(getDefaultSetupCfg())
+
+		//podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+		//Expect(err).ToNot(HaveOccurred())
+		//Expect(podNames).To(HaveLen(1))
+		//ngfPodName = podNames[0]
 	})
 
 	AfterEach(func() {
 		teardown(releaseName)
+
 	})
 
-	It("test 1", func() {
-		Expect(createResourcesGWLast(30)).To(Succeed())
-		Expect(checkResourceCreation(30)).To(Succeed())
-		cleanupResources(30)
+	AfterAll(func() {
+		close(promPortForwardStopCh)
+		Expect(framework.UninstallPrometheus(resourceManager)).To(Succeed())
 	})
+
+	createUniqueResources := func(resourceCount int, fileName string) error {
+		for i := 1; i <= resourceCount; i++ {
+			nsName := "namespace" + strconv.Itoa(i)
+			// Command to run sed and capture its output
+			//nolint:gosec
+			sedCmd := exec.Command("sed",
+				"-e",
+				"s/coffee/coffee"+nsName+"/g",
+				"-e",
+				"s/tea/tea"+nsName+"/g",
+				fileName,
+			)
+			// Command to apply using kubectl
+			kubectlCmd := exec.Command("kubectl", "apply", "-n", nsName, "-f", "-")
+
+			sedOutput, err := sedCmd.Output()
+			if err != nil {
+				fmt.Println(err.Error() + ": " + string(sedOutput))
+				return err
+			}
+			kubectlCmd.Stdin = bytes.NewReader(sedOutput)
+
+			output, err := kubectlCmd.CombinedOutput()
+			if err != nil {
+				fmt.Println(err.Error() + ": " + string(output))
+				return err
+			}
+		}
+		return nil
+	}
+
+	createResourcesGWLast := func(resourceCount int) error {
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer cancel()
+
+		for i := 1; i <= resourceCount; i++ {
+			ns := core.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "namespace" + strconv.Itoa(i),
+				},
+			}
+			Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
+		}
+
+		ns := core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "reconfig",
+			},
+		}
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(
+			[]string{
+				"reconfig/certificate-ns-and-cafe-secret.yaml",
+				"reconfig/reference-grant.yaml",
+			},
+			ns.Name)).To(Succeed())
+
+		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
+
+		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
+
+		time.Sleep(60 * time.Second)
+
+		Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, ns.Name)).To(Succeed())
+
+		return nil
+	}
+
+	//createResourcesRoutesLast := func(resourceCount int) error {
+	//	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	//	defer cancel()
 	//
+	//	for i := 1; i <= resourceCount; i++ {
+	//		ns := core.Namespace{
+	//			ObjectMeta: metav1.ObjectMeta{
+	//				Name: "namespace" + strconv.Itoa(i),
+	//			},
+	//		}
+	//		Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
+	//	}
+	//
+	//	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
+	//
+	//	time.Sleep(60 * time.Second)
+	//
+	//	ns := core.Namespace{
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name: "reconfig",
+	//		},
+	//	}
+	//	Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+	//	Expect(resourceManager.ApplyFromFiles(
+	//		[]string{
+	//			"reconfig/certificate-ns-and-cafe-secret.yaml",
+	//			"reconfig/reference-grant.yaml",
+	//			"reconfig/gateway.yaml",
+	//		},
+	//		ns.Name)).To(Succeed())
+	//
+	//	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
+	//
+	//	return nil
+	//}
+
+	checkResourceCreation := func(resourceCount int) error {
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer cancel()
+
+		var namespaces core.NamespaceList
+		if err := k8sClient.List(ctx, &namespaces); err != nil {
+			return fmt.Errorf("error getting namespaces: %w", err)
+		}
+		Expect(len(namespaces.Items)).To(BeNumerically(">=", resourceCount))
+
+		var routes v1.HTTPRouteList
+		if err := k8sClient.List(ctx, &routes); err != nil {
+			return fmt.Errorf("error getting HTTPRoutes: %w", err)
+		}
+		Expect(len(routes.Items)).To(BeNumerically(">=", resourceCount*3))
+
+		var pods core.PodList
+		if err := k8sClient.List(ctx, &pods); err != nil {
+			return fmt.Errorf("error getting Pods: %w", err)
+		}
+		Expect(len(pods.Items)).To(BeNumerically(">=", resourceCount*2))
+
+		return nil
+	}
+
+	cleanupResources := func(resourceCount int) {
+		for i := 1; i <= resourceCount; i++ {
+			nsName := "namespace" + strconv.Itoa(i)
+			Expect(resourceManager.DeleteNamespace(nsName)).To(Succeed())
+		}
+
+		ns := core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "reconfig",
+			},
+		}
+
+		Expect(resourceManager.DeleteFromFiles([]string{
+			"reconfig/certificate-ns-and-cafe-secret.yaml",
+			"reconfig/reference-grant.yaml",
+			"reconfig/gateway.yaml",
+		}, ns.Name)).To(Succeed())
+	}
+
+	getFirstValueOfVector := func(query string) float64 {
+		result, err := promInstance.Query(query)
+		Expect(err).ToNot(HaveOccurred())
+
+		val, err := framework.GetFirstValueOfPrometheusVector(result)
+		Expect(err).ToNot(HaveOccurred())
+
+		return val
+	}
+
+	runTestWithMetrics := func(resourceCount int, test func(resourceCount int) error, startWithNGFSetup bool) {
+		if startWithNGFSetup {
+			setup(getDefaultSetupCfg())
+
+			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(podNames).To(HaveLen(1))
+		} else {
+			output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
+			Expect(err).ToNot(HaveOccurred(), string(output))
+		}
+
+		Expect(test(resourceCount)).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		if !startWithNGFSetup {
+			setup(getDefaultSetupCfg())
+
+			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(podNames).To(HaveLen(1))
+		}
+
+		// lowest scrape interval on prometheus is 10 seconds, so we sleep here to make sure we get at least a single
+		// scrape
+		time.Sleep(2 * scrapeInterval)
+
+		reloadCount := getFirstValueOfVector(
+			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_milliseconds_count`),
+		)
+
+		fmt.Println(reloadCount)
+		cleanupResources(30)
+	}
+
+	It("test 1", func() {
+		//Skip("no")
+		runTestWithMetrics(30, createResourcesGWLast, true)
+	})
+
 	//It("test 2", func() {
 	//	Expect(createResourcesRoutesLast(30)).To(Succeed())
 	//	Expect(checkResourceCreation(30)).To(Succeed())
 	//	cleanupResources(30)
 	//})
 })
-
-func createResourcesGWLast(resourceCount int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-	defer cancel()
-
-	for i := 1; i <= resourceCount; i++ {
-		ns := core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "namespace" + strconv.Itoa(i),
-			},
-		}
-		Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
-	}
-
-	ns := core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "reconfig",
-		},
-	}
-	Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
-	Expect(resourceManager.ApplyFromFiles(
-		[]string{
-			"reconfig/certificate-ns-and-cafe-secret.yaml",
-			"reconfig/reference-grant.yaml",
-		},
-		ns.Name)).To(Succeed())
-
-	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
-
-	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
-
-	time.Sleep(60 * time.Second)
-
-	Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, ns.Name)).To(Succeed())
-
-	return nil
-}
-
-func createResourcesRoutesLast(resourceCount int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-	defer cancel()
-
-	for i := 1; i <= resourceCount; i++ {
-		ns := core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "namespace" + strconv.Itoa(i),
-			},
-		}
-		Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
-	}
-
-	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
-
-	time.Sleep(60 * time.Second)
-
-	ns := core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "reconfig",
-		},
-	}
-	Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
-	Expect(resourceManager.ApplyFromFiles(
-		[]string{
-			"reconfig/certificate-ns-and-cafe-secret.yaml",
-			"reconfig/reference-grant.yaml",
-			"reconfig/gateway.yaml",
-		},
-		ns.Name)).To(Succeed())
-
-	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
-
-	return nil
-}
-
-func createUniqueResources(resourceCount int, fileName string) error {
-	for i := 1; i <= resourceCount; i++ {
-		nsName := "namespace" + strconv.Itoa(i)
-		// Command to run sed and capture its output
-		//nolint:gosec
-		sedCmd := exec.Command("sed",
-			"-e",
-			"s/coffee/coffee"+nsName+"/g",
-			"-e",
-			"s/tea/tea"+nsName+"/g",
-			fileName,
-		)
-		// Command to apply using kubectl
-		kubectlCmd := exec.Command("kubectl", "apply", "-n", nsName, "-f", "-")
-
-		sedOutput, err := sedCmd.Output()
-		if err != nil {
-			fmt.Println(err.Error() + ": " + string(sedOutput))
-			return err
-		}
-		kubectlCmd.Stdin = bytes.NewReader(sedOutput)
-
-		output, err := kubectlCmd.CombinedOutput()
-		if err != nil {
-			fmt.Println(err.Error() + ": " + string(output))
-			return err
-		}
-	}
-	return nil
-}
-
-func checkResourceCreation(resourceCount int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-	defer cancel()
-
-	var namespaces core.NamespaceList
-	if err := k8sClient.List(ctx, &namespaces); err != nil {
-		return fmt.Errorf("error getting namespaces: %w", err)
-	}
-	Expect(len(namespaces.Items)).To(BeNumerically(">=", resourceCount))
-
-	var routes v1.HTTPRouteList
-	if err := k8sClient.List(ctx, &routes); err != nil {
-		return fmt.Errorf("error getting HTTPRoutes: %w", err)
-	}
-	Expect(len(routes.Items)).To(BeNumerically(">=", resourceCount*3))
-
-	var pods core.PodList
-	if err := k8sClient.List(ctx, &pods); err != nil {
-		return fmt.Errorf("error getting Pods: %w", err)
-	}
-	Expect(len(pods.Items)).To(BeNumerically(">=", resourceCount*2))
-
-	return nil
-}
-
-func cleanupResources(resourceCount int) {
-	for i := 1; i <= resourceCount; i++ {
-		nsName := "namespace" + strconv.Itoa(i)
-		Expect(resourceManager.DeleteNamespace(nsName)).To(Succeed())
-	}
-
-	ns := core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "reconfig",
-		},
-	}
-
-	Expect(resourceManager.DeleteFromFiles([]string{
-		"reconfig/certificate-ns-and-cafe-secret.yaml",
-		"reconfig/reference-grant.yaml",
-		"reconfig/gateway.yaml",
-	}, ns.Name)).To(Succeed())
-
-}
 
 type reconfigTestResults struct {
 	Name                 string
