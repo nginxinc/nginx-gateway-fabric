@@ -162,7 +162,7 @@ func createBackendRef(
 	}
 
 	err = verifyIPFamily(npCfg, svcIPFamilies)
-	if err != nil {
+	if err := verifyIPFamily(npCfg, svcIPFamilies); err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
 			ServicePort: svcPort,
