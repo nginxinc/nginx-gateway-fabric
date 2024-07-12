@@ -335,7 +335,7 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 	}
 	if *npIPFamily == ngfAPI.IPv6 {
 		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
-			return fmt.Errorf("service configured with IPv4 family but NginxProxy is configured with IPv6")
+			return errors.New("service configured with IPv4 family but NginxProxy is configured with IPv6")
 		}
 	}
 
