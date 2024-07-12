@@ -28,7 +28,7 @@ var (
 		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
 
-	readyEndpoint2 = discoveryV1.Endpoint{
+	readyIPv6Endpoint2 = discoveryV1.Endpoint{
 		Addresses:  addressesIPv6,
 		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
