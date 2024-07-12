@@ -42,6 +42,7 @@ const (
 
 	// RouteReasonInvalidIPFamily is used when the Service associated with the Route is not configured with
 	// the same IP family as the NGINX server.
+	// Used with ResolvedRefs (false).
 	RouteReasonInvalidIPFamily v1.RouteConditionReason = "InvalidServiceIPFamily"
 
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
@@ -280,6 +281,8 @@ func NewRouteGatewayNotProgrammed(msg string) conditions.Condition {
 	}
 }
 
+// NewRouteInvalidIPFamily returns a Condition that indicates that the Service associated with the Route
+// is not configured with the same IP family as the NGINX server.
 func NewRouteInvalidIPFamily(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionResolvedRefs),

@@ -113,15 +113,14 @@ func validateNginxProxy(
 		ipFamily := npCfg.Spec.IPFamily
 		ipFamilyPath := spec.Child("ipFamily")
 		switch *ipFamily {
-		case ngfAPI.Dual,
-			ngfAPI.IPv4,
-			ngfAPI.IPv6:
+		case ngfAPI.Dual, ngfAPI.IPv4, ngfAPI.IPv6:
 		default:
-			allErrs = append(allErrs, field.NotSupported(
-				ipFamilyPath,
-				ipFamily,
-				[]string{string(ngfAPI.Dual), string(ngfAPI.IPv4), string(ngfAPI.IPv6)}),
-			)
+			allErrs = append(
+				allErrs,
+				field.NotSupported(
+					ipFamilyPath,
+					ipFamily,
+					[]string{string(ngfAPI.Dual), string(ngfAPI.IPv4), string(ngfAPI.IPv6)}))
 		}
 	} else {
 		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)

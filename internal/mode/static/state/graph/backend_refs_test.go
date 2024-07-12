@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -333,10 +333,9 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			svcNsName, servicePort, svcIPFamily, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
+			svcIPFamily, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
 			g.Expect(err != nil).To(Equal(test.expErr))
-			g.Expect(svcNsName).To(Equal(test.expServiceNsName))
 			g.Expect(servicePort).To(Equal(test.expServicePort))
 			g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
 		})
@@ -401,7 +400,7 @@ func TestVerifyIPFamily(t *testing.T) {
 			expErr:      errors.New("service configured with IPv4 family but NginxProxy is configured with IPv6"),
 		},
 		{
-			name:        "Invalid - When NginxProxy is nil",
+			name:        "Valid - When NginxProxy is nil",
 			npCfg:       &NginxProxy{},
 			svcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
 		},

@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -148,7 +149,8 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svcNsName, svcPort, svcIPFamilies, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcIPFamilies, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcNsName := types.NamespacedName{Namespace: sourceNamespace, Name: string(ref.Name)}
 	if err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
@@ -161,7 +163,6 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	err = verifyIPFamily(npCfg, svcIPFamilies)
 	if err := verifyIPFamily(npCfg, svcIPFamilies); err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
@@ -297,28 +298,25 @@ func getServiceAndPortFromRef(
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (types.NamespacedName, v1.ServicePort, []v1.IPFamily, error) {
+) ([]v1.IPFamily, v1.ServicePort, error) {
 	ns := routeNamespace
 	if ref.Namespace != nil {
 		ns = string(*ref.Namespace)
 	}
 
 	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
-
 	svc, ok := services[svcNsName]
 	if !ok {
-		return svcNsName, v1.ServicePort{}, []v1.IPFamily{}, field.NotFound(refPath.Child("name"), ref.Name)
+		return []v1.IPFamily{}, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
 	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
 	svcPort, err := getServicePort(svc, int32(*ref.Port))
 	if err != nil {
-		return svcNsName, v1.ServicePort{}, []v1.IPFamily{}, err
+		return []v1.IPFamily{}, v1.ServicePort{}, err
 	}
 
-	svcIPFamilies := svc.Spec.IPFamilies
-
-	return svcNsName, svcPort, svcIPFamilies, nil
+	return svc.Spec.IPFamilies, svcPort, nil
 }
 
 func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {

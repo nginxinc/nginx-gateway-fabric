@@ -15,39 +15,162 @@ import (
 )
 
 func TestExecuteServers(t *testing.T) {
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8080,
+			},
+			{
+				Hostname: "example.com",
+				Port:     8080,
+			},
+			{
+				Hostname: "cafe.example.com",
+				Port:     8080,
+				Additions: []dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1",
+					},
+				},
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8443,
+			},
+			{
+				Hostname: "example.com",
+				SSL: &dataplane.SSL{
+					KeyPairID: "test-keypair",
+				},
+				Port: 8443,
+			},
+			{
+				Hostname: "cafe.example.com",
+				SSL: &dataplane.SSL{
+					KeyPairID: "test-keypair",
+				},
+				Port: 8443,
+				PathRules: []dataplane.PathRule{
+					{
+						Path:     "/",
+						PathType: dataplane.PathTypePrefix,
+						MatchRules: []dataplane.MatchRule{
+							{
+								Match: dataplane.Match{},
+								BackendGroup: dataplane.BackendGroup{
+									Source:  types.NamespacedName{Namespace: "test", Name: "route1"},
+									RuleIdx: 0,
+									Backends: []dataplane.Backend{
+										{
+											UpstreamName: "test_foo_443",
+											Valid:        true,
+											Weight:       1,
+											VerifyTLS: &dataplane.VerifyTLS{
+												CertBundleID: "test-foo",
+												Hostname:     "test-foo.example.com",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Additions: []dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1", // duplicate
+					},
+					{
+						Bytes:      []byte("addition-2"),
+						Identifier: "addition-2",
+					},
+				},
+			},
+		},
+	}
+
+	expSubStrings := map[string]int{
+		"listen 8080 default_server;":                              1,
+		"listen 8080;":                                             2,
+		"listen 8443 ssl;":                                         2,
+		"listen 8443 ssl default_server;":                          1,
+		"server_name example.com;":                                 2,
+		"server_name cafe.example.com;":                            2,
+		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
+		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
+		"proxy_ssl_server_name on;":                                1,
+	}
+
+	type assertion func(g *WithT, data string)
+
+	expectedResults := map[string]assertion{
+		httpConfigFile: func(g *WithT, data string) {
+			for expSubStr, expCount := range expSubStrings {
+				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
+			}
+		},
+		httpMatchVarsFile: func(g *WithT, data string) {
+			g.Expect(data).To(Equal("{}"))
+		},
+		includesFolder + "/addition-1.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-1"))
+		},
+		includesFolder + "/addition-2.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-2"))
+		},
+	}
+	g := NewWithT(t)
+
+	results := executeServers(conf)
+	g.Expect(results).To(HaveLen(len(expectedResults)))
+
+	for _, res := range results {
+		g.Expect(expectedResults).To(HaveKey(res.dest), "executeServers returned unexpected result destination")
+
+		assertData := expectedResults[res.dest]
+		assertData(g, string(res.data))
+	}
+}
+
+func TestExecuteServersForIPFamily(t *testing.T) {
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname: "example.com",
+			Port:     8080,
+		},
+	}
+	sslServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 8443,
+		},
+	}
 	tests := []struct {
-		msg                         string
-		expectedHTTPConfig          map[string]int
-		expectedHTTPMatchVars       string
-		expectedIncludedFileConfigs map[string]string
-		config                      dataplane.Configuration
+		msg                string
+		expectedHTTPConfig map[string]int
+		config             dataplane.Configuration
 	}{
 		{
 			msg: "http and ssl servers with IPv4 IP family",
 			config: dataplane.Configuration{
-				HTTPServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8080,
-					},
-					{
-						Hostname: "example.com",
-						Port:     8080,
-					},
-				},
-				SSLServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8443,
-					},
-					{
-						Hostname: "example.com",
-						SSL: &dataplane.SSL{
-							KeyPairID: "test-keypair",
-						},
-						Port: 8443,
-					},
-				},
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.IPv4,
 				},
@@ -62,142 +185,64 @@ func TestExecuteServers(t *testing.T) {
 				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
 				"ssl_reject_handshake on;":                                 1,
 			},
-			expectedHTTPMatchVars: "{}",
 		},
 		{
-			msg: "http and ssl servers with dual IP family",
+			msg: "http and ssl servers with IPv6 IP family",
 			config: dataplane.Configuration{
-				HTTPServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8080,
-					},
-					{
-						Hostname: "example.com",
-						Port:     8080,
-					},
-					{
-						Hostname: "cafe.example.com",
-						Port:     8080,
-						Additions: []dataplane.Addition{
-							{
-								Bytes:      []byte("addition-1"),
-								Identifier: "addition-1",
-							},
-						},
-					},
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv6,
 				},
-				SSLServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8443,
-					},
-					{
-						Hostname: "example.com",
-						SSL: &dataplane.SSL{
-							KeyPairID: "test-keypair",
-						},
-						Port: 8443,
-					},
-					{
-						Hostname: "cafe.example.com",
-						SSL: &dataplane.SSL{
-							KeyPairID: "test-keypair",
-						},
-						Port: 8443,
-						PathRules: []dataplane.PathRule{
-							{
-								Path:     "/",
-								PathType: dataplane.PathTypePrefix,
-								MatchRules: []dataplane.MatchRule{
-									{
-										Match: dataplane.Match{},
-										BackendGroup: dataplane.BackendGroup{
-											Source:  types.NamespacedName{Namespace: "test", Name: "route1"},
-											RuleIdx: 0,
-											Backends: []dataplane.Backend{
-												{
-													UpstreamName: "test_foo_443",
-													Valid:        true,
-													Weight:       1,
-													VerifyTLS: &dataplane.VerifyTLS{
-														CertBundleID: "test-foo",
-														Hostname:     "test-foo.example.com",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						Additions: []dataplane.Addition{
-							{
-								Bytes:      []byte("addition-1"),
-								Identifier: "addition-1", // duplicate
-							},
-							{
-								Bytes:      []byte("addition-2"),
-								Identifier: "addition-2",
-							},
-						},
-					},
-				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+			},
+		},
+		{
+			msg: "http and ssl servers with Dual IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.Dual,
 				},
 			},
 			expectedHTTPConfig: map[string]int{
 				"listen 8080 default_server;":                              1,
-				"listen [::]:8080 default_server;":                         1,
-				"listen 8080;":                                             2,
-				"listen [::]:8080;":                                        2,
-				"listen 8443 ssl;":                                         2,
-				"listen [::]:8443 ssl;":                                    2,
+				"listen 8080;":                                             1,
 				"listen 8443 ssl default_server;":                          1,
-				"listen [::]:8443 ssl default_server;":                     1,
+				"listen 8443 ssl;":                                         1,
 				"server_name example.com;":                                 2,
-				"server_name cafe.example.com;":                            2,
-				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
-				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
-				"proxy_ssl_server_name on;":                                1,
-			},
-			expectedHTTPMatchVars: "{}",
-			expectedIncludedFileConfigs: map[string]string{
-				includesFolder + "/addition-1.conf": "addition-1",
-				includesFolder + "/addition-2.conf": "addition-2",
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
 			},
 		},
 	}
 
-	type assertion func(g *WithT, data string)
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
 			results := executeServers(test.config)
-			expectedResults := map[string]assertion{
-				httpConfigFile: func(g *WithT, data string) {
-					for expSubStr, expCount := range test.expectedHTTPConfig {
-						g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
-					}
-				},
-				httpMatchVarsFile: func(g *WithT, data string) {
-					g.Expect(data).To(Equal(test.expectedHTTPMatchVars))
-				},
-			}
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
 
-			for file, assertData := range test.expectedIncludedFileConfigs {
-				expectedResults[file] = func(g *WithT, data string) {
-					g.Expect(data).To(Equal(assertData))
-				}
-			}
-
-			g.Expect(results).To(HaveLen(len(expectedResults)))
-
-			for _, res := range results {
-				g.Expect(expectedResults).To(HaveKey(res.dest), "executeServers returned unexpected result destination")
-				assertData := expectedResults[res.dest]
-				assertData(g, string(res.data))
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
 			}
 		})
 	}

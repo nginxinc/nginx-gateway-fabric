@@ -537,15 +537,14 @@ func buildUpstreams(
 }
 
 func getAllowedAddressType(ipFamily IPFamilyType) []discoveryV1.AddressType {
-	allowedAddressType := make([]discoveryV1.AddressType, 0)
-	if ipFamily == IPv4 || ipFamily == Dual {
-		allowedAddressType = append(allowedAddressType, discoveryV1.AddressTypeIPv4)
+	switch ipFamily {
+	case IPv4:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4}
+	case IPv6:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6}
+	default:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4, discoveryV1.AddressTypeIPv6}
 	}
-	if ipFamily == IPv6 || ipFamily == Dual {
-		allowedAddressType = append(allowedAddressType, discoveryV1.AddressTypeIPv6)
-	}
-
-	return allowedAddressType
 }
 
 func getListenerHostname(h *v1.Hostname) string {

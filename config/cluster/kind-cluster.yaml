@@ -4,6 +4,4 @@ nodes:
 - role: control-plane
 networking:
   ipFamily: dual
-  # ipFamily: ipv6
-  # ipFamily: ipv4
   apiServerAddress: 127.0.0.1

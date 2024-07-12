@@ -634,7 +634,7 @@ func TestBuildConfiguration(t *testing.T) {
 					ServiceName: helpers.GetPointer("my-svc"),
 				},
 				DisableHTTP2: true,
-				IPFamily:     helpers.GetPointer(ngfAPI.IPv4),
+				IPFamily:     helpers.GetPointer(ngfAPI.Dual),
 			},
 		},
 		Valid: true,
@@ -2085,7 +2085,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:     []VirtualServer{},
 				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false, IPFamily: IPv4},
+				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false, IPFamily: Dual},
 				Telemetry: Telemetry{
 					Endpoint:    "my-otel.svc:4563",
 					Interval:    "5s",
@@ -3483,6 +3483,37 @@ func TestBuildAdditions(t *testing.T) {
 
 			additions := buildAdditions(test.policies, nil, generator)
 			g.Expect(additions).To(BeEquivalentTo(test.expAdditions))
+		})
+	}
+}
+
+func TestGetAllowedAddressType(t *testing.T) {
+	test := []struct {
+		msg      string
+		ipFamily IPFamilyType
+		expected []discoveryV1.AddressType
+	}{
+		{
+			msg:      "dual ip family",
+			ipFamily: Dual,
+			expected: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4, discoveryV1.AddressTypeIPv6},
+		},
+		{
+			msg:      "ipv4 ip family",
+			ipFamily: IPv4,
+			expected: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4},
+		},
+		{
+			msg:      "ipv6 ip family",
+			ipFamily: IPv6,
+			expected: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6},
+		},
+	}
+
+	for _, tc := range test {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(getAllowedAddressType(tc.ipFamily)).To(Equal(tc.expected))
 		})
 	}
 }

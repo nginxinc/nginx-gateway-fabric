@@ -71,7 +71,7 @@ var (
 
 	validIPv6EndpointSlice = discoveryV1.EndpointSlice{
 		AddressType: discoveryV1.AddressTypeIPv6,
-		Endpoints:   []discoveryV1.Endpoint{readyEndpoint2},
+		Endpoints:   []discoveryV1.Endpoint{readyIPv6Endpoint2},
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,

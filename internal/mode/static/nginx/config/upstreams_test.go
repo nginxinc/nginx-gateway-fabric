@@ -104,7 +104,7 @@ func TestCreateUpstreams(t *testing.T) {
 			Endpoints: []resolver.Endpoint{},
 		},
 		{
-			Name: "up4",
+			Name: "up4-ipv6",
 			Endpoints: []resolver.Endpoint{
 				{
 					Address: "fd00:10:244:1::7",
