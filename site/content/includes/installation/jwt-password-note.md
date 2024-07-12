@@ -1,5 +1,5 @@
 ---
-docs: 
+docs:
 ---
 
 {{< note >}} For security, follow these practices with JSON Web Tokens (JWTs), passwords, and shell history:
