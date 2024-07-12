@@ -36,7 +36,7 @@ func TestExecuteUpstreams(t *testing.T) {
 			Endpoints: []resolver.Endpoint{},
 		},
 		{
-			Name: "up4",
+			Name: "up-ipv6",
 			Endpoints: []resolver.Endpoint{
 				{
 					Address: "2001:db8::1",
