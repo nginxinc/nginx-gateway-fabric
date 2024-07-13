@@ -56,7 +56,7 @@ type ProcessHandler interface {
 		ctx context.Context,
 		timeout time.Duration,
 	) (int, error)
-	readFile(file string) ([]byte, error)
+	ReadFile(file string) ([]byte, error)
 	Kill(pid int) error
 }
 
@@ -130,7 +130,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	}
 
 	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
-	previousChildProcesses, err := m.processHandler.readFile(childProcFile)
+	previousChildProcesses, err := m.processHandler.ReadFile(childProcFile)
 	if err != nil {
 		return err
 	}
