@@ -56,12 +56,12 @@ type ProcessHandler interface {
 		ctx context.Context,
 		timeout time.Duration,
 	) (int, error)
-	ReadFile(file string) ([]byte, error)
+	readFile(file string) ([]byte, error)
 	Kill(pid int) error
 }
 
 type ProcessHandlerImpl struct {
-	ReadFile  ReadFileFunc
+	readFile  ReadFileFunc
 	checkFile CheckFileFunc
 }
 
@@ -130,7 +130,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	}
 
 	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
-	previousChildProcesses, err := m.processHandler.ReadFile(childProcFile)
+	previousChildProcesses, err := m.processHandler.readFile(childProcFile)
 	if err != nil {
 		return err
 	}
@@ -193,11 +193,16 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 	return *upstreams, nil
 }
 
-type NewProcessHandlerImpl struct {
-	checkFile func(file string) (string, error)
+func NewProcessHandlerImpl(readFile ReadFileFunc, checkFile CheckFileFunc) *ProcessHandlerImpl {
+	ph := &ProcessHandlerImpl{
+		readFile:  readFile,
+		checkFile: checkFile,
+	}
+
+	return ph
 }
 
-func (p *NewProcessHandlerImpl) FindMainProcess(
+func (p *ProcessHandlerImpl) FindMainProcess(
 	ctx context.Context,
 	timeout time.Duration,
 ) (int, error) {
@@ -222,7 +227,7 @@ func (p *NewProcessHandlerImpl) FindMainProcess(
 		return 0, err
 	}
 
-	content, err := p.ReadFile(PidFile)
+	content, err := p.readFile(PidFile)
 	if err != nil {
 		return 0, err
 	}
@@ -235,10 +240,10 @@ func (p *NewProcessHandlerImpl) FindMainProcess(
 	return pid, nil
 }
 
-func (p *NewProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
+func (p *ProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
 	return p.ReadFile(file)
 }
 
-func (p *NewProcessHandlerImpl) Kill(pid int) error {
+func (p *ProcessHandlerImpl) Kill(pid int) error {
 	return syscall.Kill(pid, syscall.SIGHUP)
 }
