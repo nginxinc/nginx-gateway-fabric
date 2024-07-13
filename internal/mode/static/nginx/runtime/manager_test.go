@@ -51,18 +51,16 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 		})
 
-		When("MetricsCollector is nil", func() {
-			It("Is successful", func() {
-				Expect(manager.Reload(context.Background(), 1)).To(Succeed())
+		It("Is successful", func() {
+			Expect(manager.Reload(context.Background(), 1)).To(Succeed())
 
-				Expect(process.FindMainProcessCallCount()).To(Equal(1))
-				Expect(process.ReadFileCallCount()).To(Equal(1))
-				Expect(process.KillCallCount()).To(Equal(1))
-				Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
-				Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
-				Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
-				Expect(metrics.IncReloadErrorsCallCount()).To(Equal(0))
-			})
+			Expect(process.FindMainProcessCallCount()).To(Equal(1))
+			Expect(process.ReadFileCallCount()).To(Equal(1))
+			Expect(process.KillCallCount()).To(Equal(1))
+			Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
+			Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
+			Expect(metrics.IncReloadErrorsCallCount()).To(Equal(0))
 		})
 
 		When("MetricsCollector is nil", func() {
