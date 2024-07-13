@@ -5,39 +5,37 @@ This document describes the logging guidelines for the control plane of NGINX Ga
 > The data plane logging is not covered here: such a concern is owned by NGINX developers, and NGF developers
 > don't have control over it.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
-<!-- TOC -->
+- [Requirements](#requirements)
+  - [User Stories](#user-stories)
+    - [Common Stories](#common-stories)
+    - [Stories For User](#stories-for-user)
+    - [Stories For Developers](#stories-for-developers)
+- [Logging Library Choice](#logging-library-choice)
+- [Guidelines](#guidelines)
+  - [How to Log](#how-to-log)
+    - [Log Levels](#log-levels)
+    - [Log Messages](#log-messages)
+    - [Context in Messages](#context-in-messages)
+    - [Examples of Log Messages](#examples-of-log-messages)
+    - [Message Guidelines](#message-guidelines)
+  - [Log Formatting](#log-formatting)
+  - [When to Log](#when-to-log)
+  - [What not to Log](#what-not-to-log)
+  - [Performance](#performance)
+  - [Logger Dependency in Code](#logger-dependency-in-code)
+    - [Logger Initialization](#logger-initialization)
+    - [Logger Injection](#logger-injection)
+    - [Special Case - Reconciler](#special-case---reconciler)
+    - [Unit Tests](#unit-tests)
+  - [External Libraries](#external-libraries)
+  - [Evolution](#evolution)
+- [External Resources](#external-resources)
 
-- [Logging Guidelines](#logging-guidelines)
-  - [Table of Contents](#table-of-contents)
-  - [Requirements](#requirements)
-    - [User Stories](#user-stories)
-      - [Common Stories](#common-stories)
-      - [Stories For User](#stories-for-user)
-      - [Stories For Developers](#stories-for-developers)
-  - [Logging Library Choice](#logging-library-choice)
-  - [Guidelines](#guidelines)
-    - [How to Log](#how-to-log)
-      - [Log Levels](#log-levels)
-      - [Log Messages](#log-messages)
-      - [Context in Messages](#context-in-messages)
-      - [Examples of Log Messages](#examples-of-log-messages)
-      - [Message Guidelines](#message-guidelines)
-    - [Log Formatting](#log-formatting)
-    - [When to Log](#when-to-log)
-    - [What not to Log](#what-not-to-log)
-    - [Performance](#performance)
-    - [Logger Dependency in Code](#logger-dependency-in-code)
-      - [Logger Initialization](#logger-initialization)
-      - [Logger Injection](#logger-injection)
-      - [Special Case - Reconciler](#special-case---reconciler)
-      - [Unit Tests](#unit-tests)
-    - [External Libraries](#external-libraries)
-    - [Evolution](#evolution)
-  - [External Resources](#external-resources)
-
-<!-- TOC -->
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Requirements
 

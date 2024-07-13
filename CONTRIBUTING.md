@@ -3,20 +3,23 @@
 The following is a set of guidelines for contributing to NGINX Gateway Fabric. We really appreciate that you are
 considering contributing!
 
-## Table Of Contents
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Table of Contents
 
-[Ask a Question](#ask-a-question)
+- [Ask a Question](#ask-a-question)
+- [Getting Started](#getting-started)
+  - [Project Structure](#project-structure)
+- [Contributing](#contributing)
+  - [Issues and Discussions](#issues-and-discussions)
+    - [Open a Discussion](#open-a-discussion)
+    - [Report a Bug](#report-a-bug)
+    - [Suggest an Enhancement](#suggest-an-enhancement)
+    - [Issue lifecycle](#issue-lifecycle)
+  - [Development Guide](#development-guide)
+- [Contributor License Agreement](#contributor-license-agreement)
 
-[Getting Started](#getting-started)
-
-[Contributing](#contributing)
-
-- [Issues and Discussions](#issues-and-discussions)
-- [Development Guide](#development-guide)
-
-[Code of Conduct](CODE_OF_CONDUCT.md)
-
-[Contributor License Agreement](#contributor-license-agreement)
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Ask a Question
 

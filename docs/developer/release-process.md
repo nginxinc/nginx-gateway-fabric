@@ -2,6 +2,18 @@
 
 This document outlines the release process for NGINX Gateway Fabric (NGF).
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Table of Contents
+
+- [Versioning](#versioning)
+- [Release Planning and Development](#release-planning-and-development)
+- [Releasing](#releasing)
+  - [Major or Minor Release](#major-or-minor-release)
+  - [Patch Release](#patch-release)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Versioning
 
 NGF uses semantic versioning for its releases. For more information, see https://semver.org.
