@@ -105,7 +105,7 @@ data:
 
 EOF
 ```
-
+## Overview
 This will create the **secure-app** service and a deployment, as well as a Secret containing the certificate and key that will be used by the backend application to decrypt the HTTPS traffic. Note that the application is configured to accept HTTPS traffic only. Run the following command to verify the resources were created:
 
 ```shell
