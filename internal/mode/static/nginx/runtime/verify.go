@@ -19,7 +19,7 @@ const configVersionURI = "/var/run/nginx/nginx-config-version.sock"
 var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
 	" Please check the NGINX container logs for possible configuration issues: %w"
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . verifyClient
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . nginxConfigVerifier
 
 type nginxConfigVerifier interface {
 	GetConfigVersion() (int, error)

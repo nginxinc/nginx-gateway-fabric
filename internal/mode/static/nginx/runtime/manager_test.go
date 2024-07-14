@@ -237,7 +237,9 @@ func TestFindMainProcess(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			p := runtime.NewProcessHandlerImpl{}
+			p := runtime.NewProcessHandlerImpl(
+				test.readFile,
+				test.checkFile)
 			result, err := p.FindMainProcess(test.ctx, 2*time.Millisecond)
 
 			if test.expectError {

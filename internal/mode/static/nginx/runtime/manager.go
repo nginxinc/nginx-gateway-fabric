@@ -194,12 +194,10 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 }
 
 func NewProcessHandlerImpl(readFile ReadFileFunc, checkFile CheckFileFunc) *ProcessHandlerImpl {
-	ph := &ProcessHandlerImpl{
+	return &ProcessHandlerImpl{
 		readFile:  readFile,
 		checkFile: checkFile,
 	}
-
-	return ph
 }
 
 func (p *ProcessHandlerImpl) FindMainProcess(
