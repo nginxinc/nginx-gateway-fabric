@@ -36,7 +36,7 @@ func TestExecuteUpstreams(t *testing.T) {
 			Endpoints: []resolver.Endpoint{},
 		},
 		{
-			Name: "up-ipv6",
+			Name: "up4-ipv6",
 			Endpoints: []resolver.Endpoint{
 				{
 					Address: "2001:db8::1",
@@ -51,7 +51,7 @@ func TestExecuteUpstreams(t *testing.T) {
 		"upstream up1",
 		"upstream up2",
 		"upstream up3",
-		"upstream up4",
+		"upstream up4-ipv6",
 		"upstream invalid-backend-ref",
 		"server 10.0.0.0:80;",
 		"server 11.0.0.0:80;",
@@ -150,7 +150,7 @@ func TestCreateUpstreams(t *testing.T) {
 			},
 		},
 		{
-			Name:     "up4",
+			Name:     "up4-ipv6",
 			ZoneSize: ossZoneSize,
 			Servers: []http.UpstreamServer{
 				{

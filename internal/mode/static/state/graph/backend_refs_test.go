@@ -284,11 +284,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 	}
 
 	tests := []struct {
+		expSvc           *v1.Service
 		ref              gatewayv1.BackendRef
 		expServiceNsName types.NamespacedName
 		name             string
 		expServicePort   v1.ServicePort
-		expSvcIPFamily   []v1.IPFamily
 		expErr           bool
 	}{
 		{
@@ -296,7 +296,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			ref:              getNormalRef(),
 			expServiceNsName: svc1NsName,
 			expServicePort:   v1.ServicePort{Port: 80},
-			expSvcIPFamily:   []v1.IPFamily{v1.IPv4Protocol},
+			expSvc:           svc1,
 		},
 		{
 			name: "service does not exist",
@@ -307,7 +307,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			expErr:           true,
 			expServiceNsName: types.NamespacedName{Name: "does-not-exist", Namespace: "test"},
 			expServicePort:   v1.ServicePort{},
-			expSvcIPFamily:   []v1.IPFamily{},
+			expSvc: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "does-not-exist", Namespace: "test",
+				},
+			},
 		},
 		{
 			name: "no matching port for service and port",
@@ -318,7 +322,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			expErr:           true,
 			expServiceNsName: svc1NsName,
 			expServicePort:   v1.ServicePort{},
-			expSvcIPFamily:   []v1.IPFamily{},
+			expSvc: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "service1", Namespace: "test",
+				},
+			},
 		},
 	}
 
@@ -333,11 +341,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			svcIPFamily, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
+			svc, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
 			g.Expect(err != nil).To(Equal(test.expErr))
 			g.Expect(servicePort).To(Equal(test.expServicePort))
-			g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
+			g.Expect(svc).To(Equal(test.expSvc))
 		})
 	}
 }
@@ -790,6 +798,7 @@ func TestCreateBackend(t *testing.T) {
 						Port: 80,
 					},
 				},
+				IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
 			},
 		}
 	}
@@ -855,6 +864,7 @@ func TestCreateBackend(t *testing.T) {
 
 	tests := []struct {
 		expectedCondition            *conditions.Condition
+		nginxProxy                   *NginxProxy
 		name                         string
 		expectedServicePortReference string
 		ref                          gatewayv1.HTTPBackendRef
@@ -960,6 +970,30 @@ func TestCreateBackend(t *testing.T) {
 				}),
 			},
 			expectedBackend: BackendRef{
+				SvcNsName:   svc2NamespacedName,
+				ServicePort: svc1.Spec.Ports[0],
+				Weight:      5,
+				Valid:       false,
+			},
+			nginxProxy: &NginxProxy{
+				Source: &ngfAPI.NginxProxy{
+					Spec: ngfAPI.NginxProxySpec{IPFamily: helpers.GetPointer(ngfAPI.IPv6)},
+				},
+				Valid: true,
+			},
+			expectedCondition: helpers.GetPointer(
+				staticConds.NewRouteInvalidIPFamily(`service configured with IPv4 family but NginxProxy is configured with IPv6`),
+			),
+			name: "service IPFamily doesn't match NginxProxy IPFamily",
+		},
+		{
+			ref: gatewayv1.HTTPBackendRef{
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service2"
+					return backend
+				}),
+			},
+			expectedBackend: BackendRef{
 				SvcNsName:        svc2NamespacedName,
 				ServicePort:      svc1.Spec.Ports[0],
 				Weight:           5,
@@ -1024,7 +1058,7 @@ func TestCreateBackend(t *testing.T) {
 				services,
 				refPath,
 				policies,
-				&NginxProxy{},
+				test.nginxProxy,
 			)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())

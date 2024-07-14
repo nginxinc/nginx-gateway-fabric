@@ -405,6 +405,33 @@ Or view the following error message in the NGINX logs:
 The request body exceeds the [client_max_body_size](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size).
 To **resolve** this, you can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. Read the [Client Settings Policy]({{< relref "how-to/traffic-management/client-settings.md" >}}) documentation for more information.
 
+##### IP Family Mismatch Errors
+
+If you `describe` your HTTPRoute and see the following error:
+
+```text
+    Conditions:
+      Last Transition Time:  2024-07-14T23:36:37Z
+      Message:               The route is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-07-14T23:36:37Z
+      Message:               service configured with IPv4 family but NginxProxy is configured with IPv6
+      Observed Generation:   1
+      Reason:                InvalidServiceIPFamily
+      Status:                False
+      Type:                  ResolvedRefs
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+```
+
+The Service associated with your HTTPRoute is configured with a IP Family different than the one specified in NginxProxy configuration.
+To **resolve** this, you can do the following:
+
+- Change the IPFamily by modifying the field `nginx.config.ipFamily` in the `values.yaml` or add the `--set nginx.config.ipFamily=` flag to the `helm install` command. The supported IPFamilies are `ipv4`, `ipv6` and `dual` (default).
+
+- Adjust the IPFamily of your Service to match that of NginxProxy.
 
 ### Further reading
 
