@@ -426,12 +426,18 @@ If you `describe` your HTTPRoute and see the following error:
     Controller Name:         gateway.nginx.org/nginx-gateway-controller
 ```
 
-The Service associated with your HTTPRoute is configured with a IP Family different than the one specified in NginxProxy configuration.
-To **resolve** this, you can do the following:
+The Service associated with your HTTPRoute is configured with a IP Family different than the one specified in the NginxProxy configuration.
+To **resolve** this, you can do one of the following:
 
-- Change the IPFamily by modifying the field `nginx.config.ipFamily` in the `values.yaml` or add the `--set nginx.config.ipFamily=` flag to the `helm install` command. The supported IPFamilies are `ipv4`, `ipv6` and `dual` (default).
+- Update the NginxProxy configuration with the proper [`ipFamily`](({{< relref "reference/api.md" >}})) field. You can edit the NginxProxy configuration using `kubectl edit`. For example:
 
-- Adjust the IPFamily of your Service to match that of NginxProxy.
+  ```shell
+  kubectl edit -n nginx-gateway nginxproxies.gateway.nginx.org ngf-proxy-config
+  ```
+
+- When installing NGINX Gateway Fabric, change the IPFamily by modifying the field `nginx.config.ipFamily` in the `values.yaml` or add the `--set nginx.config.ipFamily=` flag to the `helm install` command. The supported IPFamilies are `ipv4`, `ipv6` and `dual` (default).
+
+- Adjust the IPFamily of your Service to match that of the NginxProxy configuration.
 
 ### Further reading
 
