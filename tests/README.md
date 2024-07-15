@@ -7,6 +7,8 @@ This directory contains the tests for NGINX Gateway Fabric. The tests are divide
 1. Conformance Testing. This is to ensure that the NGINX Gateway Fabric conforms to the Gateway API specification.
 2. System Testing. This is to ensure that the NGINX Gateway Fabric works as expected in a real system.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
@@ -15,23 +17,26 @@ This directory contains the tests for NGINX Gateway Fabric. The tests are divide
   - [Step 2 - Build and Load Images](#step-2---build-and-load-images)
 - [Conformance Testing](#conformance-testing)
   - [Step 1 - Install NGINX Gateway Fabric to configured kind cluster](#step-1---install-nginx-gateway-fabric-to-configured-kind-cluster)
-    - [_Option 1_ Build and install NGINX Gateway Fabric from local to configured kind cluster](#option-1-build-and-install-nginx-gateway-fabric-from-local-to-configured-kind-cluster)
-    - [_Option 2_ Install NGINX Gateway Fabric from local already built image to configured kind cluster](#option-2-install-nginx-gateway-fabric-from-local-already-built-image-to-configured-kind-cluster)
-    - [_Option 3_ Install NGINX Gateway Fabric from edge to configured kind cluster](#option-3-install-nginx-gateway-fabric-from-edge-to-configured-kind-cluster)
+    - [Option 1 - Build and install NGINX Gateway Fabric from local to configured kind cluster](#option-1---build-and-install-nginx-gateway-fabric-from-local-to-configured-kind-cluster)
+    - [Option 2 - Install NGINX Gateway Fabric from local already built image to configured kind cluster](#option-2---install-nginx-gateway-fabric-from-local-already-built-image-to-configured-kind-cluster)
+    - [Option 3 - Install NGINX Gateway Fabric from edge to configured kind cluster](#option-3---install-nginx-gateway-fabric-from-edge-to-configured-kind-cluster)
   - [Step 2 - Build conformance test runner image](#step-2---build-conformance-test-runner-image)
   - [Step 3 - Run Gateway conformance tests](#step-3---run-gateway-conformance-tests)
   - [Step 4 - Cleanup the conformance test fixtures and uninstall NGINX Gateway Fabric](#step-4---cleanup-the-conformance-test-fixtures-and-uninstall-nginx-gateway-fabric)
   - [Step 5 - Revert changes to Go modules](#step-5---revert-changes-to-go-modules)
   - [Step 6 - Delete kind cluster](#step-6---delete-kind-cluster)
 - [System Testing](#system-testing)
+  - [Logging in tests](#logging-in-tests)
   - [Step 1 - Run the tests](#step-1---run-the-tests)
     - [1a - Run the functional tests locally](#1a---run-the-functional-tests-locally)
     - [1b - Run the tests on a GKE cluster from a GCP VM](#1b---run-the-tests-on-a-gke-cluster-from-a-gcp-vm)
-      - [Functional Tests](#functional-tests)
-      - [NFR tests](#nfr-tests)
-        - [Longevity testing](#longevity-testing)
+    - [Functional Tests](#functional-tests)
+    - [NFR tests](#nfr-tests)
+      - [Longevity testing](#longevity-testing)
   - [Common test amendments](#common-test-amendments)
   - [Step 2 - Cleanup](#step-2---cleanup)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Prerequisites
 
@@ -131,7 +136,7 @@ TELEMETRY_ENDPOINT=otel-collector-opentelemetry-collector.collector.svc.cluster.
  export ENABLE_EXPERIMENTAL=true
 ```
 
-#### _Option 1_ Build and install NGINX Gateway Fabric from local to configured kind cluster
+#### Option 1 - Build and install NGINX Gateway Fabric from local to configured kind cluster
 
 ```makefile
 make install-ngf-local-build
@@ -143,7 +148,7 @@ Or, to install NGF with NGINX Plus enabled (NGINX Plus cert and key must exist i
 make install-ngf-local-build-with-plus
 ```
 
-#### _Option 2_ Install NGINX Gateway Fabric from local already built image to configured kind cluster
+#### Option 2 - Install NGINX Gateway Fabric from local already built image to configured kind cluster
 
 You can optionally skip the actual _build_ step.
 
@@ -169,7 +174,7 @@ Or, if you are building the NGINX Plus image:
 make update-ngf-manifest-with-plus PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
 ```
 
-#### _Option 3_ Install NGINX Gateway Fabric from edge to configured kind cluster
+#### Option 3 - Install NGINX Gateway Fabric from edge to configured kind cluster
 
 You can also skip the build NGF image step and prepare the environment to instead use the `edge` image. Note that this
 option does not currently support installing with NGINX Plus enabled.
@@ -424,7 +429,7 @@ XIt("runs some test", func(){
 
 For more information of filtering specs, see [the docs here](https://onsi.github.io/ginkgo/#filtering-specs).
 
-## Step 2 - Cleanup
+### Step 2 - Cleanup
 
 1. Delete kind cluster, if required
 
