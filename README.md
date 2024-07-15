@@ -122,7 +122,7 @@ channel.
 
 ## Community Meetings
 
-Every other Tuesday at 9:30AM Pacific / 5:30PM GMT
+Every Tuesday at 9:30AM Pacific / 5:30PM GMT
 
 For the meeting link, updates, agenda, and meeting notes, check the calendar below:
 
