@@ -90,6 +90,10 @@ spec:
         lifecycle:
         {{- toYaml .Values.nginxGateway.lifecycle | nindent 10 }}
         {{- end }}
+        {{- if .Values.nginxGateway.resources }}
+        resources:
+        {{- toYaml .Values.nginxGateway.resources | nindent 10 }}
+        {{- end }}
         ports:
         {{- if .Values.metrics.enable }}
         - name: metrics

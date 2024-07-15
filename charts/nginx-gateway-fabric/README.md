@@ -290,6 +290,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated. | int | `3` |
 | `nginxGateway.readinessProbe.port` | Port in which the readiness endpoint is exposed. | int | `8081` |
 | `nginxGateway.replicaCount` | The number of replicas of the NGINX Gateway Fabric Deployment. | int | `1` |
+| `nginxGateway.resources` | The resource requests and/or limits of the nginx-gateway container. | object | `{}` |
 | `nginxGateway.securityContext.allowPrivilegeEscalation` | Some environments may need this set to true in order for the control plane to successfully reload NGINX. | bool | `false` |
 | `nodeSelector` | The nodeSelector of the NGINX Gateway Fabric pod. | object | `{}` |
 | `service.annotations` | The annotations of the NGINX Gateway Fabric service. | object | `{}` |

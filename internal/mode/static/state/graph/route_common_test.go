@@ -687,7 +687,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
