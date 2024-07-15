@@ -64,6 +64,9 @@ nginxGateway:
   # -- The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
+  # -- The resource requests and/or limits of the nginx-gateway container.
+  resources: {}
+
   # -- extraVolumeMounts are the additional volume mounts for the nginx-gateway container.
   extraVolumeMounts: []
 
