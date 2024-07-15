@@ -27,6 +27,68 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
 )
 
+func getNormalBackendRef() graph.BackendRef {
+	return graph.BackendRef{
+		SvcNsName:   types.NamespacedName{Name: "foo", Namespace: "test"},
+		ServicePort: apiv1.ServicePort{Port: 80},
+		Valid:       true,
+		Weight:      1,
+	}
+}
+
+func getModifiedBackendRef(mod func(ref graph.BackendRef) graph.BackendRef) graph.BackendRef {
+	return mod(getNormalBackendRef())
+}
+
+func getExpectedConfiguration() Configuration {
+	return Configuration{
+		BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
+		HTTPServers: []VirtualServer{{
+			IsDefault: true,
+			Port:      80,
+		}},
+		SSLServers: []VirtualServer{
+			{
+				IsDefault: true,
+				Port:      443,
+			},
+		},
+		Upstreams:     []Upstream{},
+		BackendGroups: []BackendGroup{},
+		SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+			"ssl_keypair_test_secret-1": {
+				Cert: []byte("cert-1"),
+				Key:  []byte("privateKey-1"),
+			},
+		},
+		CertBundles: map[CertBundleID]CertBundle{},
+	}
+}
+
+func getNormalGraph() *graph.Graph {
+	return &graph.Graph{
+		GatewayClass: &graph.GatewayClass{
+			Source: &v1.GatewayClass{},
+			Valid:  true,
+		},
+		Gateway: &graph.Gateway{
+			Source:    &v1.Gateway{},
+			Listeners: []*graph.Listener{},
+		},
+		Routes:                     map[graph.RouteKey]*graph.L7Route{},
+		ReferencedSecrets:          map[types.NamespacedName]*graph.Secret{},
+		ReferencedCaCertConfigMaps: map[types.NamespacedName]*graph.CaCertConfigMap{},
+	}
+}
+
+func getModifiedGraph(mod func(g *graph.Graph) *graph.Graph) *graph.Graph {
+	return mod(getNormalGraph())
+}
+
+func getModifiedExpectedConfiguration(mod func(conf Configuration) Configuration) Configuration {
+	return mod(getExpectedConfiguration())
+}
+
 func createFakePolicy(name string, kind string) policies.Policy {
 	fakeKind := &policiesfakes.FakeObjectKind{
 		GroupVersionKindStub: func() schema.GroupVersionKind {
@@ -121,12 +183,9 @@ func TestBuildConfiguration(t *testing.T) {
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
 
-	validBackendRef := graph.BackendRef{
-		SvcNsName:   types.NamespacedName{Name: "foo", Namespace: "test"},
-		ServicePort: apiv1.ServicePort{Port: 80},
-		Valid:       true,
-		Weight:      1,
-	}
+	validBackendRef := getModifiedBackendRef(func(backend graph.BackendRef) graph.BackendRef {
+		return backend
+	})
 
 	expValidBackend := Backend{
 		UpstreamName: fooUpstreamName,
@@ -666,161 +725,97 @@ func TestBuildConfiguration(t *testing.T) {
 		expConf Configuration
 	}{
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source:    &v1.Gateway{},
-					Listeners: []*graph.Listener{},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{},
-			},
-			expConf: Configuration{
-				HTTPServers:    []VirtualServer{},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+			graph: getNormalGraph(),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = []VirtualServer{}
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "no listeners and routes",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, &graph.Listener{
+					Name:   "listener-80-1",
+					Source: listener80,
 					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{},
-						},
-					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
-				},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				})
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "http listener with no routes",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr1Invalid): routeHR1Invalid,
-							},
-						},
-						{
-							Name:   "listener-443-1",
-							Source: listener443, // nil hostname
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR1Invalid): httpsRouteHR1Invalid,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr1Invalid): routeHR1Invalid,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
-					graph.CreateRouteKey(hr1Invalid): routeHR1Invalid,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
-					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
 					{
-						IsDefault: true,
-						Port:      80,
+						Name:   "listener-443-1",
+						Source: listener443, // nil hostname
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR1Invalid): httpsRouteHR1Invalid,
+						},
+						ResolvedSecret: &secret1NsName,
 					},
-				},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
-					{
-						Hostname: wildcardHostname,
-						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
-						Port:     443,
-					},
-				},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				g.Routes[graph.CreateRouteKey(hr1Invalid)] = routeHR1Invalid
+				g.ReferencedSecrets[secret1NsName] = secret1
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = []VirtualServer{{
+					IsDefault: true,
+					Port:      80,
+				}}
+				conf.SSLServers = append(conf.SSLServers, VirtualServer{
+					Hostname: wildcardHostname,
+					SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+					Port:     443,
+				})
+				return conf
+			}),
 			msg: "http and https listeners with no valid routes",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:           "listener-443-1",
-							Source:         listener443, // nil hostname
-							Valid:          true,
-							Routes:         map[graph.RouteKey]*graph.L7Route{},
-							ResolvedSecret: &secret1NsName,
-						},
-						{
-							Name:           "listener-443-with-hostname",
-							Source:         listener443WithHostname, // non-nil hostname
-							Valid:          true,
-							Routes:         map[graph.RouteKey]*graph.L7Route{},
-							ResolvedSecret: &secret2NsName,
-						},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:           "listener-443-1",
+						Source:         listener443, // nil hostname
+						Valid:          true,
+						Routes:         map[graph.RouteKey]*graph.L7Route{},
+						ResolvedSecret: &secret1NsName,
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					{
+						Name:           "listener-443-with-hostname",
+						Source:         listener443WithHostname, // non-nil hostname
+						Valid:          true,
+						Routes:         map[graph.RouteKey]*graph.L7Route{},
+						ResolvedSecret: &secret2NsName,
+					},
+				}...)
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 					secret2NsName: secret2,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = []VirtualServer{}
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: string(hostname),
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-2"},
@@ -831,87 +826,61 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-					"ssl_keypair_test_secret-2": {
-						Cert: []byte("cert-2"),
-						Key:  []byte("privateKey-2"),
-					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				conf.SSLKeyPairs["ssl_keypair_test_secret-2"] = SSLKeyPair{
+					Cert: []byte("cert-2"),
+					Key:  []byte("privateKey-2"),
+				}
+				return conf
+			}),
 			msg: "https listeners with no routes",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:           "invalid-listener",
-							Source:         invalidListener,
-							Valid:          false,
-							ResolvedSecret: &secret1NsName,
-						},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:           "invalid-listener",
+						Source:         invalidListener,
+						Valid:          false,
+						ResolvedSecret: &secret1NsName,
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(httpsHR1): httpsRouteHR1,
 					graph.CreateRouteKey(httpsHR2): httpsRouteHR2,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
-					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers:    []VirtualServer{},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				g.ReferencedSecrets[secret1NsName] = secret1
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = []VirtualServer{}
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "invalid https listener with resolved secret",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr1): routeHR1,
-								graph.CreateRouteKey(hr2): routeHR2,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr1): routeHR1,
+							graph.CreateRouteKey(hr2): routeHR2,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr1): routeHR1,
 					graph.CreateRouteKey(hr2): routeHR2,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -944,119 +913,95 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				Upstreams:      []Upstream{fooUpstream},
-				BackendGroups:  []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				conf.SSLServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHR1Groups[0], expHR2Groups[0]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+
+				return conf
+			}),
 			msg: "one http listener with two routes for different hostnames",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(gr): routeGR,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(gr): routeGR,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
-					graph.CreateRouteKey(gr): routeGR,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
-					{
-						Hostname: "foo.example.com",
-						PathRules: []PathRule{
-							{
-								Path:     "/",
-								PathType: PathTypePrefix,
-								GRPC:     true,
-								MatchRules: []MatchRule{
-									{
-										BackendGroup: expGRGroups[0],
-										Source:       &gr.ObjectMeta,
-									},
+				}...)
+				g.Routes[graph.CreateRouteKey(gr)] = routeGR
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, VirtualServer{
+					Hostname: "foo.example.com",
+					PathRules: []PathRule{
+						{
+							Path:     "/",
+							PathType: PathTypePrefix,
+							GRPC:     true,
+							MatchRules: []MatchRule{
+								{
+									BackendGroup: expGRGroups[0],
+									Source:       &gr.ObjectMeta,
 								},
 							},
 						},
-						Port: 80,
 					},
+					Port: 80,
 				},
-				SSLServers:     []VirtualServer{},
-				Upstreams:      []Upstream{fooUpstream},
-				BackendGroups:  []BackendGroup{expGRGroups[0]},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				)
+				conf.SSLServers = []VirtualServer{}
+				conf.Upstreams = append(conf.Upstreams, fooUpstream)
+				conf.BackendGroups = []BackendGroup{expGRGroups[0]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "one http listener with one grpc route",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-443-1",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR1): httpsRouteHR1,
-								graph.CreateRouteKey(httpsHR2): httpsRouteHR2,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-443-1",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR1): httpsRouteHR1,
+							graph.CreateRouteKey(httpsHR2): httpsRouteHR2,
 						},
-						{
-							Name:   "listener-443-with-hostname",
-							Source: listener443WithHostname,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
-							},
-							ResolvedSecret: &secret2NsName,
-						},
+						ResolvedSecret: &secret1NsName,
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-443-with-hostname",
+						Source: listener443WithHostname,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
+						},
+						ResolvedSecret: &secret2NsName,
+					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr1):      httpsRouteHR1,
 					graph.CreateRouteKey(hr2):      httpsRouteHR2,
 					graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 					secret2NsName: secret2,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = []VirtualServer{}
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -1113,10 +1058,10 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{expHTTPSHR1Groups[0], expHTTPSHR2Groups[0], expHTTPSHR5Groups[0]},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+				}...)
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHTTPSHR1Groups[0], expHTTPSHR2Groups[0], expHTTPSHR5Groups[0]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{
 					"ssl_keypair_test_secret-1": {
 						Cert: []byte("cert-1"),
 						Key:  []byte("privateKey-1"),
@@ -1125,58 +1070,47 @@ func TestBuildConfiguration(t *testing.T) {
 						Cert: []byte("cert-2"),
 						Key:  []byte("privateKey-2"),
 					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				return conf
+			}),
 			msg: "two https listeners each with routes for different hostnames",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr3): routeHR3,
-								graph.CreateRouteKey(hr4): routeHR4,
-							},
-						},
-						{
-							Name:   "listener-443-1",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
-								graph.CreateRouteKey(httpsHR4): httpsRouteHR4,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr3): routeHR3,
+							graph.CreateRouteKey(hr4): routeHR4,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-443-1",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
+							graph.CreateRouteKey(httpsHR4): httpsRouteHR4,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr3):      routeHR3,
 					graph.CreateRouteKey(hr4):      routeHR4,
 					graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
 					graph.CreateRouteKey(httpsHR4): httpsRouteHR4,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1217,12 +1151,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-				},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}...)
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
@@ -1269,9 +1199,9 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams: []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{
+				}...)
+				conf.Upstreams = append(conf.Upstreams, fooUpstream)
+				conf.BackendGroups = []BackendGroup{
 					expHR3Groups[0],
 					expHR3Groups[1],
 					expHR4Groups[0],
@@ -1280,79 +1210,62 @@ func TestBuildConfiguration(t *testing.T) {
 					expHTTPSHR3Groups[1],
 					expHTTPSHR4Groups[0],
 					expHTTPSHR4Groups[1],
-				},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				return conf
+			}),
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr3): routeHR3,
-							},
-						},
-						{
-							Name:   "listener-8080",
-							Source: listener8080,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr8): routeHR8,
-							},
-						},
-						{
-							Name:   "listener-443-1",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
-							},
-							ResolvedSecret: &secret1NsName,
-						},
-						{
-							Name:   "listener-8443",
-							Source: listener8443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR7): httpsRouteHR7,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr3): routeHR3,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-8080",
+						Source: listener8080,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr8): routeHR8,
+						},
+					},
+					{
+						Name:   "listener-443-1",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+					{
+						Name:   "listener-8443",
+						Source: listener8443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR7): httpsRouteHR7,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr3):      routeHR3,
 					graph.CreateRouteKey(hr8):      routeHR8,
 					graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
 					graph.CreateRouteKey(httpsHR7): httpsRouteHR7,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1409,12 +1322,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 8080,
 					},
-				},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}...)
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
@@ -1483,9 +1392,9 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     8443,
 					},
-				},
-				Upstreams: []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{
+				}...)
+				conf.Upstreams = append(conf.Upstreams, fooUpstream)
+				conf.BackendGroups = []BackendGroup{
 					expHR3Groups[0],
 					expHR3Groups[1],
 					expHR8Groups[0],
@@ -1494,109 +1403,80 @@ func TestBuildConfiguration(t *testing.T) {
 					expHTTPSHR3Groups[1],
 					expHTTPSHR7Groups[0],
 					expHTTPSHR7Groups[1],
-				},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
-
+				}
+				return conf
+			}),
 			msg: "multiple http and https listener; different ports",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  false,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr1): routeHR1,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.GatewayClass.Valid = false
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr1): routeHR1,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr1): routeHR1,
-				},
-			},
+				}
+				return g
+			}),
 			expConf: Configuration{},
 			msg:     "invalid gatewayclass",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: nil,
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr1): routeHR1,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.GatewayClass.Valid = false
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr1): routeHR1,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr1): routeHR1,
-				},
-			},
+				}
+				return g
+			}),
 			expConf: Configuration{},
 			msg:     "missing gatewayclass",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: nil,
-				Routes:  map[graph.RouteKey]*graph.L7Route{},
-			},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway = nil
+				return g
+			}),
 			expConf: Configuration{},
 			msg:     "missing gateway",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr5): routeHR5,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr5): routeHR5,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr5): routeHR5,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1629,58 +1509,47 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				Upstreams:      []Upstream{fooUpstream},
-				BackendGroups:  []BackendGroup{expHR5Groups[0], expHR5Groups[1]},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				conf.SSLServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHR5Groups[0], expHR5Groups[1]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "one http listener with one route with filters",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr6): routeHR6,
-							},
-						},
-						{
-							Name:   "listener-443-1",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR6): httpsRouteHR6,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr6): routeHR6,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-443-1",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR6): httpsRouteHR6,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr6):      routeHR6,
 					graph.CreateRouteKey(httpsHR6): httpsRouteHR6,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1697,12 +1566,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-				},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}...)
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
@@ -1725,52 +1590,32 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams: []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{
-					expHR6Groups[0],
-					expHTTPSHR6Groups[0],
-				},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHR6Groups[0], expHTTPSHR6Groups[0]}
+				return conf
+			}),
 			msg: "one http and one https listener with routes with valid and invalid rules",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hr7): routeHR7,
-							},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hr7): routeHR7,
 						},
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hr7): routeHR7,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.HTTPServers = append(conf.HTTPServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1797,60 +1642,48 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				Upstreams:      []Upstream{fooUpstream},
-				BackendGroups:  []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}...)
+				conf.SSLServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHR7Groups[0], expHR7Groups[1]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "duplicate paths with different types",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-443-with-hostname",
-							Source: listener443WithHostname,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
-							},
-							ResolvedSecret: &secret2NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-443-with-hostname",
+						Source: listener443WithHostname,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 						},
-						{
-							Name:   "listener-443-1",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
-							},
-							ResolvedSecret: &secret1NsName,
-						},
+						ResolvedSecret: &secret2NsName,
 					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-443-1",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 					secret2NsName: secret2,
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      443,
-					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "example.com",
 						PathRules: []PathRule{
@@ -1878,10 +1711,11 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{expHTTPSHR5Groups[0]},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+				}...)
+				conf.HTTPServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHTTPSHR5Groups[0]}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{
 					"ssl_keypair_test_secret-1": {
 						Cert: []byte("cert-1"),
 						Key:  []byte("privateKey-1"),
@@ -1890,47 +1724,35 @@ func TestBuildConfiguration(t *testing.T) {
 						Cert: []byte("cert-2"),
 						Key:  []byte("privateKey-2"),
 					},
-				},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				return conf
+			}),
 			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-443",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
-							},
-							ResolvedSecret: &secret1NsName,
-						},
-					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
-					graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
-					secret1NsName: secret1,
-				},
-				ReferencedCaCertConfigMaps: referencedConfigMaps,
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers: []VirtualServer{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
 					{
-						IsDefault: true,
-						Port:      443,
+						Name:   "listener-443",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
+						},
+						ResolvedSecret: &secret1NsName,
 					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
+					graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				}
+				g.ReferencedCaCertConfigMaps = referencedConfigMaps
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -1957,57 +1779,41 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{expHTTPSHR8Groups[0], expHTTPSHR8Groups[1]},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles: map[CertBundleID]CertBundle{
+				}...)
+				conf.HTTPServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHTTPSHR8Groups[0], expHTTPSHR8Groups[1]}
+				conf.CertBundles = map[CertBundleID]CertBundle{
 					"cert_bundle_test_configmap-1": []byte("cert-1"),
-				},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				return conf
+			}),
 			msg: "https listener with httproute with backend that has a backend TLS policy attached",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-443",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
-							},
-							ResolvedSecret: &secret1NsName,
-						},
-					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
-					graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
-					secret1NsName: secret1,
-				},
-				ReferencedCaCertConfigMaps: referencedConfigMaps,
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers: []VirtualServer{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
 					{
-						IsDefault: true,
-						Port:      443,
+						Name:   "listener-443",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
+						},
+						ResolvedSecret: &secret1NsName,
 					},
+				}...)
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
+					graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				}
+				g.ReferencedCaCertConfigMaps = referencedConfigMaps
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = append(conf.SSLServers, []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -2034,93 +1840,65 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
-				},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{expHTTPSHR9Groups[0], expHTTPSHR9Groups[1]},
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles: map[CertBundleID]CertBundle{
+				}...)
+				conf.HTTPServers = []VirtualServer{}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHTTPSHR9Groups[0], expHTTPSHR9Groups[1]}
+				conf.CertBundles = map[CertBundleID]CertBundle{
 					"cert_bundle_test_configmap-2": []byte("cert-2"),
-				},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				return conf
+			}),
 			msg: "https listener with httproute with backend that has a backend TLS policy with binaryData attached",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gw",
-							Namespace: "ns",
-						},
-					},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{},
-						},
-					},
-				},
-				Routes:     map[graph.RouteKey]*graph.L7Route{},
-				NginxProxy: nginxProxy,
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
 					{
-						IsDefault: true,
-						Port:      80,
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{},
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false, IPFamily: Dual},
-				Telemetry: Telemetry{
+				}...)
+				g.NginxProxy = nginxProxy
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				conf.Telemetry = Telemetry{
 					Endpoint:    "my-otel.svc:4563",
 					Interval:    "5s",
 					BatchSize:   512,
 					BatchCount:  4,
 					ServiceName: "ngf:ns:gw:my-svc",
 					Ratios:      []Ratio{},
-				},
-			},
+				}
+				conf.BaseHTTPConfig = BaseHTTPConfig{HTTP2: false, IPFamily: Dual}
+				return conf
+			}),
 			msg: "NginxProxy with tracing config and http2 disabled",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gw",
-							Namespace: "ns",
-						},
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{},
 					},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{},
-						},
-					},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{},
-				NginxProxy: &graph.NginxProxy{
+				}...)
+				g.NginxProxy = &graph.NginxProxy{
 					Valid: false,
 					Source: &ngfAPI.NginxProxy{
 						Spec: ngfAPI.NginxProxySpec{
@@ -2133,117 +1911,49 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
-				},
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-					},
-				},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-				Telemetry:      Telemetry{},
-			},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				return conf
+			}),
 			msg: "invalid NginxProxy",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(hrWithPolicy): l7RouteWithPolicy,
-							},
-						},
-						{
-							Name:   "listener-443",
-							Source: listener443,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{
-								graph.CreateRouteKey(httpsHRWithPolicy): l7HTTPSRouteWithPolicy,
-							},
-							ResolvedSecret: &secret1NsName,
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
+					{
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(hrWithPolicy): l7RouteWithPolicy,
 						},
 					},
-					Policies: []*graph.Policy{gwPolicy1, gwPolicy2},
-				},
-				Routes: map[graph.RouteKey]*graph.L7Route{
+					{
+						Name:   "listener-443",
+						Source: listener443,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							graph.CreateRouteKey(httpsHRWithPolicy): l7HTTPSRouteWithPolicy,
+						},
+						ResolvedSecret: &secret1NsName,
+					},
+				}...)
+				g.Gateway.Policies = []*graph.Policy{gwPolicy1, gwPolicy2}
+				g.Routes = map[graph.RouteKey]*graph.L7Route{
 					graph.CreateRouteKey(hrWithPolicy):      l7RouteWithPolicy,
 					graph.CreateRouteKey(httpsHRWithPolicy): l7HTTPSRouteWithPolicy,
-				},
-				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+				}
+				g.ReferencedSecrets = map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
-				},
-			},
-			expConf: Configuration{
-				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
-					"ssl_keypair_test_secret-1": {
-						Cert: []byte("cert-1"),
-						Key:  []byte("privateKey-1"),
-					},
-				},
-				CertBundles: map[CertBundleID]CertBundle{},
-				HTTPServers: []VirtualServer{
-					{
-						IsDefault: true,
-						Port:      80,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
-					},
-					{
-						Hostname: "policy.com",
-						PathRules: []PathRule{
-							{
-								Path:     "/",
-								PathType: PathTypePrefix,
-								MatchRules: []MatchRule{
-									{
-										Source:       &hrWithPolicy.ObjectMeta,
-										BackendGroup: expHRWithPolicyGroups[0],
-										Additions: []Addition{
-											{
-												Bytes:      []byte("lemon"),
-												Identifier: "LemonPolicy_default_attach-hr",
-											},
-										},
-									},
-								},
-							},
-						},
-						Port: 80,
-						Additions: []Addition{
-							{
-								Bytes:      []byte("apple"),
-								Identifier: "ApplePolicy_default_attach-gw",
-							},
-							{
-								Bytes:      []byte("orange"),
-								Identifier: "OrangePolicy_default_attach-gw",
-							},
-						},
-					},
-				},
-				SSLServers: []VirtualServer{
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{
 					{
 						IsDefault: true,
 						Port:      443,
@@ -2306,94 +2016,109 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
-				},
-				Upstreams: []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{
-					expHRWithPolicyGroups[0],
-					expHTTPSHRWithPolicyGroups[0],
-				},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: Dual},
-			},
+				}
+				conf.HTTPServers = []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+					{
+						Hostname: "policy.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										Source:       &hrWithPolicy.ObjectMeta,
+										BackendGroup: expHRWithPolicyGroups[0],
+										Additions: []Addition{
+											{
+												Bytes:      []byte("lemon"),
+												Identifier: "LemonPolicy_default_attach-hr",
+											},
+										},
+									},
+								},
+							},
+						},
+						Port: 80,
+						Additions: []Addition{
+							{
+								Bytes:      []byte("apple"),
+								Identifier: "ApplePolicy_default_attach-gw",
+							},
+							{
+								Bytes:      []byte("orange"),
+								Identifier: "OrangePolicy_default_attach-gw",
+							},
+						},
+					},
+				}
+				conf.Upstreams = []Upstream{fooUpstream}
+				conf.BackendGroups = []BackendGroup{expHRWithPolicyGroups[0], expHTTPSHRWithPolicyGroups[0]}
+				return conf
+			}),
 			msg: "Simple Gateway and HTTPRoute with policies attached",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gw",
-							Namespace: "ns",
-						},
-					},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{},
-						},
-					},
-				},
-				Routes:     map[graph.RouteKey]*graph.L7Route{},
-				NginxProxy: nginxProxyIPv4,
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
 					{
-						IsDefault: true,
-						Port:      80,
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{},
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: IPv4},
-				Telemetry:      Telemetry{},
-			},
+				}...)
+				g.NginxProxy = nginxProxyIPv4
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				conf.BaseHTTPConfig = BaseHTTPConfig{HTTP2: true, IPFamily: IPv4}
+				return conf
+			}),
 			msg: "NginxProxy with IPv4 IPFamily and no routes",
 		},
 		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1.GatewayClass{},
-					Valid:  true,
-				},
-				Gateway: &graph.Gateway{
-					Source: &v1.Gateway{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gw",
-							Namespace: "ns",
-						},
-					},
-					Listeners: []*graph.Listener{
-						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[graph.RouteKey]*graph.L7Route{},
-						},
-					},
-				},
-				Routes:     map[graph.RouteKey]*graph.L7Route{},
-				NginxProxy: nginxProxyIPv6,
-			},
-			expConf: Configuration{
-				HTTPServers: []VirtualServer{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, []*graph.Listener{
 					{
-						IsDefault: true,
-						Port:      80,
+						Name:   "listener-80-1",
+						Source: listener80,
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{},
 					},
-				},
-				SSLServers:     []VirtualServer{},
-				SSLKeyPairs:    map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:    map[CertBundleID]CertBundle{},
-				BaseHTTPConfig: BaseHTTPConfig{HTTP2: true, IPFamily: IPv6},
-				Telemetry:      Telemetry{},
-			},
+				}...)
+				g.NginxProxy = nginxProxyIPv6
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				conf.BaseHTTPConfig = BaseHTTPConfig{HTTP2: true, IPFamily: IPv6}
+				return conf
+			}),
 			msg: "NginxProxy with IPv6 IPFamily and no routes",
 		},
 	}
@@ -3507,6 +3232,11 @@ func TestGetAllowedAddressType(t *testing.T) {
 			msg:      "ipv6 ip family",
 			ipFamily: IPv6,
 			expected: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6},
+		},
+		{
+			msg:      "unknown ip family",
+			ipFamily: "unknown",
+			expected: []discoveryV1.AddressType{},
 		},
 	}
 

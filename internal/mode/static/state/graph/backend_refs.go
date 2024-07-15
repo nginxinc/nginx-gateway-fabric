@@ -152,18 +152,17 @@ func createBackendRef(
 	}
 
 	svc, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
-	svcNsName := client.ObjectKeyFromObject(svc)
 	if err != nil {
 		backendRef = BackendRef{
-			SvcNsName:   svcNsName,
-			ServicePort: svcPort,
-			Weight:      weight,
-			Valid:       false,
+			Weight: weight,
+			Valid:  false,
 		}
 
 		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
 		return backendRef, &cond
 	}
+
+	svcNsName := client.ObjectKeyFromObject(svc)
 
 	if err := verifyIPFamily(npCfg, svc.Spec.IPFamilies); err != nil {
 		backendRef = BackendRef{
@@ -332,12 +331,16 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 	npIPFamily := npCfg.Source.Spec.IPFamily
 	if *npIPFamily == ngfAPI.IPv4 {
 		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
-			return errors.New("service configured with IPv6 family but NginxProxy is configured with IPv4")
+			// capitalizing error message to match the rest of the error messages associated with a condition
+			return errors.New( //nolint: stylecheck
+				"Service configured with IPv6 family but NginxProxy is configured with IPv4")
 		}
 	}
 	if *npIPFamily == ngfAPI.IPv6 {
 		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
-			return errors.New("service configured with IPv4 family but NginxProxy is configured with IPv6")
+			// capitalizing error message to match the rest of the error messages associated with a condition
+			return errors.New( //nolint: stylecheck
+				"Service configured with IPv4 family but NginxProxy is configured with IPv6")
 		}
 	}
 

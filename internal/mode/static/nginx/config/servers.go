@@ -93,7 +93,7 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 
 // getIPFamily returns whether the server should be configured for IPv4, IPv6, or both.
 func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
-	switch ip := baseHTTPConfig.IPFamily; ip {
+	switch baseHTTPConfig.IPFamily {
 	case dataplane.IPv4:
 		return http.IPFamily{IPv4: true}
 	case dataplane.IPv6:

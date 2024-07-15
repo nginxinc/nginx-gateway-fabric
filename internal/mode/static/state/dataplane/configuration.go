@@ -542,8 +542,10 @@ func getAllowedAddressType(ipFamily IPFamilyType) []discoveryV1.AddressType {
 		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4}
 	case IPv6:
 		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6}
-	default:
+	case Dual:
 		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4, discoveryV1.AddressTypeIPv6}
+	default:
+		return []discoveryV1.AddressType{}
 	}
 }
 
@@ -686,7 +688,7 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	}
 
 	if g.NginxProxy.Source.Spec.IPFamily != nil {
-		switch ipFamily := g.NginxProxy.Source.Spec.IPFamily; *ipFamily {
+		switch *g.NginxProxy.Source.Spec.IPFamily {
 		case ngfAPI.IPv4:
 			baseConfig.IPFamily = IPv4
 		case ngfAPI.IPv6:
