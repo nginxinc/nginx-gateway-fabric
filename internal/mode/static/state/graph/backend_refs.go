@@ -6,10 +6,8 @@ import (
 	"slices"
 
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
@@ -151,20 +149,25 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svc, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	ns := sourceNamespace
+	if ref.BackendRef.Namespace != nil {
+		ns = string(*ref.Namespace)
+	}
+	svcNsName := types.NamespacedName{Name: string(ref.BackendRef.Name), Namespace: ns}
+	svcIPFamily, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
-			Weight: weight,
-			Valid:  false,
+			Weight:      weight,
+			Valid:       false,
+			SvcNsName:   svcNsName,
+			ServicePort: v1.ServicePort{},
 		}
 
 		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
 		return backendRef, &cond
 	}
 
-	svcNsName := client.ObjectKeyFromObject(svc)
-
-	if err := verifyIPFamily(npCfg, svc.Spec.IPFamilies); err != nil {
+	if err := verifyIPFamily(npCfg, svcIPFamily); err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
 			ServicePort: svcPort,
@@ -299,7 +302,7 @@ func getServiceAndPortFromRef(
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (*v1.Service, v1.ServicePort, error) {
+) ([]v1.IPFamily, v1.ServicePort, error) {
 	ns := routeNamespace
 	if ref.Namespace != nil {
 		ns = string(*ref.Namespace)
@@ -308,18 +311,16 @@ func getServiceAndPortFromRef(
 	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 	svc, ok := services[svcNsName]
 	if !ok {
-		return &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: string(ref.Name)}},
-			v1.ServicePort{},
-			field.NotFound(refPath.Child("name"), ref.Name)
+		return []v1.IPFamily{}, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
 	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
 	svcPort, err := getServicePort(svc, int32(*ref.Port))
 	if err != nil {
-		return &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: string(ref.Name)}}, v1.ServicePort{}, err
+		return []v1.IPFamily{}, v1.ServicePort{}, err
 	}
 
-	return svc, svcPort, nil
+	return svc.Spec.IPFamilies, svcPort, nil
 }
 
 func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {

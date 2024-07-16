@@ -271,10 +271,6 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
 		},
 	}
-	svc1NsName := types.NamespacedName{
-		Namespace: "test",
-		Name:      "service1",
-	}
 
 	svc2 := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -284,19 +280,18 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 	}
 
 	tests := []struct {
-		expSvc           *v1.Service
-		ref              gatewayv1.BackendRef
-		expServiceNsName types.NamespacedName
-		name             string
-		expServicePort   v1.ServicePort
-		expErr           bool
+		expSvc         *v1.Service
+		ref            gatewayv1.BackendRef
+		expSvcIPFamily []v1.IPFamily
+		name           string
+		expServicePort v1.ServicePort
+		expErr         bool
 	}{
 		{
-			name:             "normal case",
-			ref:              getNormalRef(),
-			expServiceNsName: svc1NsName,
-			expServicePort:   v1.ServicePort{Port: 80},
-			expSvc:           svc1,
+			name:           "normal case",
+			ref:            getNormalRef(),
+			expServicePort: v1.ServicePort{Port: 80},
+			expSvcIPFamily: []v1.IPFamily{v1.IPv4Protocol},
 		},
 		{
 			name: "service does not exist",
@@ -304,14 +299,14 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 				backend.Name = "does-not-exist"
 				return backend
 			}),
-			expErr:           true,
-			expServiceNsName: types.NamespacedName{Name: "does-not-exist", Namespace: "test"},
-			expServicePort:   v1.ServicePort{},
+			expErr:         true,
+			expServicePort: v1.ServicePort{},
 			expSvc: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "does-not-exist", Namespace: "test",
 				},
 			},
+			expSvcIPFamily: []v1.IPFamily{},
 		},
 		{
 			name: "no matching port for service and port",
@@ -319,14 +314,14 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 				backend.Port = helpers.GetPointer[gatewayv1.PortNumber](504)
 				return backend
 			}),
-			expErr:           true,
-			expServiceNsName: svc1NsName,
-			expServicePort:   v1.ServicePort{},
+			expErr:         true,
+			expServicePort: v1.ServicePort{},
 			expSvc: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "service1", Namespace: "test",
 				},
 			},
+			expSvcIPFamily: []v1.IPFamily{},
 		},
 	}
 
@@ -341,11 +336,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			svc, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
+			svcIPFamily, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
 			g.Expect(err != nil).To(Equal(test.expErr))
 			g.Expect(servicePort).To(Equal(test.expServicePort))
-			g.Expect(svc).To(Equal(test.expSvc))
+			g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
 		})
 	}
 }
@@ -953,6 +948,10 @@ func TestCreateBackend(t *testing.T) {
 			expectedBackend: BackendRef{
 				Weight: 5,
 				Valid:  false,
+				SvcNsName: types.NamespacedName{
+					Namespace: "test",
+					Name:      "not-exist",
+				},
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
