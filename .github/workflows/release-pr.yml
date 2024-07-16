@@ -95,6 +95,7 @@ jobs:
           commit-message: Release ${{ inputs.version }}
           title: Release ${{ inputs.version }}
           draft: true
+          delete-branch: true
           branch: docs/release-${{ inputs.version }}
           author: nginx-bot <integrations@nginx.com>
           committer: nginx-bot <integrations@nginx.com>

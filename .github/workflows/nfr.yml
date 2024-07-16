@@ -17,11 +17,14 @@ on:
         description: Tag of the NGF and NGINX Docker images
         required: true
         default: edge
-      nginx_plus:
-        description: Run tests with NGINX Plus
-        required: false
-        default: false
-        type: boolean
+      type:
+        description: Type of NGINX image to test
+        required: true
+        default: both
+        type: choice
+        options: [oss, plus, both]
+  schedule:
+    - cron: "0 16 1,15 * *" # Run on the 1st and 15th of every month at 16:00 UTC
 
 defaults:
   run:
@@ -35,104 +38,142 @@ permissions:
   contents: read
 
 jobs:
+  vars:
+    name: Set up vars
+    runs-on: ubuntu-22.04
+    outputs:
+      test_label: ${{ github.event.inputs.test_label || 'all' }}
+      version: ${{ github.event.inputs.version || 'edge' }}
+      image_tag: ${{ github.event.inputs.image_tag || 'edge' }}
+      types: ${{ steps.var.outputs.types }}
+    permissions:
+      contents: read
+    steps:
+      - name: Set vars
+        id: var
+        run: |
+          if ${{ github.event.inputs.type == 'both' || github.event_name == 'schedule' }}; then
+          echo 'types=["oss","plus"]' >> $GITHUB_OUTPUT
+          else
+          echo 'types=["${{ github.event.inputs.type }}"]' >> $GITHUB_OUTPUT
+          fi
+
   setup-and-run-tests:
     name: Setup and Run NFR Tests
     runs-on: ubuntu-22.04
     permissions:
+      contents: read
+      id-token: write # needed for authenticating to GCP
+    needs: vars
+    strategy:
+      matrix:
+        type: ${{ fromJson(needs.vars.outputs.types) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2.1.0
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: kubectl
+
+      - name: Setup dotenv file
+        working-directory: ./tests/scripts
+        run: |
+          echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
+          echo "TAG=${{ needs.vars.outputs.image_tag }}" >> vars.env
+          echo "PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric" >> vars.env
+          echo "NGINX_PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric/nginx" >> vars.env
+          echo "NGINX_PLUS_PREFIX=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/nginx-gateway-fabric/nginx-plus" >> vars.env
+          echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
+          echo "GKE_CLUSTER_ZONE=us-east1-b" >> vars.env
+          echo "GKE_CLUSTER_REGION=us-east1" >> vars.env
+          echo "GKE_PROJECT=${{ secrets.GCP_PROJECT_ID }}" >> vars.env
+          echo "GKE_SVC_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}" >> vars.env
+          echo "GKE_NODES_SERVICE_ACCOUNT=${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}" >> vars.env
+          echo "IMAGE=projects/debian-cloud/global/images/debian-11-bullseye-v20240213" >> vars.env
+          echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}" >> vars.env
+          echo "NGF_REPO=nginxinc" >> vars.env
+          echo "NGF_BRANCH=${{ github.ref_name }}" >> vars.env
+          echo "SOURCE_IP_RANGE=$(curl -sS -4 icanhazip.com)/32" >> vars.env
+          echo "ADD_VM_IP_AUTH_NETWORKS=true" >> vars.env
+          echo "PLUS_ENABLED=${{ matrix.type == 'plus' }}" >> vars.env
+          echo "GINKGO_LABEL=" >> vars.env
+          echo "NGF_VERSION=${{ needs.vars.outputs.version }}" >> vars.env
+          echo "GKE_NUM_NODES=12" >> vars.env
+          echo "GKE_MACHINE_TYPE=n2d-standard-16" >> vars.env
+
+      - name: Create GKE cluster
+        working-directory: ./tests
+        run: make create-gke-cluster CI=true
+
+      - name: Create and setup VM
+        working-directory: ./tests
+        run: make create-and-setup-vm
+
+      - name: Run Tests
+        working-directory: ./tests
+        run: |
+          if ${{ needs.vars.outputs.test_label != 'all' }}; then
+          sed -i '/^GINKGO_LABEL=/s/=.*/="${{ needs.vars.outputs.test_label }}"/' "scripts/vars.env" && make nfr-test;
+          else
+          make nfr-test;
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        with:
+          name: results-${{ matrix.type }}
+          path: tests/results/
+
+      - name: Cleanup
+        working-directory: ./tests
+        if: always()
+        run: |
+          bash scripts/cleanup-vm.sh true
+          make delete-gke-cluster
+          rm -rf scripts/vars.env
+
+  pr-results:
+    name: Open PR with results
+    runs-on: ubuntu-22.04
+    permissions:
       contents: write # needed for opening PR with the results files
       pull-requests: write # needed for opening PR with the results files
-      id-token: write # needed for authenticating to GCP
-
+    needs: [vars, setup-and-run-tests]
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-    - name: Authenticate to Google Cloud
-      id: auth
-      uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
-      with:
-        token_format: access_token
-        workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-        service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - name: Download Artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: tests/results/
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2.1.0
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        install_components: kubectl
-
-    - name: Setup dotenv file
-      working-directory: ./tests/scripts
-      run: |
-        echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
-        echo "TAG=${{ inputs.image_tag }}" >> vars.env
-        echo "PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric" >> vars.env
-        echo "NGINX_PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric/nginx" >> vars.env
-        echo "NGINX_PLUS_PREFIX=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/nginx-gateway-fabric/nginx-plus" >> vars.env
-        echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
-        echo "GKE_CLUSTER_ZONE=us-east1-b" >> vars.env
-        echo "GKE_CLUSTER_REGION=us-east1" >> vars.env
-        echo "GKE_PROJECT=${{ secrets.GCP_PROJECT_ID }}" >> vars.env
-        echo "GKE_SVC_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}" >> vars.env
-        echo "GKE_NODES_SERVICE_ACCOUNT=${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}" >> vars.env
-        echo "IMAGE=projects/debian-cloud/global/images/debian-11-bullseye-v20240213" >> vars.env
-        echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}" >> vars.env
-        echo "NGF_REPO=nginxinc" >> vars.env
-        echo "NGF_BRANCH=${{ github.ref_name }}" >> vars.env
-        echo "SOURCE_IP_RANGE=$(curl -sS -4 icanhazip.com)/32" >> vars.env
-        echo "ADD_VM_IP_AUTH_NETWORKS=true" >> vars.env
-        echo "PLUS_ENABLED=${{ inputs.nginx_plus }}" >> vars.env
-        echo "GINKGO_LABEL=" >> vars.env
-        echo "NGF_VERSION=${{ inputs.version }}" >> vars.env
-        echo "GKE_NUM_NODES=12" >> vars.env
-        echo "GKE_MACHINE_TYPE=n2d-standard-16" >> vars.env
-
-    - name: Create GKE cluster
-      working-directory: ./tests
-      run:
-        make create-gke-cluster CI=true
-
-    - name: Create and setup VM
-      working-directory: ./tests
-      run:
-        make create-and-setup-vm
-
-    - name: Run Tests
-      working-directory: ./tests
-      run: |
-        if ${{ inputs.test_label != 'all' }}; then
-        sed -i '/^GINKGO_LABEL=/s/=.*/="${{ inputs.test_label }}"/' "scripts/vars.env" && make nfr-test;
-        else
-        make nfr-test;
-        fi
-
-    - name: Cleanup
-      working-directory: ./tests
-      if: always()
-      run: |
-        bash scripts/cleanup-vm.sh true
-        make delete-gke-cluster
-        rm -rf scripts/vars.env
-
-    - name: Open a PR with the results
-      uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
-      with:
-        token: ${{ secrets.NGINX_PAT }}
-        commit-message: NFR Test Results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
-        author: nginx-bot <integrations@nginx.com>
-        committer: nginx-bot <integrations@nginx.com>
-        branch: tests/nfr-tests-${{ inputs.version }}${{ inputs.nginx_plus == true && '-plus' || ''}}
-        delete-branch: true
-        title: NFR Test Results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
-        add-paths: |
-          tests/results/
-        body: |
-          Update with NFR test results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
-          - Auto-generated by the NFR tests workflow run ${{ github.run_id }}
-          - Tests ran using Docker image tag ${{ inputs.image_tag }}
-          - ${{ inputs.test_label }} test(s) ran
-          - NGINX Plus enabled: ${{ inputs.nginx_plus }}
-        labels: |
-          tests
-        assignees: ${{ github.actor }}
-        draft: true
+      - name: Open a PR with the results
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        with:
+          token: ${{ secrets.NGINX_PAT }}
+          commit-message: NFR Test Results for NGF version ${{ needs.vars.outputs.version }}
+          author: nginx-bot <integrations@nginx.com>
+          committer: nginx-bot <integrations@nginx.com>
+          branch: tests/nfr-tests-${{ needs.vars.outputs.version }}
+          delete-branch: true
+          title: NFR Test Results for NGF version ${{ needs.vars.outputs.version }}
+          add-paths: |
+            tests/results/
+          body: |
+            Update with NFR test results for NGF version ${{ needs.vars.outputs.version }} ${{ needs.vars.outputs.types }}
+            - Auto-generated by the NFR tests workflow run ${{ github.run_id }}
+            - Tests ran using Docker image tag ${{ needs.vars.outputs.image_tag }}
+            - ${{ needs.vars.outputs.test_label }} test(s) ran
+          assignees: ${{ github.actor }}
