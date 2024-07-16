@@ -416,7 +416,7 @@ Tracing
 <td>
 <p>TargetRefs identifies the API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
-Support: HTTPRoute</p>
+Support: HTTPRoute, GRPCRoute.</p>
 </td>
 </tr>
 </table>
@@ -949,7 +949,7 @@ Tracing
 <td>
 <p>TargetRefs identifies the API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
-Support: HTTPRoute</p>
+Support: HTTPRoute, GRPCRoute.</p>
 </td>
 </tr>
 </tbody>

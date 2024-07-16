@@ -10,13 +10,37 @@ Once you have a good grasp of these general best practices, you can then explore
 These guidelines will often build upon the foundation set by the general best practices and provide additional
 recommendations tailored to the project's specific requirements and coding style.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
-1. [General Guidelines](#general-guidelines)
-2. [Error Handling](#error-handling)
-3. [Logging](#logging)
-4. [Concurrency](#concurrency)
-5. [Recommended/Situational Guidelines](#recommended--situational)
+- [General Guidelines](#general-guidelines)
+  - [Use the empty struct `struct{}` for sentinel values](#use-the-empty-struct-struct-for-sentinel-values)
+  - [Consistent Line Breaks](#consistent-line-breaks)
+  - [Do not copy sync entities](#do-not-copy-sync-entities)
+  - [Construct slices with known capacity](#construct-slices-with-known-capacity)
+  - [Accept interfaces and return structs](#accept-interfaces-and-return-structs)
+  - [Use contexts in a viral fashion](#use-contexts-in-a-viral-fashion)
+  - [Do not use templates to replace interface types](#do-not-use-templates-to-replace-interface-types)
+  - [Do not use booleans as function parameters](#do-not-use-booleans-as-function-parameters)
+  - [Use dependency injection to separate concerns](#use-dependency-injection-to-separate-concerns)
+  - [Required arguments should be provided via parameters and optional arguments provided functionally or with structs](#required-arguments-should-be-provided-via-parameters-and-optional-arguments-provided-functionally-or-with-structs)
+- [Error Handling](#error-handling)
+  - [Prefer inline error handling](#prefer-inline-error-handling)
+  - [Do not filter context when returning errors](#do-not-filter-context-when-returning-errors)
+  - [Only handle errors once](#only-handle-errors-once)
+  - [Libraries should return errors for callers to handle](#libraries-should-return-errors-for-callers-to-handle)
+  - [Callers should handle errors and pass them up the stack for notification](#callers-should-handle-errors-and-pass-them-up-the-stack-for-notification)
+  - [Use panics for unrecoverable errors or programming errors](#use-panics-for-unrecoverable-errors-or-programming-errors)
+- [Logging](#logging)
+- [Concurrency](#concurrency)
+- [Recommended / Situational](#recommended--situational)
+  - [Use golang benchmark tests and pprof tools for profiling and identifying hot spots](#use-golang-benchmark-tests-and-pprof-tools-for-profiling-and-identifying-hot-spots)
+  - [Reduce the number of stored pointers. Structures should store instances whenever possible](#reduce-the-number-of-stored-pointers-structures-should-store-instances-whenever-possible)
+  - [Pass pointers down the stack not up](#pass-pointers-down-the-stack-not-up)
+  - [Using interface types will cause unavoidable heap allocations](#using-interface-types-will-cause-unavoidable-heap-allocations)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## General Guidelines
 

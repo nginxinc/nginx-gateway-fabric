@@ -22,7 +22,7 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-22.04
     env:
-      DOCKER_BUILD_NO_SUMMARY: true
+      DOCKER_BUILD_SUMMARY: false
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: stable
 
@@ -38,7 +38,7 @@ jobs:
         run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
       - name: Docker Buildx
-        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
+        uses: docker/setup-buildx-action@4fd812986e6c8c2a69e18311145f9371337f27d4 # v3.4.0
 
       - name: NGF Docker meta
         id: ngf-meta
@@ -76,7 +76,7 @@ jobs:
           TELEMETRY_ENDPOINT_INSECURE: "true"
 
       - name: Build NGF Docker Image
-        uses: docker/build-push-action@15560696de535e4014efeff63c48f16952e52dd1 # v6.2.0
+        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c # v6.3.0
         with:
           file: build/Dockerfile
           tags: ${{ steps.ngf-meta.outputs.tags }}
@@ -87,7 +87,7 @@ jobs:
           target: goreleaser
 
       - name: Build NGINX Docker Image
-        uses: docker/build-push-action@15560696de535e4014efeff63c48f16952e52dd1 # v6.2.0
+        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c # v6.3.0
         with:
           file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'plus' && '.nginxplus' || ''}}
           tags: ${{ steps.nginx-meta.outputs.tags }}
@@ -102,8 +102,8 @@ jobs:
 
       - name: Install cloud-provider-kind
         run: |
-          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.2.0/cloud-provider-kind_0.2.0_linux_amd64.tar.gz
-          tar -xvf cloud-provider-kind_0.2.0_linux_amd64.tar.gz
+          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.3.0/cloud-provider-kind_0.3.0_linux_amd64.tar.gz
+          tar -xvf cloud-provider-kind_0.3.0_linux_amd64.tar.gz
 
       - name: Run cloud-provider-kind
         run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1

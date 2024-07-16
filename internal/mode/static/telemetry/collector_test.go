@@ -12,11 +12,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -304,6 +306,25 @@ var _ = Describe("Collector", Ordered, func() {
 						{Namespace: "test", Name: "backendTLSPolicy-2"}: {},
 						{Namespace: "test", Name: "backendTLSPolicy-3"}: {},
 					},
+					NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+						{
+							NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-1"},
+							GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+						}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.Gateway}}},
+						{
+							NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-2"},
+							GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+						}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.HTTPRoute}}},
+						{
+							NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-3"},
+							GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+						}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.GRPCRoute}}},
+						{
+							NsName: types.NamespacedName{Namespace: "test", Name: "ObservabilityPolicy-1"},
+							GVK:    schema.GroupVersionKind{Kind: kinds.ObservabilityPolicy},
+						}: {},
+					},
+					NginxProxy: &graph.NginxProxy{},
 				}
 
 				config := &dataplane.Configuration{
@@ -342,14 +363,18 @@ var _ = Describe("Collector", Ordered, func() {
 
 				expData.ClusterNodeCount = 3
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:          3,
-					GatewayClassCount:     3,
-					HTTPRouteCount:        3,
-					SecretCount:           3,
-					ServiceCount:          3,
-					EndpointCount:         4,
-					GRPCRouteCount:        2,
-					BackendTLSPolicyCount: 3,
+					GatewayCount:                             3,
+					GatewayClassCount:                        3,
+					HTTPRouteCount:                           3,
+					SecretCount:                              3,
+					ServiceCount:                             3,
+					EndpointCount:                            4,
+					GRPCRouteCount:                           2,
+					BackendTLSPolicyCount:                    3,
+					GatewayAttachedClientSettingsPolicyCount: 1,
+					RouteAttachedClientSettingsPolicyCount:   2,
+					ObservabilityPolicyCount:                 1,
+					NginxProxyCount:                          1,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
@@ -495,6 +520,25 @@ var _ = Describe("Collector", Ordered, func() {
 				ReferencedServices: map[types.NamespacedName]struct{}{
 					client.ObjectKeyFromObject(svc): {},
 				},
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-1"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+					}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.Gateway}}},
+					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-2"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+					}: {TargetRefs: []graph.PolicyTargetRef{{Kind: kinds.HTTPRoute}}},
+					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "ClientSettingsPolicy-empty"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.ClientSettingsPolicy},
+					}: {},
+					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "ObservabilityPolicy-1"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.ObservabilityPolicy},
+					}: {},
+				},
+				NginxProxy: &graph.NginxProxy{},
 			}
 
 			config1 = &dataplane.Configuration{
@@ -557,12 +601,16 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config1)
 
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:      1,
-					GatewayClassCount: 1,
-					HTTPRouteCount:    1,
-					SecretCount:       1,
-					ServiceCount:      1,
-					EndpointCount:     1,
+					GatewayCount:                             1,
+					GatewayClassCount:                        1,
+					HTTPRouteCount:                           1,
+					SecretCount:                              1,
+					ServiceCount:                             1,
+					EndpointCount:                            1,
+					GatewayAttachedClientSettingsPolicyCount: 1,
+					RouteAttachedClientSettingsPolicyCount:   1,
+					ObservabilityPolicyCount:                 1,
+					NginxProxyCount:                          1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -575,14 +623,18 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:          0,
-					GatewayClassCount:     0,
-					HTTPRouteCount:        0,
-					SecretCount:           0,
-					ServiceCount:          0,
-					EndpointCount:         0,
-					GRPCRouteCount:        0,
-					BackendTLSPolicyCount: 0,
+					GatewayCount:                             0,
+					GatewayClassCount:                        0,
+					HTTPRouteCount:                           0,
+					SecretCount:                              0,
+					ServiceCount:                             0,
+					EndpointCount:                            0,
+					GRPCRouteCount:                           0,
+					BackendTLSPolicyCount:                    0,
+					GatewayAttachedClientSettingsPolicyCount: 0,
+					RouteAttachedClientSettingsPolicyCount:   0,
+					ObservabilityPolicyCount:                 0,
+					NginxProxyCount:                          0,
 				}
 
 				data, err := dataCollector.Collect(ctx)
