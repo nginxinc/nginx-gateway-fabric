@@ -154,7 +154,7 @@ func createBackendRef(
 		ns = string(*ref.Namespace)
 	}
 	svcNsName := types.NamespacedName{Name: string(ref.BackendRef.Name), Namespace: ns}
-	svcIPFamily, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcIPFamily, svcPort, err := getIPFamilyAndPortFromRef(ref.BackendRef, svcNsName, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
 			Weight:      weight,
@@ -293,22 +293,16 @@ func findBackendTLSPolicyForService(
 	return beTLSPolicy, err
 }
 
-// getServiceAndPortFromRef extracts the NamespacedName of the Service and the port from a BackendRef.
+// getIPFamilyAndPortFromRef extracts the IPFamily of the Service and the port from a BackendRef.
 // It can return an error and an empty v1.ServicePort in two cases:
 // 1. The Service referenced from the BackendRef does not exist in the cluster/state.
 // 2. The Port on the BackendRef does not match any of the ServicePorts on the Service.
-func getServiceAndPortFromRef(
+func getIPFamilyAndPortFromRef(
 	ref gatewayv1.BackendRef,
-	routeNamespace string,
+	svcNsName types.NamespacedName,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 ) ([]v1.IPFamily, v1.ServicePort, error) {
-	ns := routeNamespace
-	if ref.Namespace != nil {
-		ns = string(*ref.Namespace)
-	}
-
-	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 	svc, ok := services[svcNsName]
 	if !ok {
 		return []v1.IPFamily{}, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
@@ -334,14 +328,16 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
 			// capitalizing error message to match the rest of the error messages associated with a condition
 			return errors.New( //nolint: stylecheck
-				"Service configured with IPv6 family but NginxProxy is configured with IPv4")
+				"Service configured with IPv6 family but NginxProxy is configured with IPv4",
+			)
 		}
 	}
 	if *npIPFamily == ngfAPI.IPv6 {
 		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
 			// capitalizing error message to match the rest of the error messages associated with a condition
 			return errors.New( //nolint: stylecheck
-				"Service configured with IPv4 family but NginxProxy is configured with IPv6")
+				"Service configured with IPv4 family but NginxProxy is configured with IPv6",
+			)
 		}
 	}
 

@@ -418,7 +418,7 @@ If you `describe` your HTTPRoute and see the following error:
       Status:                True
       Type:                  Accepted
       Last Transition Time:  2024-07-14T23:36:37Z
-      Message:               service configured with IPv4 family but NginxProxy is configured with IPv6
+      Message:               Service configured with IPv4 family but NginxProxy is configured with IPv6
       Observed Generation:   1
       Reason:                InvalidServiceIPFamily
       Status:                False
