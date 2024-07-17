@@ -66,6 +66,7 @@ jobs:
       id-token: write # needed for authenticating to GCP
     needs: vars
     strategy:
+      fail-fast: false
       matrix:
         type: ${{ fromJson(needs.vars.outputs.types) }}
     steps:
@@ -89,19 +90,19 @@ jobs:
       - name: Setup dotenv file
         working-directory: ./tests/scripts
         run: |
-          echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
+          echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}-${{ matrix.type }}" >> vars.env
           echo "TAG=${{ needs.vars.outputs.image_tag }}" >> vars.env
           echo "PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric" >> vars.env
           echo "NGINX_PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric/nginx" >> vars.env
           echo "NGINX_PLUS_PREFIX=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/nginx-gateway-fabric/nginx-plus" >> vars.env
-          echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
-          echo "GKE_CLUSTER_ZONE=us-east1-b" >> vars.env
-          echo "GKE_CLUSTER_REGION=us-east1" >> vars.env
+          echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}-${{ matrix.type }}" >> vars.env
+          echo "GKE_CLUSTER_ZONE=us-west1-b" >> vars.env
+          echo "GKE_CLUSTER_REGION=us-west1" >> vars.env
           echo "GKE_PROJECT=${{ secrets.GCP_PROJECT_ID }}" >> vars.env
           echo "GKE_SVC_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}" >> vars.env
           echo "GKE_NODES_SERVICE_ACCOUNT=${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}" >> vars.env
           echo "IMAGE=projects/debian-cloud/global/images/debian-11-bullseye-v20240213" >> vars.env
-          echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}" >> vars.env
+          echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}-${{ matrix.type }}" >> vars.env
           echo "NGF_REPO=nginxinc" >> vars.env
           echo "NGF_BRANCH=${{ github.ref_name }}" >> vars.env
           echo "SOURCE_IP_RANGE=$(curl -sS -4 icanhazip.com)/32" >> vars.env
