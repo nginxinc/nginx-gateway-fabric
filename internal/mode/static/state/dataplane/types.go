@@ -33,10 +33,10 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
-	// Telemetry holds the Otel configuration.
-	Telemetry Telemetry
 	// BaseHTTPConfig holds the configuration options at the http context.
 	BaseHTTPConfig BaseHTTPConfig
+	// Telemetry holds the Otel configuration.
+	Telemetry Telemetry
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -296,9 +296,23 @@ type SpanAttribute struct {
 
 // BaseHTTPConfig holds the configuration options at the http context.
 type BaseHTTPConfig struct {
+	// IPFamily specifies the IP family for all servers.
+	IPFamily IPFamilyType
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
+
+// IPFamilyType specifies the IP family to be used by NGINX.
+type IPFamilyType string
+
+const (
+	// Dual specifies that the server will use both IPv4 and IPv6.
+	Dual IPFamilyType = "dual"
+	// IPv4 specifies that the server will use only IPv4.
+	IPv4 IPFamilyType = "ipv4"
+	// IPv6 specifies that the server will use only IPv6.
+	IPv6 IPFamilyType = "ipv6"
+)
 
 // Ratio represents a tracing sampling ratio used in an nginx config with the otel_module.
 type Ratio struct {

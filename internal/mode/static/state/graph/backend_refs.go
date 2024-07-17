@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -9,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
+
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -44,9 +47,10 @@ func addBackendRefsToRouteRules(
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) {
 	for _, r := range routes {
-		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
+		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies, npCfg)
 	}
 }
 
@@ -57,6 +61,7 @@ func addBackendRefsToRules(
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) {
 	if !route.Valid {
 		return
@@ -87,6 +92,7 @@ func addBackendRefsToRules(
 				services,
 				refPath,
 				backendTLSPolicies,
+				npCfg,
 			)
 
 			backendRefs = append(backendRefs, ref)
@@ -116,6 +122,7 @@ func createBackendRef(
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+	npCfg *NginxProxy,
 ) (BackendRef, *conditions.Condition) {
 	// Data plane will handle invalid ref by responding with 500.
 	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
@@ -142,8 +149,25 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svcNsName, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	ns := sourceNamespace
+	if ref.BackendRef.Namespace != nil {
+		ns = string(*ref.Namespace)
+	}
+	svcNsName := types.NamespacedName{Name: string(ref.BackendRef.Name), Namespace: ns}
+	svcIPFamily, svcPort, err := getIPFamilyAndPortFromRef(ref.BackendRef, svcNsName, services, refPath)
 	if err != nil {
+		backendRef = BackendRef{
+			Weight:      weight,
+			Valid:       false,
+			SvcNsName:   svcNsName,
+			ServicePort: v1.ServicePort{},
+		}
+
+		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
+		return backendRef, &cond
+	}
+
+	if err := verifyIPFamily(npCfg, svcIPFamily); err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
 			ServicePort: svcPort,
@@ -151,7 +175,7 @@ func createBackendRef(
 			Valid:       false,
 		}
 
-		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
+		cond := staticConds.NewRouteInvalidIPFamily(err.Error())
 		return backendRef, &cond
 	}
 
@@ -269,35 +293,55 @@ func findBackendTLSPolicyForService(
 	return beTLSPolicy, err
 }
 
-// getServiceAndPortFromRef extracts the NamespacedName of the Service and the port from a BackendRef.
+// getIPFamilyAndPortFromRef extracts the IPFamily of the Service and the port from a BackendRef.
 // It can return an error and an empty v1.ServicePort in two cases:
 // 1. The Service referenced from the BackendRef does not exist in the cluster/state.
 // 2. The Port on the BackendRef does not match any of the ServicePorts on the Service.
-func getServiceAndPortFromRef(
+func getIPFamilyAndPortFromRef(
 	ref gatewayv1.BackendRef,
-	routeNamespace string,
+	svcNsName types.NamespacedName,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (types.NamespacedName, v1.ServicePort, error) {
-	ns := routeNamespace
-	if ref.Namespace != nil {
-		ns = string(*ref.Namespace)
-	}
-
-	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
-
+) ([]v1.IPFamily, v1.ServicePort, error) {
 	svc, ok := services[svcNsName]
 	if !ok {
-		return svcNsName, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
+		return []v1.IPFamily{}, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
 	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
 	svcPort, err := getServicePort(svc, int32(*ref.Port))
 	if err != nil {
-		return svcNsName, v1.ServicePort{}, err
+		return []v1.IPFamily{}, v1.ServicePort{}, err
 	}
 
-	return svcNsName, svcPort, nil
+	return svc.Spec.IPFamilies, svcPort, nil
+}
+
+func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
+	if npCfg == nil || npCfg.Source == nil || !npCfg.Valid {
+		return nil
+	}
+
+	// we can access this field since we have already validated that ipFamily is not nil in validateNginxProxy.
+	npIPFamily := npCfg.Source.Spec.IPFamily
+	if *npIPFamily == ngfAPI.IPv4 {
+		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
+			// capitalizing error message to match the rest of the error messages associated with a condition
+			return errors.New( //nolint: stylecheck
+				"Service configured with IPv6 family but NginxProxy is configured with IPv4",
+			)
+		}
+	}
+	if *npIPFamily == ngfAPI.IPv6 {
+		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
+			// capitalizing error message to match the rest of the error messages associated with a condition
+			return errors.New( //nolint: stylecheck
+				"Service configured with IPv4 family but NginxProxy is configured with IPv6",
+			)
+		}
+	}
+
+	return nil
 }
 
 func validateRouteBackendRef(

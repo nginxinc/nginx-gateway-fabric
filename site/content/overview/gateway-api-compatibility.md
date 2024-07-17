@@ -179,6 +179,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/RefNotPermitted`
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef with an unsupported value.
+      - `ResolvedRefs/False/InvalidIPFamily`: Custom reason for when one of the HTTPRoute rules has a backendRef that has an invalid IPFamily.
       - `PartiallyInvalid/True/UnsupportedValue`
 
 ---

@@ -60,9 +60,14 @@ var grpcBaseHeaders = []http.Header{
 func executeServers(conf dataplane.Configuration) []executeResult {
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
 
+	serverConfig := http.ServerConfig{
+		Servers:  servers,
+		IPFamily: getIPFamily(conf.BaseHTTPConfig),
+	}
+
 	serverResult := executeResult{
 		dest: httpConfigFile,
-		data: helpers.MustExecuteTemplate(serversTemplate, servers),
+		data: helpers.MustExecuteTemplate(serversTemplate, serverConfig),
 	}
 
 	// create httpMatchPair conf
@@ -84,6 +89,18 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 	allResults = append(allResults, serverResult, httpMatchResult)
 
 	return allResults
+}
+
+// getIPFamily returns whether the server should be configured for IPv4, IPv6, or both.
+func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
+	switch baseHTTPConfig.IPFamily {
+	case dataplane.IPv4:
+		return http.IPFamily{IPv4: true}
+	case dataplane.IPv6:
+		return http.IPFamily{IPv6: true}
+	}
+
+	return http.IPFamily{IPv4: true, IPv6: true}
 }
 
 func createAdditionFileResults(conf dataplane.Configuration) []executeResult {

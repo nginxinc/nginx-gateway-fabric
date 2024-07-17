@@ -92,6 +92,7 @@ nginx:
   config:
     {}
     # disableHTTP2: false
+    # ipFamily: dual
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317
