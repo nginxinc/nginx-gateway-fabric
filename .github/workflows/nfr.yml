@@ -177,3 +177,4 @@ jobs:
             - Tests ran using Docker image tag ${{ needs.vars.outputs.image_tag }}
             - ${{ needs.vars.outputs.test_label }} test(s) ran
           assignees: ${{ github.actor }}
+          draft: ${{ github.event_name != 'schedule' }}
