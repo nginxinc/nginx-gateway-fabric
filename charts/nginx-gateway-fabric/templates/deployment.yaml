@@ -15,9 +15,10 @@ spec:
     metadata:
       labels:
       {{- include "nginx-gateway.selectorLabels" . | nindent 8 }}
+      {{- if or .Values.nginxGateway.podAnnotations .Values.metrics.enable }}
       annotations:
         {{- if .Values.nginxGateway.podAnnotations }}
-        {{- toYaml .Values.nginxGateway.podAnnotations | trim | nindent 8 }}
+        {{- toYaml .Values.nginxGateway.podAnnotations | nindent 8 }}
         {{- end }}
         {{- if .Values.metrics.enable }}
         prometheus.io/scrape: "true"
@@ -26,6 +27,7 @@ spec:
         prometheus.io/scheme: "https"
         {{- end }}
         {{- end }}
+      {{- end }}
     spec:
       containers:
       - args:
