@@ -5,154 +5,135 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/gomega"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
 
-func getFirstValueOfVector(query string, promInstance PrometheusInstance) float64 {
+// TODO: having gomega and regular queries here is bad
+
+func getFirstValueOfVector(query string, promInstance PrometheusInstance) (float64, error) {
 	result, err := promInstance.Query(query)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return 0, err
+	}
 
 	val, err := GetFirstValueOfPrometheusVector(result)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return 0, err
+	}
 
-	return val
+	return val, nil
 }
 
-func getBuckets(query string, promInstance PrometheusInstance) []bucket {
+func getBuckets(query string, promInstance PrometheusInstance) ([]Bucket, error) {
 	result, err := promInstance.Query(query)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return nil, err
+	}
 
 	res, ok := result.(model.Vector)
-	Expect(ok).To(BeTrue())
+	if !ok {
+		return nil, errors.New("could not convert result to vector")
+	}
 
-	buckets := make([]bucket, 0, len(res))
+	buckets := make([]Bucket, 0, len(res))
 
 	for _, sample := range res {
 		le := sample.Metric["le"]
 		val := float64(sample.Value)
-		bucket := bucket{
+		bucket := Bucket{
 			Le:  string(le),
 			Val: int(val),
 		}
 		buckets = append(buckets, bucket)
 	}
 
-	return buckets
+	return buckets, nil
 }
 
-func GetReloadCount(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
+func GetReloadCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
 		fmt.Sprintf(
-			`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %d`,
+			`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
-		),
-		promInstance,
-	)
-
-	//return getFirstValueOfVector(
-	//	fmt.Sprintf(
-	//		`nginx_gateway_fabric_nginx_reloads_milliseconds_count{pod="%[1]s"}`+
-	//			` - `+
-	//			`nginx_gateway_fabric_nginx_reloads_milliseconds_count{pod="%[1]s"} @ %d`,
-	//		ngfPodName,
-	//		startTime.Unix(),
-	//	),
-	//	promInstance,
-	//)
-}
-
-func getReloadErrsCount(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
-	return getFirstValueOfVector(
-		fmt.Sprintf(
-			`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
-			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func getReloadAvgTime(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
+//func getReloadErrsCount(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
+//	return getFirstValueOfVector(
+//		fmt.Sprintf(
+//			`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
+//				` - `+
+//				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
+//			ngfPodName,
+//			startTime.Unix(),
+//		),
+//		promInstance,
+//	)
+//}
+
+func GetReloadAvgTime(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
 		fmt.Sprintf(
-			`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
 				` / `+
-				`(nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %[2]d)`,
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func getReloadBuckets(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) []bucket {
+func GetReloadBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Bucket, error) {
 	return getBuckets(
 		fmt.Sprintf(
-			`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func getEventsCount(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
+func GetEventsCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
 		fmt.Sprintf(
-			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %d`,
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func getEventsAvtTime(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
+func GetEventsAvgTime(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
 		fmt.Sprintf(
-			`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
 				` / `+
-				`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %[2]d)`,
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func getEventsBuckets(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) []bucket {
+func GetEventsBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Bucket, error) {
 	return getBuckets(
 		fmt.Sprintf(
-			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`+
-				` - `+
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`,
 			ngfPodName,
-			startTime.Unix(),
 		),
 		promInstance,
 	)
 }
 
-func CreateMetricExistChecker(promInstance PrometheusInstance, query string, getTime func() time.Time, modifyTime func()) func() error {
+func CreateMetricExistChecker(
+	promInstance PrometheusInstance,
+	query string,
+	getTime func() time.Time,
+	modifyTime func(),
+) func() error {
 	return func() error {
 		queryWithTimestamp := fmt.Sprintf("%s @ %d", query, getTime().Unix())
 
@@ -170,7 +151,13 @@ func CreateMetricExistChecker(promInstance PrometheusInstance, query string, get
 	}
 }
 
-func CreateEndTimeFinder(promInstance PrometheusInstance, query string, startTime time.Time, t *time.Time, queryRangeStep time.Duration) func() error {
+func CreateEndTimeFinder(
+	promInstance PrometheusInstance,
+	query string,
+	startTime time.Time,
+	t *time.Time,
+	queryRangeStep time.Duration,
+) func() error {
 	return func() error {
 		result, err := promInstance.QueryRange(query, v1.Range{
 			Start: startTime,
@@ -190,22 +177,22 @@ func CreateEndTimeFinder(promInstance PrometheusInstance, query string, startTim
 	}
 }
 
-func createResponseChecker(url, address string, requestTimeout time.Duration) func() error {
-	return func() error {
-		status, _, err := Get(url, address, requestTimeout)
-		if err != nil {
-			return fmt.Errorf("bad response: %w", err)
-		}
+//func createResponseChecker(url, address string, requestTimeout time.Duration) func() error {
+//	return func() error {
+//		status, _, err := Get(url, address, requestTimeout)
+//		if err != nil {
+//			return fmt.Errorf("bad response: %w", err)
+//		}
+//
+//		if status != 200 {
+//			return fmt.Errorf("unexpected status code: %d", status)
+//		}
+//
+//		return nil
+//	}
+//}
 
-		if status != 200 {
-			return fmt.Errorf("unexpected status code: %d", status)
-		}
-
-		return nil
-	}
-}
-
-type bucket struct {
+type Bucket struct {
 	Le  string
 	Val int
 }

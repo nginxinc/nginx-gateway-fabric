@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -27,11 +28,11 @@ import (
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration"), func() {
 	var (
 		scrapeInterval        = 15 * time.Second
-		queryRangeStep        = 15 * time.Second
+		queryRangeStep        = 5 * time.Second
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
 
-		//ngfPodName string
+		outFile *os.File
 	)
 
 	BeforeAll(func() {
@@ -39,7 +40,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(err).ToNot(HaveOccurred())
 
 		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
-		outFile, err := framework.CreateResultsFile(filename)
+		outFile, err = framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
 
@@ -58,25 +59,15 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	})
 
 	BeforeEach(func() {
-		// possibly instead of teardown, can scale to 0 replicas.
 		teardown(releaseName)
-
-		//setup(getDefaultSetupCfg())
-
-		//podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-		//Expect(err).ToNot(HaveOccurred())
-		//Expect(podNames).To(HaveLen(1))
-		//ngfPodName = podNames[0]
-	})
-
-	AfterEach(func() {
-		teardown(releaseName)
-
 	})
 
 	AfterAll(func() {
+		teardown(releaseName)
 		close(promPortForwardStopCh)
 		Expect(framework.UninstallPrometheus(resourceManager)).To(Succeed())
+
+		// might want to call cleanupResources here with 150 or the max resources.
 	})
 
 	createUniqueResources := func(resourceCount int, fileName string) error {
@@ -147,41 +138,41 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		return nil
 	}
 
-	//createResourcesRoutesLast := func(resourceCount int) error {
-	//	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-	//	defer cancel()
-	//
-	//	for i := 1; i <= resourceCount; i++ {
-	//		ns := core.Namespace{
-	//			ObjectMeta: metav1.ObjectMeta{
-	//				Name: "namespace" + strconv.Itoa(i),
-	//			},
-	//		}
-	//		Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
-	//	}
-	//
-	//	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
-	//
-	//	time.Sleep(60 * time.Second)
-	//
-	//	ns := core.Namespace{
-	//		ObjectMeta: metav1.ObjectMeta{
-	//			Name: "reconfig",
-	//		},
-	//	}
-	//	Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
-	//	Expect(resourceManager.ApplyFromFiles(
-	//		[]string{
-	//			"reconfig/certificate-ns-and-cafe-secret.yaml",
-	//			"reconfig/reference-grant.yaml",
-	//			"reconfig/gateway.yaml",
-	//		},
-	//		ns.Name)).To(Succeed())
-	//
-	//	Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
-	//
-	//	return nil
-	//}
+	createResourcesRoutesLast := func(resourceCount int) error {
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer cancel()
+
+		for i := 1; i <= resourceCount; i++ {
+			ns := core.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "namespace" + strconv.Itoa(i),
+				},
+			}
+			Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
+		}
+
+		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
+
+		time.Sleep(60 * time.Second)
+
+		ns := core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "reconfig",
+			},
+		}
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(
+			[]string{
+				"reconfig/certificate-ns-and-cafe-secret.yaml",
+				"reconfig/reference-grant.yaml",
+				"reconfig/gateway.yaml",
+			},
+			ns.Name)).To(Succeed())
+
+		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
+
+		return nil
+	}
 
 	checkResourceCreation := func(resourceCount int) error {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
@@ -227,15 +218,18 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}, ns.Name)).To(Succeed())
 	}
 
-	runTestWithMetrics := func(resourceCount int, test func(resourceCount int) error, startWithNGFSetup bool) {
-
+	runTestWithMetrics := func(
+		testName string,
+		resourceCount int,
+		test func(resourceCount int) error,
+		startWithNGFSetup bool,
+	) {
 		var (
 			metricExistTimeout = 2 * time.Minute
 			metricExistPolling = 1 * time.Second
 			ngfPodName         string
+			startTime          time.Time
 		)
-
-		startTime := time.Now()
 
 		getStartTime := func() time.Time { return startTime }
 		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
@@ -248,27 +242,27 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(podNames).To(HaveLen(1))
 			ngfPodName = podNames[0]
 			startTime = time.Now()
+
+			queries := []string{
+				fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
+				fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
+				// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
+				fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
+			}
+
+			for _, q := range queries {
+				Eventually(
+					framework.CreateMetricExistChecker(
+						promInstance,
+						q,
+						getStartTime,
+						modifyStartTime,
+					),
+				).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
+			}
 		} else {
 			output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
 			Expect(err).ToNot(HaveOccurred(), string(output))
-		}
-
-		queries := []string{
-			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
-			fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
-			// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
-			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
-		}
-
-		for _, q := range queries {
-			Eventually(
-				framework.CreateMetricExistChecker(
-					promInstance,
-					q,
-					getStartTime,
-					modifyStartTime,
-				),
-			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
 		Expect(test(resourceCount)).To(Succeed())
@@ -282,6 +276,25 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(podNames).To(HaveLen(1))
 			ngfPodName = podNames[0]
 			startTime = time.Now()
+
+			// if i do a new instance of NGF each time, I might not need start time and can just do the endtime.
+			queries := []string{
+				fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
+				fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
+				// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
+				fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
+			}
+
+			for _, q := range queries {
+				Eventually(
+					framework.CreateMetricExistChecker(
+						promInstance,
+						q,
+						getStartTime,
+						modifyStartTime,
+					),
+				).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
+			}
 		}
 
 		time.Sleep(2 * scrapeInterval)
@@ -301,7 +314,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		getEndTime := func() time.Time { return endTime }
 		noOpModifier := func() {}
 
-		queries = []string{
+		queries := []string{
 			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
 			// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
 			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
@@ -318,15 +331,57 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
-		reloadCount := framework.GetReloadCount(promInstance, ngfPodName, startTime)
-
+		reloadCount, err := framework.GetReloadCount(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
 		fmt.Println(reloadCount)
+
+		reloadAvgTime, err := framework.GetReloadAvgTime(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(reloadAvgTime)
+
+		reloadBuckets, err := framework.GetReloadBuckets(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(reloadBuckets)
+
+		eventsCount, err := framework.GetEventsCount(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(eventsCount)
+
+		eventsAvgTime, err := framework.GetEventsAvgTime(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(eventsAvgTime)
+
+		eventsBuckets, err := framework.GetEventsBuckets(promInstance, ngfPodName)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(eventsBuckets)
+
+		results := reconfigTestResults{
+			Name:               testName,
+			EventsBuckets:      eventsBuckets,
+			ReloadBuckets:      reloadBuckets,
+			NumResources:       resourceCount,
+			NGINXReloads:       int(reloadCount),
+			NGINXReloadAvgTime: int(reloadAvgTime),
+			EventsCount:        int(eventsCount),
+			EventsAvgTime:      int(eventsAvgTime),
+		}
+
+		err = writeReconfigResults(outFile, results)
+		Expect(err).ToNot(HaveOccurred())
+
 		cleanupResources(30)
 	}
 
 	It("test 1", func() {
-		//Skip("no")
-		runTestWithMetrics(30, createResourcesGWLast, true)
+		runTestWithMetrics("1", 30, createResourcesGWLast, false)
+	})
+
+	It("test 2", func() {
+		runTestWithMetrics("2", 30, createResourcesRoutesLast, true)
+	})
+
+	It("test 3", func() {
+		runTestWithMetrics("3", 30, createResourcesGWLast, true)
 	})
 
 	//It("test 2", func() {
@@ -338,8 +393,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 type reconfigTestResults struct {
 	Name                 string
-	EventsBuckets        []bucket
-	ReloadBuckets        []bucket
+	EventsBuckets        []framework.Bucket
+	ReloadBuckets        []framework.Bucket
 	NumResources         int
 	TimeToReadyTotal     int
 	TimeToReadyAvgSingle int
@@ -350,9 +405,7 @@ type reconfigTestResults struct {
 }
 
 const reconfigResultTemplate = `
-## Test {{ .Name }}
-
-- NumResources: {{ .NumResources }}
+## Test {{ .Name }} NumResources {{ .NumResources }}
 
 ### Reloads and Time to Ready
 
