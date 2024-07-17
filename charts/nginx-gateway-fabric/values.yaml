@@ -7,6 +7,9 @@ nginxGateway:
   # belong to its class - i.e. have the "gatewayClassName" field resource equal to the class.
   gatewayClassName: nginx
 
+  # -- Set of custom annotations for the NGINX Gateway Fabric pods.
+  podAnnotations: {}
+
   # -- Set of custom annotations for GatewayClass objects.
   gatewayClassAnnotations: {}
 
