@@ -25,7 +25,7 @@ func CreateResultsDir(testName, version string) (string, error) {
 
 // CreateResultsFile creates and returns the results file for a test.
 func CreateResultsFile(filename string) (*os.File, error) {
-	outFile, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o777)
+	outFile, err := os.OpenFile(filename, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
 	}
