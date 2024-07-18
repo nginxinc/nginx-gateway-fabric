@@ -1,6 +1,6 @@
 ---
 title: "Securing backend traffic"
-description: 
+description:
 weight: 700
 toc: true
 docs: "DOCS-1423"

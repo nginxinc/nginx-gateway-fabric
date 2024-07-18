@@ -5,7 +5,7 @@ toc: true
 docs: "DOCS-1413"
 ---
 
-Learn about the architecture and design principles of NGINX Gateway Fabric. 
+Learn about the architecture and design principles of NGINX Gateway Fabric.
 
 The intended audience for this information is primarily the two following groups:
 
