@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,13 +42,13 @@ func BuildConfiguration(
 		return Configuration{Version: configVersion}
 	}
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
+	baseHTTPConfig := buildBaseHTTPConfig(g)
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig.IPFamily)
 	httpServers, sslServers := buildServers(g, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
-	baseHTTPConfig := buildBaseHTTPConfig(g)
 
 	config := Configuration{
 		HTTPServers:    httpServers,
@@ -472,10 +473,14 @@ func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
 	resolver resolver.ServiceResolver,
+	ipFamily IPFamilyType,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
 	// We use a map to deduplicate them.
 	uniqueUpstreams := make(map[string]Upstream)
+
+	// We need to build endpoints based on the IPFamily of NGINX.
+	allowedAddressType := getAllowedAddressType(ipFamily)
 
 	for _, l := range listeners {
 		if !l.Valid {
@@ -503,7 +508,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
 						if err != nil {
 							errMsg = err.Error()
 						}
@@ -529,6 +534,19 @@ func buildUpstreams(
 		upstreams = append(upstreams, up)
 	}
 	return upstreams
+}
+
+func getAllowedAddressType(ipFamily IPFamilyType) []discoveryV1.AddressType {
+	switch ipFamily {
+	case IPv4:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4}
+	case IPv6:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6}
+	case Dual:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4, discoveryV1.AddressTypeIPv6}
+	default:
+		return []discoveryV1.AddressType{}
+	}
 }
 
 func getListenerHostname(h *v1.Hostname) string {
@@ -658,7 +676,8 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	baseConfig := BaseHTTPConfig{
 		// HTTP2 should be enabled by default
-		HTTP2: true,
+		HTTP2:    true,
+		IPFamily: Dual,
 	}
 	if g.NginxProxy == nil || !g.NginxProxy.Valid {
 		return baseConfig
@@ -666,6 +685,15 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 
 	if g.NginxProxy.Source.Spec.DisableHTTP2 {
 		baseConfig.HTTP2 = false
+	}
+
+	if g.NginxProxy.Source.Spec.IPFamily != nil {
+		switch *g.NginxProxy.Source.Spec.IPFamily {
+		case ngfAPI.IPv4:
+			baseConfig.IPFamily = IPv4
+		case ngfAPI.IPv6:
+			baseConfig.IPFamily = IPv6
+		}
 	}
 
 	return baseConfig

@@ -14,12 +14,22 @@ import (
 )
 
 var (
-	svcPortName = "svc-port"
+	svcPortName     = "svc-port"
+	dualAddressType = []discoveryV1.AddressType{
+		discoveryV1.AddressTypeIPv4,
+		discoveryV1.AddressTypeIPv6,
+	}
 
-	addresses = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+	addresses     = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+	addressesIPv6 = []string{"2001:db8::1", "2001:db8::2", "2001:db8::3"}
 
 	readyEndpoint1 = discoveryV1.Endpoint{
 		Addresses:  addresses,
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
+	}
+
+	readyIPv6Endpoint2 = discoveryV1.Endpoint{
+		Addresses:  addressesIPv6,
 		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
 
@@ -44,7 +54,7 @@ var (
 		Endpoints:   nil,
 	}
 
-	validEndpointSlice = discoveryV1.EndpointSlice{
+	validIPv4EndpontSlice = discoveryV1.EndpointSlice{
 		AddressType: discoveryV1.AddressTypeIPv4,
 		Endpoints: []discoveryV1.Endpoint{
 			readyEndpoint1,
@@ -59,8 +69,19 @@ var (
 		},
 	}
 
-	invalidAddressTypeEndpointSlice = discoveryV1.EndpointSlice{
+	validIPv6EndpointSlice = discoveryV1.EndpointSlice{
 		AddressType: discoveryV1.AddressTypeIPv6,
+		Endpoints:   []discoveryV1.Endpoint{readyIPv6Endpoint2},
+		Ports: []discoveryV1.EndpointPort{
+			{
+				Name: &svcPortName,
+				Port: helpers.GetPointer[int32](80),
+			},
+		},
+	}
+
+	invalidAddressTypeEndpointSlice = discoveryV1.EndpointSlice{
+		AddressType: discoveryV1.AddressTypeFQDN,
 		Endpoints:   []discoveryV1.Endpoint{readyEndpoint1},
 		Ports: []discoveryV1.EndpointPort{
 			{
@@ -83,13 +104,54 @@ var (
 )
 
 func TestFilterEndpointSliceList(t *testing.T) {
-	sliceList := discoveryV1.EndpointSliceList{
-		Items: []discoveryV1.EndpointSlice{
-			validEndpointSlice,
-			invalidAddressTypeEndpointSlice,
-			invalidPortEndpointSlice,
-			nilEndpoints,
-			mixedValidityEndpointSlice,
+	test := []struct {
+		msg                string
+		sliceList          discoveryV1.EndpointSliceList
+		expList            []discoveryV1.EndpointSlice
+		allowedAddressType []discoveryV1.AddressType
+	}{
+		{
+			msg: "only ipv4 enabled",
+			sliceList: discoveryV1.EndpointSliceList{
+				Items: []discoveryV1.EndpointSlice{
+					validIPv4EndpontSlice,
+					validIPv6EndpointSlice,
+				},
+			},
+			expList: []discoveryV1.EndpointSlice{
+				validIPv4EndpontSlice,
+			},
+			allowedAddressType: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4},
+		},
+		{
+			msg: "only ipv6 enabled",
+			sliceList: discoveryV1.EndpointSliceList{
+				Items: []discoveryV1.EndpointSlice{
+					validIPv4EndpontSlice,
+					validIPv6EndpointSlice,
+				},
+			},
+			expList: []discoveryV1.EndpointSlice{
+				validIPv6EndpointSlice,
+			},
+			allowedAddressType: []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6},
+		},
+		{
+			msg: "ipv4 and ipv6 enabled",
+			sliceList: discoveryV1.EndpointSliceList{
+				Items: []discoveryV1.EndpointSlice{
+					validIPv4EndpontSlice,
+					validIPv6EndpointSlice,
+					invalidAddressTypeEndpointSlice,
+					invalidPortEndpointSlice,
+					nilEndpoints,
+					mixedValidityEndpointSlice,
+				},
+			},
+			expList: []discoveryV1.EndpointSlice{
+				validIPv4EndpontSlice, validIPv6EndpointSlice, mixedValidityEndpointSlice,
+			},
+			allowedAddressType: dualAddressType,
 		},
 	}
 
@@ -99,11 +161,11 @@ func TestFilterEndpointSliceList(t *testing.T) {
 		TargetPort: intstr.FromInt(80),
 	}
 
-	expFilteredList := []discoveryV1.EndpointSlice{validEndpointSlice, mixedValidityEndpointSlice}
-
-	filteredSliceList := filterEndpointSliceList(sliceList, svcPort)
-	g := NewWithT(t)
-	g.Expect(filteredSliceList).To(Equal(expFilteredList))
+	for _, tc := range test {
+		filteredSliceList := filterEndpointSliceList(tc.sliceList, svcPort, tc.allowedAddressType)
+		g := NewWithT(t)
+		g.Expect(filteredSliceList).To(Equal(tc.expList))
+	}
 }
 
 func TestGetDefaultPort(t *testing.T) {
@@ -155,24 +217,6 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 		servicePort v1.ServicePort
 		ignore      bool
 	}{
-		{
-			msg: "IPV6 address type",
-			slice: discoveryV1.EndpointSlice{
-				AddressType: discoveryV1.AddressTypeIPv6,
-				Ports: []discoveryV1.EndpointPort{
-					{
-						Name: &svcPortName,
-						Port: &port8080,
-					},
-				},
-			},
-			servicePort: v1.ServicePort{
-				Name:       svcPortName,
-				Port:       80,
-				TargetPort: intstr.FromInt(8080),
-			},
-			ignore: true,
-		},
 		{
 			msg: "FQDN address type",
 			slice: discoveryV1.EndpointSlice{
@@ -227,9 +271,27 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 			ignore: false,
 		},
 		{
-			msg: "normal",
+			msg: "normal IPV4 address type",
 			slice: discoveryV1.EndpointSlice{
 				AddressType: discoveryV1.AddressTypeIPv4,
+				Ports: []discoveryV1.EndpointPort{
+					{
+						Name: &svcPortName,
+						Port: &port8080,
+					},
+				},
+			},
+			servicePort: v1.ServicePort{
+				Name:       svcPortName,
+				Port:       80,
+				TargetPort: intstr.FromInt(8080),
+			},
+			ignore: false,
+		},
+		{
+			msg: "normal IPV6 address type",
+			slice: discoveryV1.EndpointSlice{
+				AddressType: discoveryV1.AddressTypeIPv6,
 				Ports: []discoveryV1.EndpointPort{
 					{
 						Name: &svcPortName,
@@ -247,7 +309,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		g := NewWithT(t)
-		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort)).To(Equal(tc.ignore))
+		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort, dualAddressType)).To(Equal(tc.ignore))
 	}
 }
 
@@ -542,7 +604,7 @@ func bench(b *testing.B, svcNsName types.NamespacedName,
 ) {
 	b.Helper()
 	for i := 0; i < b.N; i++ {
-		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet)
+		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet, dualAddressType)
 		if len(res) != n {
 			b.Fatalf("expected %d endpoints, got %d", n, len(res))
 		}

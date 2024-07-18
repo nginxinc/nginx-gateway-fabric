@@ -27,8 +27,28 @@ type NginxProxyList struct {
 	Items           []NginxProxy `json:"items"`
 }
 
+// IPFamilyType specifies the IP family to be used by NGINX.
+//
+// +kubebuilder:validation:Enum=dual;ipv4;ipv6
+type IPFamilyType string
+
+const (
+	// Dual specifies that NGINX will use both IPv4 and IPv6.
+	Dual IPFamilyType = "dual"
+	// IPv4 specifies that NGINX will use only IPv4.
+	IPv4 IPFamilyType = "ipv4"
+	// IPv6 specifies that NGINX will use only IPv6.
+	IPv6 IPFamilyType = "ipv6"
+)
+
 // NginxProxySpec defines the desired state of the NginxProxy.
 type NginxProxySpec struct {
+	// IPFamily specifies the IP family to be used by the NGINX.
+	// Default is "dual", meaning the server will use both IPv4 and IPv6.
+	//
+	// +optional
+	// +kubebuilder:default:=dual
+	IPFamily *IPFamilyType `json:"ipFamily,omitempty"`
 	// Telemetry specifies the OpenTelemetry configuration.
 	//
 	// +optional

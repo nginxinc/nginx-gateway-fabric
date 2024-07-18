@@ -71,6 +71,9 @@ func TestGetNginxProxy(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "np2",
 					},
+					Spec: ngfAPI.NginxProxySpec{
+						IPFamily: helpers.GetPointer(ngfAPI.Dual),
+					},
 				},
 				Valid: true,
 			},
@@ -262,6 +265,7 @@ func TestValidateNginxProxy(t *testing.T) {
 							{Key: "key", Value: "value"},
 						},
 					},
+					IPFamily: helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual),
 				},
 			},
 			expectErrCount: 0,
@@ -325,6 +329,18 @@ func TestValidateNginxProxy(t *testing.T) {
 			},
 			expErrSubstring: "telemetry.spanAttributes",
 			expectErrCount:  2,
+		},
+		{
+			name:      "invalid ipFamily type",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{},
+					IPFamily:  helpers.GetPointer[ngfAPI.IPFamilyType]("invalid"),
+				},
+			},
+			expErrSubstring: "spec.ipFamily",
+			expectErrCount:  1,
 		},
 	}
 

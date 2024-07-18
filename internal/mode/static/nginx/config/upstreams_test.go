@@ -35,15 +35,27 @@ func TestExecuteUpstreams(t *testing.T) {
 			Name:      "up3",
 			Endpoints: []resolver.Endpoint{},
 		},
+		{
+			Name: "up4-ipv6",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "2001:db8::1",
+					Port:    80,
+					IPv6:    true,
+				},
+			},
+		},
 	}
 
 	expectedSubStrings := []string{
 		"upstream up1",
 		"upstream up2",
 		"upstream up3",
+		"upstream up4-ipv6",
 		"upstream invalid-backend-ref",
 		"server 10.0.0.0:80;",
 		"server 11.0.0.0:80;",
+		"server [2001:db8::1]:80",
 		"server unix:/var/run/nginx/nginx-502-server.sock;",
 	}
 
@@ -91,6 +103,16 @@ func TestCreateUpstreams(t *testing.T) {
 			Name:      "up3",
 			Endpoints: []resolver.Endpoint{},
 		},
+		{
+			Name: "up4-ipv6",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "fd00:10:244:1::7",
+					Port:    80,
+					IPv6:    true,
+				},
+			},
+		},
 	}
 
 	expUpstreams := []http.Upstream{
@@ -124,6 +146,15 @@ func TestCreateUpstreams(t *testing.T) {
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx502Server,
+				},
+			},
+		},
+		{
+			Name:     "up4-ipv6",
+			ZoneSize: ossZoneSize,
+			Servers: []http.UpstreamServer{
+				{
+					Address: "[fd00:10:244:1::7]:80",
 				},
 			},
 		},
@@ -215,6 +246,28 @@ func TestCreateUpstream(t *testing.T) {
 				},
 			},
 			msg: "multiple endpoints",
+		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "endpoint-ipv6",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "fd00:10:244:1::7",
+						Port:    80,
+						IPv6:    true,
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "endpoint-ipv6",
+				ZoneSize: ossZoneSize,
+				Servers: []http.UpstreamServer{
+					{
+						Address: "[fd00:10:244:1::7]:80",
+					},
+				},
+			},
+			msg: "endpoint ipv6",
 		},
 	}
 

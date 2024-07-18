@@ -137,6 +137,117 @@ func TestExecuteServers(t *testing.T) {
 	}
 }
 
+func TestExecuteServersForIPFamily(t *testing.T) {
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname: "example.com",
+			Port:     8080,
+		},
+	}
+	sslServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 8443,
+		},
+	}
+	tests := []struct {
+		msg                string
+		expectedHTTPConfig map[string]int
+		config             dataplane.Configuration
+	}{
+		{
+			msg: "http and ssl servers with IPv4 IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv4,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+			},
+		},
+		{
+			msg: "http and ssl servers with IPv6 IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv6,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+			},
+		},
+		{
+			msg: "http and ssl servers with Dual IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			results := executeServers(test.config)
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
+
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
+	}
+}
+
 func TestExecuteForDefaultServers(t *testing.T) {
 	testcases := []struct {
 		msg       string
@@ -2514,4 +2625,36 @@ func TestAdditionFilename(t *testing.T) {
 
 	name := createAdditionFileName(dataplane.Addition{Identifier: "my-addition"})
 	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
+}
+
+func TestGetIPFamily(t *testing.T) {
+	test := []struct {
+		msg            string
+		baseHTTPConfig dataplane.BaseHTTPConfig
+		expected       http.IPFamily
+	}{
+		{
+			msg:            "ipv4",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv4},
+			expected:       http.IPFamily{IPv4: true, IPv6: false},
+		},
+		{
+			msg:            "ipv6",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv6},
+			expected:       http.IPFamily{IPv4: false, IPv6: true},
+		},
+		{
+			msg:            "dual",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.Dual},
+			expected:       http.IPFamily{IPv4: true, IPv6: true},
+		},
+	}
+
+	for _, tc := range test {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getIPFamily(tc.baseHTTPConfig)
+			g.Expect(result).To(Equal(tc.expected))
+		})
+	}
 }
