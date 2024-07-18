@@ -1,6 +1,5 @@
 ---
 title: "Prometheus metrics"
-description:
 weight: 100
 toc: true
 docs: "DOCS-1418"
