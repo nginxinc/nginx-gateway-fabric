@@ -1,0 +1,7 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: nginx-proxy
+spec:
+  config:
+    ipFamily: dual

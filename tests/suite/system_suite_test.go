@@ -303,5 +303,6 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "scale")
+		strings.Contains(labelFilter, "scale") ||
+		strings.Contains(labelFilter, "ip-family")
 }
