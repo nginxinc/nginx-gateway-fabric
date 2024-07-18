@@ -7,6 +7,7 @@ MANIFEST_DIR = $(CURDIR)/deploy/manifests
 CHART_DIR = $(SELF_DIR)charts/nginx-gateway-fabric
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
+KIND_CONFIG_FILE = $(SELF_DIR)config/cluster/kind-cluster.yaml
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
 PLUS_ENABLED ?= false
@@ -160,7 +161,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <$(SELF_DIR)tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
-	kind create cluster --image $(KIND_IMAGE)
+	kind create cluster --image $(KIND_IMAGE) --config $(KIND_CONFIG_FILE)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster

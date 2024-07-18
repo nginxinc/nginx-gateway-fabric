@@ -225,7 +225,7 @@ func BuildGraph(
 	)
 
 	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies, npCfg)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
