@@ -1,19 +1,21 @@
 ---
-title: "Gateway Architecture"
-description: "Learn about the architecture and design principles of NGINX Gateway Fabric."
+title: "Gateway architecture"
 weight: 100
 toc: true
 docs: "DOCS-1413"
 ---
 
+Learn about the architecture and design principles of NGINX Gateway Fabric. 
+
 The intended audience for this information is primarily the two following groups:
+
 
 - _Cluster Operators_ who would like to know how the software works and understand how it can fail.
 - _Developers_ who would like to [contribute](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/CONTRIBUTING.md) to the project.
 
 The reader needs to be familiar with core Kubernetes concepts, such as pods, deployments, services, and endpoints. For an understanding of how NGINX itself works, you can read the ["Inside NGINX: How We Designed for Performance & Scale"](https://www.nginx.com/blog/inside-nginx-how-we-designed-for-performance-scale/) blog post.
 
-## NGINX Gateway Fabric Overview
+## Overview
 
 NGINX Gateway Fabric is an open source project that provides an implementation of the [Gateway API](https://gateway-api.sigs.k8s.io/) using [NGINX](https://nginx.org/) as the data plane. The goal of this project is to implement the core Gateway APIs -- _Gateway_, _GatewayClass_, _HTTPRoute_, _GRPCRoute_, _TCPRoute_, _TLSRoute_, and _UDPRoute_ -- to configure an HTTP or TCP/UDP load balancer, reverse proxy, or API gateway for applications running on Kubernetes. NGINX Gateway Fabric supports a subset of the Gateway API.
 

@@ -1,10 +1,13 @@
 ---
-title: "Securing Traffic using Let's Encrypt and Cert-Manager"
-description: "Learn how to issue and mange certificates using Let's Encrypt and cert-manager."
+title: "Secure traffic using Let's Encrypt and cert-manager"
 weight: 300
 toc: true
 docs: "DOCS-1425"
 ---
+
+Learn how to issue and mange certificates using Let's Encrypt and cert-manager.
+
+## Overview
 
 Securing client server communication is a crucial part of modern application architectures. One of the most important steps in this process is implementing HTTPS (HTTP over TLS/SSL) for all communications. This encrypts the data transmitted between the client and server, preventing eavesdropping and tampering. To do this, you need an SSL/TLS certificate from a trusted Certificate Authority (CA). However, issuing and managing certificates can be a complicated manual process. Luckily, there are many services and tools available to simplify and automate certificate issuance and management.
 
@@ -14,7 +17,7 @@ Follow the steps in this guide to:
 - Use [Let’s Encrypt](https://letsencrypt.org) as the Certificate Authority (CA) issuing the TLS certificate.
 - Use [cert-manager](https://cert-manager.io) to automate the provisioning and management of the certificate.
 
-## Prerequisities
+## Before you begin
 
 - Administrator access to a Kubernetes cluster.
 - [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
@@ -37,7 +40,7 @@ At a high level, the process looks like this:
 1. When the client connects to `https://cafe.example.com/coffee`, the request is routed to the coffee-app application and the communication is secured using the signed keypair contained in the cafe-secret secret.
 1. The certificate will be automatically renewed when it is close to expiry, the secret will be updated using the new certificate, and NGINX Gateway Fabric will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once the secret is updated.
 
-## Securing Traffic
+## Securing traffic
 
 ### Deploy cert-manager
 

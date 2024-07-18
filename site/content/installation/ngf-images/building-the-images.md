@@ -1,11 +1,9 @@
 ---
-title: "Building NGINX Gateway Fabric and NGINX Images"
+title: "Build NGINX Gateway Fabric and NGINX images"
 weight: 300
 toc: true
 docs: "DOCS-1431"
 ---
-
-{{<custom-styles>}}
 
 ## Overview
 

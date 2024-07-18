@@ -1,15 +1,14 @@
 ---
-title: "Prometheus Metrics"
-description: "This document describes how to monitor NGINX Gateway Fabric using Prometheus and Grafana. It explains installation and configuration, as well as what metrics are available."
+title: "Prometheus metrics"
+description: 
 weight: 100
 toc: true
 docs: "DOCS-1418"
 ---
 
-{{<custom-styles>}}
+This document describes how to monitor NGINX Gateway Fabric using Prometheus and Grafana. It explains installation and configuration, as well as what metrics are available.
 
 ## Overview
-
 
 NGINX Gateway Fabric metrics are displayed in [Prometheus](https://prometheus.io/) format. These metrics are served through a metrics server orchestrated by the controller-runtime package on HTTP port `9113`. When installed, Prometheus automatically scrapes this port and collects metrics. [Grafana](https://grafana.com/) can be used for rich visualization of these metrics.
 
@@ -98,7 +97,7 @@ Provided by the [controller-runtime](https://github.com/kubernetes-sigs/controll
 - Go runtime metrics such as the number of Go routines, garbage collection duration, and Go version.
 - Controller-specific metrics, including reconciliation errors per controller, length of the reconcile queue, and reconciliation latency.
 
-## How to change the default metrics configuration
+## Change the default metrics configuration
 
 You can configure monitoring metrics for NGINX Gateway Fabric using Helm or Manifests.
 

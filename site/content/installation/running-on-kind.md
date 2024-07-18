@@ -1,14 +1,15 @@
 ---
-title: "Deploying NGINX Gateway Fabric on a kind Cluster"
-description: "Learn how to run NGINX Gateway Fabric on a kind (Kubernetes in Docker) cluster."
+title: "Deploy NGINX Gateway Fabric on a kind Cluster"
 weight: 400
 toc: true
 docs: "DOCS-1428"
 ---
 
-{{< custom-styles >}}
+## Overview
 
-## Prerequisites
+Learn how to run NGINX Gateway Fabric on a kind (Kubernetes in Docker) cluster.
+
+## Before you begin
 
 To complete the steps in this guide, you first need to install the following tools for Kubernetes management and development:
 
@@ -56,6 +57,6 @@ kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 
 {{< note >}}NGINX will only start listening on these ports after you set up a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.{{</note>}}
 
-## Getting Started with NGINX Gateway Fabric
+## Get Started with NGINX Gateway Fabric
 
 Learn how to use NGINX Gateway Fabric by exploring the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/examples) directory. The guides provide practical instructions and scenarios to help you use NGINX Gateway Fabric effectively.
