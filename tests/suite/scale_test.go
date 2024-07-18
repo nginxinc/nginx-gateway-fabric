@@ -1,6 +1,7 @@
 package suite
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,17 +10,20 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
@@ -105,6 +109,70 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ngfPodName = podNames[0]
 	})
 
+	type bucket struct {
+		Le  string
+		Val int
+	}
+
+	type scaleTestResults struct {
+		Name                   string
+		EventsBuckets          []bucket
+		ReloadBuckets          []bucket
+		EventsAvgTime          int
+		EventsCount            int
+		NGFContainerRestarts   int
+		NGFErrors              int
+		NginxContainerRestarts int
+		NginxErrors            int
+		ReloadAvgTime          int
+		ReloadCount            int
+		ReloadErrsCount        int
+	}
+
+	const scaleResultTemplate = `
+	## Test {{ .Name }}
+
+	### Reloads
+
+	- Total: {{ .ReloadCount }}
+	- Total Errors: {{ .ReloadErrsCount }}
+	- Average Time: {{ .ReloadAvgTime }}ms
+	- Reload distribution:
+	{{- range .ReloadBuckets }}
+		- {{ .Le }}ms: {{ .Val }}
+	{{- end }}
+
+	### Event Batch Processing
+
+	- Total: {{ .EventsCount }}
+	- Average Time: {{ .EventsAvgTime }}ms
+	- Event Batch Processing distribution:
+	{{- range .EventsBuckets }}
+		- {{ .Le }}ms: {{ .Val }}
+	{{- end }}
+
+	### Errors
+
+	- NGF errors: {{ .NGFErrors }}
+	- NGF container restarts: {{ .NGFContainerRestarts }}
+	- NGINX errors: {{ .NginxErrors }}
+	- NGINX container restarts: {{ .NginxContainerRestarts }}
+
+	### Graphs and Logs
+
+	See [output directory](./{{ .Name }}) for more details.
+	The logs are attached only if there are errors.
+	`
+
+	writeScaleResults := func(dest io.Writer, results scaleTestResults) error {
+		tmpl, err := template.New("results").Parse(scaleResultTemplate)
+		if err != nil {
+			return err
+		}
+
+		return tmpl.Execute(dest, results)
+	}
+
 	createResponseChecker := func(url, address string) func() error {
 		return func() error {
 			status, _, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
@@ -140,7 +208,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 	createEndTimeFinder := func(query string, startTime time.Time, t *time.Time) func() error {
 		return func() error {
-			result, err := promInstance.QueryRange(query, v1.Range{
+			result, err := promInstance.QueryRange(query, promv1.Range{
 				Start: startTime,
 				End:   *t,
 				Step:  queryRangeStep,
@@ -308,7 +376,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		result, err := promInstance.QueryRange(
 			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
-			v1.Range{
+			promv1.Range{
 				Start: startTime,
 				End:   endTime,
 				Step:  queryRangeStep,
@@ -328,7 +396,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		result, err = promInstance.QueryRange(
 			fmt.Sprintf(`rate(container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}[2m])`, ngfPodName),
-			v1.Range{
+			promv1.Range{
 				Start: startTime,
 				End:   endTime,
 				Step:  queryRangeStep,
@@ -728,66 +796,360 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	})
 })
 
-type bucket struct {
-	Le  string
-	Val int
-}
+var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtime-scale"), func() {
+	// These tests assume 12 nodes exist, since that is what is created in the pipeline to handle scale tests.
+	// The number of NGF replicas is based on this number of nodes. If running with a different number of nodes,
+	// then the number of replicas should be updated to match.
 
-type scaleTestResults struct {
-	Name                   string
-	EventsBuckets          []bucket
-	ReloadBuckets          []bucket
-	EventsAvgTime          int
-	EventsCount            int
-	NGFContainerRestarts   int
-	NGFErrors              int
-	NginxContainerRestarts int
-	NginxErrors            int
-	ReloadAvgTime          int
-	ReloadCount            int
-	ReloadErrsCount        int
-}
-
-const scaleResultTemplate = `
-## Test {{ .Name }}
-
-### Reloads
-
-- Total: {{ .ReloadCount }}
-- Total Errors: {{ .ReloadErrsCount }}
-- Average Time: {{ .ReloadAvgTime }}ms
-- Reload distribution:
-{{- range .ReloadBuckets }}
-	- {{ .Le }}ms: {{ .Val }}
-{{- end }}
-
-### Event Batch Processing
-
-- Total: {{ .EventsCount }}
-- Average Time: {{ .EventsAvgTime }}ms
-- Event Batch Processing distribution:
-{{- range .EventsBuckets }}
-	- {{ .Le }}ms: {{ .Val }}
-{{- end }}
-
-### Errors
-
-- NGF errors: {{ .NGFErrors }}
-- NGF container restarts: {{ .NGFContainerRestarts }}
-- NGINX errors: {{ .NginxErrors }}
-- NGINX container restarts: {{ .NginxContainerRestarts }}
-
-### Graphs and Logs
-
-See [output directory](./{{ .Name }}) for more details.
-The logs are attached only if there are errors.
-`
-
-func writeScaleResults(dest io.Writer, results scaleTestResults) error {
-	tmpl, err := template.New("results").Parse(scaleResultTemplate)
-	if err != nil {
-		return err
+	type metricsResults struct {
+		metrics  *framework.Metrics
+		testName string
+		scheme   string
 	}
 
-	return tmpl.Execute(dest, results)
-}
+	var (
+		outFile           *os.File
+		resultsDir        string
+		ngfDeploymentName string
+		ns                core.Namespace
+		wg                sync.WaitGroup
+		metricsCh         chan *metricsResults
+
+		files = []string{
+			"scale/zero-downtime/cafe.yaml",
+			"scale/zero-downtime/cafe-secret.yaml",
+			"scale/zero-downtime/gateway-1.yaml",
+			"scale/zero-downtime/cafe-routes.yaml",
+		}
+	)
+
+	type trafficCfg struct {
+		desc   string
+		port   string
+		target framework.Target
+	}
+
+	trafficConfigs := []trafficCfg{
+		{
+			desc: "Send http /coffee traffic",
+			port: "80",
+			target: framework.Target{
+				Method: "GET",
+				URL:    "http://cafe.example.com/coffee",
+			},
+		},
+		{
+			desc: "Send https /tea traffic",
+			port: "443",
+			target: framework.Target{
+				Method: "GET",
+				URL:    "https://cafe.example.com/tea",
+			},
+		},
+	}
+
+	formatTestFileNamePrefix := func(prefix, valuesFile string) string {
+		if strings.Contains(valuesFile, "affinity") {
+			prefix += "-affinity"
+		}
+		return prefix
+	}
+
+	sendTraffic := func(testFileNamePrefix string, duration time.Duration) {
+		for _, test := range trafficConfigs {
+			wg.Add(1)
+			go func(cfg trafficCfg) {
+				defer GinkgoRecover()
+				defer wg.Done()
+
+				loadTestCfg := framework.LoadTestConfig{
+					Targets:     []framework.Target{cfg.target},
+					Rate:        100,
+					Duration:    duration,
+					Description: cfg.desc,
+					Proxy:       fmt.Sprintf("%s:%s", address, cfg.port),
+					ServerName:  "cafe.example.com",
+				}
+
+				results, metrics := framework.RunLoadTest(loadTestCfg)
+
+				scheme := strings.Split(cfg.target.URL, "://")[0]
+				metricsRes := metricsResults{
+					metrics:  &metrics,
+					testName: fmt.Sprintf("\n#### Test: %s\n\n```text\n", cfg.desc),
+					scheme:   scheme,
+				}
+
+				buf := new(bytes.Buffer)
+				encoder := framework.NewVegetaCSVEncoder(buf)
+				for _, res := range results {
+					res := res
+					Expect(encoder.Encode(&res)).To(Succeed())
+				}
+
+				csvName := framework.CreateResultsFilename("csv", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+				filename := filepath.Join(resultsDir, csvName)
+				csvFile, err := framework.CreateResultsFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = fmt.Fprint(csvFile, buf.String())
+				Expect(err).ToNot(HaveOccurred())
+				csvFile.Close()
+
+				pngName := framework.CreateResultsFilename("png", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+				Expect(
+					framework.GenerateRequestsPNG(resultsDir, csvName, pngName),
+				).To(Succeed())
+
+				metricsCh <- &metricsRes
+			}(test)
+		}
+	}
+
+	writeResults := func(testFileNamePrefix string, res *metricsResults) {
+		_, err := fmt.Fprint(outFile, res.testName)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(framework.WriteMetricsResults(outFile, res.metrics)).To(Succeed())
+
+		link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
+		if *plusEnabled {
+			link = fmt.Sprintf("\n\n![%[1]v-plus.png](%[1]v-plus.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
+		}
+
+		_, err = fmt.Fprintf(outFile, "```%s", link)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	BeforeAll(func() {
+		// Scale tests need a dedicated NGF instance
+		// Because they analyze the logs of NGF and NGINX, and they don't want to analyze the logs of other tests.
+		teardown(releaseName)
+
+		var err error
+		resultsDir, err = framework.CreateResultsDir("zero-downtime-scale", version)
+		Expect(err).ToNot(HaveOccurred())
+
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
+		outFile, err = framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
+	})
+
+	AfterAll(func() {
+		_, err := fmt.Fprintln(outFile)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(outFile.Close()).To(Succeed())
+
+		// restoring NGF shared among tests in the suite
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg)
+	})
+
+	BeforeEach(func() {
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "zero-downtime-scale",
+			},
+		}
+
+		metricsCh = make(chan *metricsResults, 2)
+	})
+
+	tests := []struct {
+		name        string
+		valuesFile  string
+		numReplicas int
+	}{
+		{
+			name:        "One NGF Pod runs per node",
+			valuesFile:  "manifests/scale/zero-downtime/values-affinity.yaml",
+			numReplicas: 12, // equals number of nodes
+		},
+		{
+			name:        "Multiple NGF Pods run per node",
+			valuesFile:  "manifests/scale/zero-downtime/values.yaml",
+			numReplicas: 24, // twice the number of nodes
+		},
+	}
+
+	for _, test := range tests {
+		When(test.name, func() {
+			BeforeAll(func() {
+				cfg := getDefaultSetupCfg()
+				cfg.nfr = true
+				setup(cfg, "--values", test.valuesFile)
+
+				deploy, err := resourceManager.GetNGFDeployment(ngfNamespace, releaseName)
+				Expect(err).ToNot(HaveOccurred())
+				ngfDeploymentName = deploy.GetName()
+
+				Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+				Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+
+				_, err = fmt.Fprintf(outFile, "\n## %s Test Results\n", test.name)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				teardown(releaseName)
+				Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
+			})
+
+			It("scales up gradually without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Up Gradually\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-up", test.valuesFile)
+
+				sendTraffic(testFileNamePrefix, 5*time.Minute)
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				// scale NGF up one at a time
+				for i := 2; i <= test.numReplicas; i++ {
+					Eventually(resourceManager.ScaleDeployment).
+						WithArguments(ngfNamespace, ngfDeploymentName, int32(i)).
+						WithTimeout(timeoutConfig.UpdateTimeout).
+						WithPolling(500 * time.Millisecond).
+						Should(Succeed())
+
+					gatewayFile := fmt.Sprintf("scale/zero-downtime/gateway-%d.yaml", i)
+					Expect(resourceManager.ApplyFromFiles([]string{gatewayFile}, ns.Name)).To(Succeed())
+
+					ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.UpdateTimeout)
+
+					Expect(resourceManager.WaitForPodsToBeReadyWithCount(ctx, ngfNamespace, i)).To(Succeed())
+					Expect(resourceManager.WaitForGatewayObservedGeneration(ctx, ns.Name, "gateway", i)).To(Succeed())
+
+					cancel()
+				}
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			It("scales down gradually without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Down Gradually\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-down", test.valuesFile)
+
+				// this is the termination time per pod as defined in the values file
+				terminationTime := time.Duration(40) * time.Second
+				// total amount of time we send traffic
+				waitTime := time.Duration(test.numReplicas) * terminationTime
+
+				sendTraffic(testFileNamePrefix, waitTime)
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				// scale NGF down one at a time
+				currentGen := test.numReplicas
+				for i := test.numReplicas - 1; i >= 1; i-- {
+					Eventually(resourceManager.ScaleDeployment).
+						WithArguments(ngfNamespace, ngfDeploymentName, int32(i)).
+						WithTimeout(timeoutConfig.UpdateTimeout).
+						WithPolling(500 * time.Millisecond).
+						Should(Succeed())
+
+					gatewayFile := fmt.Sprintf("scale/zero-downtime/gateway-%d.yaml", i)
+					Expect(resourceManager.ApplyFromFiles([]string{gatewayFile}, ns.Name)).To(Succeed())
+					currentGen++
+
+					ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.UpdateTimeout)
+
+					time.Sleep(terminationTime)
+					Expect(resourceManager.WaitForGatewayObservedGeneration(ctx, ns.Name, "gateway", currentGen)).To(Succeed())
+
+					cancel()
+				}
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			checkGatewayListeners := func(num int) {
+				Eventually(
+					func() error {
+						ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+						defer cancel()
+
+						var gw v1.Gateway
+						key := types.NamespacedName{Namespace: ns.Name, Name: "gateway"}
+						if err := resourceManager.K8sClient.Get(ctx, key, &gw); err != nil {
+							return err
+						}
+
+						if len(gw.Status.Listeners) != num {
+							return fmt.Errorf("gateway listeners not updated to %d entries", num)
+						}
+
+						return nil
+					},
+				).
+					WithTimeout(5 * time.Second).
+					WithPolling(100 * time.Millisecond).
+					Should(Succeed())
+			}
+
+			It("scales up abruptly without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Up Abruptly\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-up", test.valuesFile)
+
+				sendTraffic(testFileNamePrefix, 2*time.Minute)
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				Expect(resourceManager.ScaleDeployment(ngfNamespace, ngfDeploymentName, int32(test.numReplicas))).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles([]string{"scale/zero-downtime/gateway-2.yaml"}, ns.Name)).To(Succeed())
+				checkGatewayListeners(3)
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			It("scales down abruptly without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Down Abruptly\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-down", test.valuesFile)
+
+				sendTraffic(testFileNamePrefix, 2*time.Minute)
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				Expect(resourceManager.ScaleDeployment(ngfNamespace, ngfDeploymentName, int32(1))).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles([]string{"scale/zero-downtime/gateway-1.yaml"}, ns.Name)).To(Succeed())
+				checkGatewayListeners(2)
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+		})
+	}
+})

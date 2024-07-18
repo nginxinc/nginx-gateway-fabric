@@ -744,3 +744,32 @@ func (rm *ResourceManager) WaitForPodsToBeReadyWithCount(ctx context.Context, na
 		},
 	)
 }
+
+// WaitForGatewayObservedGeneration waits for the provided Gateway's ObservedGeneration to equal the expected value.
+func (rm *ResourceManager) WaitForGatewayObservedGeneration(
+	ctx context.Context,
+	namespace,
+	name string,
+	generation int,
+) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var gw v1.Gateway
+			key := types.NamespacedName{Namespace: namespace, Name: name}
+			if err := rm.K8sClient.Get(ctx, key, &gw); err != nil {
+				return false, err
+			}
+
+			for _, cond := range gw.Status.Conditions {
+				if cond.ObservedGeneration == int64(generation) {
+					return true, nil
+				}
+			}
+
+			return false, nil
+		},
+	)
+}
