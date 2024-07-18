@@ -24,7 +24,7 @@ Follow the steps in this guide to:
 - [NGINX Gateway Fabric deployed]({{< relref "/installation/" >}}) in the Kubernetes cluster.
 - A DNS-resolvable domain name is required. It must resolve to the public endpoint of the NGINX Gateway Fabric deployment, and this public endpoint must be an external IP address or alias accessible over the internet. The process here will depend on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require that you wait for the record to propagate before it will work.
 
-## Overview
+## Secure traffic using Let's Encrypt and cert-manage
 
 {{<img src="img/cert-manager-gateway-workflow.png" alt="cert-manager ACME challenge and certificate management with Gateway API">}}
 

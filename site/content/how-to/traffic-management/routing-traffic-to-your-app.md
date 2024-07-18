@@ -170,7 +170,7 @@ The [**rules**](https://gateway-api.sigs.k8s.io/references/spec/#gateway.network
 
 ## Test the configuration
 
-To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [prerequisites](#prerequisites) section and verify that the response comes from one of the **coffee** pods.
+To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [Before you begin](#before-you-begin) section and verify that the response comes from one of the **coffee** pods.
 
 {{< note >}}Your clients should be able to resolve the domain name "cafe.example.com" to the public IP of the NGINX Gateway Fabric. In this guide we will simulate that using curl's `--resolve` option. {{< /note >}}
 
