@@ -35,7 +35,7 @@ func CreateResultsFile(filename string) (*os.File, error) {
 
 // CreateResultsFilename returns the name of the results file.
 func CreateResultsFilename(ext, base string, plusEnabled bool) string {
-	name := fmt.Sprintf("%s.%s", base, ext)
+	name := fmt.Sprintf("%s-oss.%s", base, ext)
 	if plusEnabled {
 		name = fmt.Sprintf("%s-plus.%s", base, ext)
 	}
