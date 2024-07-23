@@ -855,55 +855,49 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 		return prefix
 	}
 
-	sendTraffic := func(testFileNamePrefix string, duration time.Duration) {
-		for _, test := range trafficConfigs {
-			wg.Add(1)
-			go func(cfg trafficCfg) {
-				defer GinkgoRecover()
-				defer wg.Done()
-
-				loadTestCfg := framework.LoadTestConfig{
-					Targets:     []framework.Target{cfg.target},
-					Rate:        100,
-					Duration:    duration,
-					Description: cfg.desc,
-					Proxy:       fmt.Sprintf("%s:%s", address, cfg.port),
-					ServerName:  "cafe.example.com",
-				}
-
-				results, metrics := framework.RunLoadTest(loadTestCfg)
-
-				scheme := strings.Split(cfg.target.URL, "://")[0]
-				metricsRes := metricsResults{
-					metrics:  &metrics,
-					testName: fmt.Sprintf("\n#### Test: %s\n\n```text\n", cfg.desc),
-					scheme:   scheme,
-				}
-
-				buf := new(bytes.Buffer)
-				encoder := framework.NewVegetaCSVEncoder(buf)
-				for _, res := range results {
-					res := res
-					Expect(encoder.Encode(&res)).To(Succeed())
-				}
-
-				csvName := framework.CreateResultsFilename("csv", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
-				filename := filepath.Join(resultsDir, csvName)
-				csvFile, err := framework.CreateResultsFile(filename)
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = fmt.Fprint(csvFile, buf.String())
-				Expect(err).ToNot(HaveOccurred())
-				csvFile.Close()
-
-				pngName := framework.CreateResultsFilename("png", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
-				Expect(
-					framework.GenerateRequestsPNG(resultsDir, csvName, pngName),
-				).To(Succeed())
-
-				metricsCh <- &metricsRes
-			}(test)
+	sendTraffic := func(
+		cfg trafficCfg,
+		testFileNamePrefix string,
+		duration time.Duration,
+	) {
+		loadTestCfg := framework.LoadTestConfig{
+			Targets:     []framework.Target{cfg.target},
+			Rate:        100,
+			Duration:    duration,
+			Description: cfg.desc,
+			Proxy:       fmt.Sprintf("%s:%s", address, cfg.port),
+			ServerName:  "cafe.example.com",
 		}
+
+		results, metrics := framework.RunLoadTest(loadTestCfg)
+
+		scheme := strings.Split(cfg.target.URL, "://")[0]
+		metricsRes := metricsResults{
+			metrics:  &metrics,
+			testName: fmt.Sprintf("\n#### Test: %s\n\n```text\n", cfg.desc),
+			scheme:   scheme,
+		}
+
+		buf := new(bytes.Buffer)
+		encoder := framework.NewVegetaCSVEncoder(buf)
+		for _, res := range results {
+			res := res
+			Expect(encoder.Encode(&res)).To(Succeed())
+		}
+
+		csvName := framework.CreateResultsFilename("csv", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+		filename := filepath.Join(resultsDir, csvName)
+		csvFile, err := framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = fmt.Fprint(csvFile, buf.String())
+		Expect(err).ToNot(HaveOccurred())
+		csvFile.Close()
+
+		pngName := framework.CreateResultsFilename("png", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+		Expect(framework.GenerateRequestsPNG(resultsDir, csvName, pngName)).To(Succeed())
+
+		metricsCh <- &metricsRes
 	}
 
 	writeResults := func(testFileNamePrefix string, res *metricsResults) {
@@ -1004,7 +998,15 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-up", test.valuesFile)
 
-				sendTraffic(testFileNamePrefix, 5*time.Minute)
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 5*time.Minute)
+					}(test)
+				}
 
 				// allow traffic flow to start
 				time.Sleep(2 * time.Second)
@@ -1047,7 +1049,15 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 				// total amount of time we send traffic
 				waitTime := time.Duration(test.numReplicas) * terminationTime
 
-				sendTraffic(testFileNamePrefix, waitTime)
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, waitTime)
+					}(test)
+				}
 
 				// allow traffic flow to start
 				time.Sleep(2 * time.Second)
@@ -1111,7 +1121,15 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-up", test.valuesFile)
 
-				sendTraffic(testFileNamePrefix, 2*time.Minute)
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 2*time.Minute)
+					}(test)
+				}
 
 				// allow traffic flow to start
 				time.Sleep(2 * time.Second)
@@ -1134,7 +1152,15 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-down", test.valuesFile)
 
-				sendTraffic(testFileNamePrefix, 2*time.Minute)
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 2*time.Minute)
+					}(test)
+				}
 
 				// allow traffic flow to start
 				time.Sleep(2 * time.Second)
