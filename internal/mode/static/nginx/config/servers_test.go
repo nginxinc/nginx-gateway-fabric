@@ -137,7 +137,7 @@ func TestExecuteServers(t *testing.T) {
 	}
 }
 
-func TestExecuteServersForIPFamily(t *testing.T) {
+func TestExecuteServerConfig(t *testing.T) {
 	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
@@ -228,6 +228,30 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 				"listen [::]:8080;":                                        1,
 				"listen [::]:8443 ssl default_server;":                     1,
 				"listen [::]:8443 ssl;":                                    1,
+			},
+		},
+		{
+			msg: "http and ssl servers with proxy protocol enabled",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					ProxyProtocol: true,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen 8080 default_server proxy_protocol;":               1,
+				"listen 8080 proxy_protocol;":                              1,
+				"listen 8443 ssl default_server proxy_protocol;":           1,
+				"listen 8443 ssl proxy_protocol;":                          1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server proxy_protocol;":          1,
+				"listen [::]:8080 proxy_protocol;":                         1,
+				"listen [::]:8443 ssl default_server proxy_protocol;":      1,
+				"listen [::]:8443 ssl proxy_protocol;":                     1,
 			},
 		},
 	}

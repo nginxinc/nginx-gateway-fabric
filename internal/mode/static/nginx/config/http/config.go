@@ -115,6 +115,7 @@ type ProxySSLVerify struct {
 
 // ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
 type ServerConfig struct {
-	Servers  []Server
-	IPFamily IPFamily
+	Servers       []Server
+	IPFamily      IPFamily
+	ProxyProtocol bool
 }

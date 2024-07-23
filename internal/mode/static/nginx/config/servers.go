@@ -61,8 +61,9 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
 
 	serverConfig := http.ServerConfig{
-		Servers:  servers,
-		IPFamily: getIPFamily(conf.BaseHTTPConfig),
+		Servers:       servers,
+		IPFamily:      getIPFamily(conf.BaseHTTPConfig),
+		ProxyProtocol: conf.BaseHTTPConfig.ProxyProtocol,
 	}
 
 	serverResult := executeResult{

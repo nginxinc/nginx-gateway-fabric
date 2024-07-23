@@ -58,6 +58,12 @@ type NginxProxySpec struct {
 	//
 	// +optional
 	DisableHTTP2 bool `json:"disableHTTP2,omitempty"`
+
+	// EnableProxyProtocol defines if the Proxy Protocol should be enabled for all servers.
+	// Default is false, meaning the Proxy Protocol will be disabled.
+	//
+	// +optional
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty"`
 }
 
 // Telemetry specifies the OpenTelemetry configuration.

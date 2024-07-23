@@ -439,6 +439,20 @@ To **resolve** this, you can do one of the following:
 
 - Adjust the IPFamily of your Service to match that of the NginxProxy configuration.
 
+##### Broken Header Error
+
+If you check your _nginx_ container logs and see the following error:
+
+  ```text
+    2024/07/25 00:50:45 [error] 211#211: *22 broken header: "GET /coffee HTTP/1.1" while reading PROXY protocol, client: 127.0.0.1, server: 0.0.0.0:80
+  ```
+
+It indicates that `proxy_protocol` is enabled for the gateway listeners but the request sent to the application endpoint does not contain proxy information.To **resolve** this, you can do one of the following:
+
+- Update the NginxProxy configuration with [`enableProxyProtocol`](({{< relref "reference/api.md" >}})) disabled.
+
+- Send valid proxy information with requests being handled by your application.
+
 ### Further reading
 
 You can view the [Kubernetes Troubleshooting Guide](https://kubernetes.io/docs/tasks/debug/debug-application/) for more debugging guidance.
