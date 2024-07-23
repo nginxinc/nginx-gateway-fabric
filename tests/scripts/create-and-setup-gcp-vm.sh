@@ -14,11 +14,11 @@ gcloud compute firewall-rules create ${RESOURCE_NAME} \
     --source-ranges=${SOURCE_IP_RANGE} \
     --target-tags=${NETWORK_TAGS}
 
-gcloud compute instances create ${RESOURCE_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} --machine-type=e2-medium \
+gcloud compute instances create ${RESOURCE_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} --machine-type=n2-standard-2 \
     --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=default --maintenance-policy=MIGRATE \
     --provisioning-model=STANDARD --service-account=${GKE_SVC_ACCOUNT} \
     --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append,https://www.googleapis.com/auth/cloud-platform \
-    --tags=${NETWORK_TAGS} --create-disk=auto-delete=yes,boot=yes,device-name=${RESOURCE_NAME},image=${IMAGE},mode=rw,size=10 --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
+    --tags=${NETWORK_TAGS} --create-disk=auto-delete=yes,boot=yes,device-name=${RESOURCE_NAME},image-family=projects/${GKE_PROJECT}/global/images/ngf-debian,mode=rw,size=20 --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
 
 # Add VM IP to GKE master control node access, if required
 if [ "${ADD_VM_IP_AUTH_NETWORKS}" = "true" ]; then
@@ -44,5 +44,5 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
 done
 
 gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_DIR}/vars.env username@${RESOURCE_NAME}:~
-
-gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps.sh
+gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} \
+	--command="git clone https://github.com/${NGF_REPO}/nginx-gateway-fabric.git && cd nginx-gateway-fabric/tests && git checkout ${NGF_BRANCH} && gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet"

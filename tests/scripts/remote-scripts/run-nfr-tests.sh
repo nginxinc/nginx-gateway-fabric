@@ -4,8 +4,6 @@ set -e
 
 source ~/vars.env
 
-echo "export PATH=$PATH:/usr/local/go/bin" >> $HOME/.profile && . $HOME/.profile
-
 if [ "$START_LONGEVITY" == "true" ]; then
     GINKGO_LABEL="longevity-setup"
 elif [ "$STOP_LONGEVITY" == "true" ]; then

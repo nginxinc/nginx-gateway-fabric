@@ -101,7 +101,6 @@ jobs:
           echo "GKE_PROJECT=${{ secrets.GCP_PROJECT_ID }}" >> vars.env
           echo "GKE_SVC_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}" >> vars.env
           echo "GKE_NODES_SERVICE_ACCOUNT=${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}" >> vars.env
-          echo "IMAGE=projects/debian-cloud/global/images/debian-11-bullseye-v20240213" >> vars.env
           echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}-${{ matrix.type }}" >> vars.env
           echo "NGF_REPO=nginxinc" >> vars.env
           echo "NGF_BRANCH=${{ github.ref_name }}" >> vars.env
