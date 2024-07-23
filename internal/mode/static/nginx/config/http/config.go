@@ -109,13 +109,22 @@ type ProxySSLVerify struct {
 
 // ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
 type ServerConfig struct {
-	Servers  []Server
-	IPFamily shared.IPFamily
-	Plus     bool
+	Servers         []Server
+	RewriteClientIP RewriteClientIPSettings
+	IPFamily        shared.IPFamily
+	Plus            bool
 }
 
 // Include defines a file that's included via the include directive.
 type Include struct {
 	Name    string
 	Content []byte
+}
+
+// RewriteClientIP holds the configuration for the rewrite client IP settings.
+type RewriteClientIPSettings struct {
+	RealIPHeader  string
+	RealIPFrom    []string
+	Recursive     bool
+	ProxyProtocol bool
 }

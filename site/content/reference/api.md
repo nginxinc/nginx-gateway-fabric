@@ -329,6 +329,20 @@ Telemetry
 </tr>
 <tr>
 <td>
+<code>rewriteClientIP</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">
+RewriteClientIP
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RewriteClientIP defines configuration for rewriting the client IP to the original client&rsquo;s IP.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>disableHTTP2</code><br/>
 <em>
 bool
@@ -951,6 +965,20 @@ Telemetry
 </tr>
 <tr>
 <td>
+<code>rewriteClientIP</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">
+RewriteClientIP
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RewriteClientIP defines configuration for rewriting the client IP to the original client&rsquo;s IP.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>disableHTTP2</code><br/>
 <em>
 bool
@@ -1012,6 +1040,103 @@ Support: HTTPRoute, GRPCRoute.</p>
 </td>
 </tr>
 </tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.RewriteClientIP" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
+</p>
+<p>
+<p>RewriteClientIP specifies the configuration for rewriting the client&rsquo;s IP address.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>mode</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIPModeType">
+RewriteClientIPModeType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Mode defines how NGINX will rewrite the client&rsquo;s IP address.
+Possible modes: ProxyProtocol, XForwardedFor.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>setIPRecursively</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SetIPRecursively configures whether recursive search is used for selecting client&rsquo;s
+address from the X-Forwarded-For header and used in conjunction with TrustedAddresses.
+If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of
+array to start of array and select the first untrusted IP.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trustedAddresses</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.TrustedAddress">
+[]TrustedAddress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TrustedAddresses specifies the addresses that are trusted to send correct client IP information.
+If a request comes from a trusted address, NGINX will rewrite the client IP information,
+and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
+This field is required if mode is set.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.RewriteClientIPModeType">RewriteClientIPModeType
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.RewriteClientIPModeType" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP</a>)
+</p>
+<p>
+<p>RewriteClientIPModeType defines how NGINX Gateway Fabric will determine the client&rsquo;s original IP address.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;ProxyProtocol&#34;</p></td>
+<td><p>RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and,
+set the client&rsquo;s IP address to the IP address in the PROXY protocol header.
+Sets the proxy_protocol parameter to the listen directive on all servers, and sets real_ip_header
+to proxy_protocol: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header</a>.</p>
+</td>
+</tr><tr><td><p>&#34;XForwardedFor&#34;</p></td>
+<td><p>RewriteClientIPModeXForwardedFor configures NGINX to set the client&rsquo;s IP address to the
+IP address in the X-Forwarded-For HTTP header.
+<a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header</a>.</p>
+</td>
+</tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.Size">Size
 (<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Size" title="Permanent link">¶</a>
@@ -1353,6 +1478,17 @@ Examples of invalid names: some-$value, quoted-&ldquo;value&rdquo;-name, unescap
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.TrustedAddress">TrustedAddress
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.TrustedAddress" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP</a>)
+</p>
+<p>
+<p>TrustedAddress is a string value representing a CIDR block.
+Examples: 0.0.0.0/0</p>
+</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>

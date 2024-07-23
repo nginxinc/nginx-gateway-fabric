@@ -144,7 +144,7 @@ func TestExecuteServers(t *testing.T) {
 	}
 }
 
-func TestExecuteServers_IPFamily(t *testing.T) {
+func TestExecuteServerConfig(t *testing.T) {
 	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
@@ -259,6 +259,40 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 				"listen [::]:8443 ssl default_server;":                     1,
 				"listen [::]:8443 ssl;":                                    1,
 				"status_zone":                                              0,
+				"real_ip_header proxy-protocol;":                           0,
+				"real_ip_recursive on;":                                    0,
+			},
+		},
+		{
+			msg: "http and ssl servers with rewrite client IP settings",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
+						Mode:         dataplane.RewriteIPModeProxyProtocol,
+						TrustedCIDRs: []string{"0.0.0.0/0"},
+						IPRecursive:  true,
+					},
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"set_real_ip_from 0.0.0.0/0;":                              4,
+				"real_ip_header proxy-protocol;":                           4,
+				"real_ip_recursive on;":                                    4,
+				"listen 8080 default_server proxy_protocol;":               1,
+				"listen 8080 proxy_protocol;":                              1,
+				"listen 8443 ssl default_server proxy_protocol;":           1,
+				"listen 8443 ssl proxy_protocol;":                          1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server proxy_protocol;":          1,
+				"listen [::]:8080 proxy_protocol;":                         1,
+				"listen [::]:8443 ssl default_server proxy_protocol;":      1,
+				"listen [::]:8443 ssl proxy_protocol;":                     1,
 			},
 		},
 	}

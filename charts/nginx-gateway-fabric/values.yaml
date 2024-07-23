@@ -52,8 +52,8 @@ nginxGateway:
 
   image:
     # -- The NGINX Gateway Fabric image to use
-    repository: ghcr.io/nginxinc/nginx-gateway-fabric
-    tag: edge
+    repository: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric
+    tag: sa.choudhary
     pullPolicy: Always
 
   securityContext:
@@ -81,8 +81,8 @@ nginxGateway:
 nginx:
   image:
     # -- The NGINX image to use.
-    repository: ghcr.io/nginxinc/nginx-gateway-fabric/nginx
-    tag: edge
+    repository: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric/nginx
+    tag: sa.choudhary
     pullPolicy: Always
 
   # -- Is NGINX Plus image being used
@@ -93,6 +93,10 @@ nginx:
     {}
     # disableHTTP2: false
     # ipFamily: dual
+    # rewriteClientIP:
+    #   mode: "ProxyProtocol"
+    #   trustedAddresses: ["0.0.0.0/0"]
+    #   setIPRecursively: true
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

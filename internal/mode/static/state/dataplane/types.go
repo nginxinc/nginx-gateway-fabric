@@ -38,10 +38,10 @@ type Configuration struct {
 	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
-	// BaseHTTPConfig holds the configuration options at the http context.
-	BaseHTTPConfig BaseHTTPConfig
 	// Telemetry holds the Otel configuration.
 	Telemetry Telemetry
+	// BaseHTTPConfig holds the configuration options at the http context.
+	BaseHTTPConfig BaseHTTPConfig
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -309,9 +309,31 @@ type SpanAttribute struct {
 type BaseHTTPConfig struct {
 	// IPFamily specifies the IP family for all servers.
 	IPFamily IPFamilyType
+	// RewriteIPSettings defines configuration for rewriting the client IP to the original client's IP.
+	RewriteClientIPSettings RewriteClientIPSettings
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
+
+// RewriteIPSettings defines configuration for rewriting the client IP to the original client's IP.
+type RewriteClientIPSettings struct {
+	// Mode specifies the mode for rewriting the client IP.
+	Mode RewriteIPModeType
+	// TrustedCIDRs specifies the CIDRs that are trusted to provide the client IP.
+	TrustedCIDRs []string
+	// IPRecursive specifies whether a recursive search is used when selecting the client IP.
+	IPRecursive bool
+}
+
+// RewriteIPModeType specifies the mode for rewriting the client IP.
+type RewriteIPModeType string
+
+const (
+	// RewriteIPModeProxyProtocol specifies that client IP will be rewrritten using the Proxy-Protocol header.
+	RewriteIPModeProxyProtocol RewriteIPModeType = "proxy-protocol"
+	// RewriteIPModeXForwardedFor specifies that client IP will be rewrritten using the X-Forwarded-For header.
+	RewriteIPModeXForwardedFor RewriteIPModeType = "X-Forwarded-For"
+)
 
 // IPFamilyType specifies the IP family to be used by NGINX.
 type IPFamilyType string

@@ -69,9 +69,10 @@ func (g GeneratorImpl) executeServers(conf dataplane.Configuration, generator po
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSPassthroughServers, generator)
 
 	serverConfig := http.ServerConfig{
-		Servers:  servers,
-		IPFamily: getIPFamily(conf.BaseHTTPConfig),
-		Plus:     g.plus,
+		Servers:         servers,
+		IPFamily:        getIPFamily(conf.BaseHTTPConfig),
+		Plus:            g.plus,
+		RewriteClientIP: getRewriteClientIPSettings(conf.BaseHTTPConfig.RewriteClientIPSettings),
 	}
 
 	serverResult := executeResult{
@@ -873,4 +874,19 @@ func createDefaultRootLocation() http.Location {
 // isNonSlashedPrefixPath returns whether or not a path is of type Prefix and does not contain a trailing slash.
 func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 	return pathType == dataplane.PathTypePrefix && !strings.HasSuffix(path, "/")
+}
+
+// getRewriteClientIPSettings returns the configuration for the rewriting client IP settings.
+func getRewriteClientIPSettings(rewriteIP dataplane.RewriteClientIPSettings) http.RewriteClientIPSettings {
+	var proxyProtocol bool
+	if rewriteIP.Mode == dataplane.RewriteIPModeProxyProtocol {
+		proxyProtocol = true
+	}
+
+	return http.RewriteClientIPSettings{
+		Recursive:     rewriteIP.IPRecursive,
+		ProxyProtocol: proxyProtocol,
+		RealIPFrom:    rewriteIP.TrustedCIDRs,
+		RealIPHeader:  string(rewriteIP.Mode),
+	}
 }

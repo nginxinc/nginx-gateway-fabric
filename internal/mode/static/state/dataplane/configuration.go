@@ -852,6 +852,26 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		}
 	}
 
+	if g.NginxProxy.Source.Spec.RewriteClientIP != nil {
+		if g.NginxProxy.Source.Spec.RewriteClientIP.Mode != nil {
+			switch *g.NginxProxy.Source.Spec.RewriteClientIP.Mode {
+			case ngfAPI.RewriteClientIPModeProxyProtocol:
+				baseConfig.RewriteClientIPSettings.Mode = RewriteIPModeProxyProtocol
+			case ngfAPI.RewriteClientIPModeXForwardedFor:
+				baseConfig.RewriteClientIPSettings.Mode = RewriteIPModeXForwardedFor
+			}
+		}
+
+		if len(g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses) > 0 {
+			trustedAddresses := convertTrustedCIDRs(g)
+			baseConfig.RewriteClientIPSettings.TrustedCIDRs = trustedAddresses
+		}
+
+		if g.NginxProxy.Source.Spec.RewriteClientIP.SetIPRecursively != nil {
+			baseConfig.RewriteClientIPSettings.IPRecursive = *g.NginxProxy.Source.Spec.RewriteClientIP.SetIPRecursively
+		}
+	}
+
 	return baseConfig
 }
 
@@ -871,4 +891,12 @@ func buildPolicies(graphPolicies []*graph.Policy) []policies.Policy {
 	}
 
 	return finalPolicies
+}
+
+func convertTrustedCIDRs(g *graph.Graph) []string {
+	trustedAddresses := make([]string, len(g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses))
+	for i, addr := range g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses {
+		trustedAddresses[i] = string(addr)
+	}
+	return trustedAddresses
 }

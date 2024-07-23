@@ -53,6 +53,12 @@ type NginxProxySpec struct {
 	//
 	// +optional
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
+	// RewriteClientIP defines configuration for rewriting the client IP to the original client's IP.
+	// +kubebuilder:validation:XValidation:message="if mode is set, trustedAddresses is a required field",rule="!(has(self.mode) && !has(self.trustedAddresses))"
+	//
+	// +optional
+	//nolint:lll
+	RewriteClientIP *RewriteClientIP `json:"rewriteClientIP,omitempty"`
 	// DisableHTTP2 defines if http2 should be disabled for all servers.
 	// Default is false, meaning http2 will be enabled for all servers.
 	//
@@ -114,3 +120,56 @@ type TelemetryExporter struct {
 	// +kubebuilder:validation:Pattern=`^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$`
 	Endpoint string `json:"endpoint"`
 }
+
+// RewriteClientIP specifies the configuration for rewriting the client's IP address.
+type RewriteClientIP struct {
+	// Mode defines how NGINX will rewrite the client's IP address.
+	// Possible modes: ProxyProtocol, XForwardedFor.
+	//
+	// +optional
+	Mode *RewriteClientIPModeType `json:"mode,omitempty"`
+
+	// SetIPRecursively configures whether recursive search is used for selecting client's
+	// address from the X-Forwarded-For header and used in conjunction with TrustedAddresses.
+	// If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of
+	// array to start of array and select the first untrusted IP.
+	//
+	// +optional
+	SetIPRecursively *bool `json:"setIPRecursively,omitempty"`
+
+	// TrustedAddresses specifies the addresses that are trusted to send correct client IP information.
+	// If a request comes from a trusted address, NGINX will rewrite the client IP information,
+	// and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
+	// This field is required if mode is set.
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=atomic
+	//
+	//
+	// +optional
+	TrustedAddresses []TrustedAddress `json:"trustedAddresses,omitempty"`
+}
+
+// RewriteClientIPModeType defines how NGINX Gateway Fabric will determine the client's original IP address.
+// +kubebuilder:validation:Enum=ProxyProtocol;XForwardedFor
+type RewriteClientIPModeType string
+
+const (
+	// RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and,
+	// set the client's IP address to the IP address in the PROXY protocol header.
+	// Sets the proxy_protocol parameter to the listen directive on all servers, and sets real_ip_header
+	// to proxy_protocol: https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header.
+	RewriteClientIPModeProxyProtocol RewriteClientIPModeType = "ProxyProtocol"
+
+	// RewriteClientIPModeXForwardedFor configures NGINX to set the client's IP address to the
+	// IP address in the X-Forwarded-For HTTP header.
+	// https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header.
+	RewriteClientIPModeXForwardedFor RewriteClientIPModeType = "XForwardedFor"
+)
+
+// TrustedAddress is a string value representing a CIDR block.
+// Examples: 0.0.0.0/0
+//
+// +kubebuilder:validation:Pattern=`^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)$`
+//
+//nolint:lll
+type TrustedAddress string

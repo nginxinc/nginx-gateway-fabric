@@ -2,27 +2,46 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
-{{ range $s := .Servers -}}
+{{ $proxyProtocol := "" }}
+{{ if $.RewriteClientIP.ProxyProtocol }}{{ $proxyProtocol = " proxy_protocol" }}{{ end }}
+
+{{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-        {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
-    listen {{ $s.Listen }} ssl default_server;
+         {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
         {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
-    listen [::]:{{ $s.Listen }} ssl default_server;
+    listen [::]:{{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
-
     ssl_reject_handshake on;
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $cidr }};
+        {{- end}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
+    real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
+        {{- end}}
+        {{- if $.RewriteClientIP.Recursive }}
+    real_ip_recursive on;
+        {{ end }}
 }
     {{- else if $s.IsDefaultHTTP }}
 server {
         {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Listen }} default_server;
+    listen {{ $s.Listen }} default_server{{ $proxyProtocol }};
         {{- end }}
         {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Listen }} default_server;
+    listen [::]:{{ $s.Listen }} default_server{{ $proxyProtocol }};
         {{- end }}
-
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $cidr }};
+        {{- end}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
+    real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
+        {{- end}}
+        {{- if $.RewriteClientIP.Recursive }}
+    real_ip_recursive on;
+        {{ end }}
     default_type text/html;
     return 404;
 }
@@ -30,10 +49,10 @@ server {
 server {
         {{- if $s.SSL }}
           {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
-    listen {{ $s.Listen }} ssl;
+    listen {{ $s.Listen }} ssl{{ $proxyProtocol }};
           {{- end }}
           {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
-    listen [::]:{{ $s.Listen }} ssl;
+    listen [::]:{{ $s.Listen }} ssl{{ $proxyProtocol }};
           {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
@@ -43,10 +62,10 @@ server {
     }
         {{- else }}
           {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Listen }};
+    listen {{ $s.Listen }}{{ $proxyProtocol }};
           {{- end }}
           {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Listen }};
+    listen [::]:{{ $s.Listen }}{{ $proxyProtocol }};
           {{- end }}
         {{- end }}
 
@@ -59,6 +78,16 @@ server {
         {{- range $i := $s.Includes }}
     include {{ $i.Name }};
         {{- end }}
+
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $cidr }};
+        {{- end}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
+    real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
+        {{- end}}
+        {{- if $.RewriteClientIP.Recursive }}
+    real_ip_recursive on;
+        {{ end }}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {

@@ -222,27 +222,27 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 	}
 }
 
+func createValidValidator() *validationfakes.FakeGenericValidator {
+	v := &validationfakes.FakeGenericValidator{}
+	v.ValidateEscapedStringNoVarExpansionReturns(nil)
+	v.ValidateEndpointReturns(nil)
+	v.ValidateServiceNameReturns(nil)
+	v.ValidateNginxDurationReturns(nil)
+
+	return v
+}
+
+func createInvalidValidator() *validationfakes.FakeGenericValidator {
+	v := &validationfakes.FakeGenericValidator{}
+	v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
+	v.ValidateEndpointReturns(errors.New("error"))
+	v.ValidateServiceNameReturns(errors.New("error"))
+	v.ValidateNginxDurationReturns(errors.New("error"))
+
+	return v
+}
+
 func TestValidateNginxProxy(t *testing.T) {
-	createValidValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(nil)
-		v.ValidateEndpointReturns(nil)
-		v.ValidateServiceNameReturns(nil)
-		v.ValidateNginxDurationReturns(nil)
-
-		return v
-	}
-
-	createInvalidValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
-		v.ValidateEndpointReturns(errors.New("error"))
-		v.ValidateServiceNameReturns(errors.New("error"))
-		v.ValidateNginxDurationReturns(errors.New("error"))
-
-		return v
-	}
-
 	tests := []struct {
 		np              *ngfAPI.NginxProxy
 		validator       *validationfakes.FakeGenericValidator
@@ -266,6 +266,11 @@ func TestValidateNginxProxy(t *testing.T) {
 						},
 					},
 					IPFamily: helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual),
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
 				},
 			},
 			expectErrCount: 0,
@@ -349,6 +354,106 @@ func TestValidateNginxProxy(t *testing.T) {
 			g := NewWithT(t)
 
 			allErrs := validateNginxProxy(test.validator, test.np)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			if len(allErrs) > 0 {
+				g.Expect(allErrs.ToAggregate().Error()).To(ContainSubstring(test.expErrSubstring))
+			}
+		})
+	}
+}
+
+func TestValidateRewriteClientIP(t *testing.T) {
+	tests := []struct {
+		np              *ngfAPI.NginxProxy
+		validator       *validationfakes.FakeGenericValidator
+		name            string
+		expErrSubstring string
+		expectErrCount  int
+	}{
+		{
+			name:      "valid rewriteClientIP",
+			validator: createValidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 0,
+		},
+		{
+			name:      "invalid CIDR in trustedAddresses",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1"},
+						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount:  1,
+			expErrSubstring: "spec.rewriteClientIP.trustedAddresses",
+		},
+		{
+			name:      "invalid when mode is set and trustedAddresses is empty",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount:  1,
+			expErrSubstring: "trustedAddresses field required when mode is set",
+		},
+		{
+			name:      "invalid when trustedAddresses is greater in length than 16",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+						TrustedAddresses: []ngfAPI.TrustedAddress{
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+							"2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32", "2001:db8:a0b:12f0::1/32",
+						},
+					},
+				},
+			},
+			expectErrCount:  1,
+			expErrSubstring: "Too long: may not be longer than 16",
+		},
+		{
+			name:      "invalid when mode is not proxyProtocol or XForwardedFor",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeType("invalid")),
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+					},
+				},
+			},
+			expectErrCount:  1,
+			expErrSubstring: "supported values: \"ProxyProtocol\", \"XForwardedFor\"",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			allErrs := validateRewriteClientIP(test.np)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			if len(allErrs) > 0 {
 				g.Expect(allErrs.ToAggregate().Error()).To(ContainSubstring(test.expErrSubstring))

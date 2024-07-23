@@ -45,7 +45,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
+        image: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric:sa.choudhary
         imagePullPolicy: Always
         name: nginx-gateway
         ports:
@@ -82,7 +82,7 @@ spec:
           mountPath: /var/run/nginx
         - name: nginx-includes
           mountPath: /etc/nginx/includes
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
+      - image: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric/nginx:sa.choudhary
         imagePullPolicy: Always
         name: nginx
         ports:

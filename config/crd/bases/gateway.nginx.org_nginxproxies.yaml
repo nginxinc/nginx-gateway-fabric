@@ -62,6 +62,44 @@ spec:
                 - ipv4
                 - ipv6
                 type: string
+              rewriteClientIP:
+                description: RewriteClientIP defines configuration for rewriting the
+                  client IP to the original client's IP.
+                properties:
+                  mode:
+                    description: |-
+                      Mode defines how NGINX will rewrite the client's IP address.
+                      Possible modes: ProxyProtocol, XForwardedFor.
+                    enum:
+                    - ProxyProtocol
+                    - XForwardedFor
+                    type: string
+                  setIPRecursively:
+                    description: |-
+                      SetIPRecursively configures whether recursive search is used for selecting client's
+                      address from the X-Forwarded-For header and used in conjunction with TrustedAddresses.
+                      If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of
+                      array to start of array and select the first untrusted IP.
+                    type: boolean
+                  trustedAddresses:
+                    description: |-
+                      TrustedAddresses specifies the addresses that are trusted to send correct client IP information.
+                      If a request comes from a trusted address, NGINX will rewrite the client IP information,
+                      and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
+                      This field is required if mode is set.
+                    items:
+                      description: |-
+                        TrustedAddress is a string value representing a CIDR block.
+                        Examples: 0.0.0.0/0
+                      pattern: ^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)$
+                      type: string
+                    maxItems: 16
+                    type: array
+                    x-kubernetes-list-type: atomic
+                type: object
+                x-kubernetes-validations:
+                - message: if mode is set, trustedAddresses is a required field
+                  rule: '!(has(self.mode) && !has(self.trustedAddresses))'
               telemetry:
                 description: Telemetry specifies the OpenTelemetry configuration.
                 properties:
