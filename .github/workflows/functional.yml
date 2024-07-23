@@ -34,6 +34,9 @@ jobs:
         with:
           go-version: stable
 
+      - name: Setup WARP
+        uses: fscarmen/warp-on-actions@v1.1
+
       - name: Set GOPATH
         run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
@@ -111,7 +114,7 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
+          kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }} --config ../../config/cluster/kind-cluster.yaml
           kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
 
       - name: Run functional telemetry tests

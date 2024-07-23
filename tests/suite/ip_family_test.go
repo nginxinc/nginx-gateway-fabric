@@ -40,7 +40,7 @@ var (
 	coffeeURL   = baseHTTPURL + "/coffee"
 )
 
-var _ = Describe("IPFamily", Ordered, Label("ip-family"), func() {
+var _ = Describe("IPFamily", Ordered, Label("functional", "ip-family"), func() {
 	BeforeEach(func() {
 		ns = core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
