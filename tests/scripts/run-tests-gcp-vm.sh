@@ -14,7 +14,13 @@ gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_
 gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} \
     --command="export START_LONGEVITY=${START_LONGEVITY} &&\
         export STOP_LONGEVITY=${STOP_LONGEVITY} &&\
-        bash -s" < ${SCRIPT_DIR}/remote-scripts/${SCRIPT}
+		source /etc/profile &&\
+        bash -s" < ${SCRIPT_DIR}/remote-scripts/${SCRIPT}; retcode=$?
+
+if [ $retcode -ne 0 ]; then
+	echo "Error running tests on VM"
+	exit 1
+fi
 
 if [ "${NFR}" = "true" ]; then
     gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --recurse username@${RESOURCE_NAME}:~/nginx-gateway-fabric/tests/results .
