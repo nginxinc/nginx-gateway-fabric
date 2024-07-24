@@ -812,7 +812,6 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 		resultsDir        string
 		ngfDeploymentName string
 		ns                core.Namespace
-		wg                sync.WaitGroup
 		metricsCh         chan *metricsResults
 
 		files = []string{
@@ -998,6 +997,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-up", test.valuesFile)
 
+				var wg sync.WaitGroup
 				for _, test := range trafficConfigs {
 					wg.Add(1)
 					go func(cfg trafficCfg) {
@@ -1049,6 +1049,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 				// total amount of time we send traffic
 				waitTime := time.Duration(test.numReplicas) * terminationTime
 
+				var wg sync.WaitGroup
 				for _, test := range trafficConfigs {
 					wg.Add(1)
 					go func(cfg trafficCfg) {
@@ -1121,6 +1122,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-up", test.valuesFile)
 
+				var wg sync.WaitGroup
 				for _, test := range trafficConfigs {
 					wg.Add(1)
 					go func(cfg trafficCfg) {
@@ -1152,6 +1154,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-down", test.valuesFile)
 
+				var wg sync.WaitGroup
 				for _, test := range trafficConfigs {
 					wg.Add(1)
 					go func(cfg trafficCfg) {
