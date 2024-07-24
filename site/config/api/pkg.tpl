@@ -6,6 +6,7 @@ toc: false
 ---
 
 ## Overview
+
 NGINX Gateway API Reference
 
 {{ with .packages}}
