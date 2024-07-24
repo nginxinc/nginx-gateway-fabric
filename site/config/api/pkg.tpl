@@ -5,7 +5,7 @@ weight: 100
 toc: false
 ---
 
-## Overview 
+## Overview
 NGINX Gateway API Reference
 
 {{ with .packages}}
