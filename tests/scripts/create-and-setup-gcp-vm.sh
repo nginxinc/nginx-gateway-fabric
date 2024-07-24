@@ -44,5 +44,19 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
 done
 
 gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_DIR}/vars.env username@${RESOURCE_NAME}:~
+
+if [ -n "${NGF_REPO}" ] && [ "${NGF_REPO}" != "nginxinc" ]; then
+	gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} \
+		--command="bash -i <<EOF
+rm -rf nginx-gateway-fabric
+git clone https://github.com/${NGF_REPO}/nginx-gateway-fabric.git
+EOF" -- -t
+fi
+
 gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} \
-	--command="git clone https://github.com/${NGF_REPO}/nginx-gateway-fabric.git && cd nginx-gateway-fabric/tests && git checkout ${NGF_BRANCH} && gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet"
+	--command="bash -i <<EOF
+cd nginx-gateway-fabric/tests
+git fetch -pP --all
+git checkout ${NGF_BRANCH}
+gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet
+EOF" -- -t
