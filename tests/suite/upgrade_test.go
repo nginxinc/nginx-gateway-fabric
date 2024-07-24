@@ -257,7 +257,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 			Expect(framework.WriteMetricsResults(resultsFile, res.metrics)).To(Succeed())
 
-			link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
+			link := fmt.Sprintf("\n\n![%[1]v-oss.png](%[1]v-oss.png)\n", res.scheme)
 			if *plusEnabled {
 				link = fmt.Sprintf("\n\n![%[1]v-plus.png](%[1]v-plus.png)\n", res.scheme)
 			}
