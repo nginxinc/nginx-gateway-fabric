@@ -54,8 +54,8 @@ var _ = Describe("IPFamily", Ordered, Label("functional", "ip-family"), func() {
 		}
 
 		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
-		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles([]string{nginxProxyFile}, ns.Name)).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 	})
 
@@ -128,7 +128,6 @@ var _ = Describe("IPFamily", Ordered, Label("functional", "ip-family"), func() {
 		})
 		It("Successfully configures coffee route(IPv4), "+
 			"tea route(IPv6) has accepted condition set to InvalidIPFamily", func() {
-			Expect(resourceManager.ApplyFromFiles([]string{nginxProxyFile}, ns.Name)).To(Succeed())
 			Expect(updateGatewayClass()).Should(Succeed())
 			Expect(updateNginxProxy(ngfAPI.IPv4)).Should(Succeed())
 
@@ -157,6 +156,15 @@ var _ = Describe("IPFamily", Ordered, Label("functional", "ip-family"), func() {
 			"coffee route(IPv4) has accepted condition set to InvalidIPFamily", func() {
 			Expect(updateGatewayClass()).Should(Succeed())
 			Expect(updateNginxProxy(ngfAPI.IPv6)).Should(Succeed())
+
+			Eventually(
+				func() error {
+					return checkWorkingTraffic(teaURL, address, true)
+				}).
+				WithTimeout(timeoutConfig.RequestTimeout).
+				WithPolling(2 * time.Second).
+				Should(Succeed())
+
 			Eventually(
 				func() error {
 					return verifyRequestFailureAndRouteConditionToBeInvalidIPFamily(
@@ -166,14 +174,7 @@ var _ = Describe("IPFamily", Ordered, Label("functional", "ip-family"), func() {
 						ns.Name,
 						"Service configured with IPv4 family but NginxProxy is configured with IPv6")
 				}).
-				WithTimeout(timeoutConfig.RequestTimeout).
-				Should(Succeed())
-
-			Eventually(
-				func() error {
-					return checkWorkingTraffic(teaURL, address, true)
-				}).
-				WithTimeout(timeoutConfig.RequestTimeout).
+				WithTimeout(timeoutConfig.RequestTimeout * 2).
 				WithPolling(2 * time.Second).
 				Should(Succeed())
 		})
@@ -191,12 +192,12 @@ func verifyRequestFailureAndRouteConditionToBeInvalidIPFamily(
 	namespace,
 	expectedErrMessage string,
 ) error {
-	err := expectRequestFailureInternalError(appURL, address)
+	err := verifyHTTPRouteConditionToBeInvalidIPFamily(routeName, namespace, expectedErrMessage)
 	if err != nil {
 		return err
 	}
 
-	err = verifyHTTPRouteConditionToBeInvalidIPFamily(routeName, namespace, expectedErrMessage)
+	err = expectRequestFailureInternalError(appURL, address)
 	if err != nil {
 		return err
 	}
@@ -206,6 +207,10 @@ func verifyRequestFailureAndRouteConditionToBeInvalidIPFamily(
 
 func expectRequestFailureInternalError(appURL, address string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
+	if err != nil {
+		return fmt.Errorf("error while sending request: %s", err.Error())
+	}
+
 	if status != http.StatusInternalServerError {
 		return errors.New("expected http status to be 500")
 	}
@@ -213,21 +218,18 @@ func expectRequestFailureInternalError(appURL, address string) error {
 	if body != "" && !strings.Contains(body, "500 Internal Server Error") {
 		return fmt.Errorf("expected response body to have Internal Server Error, instead received: %s", body)
 	}
-	if err != nil {
-		return fmt.Errorf("error while sending request: %s", err.Error())
-	}
 
 	return nil
 }
 
 func checkWorkingTraffic(url, address string, ipv6Expected bool) error {
 	status, body, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
-	if status != http.StatusOK {
-		return errors.New("http response status is not 200")
-	}
-
 	if err != nil {
 		return err
+	}
+
+	if status != http.StatusOK {
+		return errors.New("http response status is not 200")
 	}
 
 	err = verifyIPType(body, ipv6Expected)
@@ -295,6 +297,7 @@ func verifyHTTPRouteConditionToBeInvalidIPFamily(httpRouteName, namespace, expec
 
 			for _, parent := range route.Status.Parents {
 				for _, condition := range parent.Conditions {
+					fmt.Println("condition.Type: ", condition.Type, condition.Message, condition.Status)
 					if condition.Type == string(v1.RouteConditionResolvedRefs) &&
 						condition.Status == metav1.ConditionFalse &&
 						condition.Message == expectedErrMessage {
