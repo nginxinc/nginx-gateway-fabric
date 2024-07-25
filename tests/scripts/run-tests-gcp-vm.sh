@@ -23,7 +23,13 @@ if [ $retcode -ne 0 ]; then
 fi
 
 if [ "${NFR}" = "true" ]; then
-    gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --recurse username@${RESOURCE_NAME}:~/nginx-gateway-fabric/tests/results .
+    ## Use rsync if running locally (faster); otherwise if in the pipeline don't download an SSH config
+    if [ "${CI}" = "false" ]; then
+      gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh > /dev/null
+      rsync -ave 'ssh -F ngf-gcp.ssh' username@${RESOURCE_NAME}.${GKE_CLUSTER_ZONE}.${GKE_PROJECT}:~/nginx-gateway-fabric/tests/results .
+    else
+      gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --recurse username@${RESOURCE_NAME}:~/nginx-gateway-fabric/tests/results .
+    fi
 fi
 
 ## If tearing down the longevity test, we need to collect logs from gcloud and add to the results

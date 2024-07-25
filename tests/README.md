@@ -258,8 +258,6 @@ Directory structure is as follows:
 - `scripts`: contain scripts used to set up the environment and run the tests
 - `suite`: contains the test files
 
-> Note: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
-
 ### Logging in tests
 
 To log in the tests, use the `GinkgoWriter` interface described here: https://onsi.github.io/ginkgo/#logging-output.

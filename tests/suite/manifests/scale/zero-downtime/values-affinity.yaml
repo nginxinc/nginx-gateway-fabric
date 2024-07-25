@@ -1,8 +1,4 @@
 nginxGateway:
-  image:
-    repository: ghcr.io/nginxinc/nginx-gateway-fabric
-    tag: edge # change this tag if you are testing a different version
-    pullPolicy: IfNotPresent
   lifecycle:
     preStop:
       exec:
@@ -10,9 +6,6 @@ nginxGateway:
         - /usr/bin/gateway
         - sleep
         - --duration=40s
-  config:
-    logging:
-      level: debug
 
 nginx:
   lifecycle:
@@ -31,7 +24,3 @@ affinity:
       labelSelector:
         matchLabels:
           app.kubernetes.io/name: nginx-gateway
-
-service:
-  annotations:
-    networking.gke.io/load-balancer-type: "Internal"
