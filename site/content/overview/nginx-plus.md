@@ -1,5 +1,5 @@
 ---
-title: "Advanced features of NGINX Plus"
+title: "Advanced features with NGINX Plus"
 weight: 300
 toc: true
 docs: "DOCS-1415"

@@ -1,14 +1,17 @@
 ---
-title: "HTTPS Termination"
-description: "Learn how to terminate HTTPS traffic using NGINX Gateway Fabric."
-weight: 500
+title: "HTTPS termination"
+weight: 600
 toc: true
 docs: "DOCS-1421"
 ---
 
+Learn how to terminate HTTPS traffic using NGINX Gateway Fabric.
+
+## Overview
+
 In this guide, we will show how to configure HTTPS termination for your application, using an [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) redirect filter, secret, and [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/).
 
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
 - [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
@@ -85,7 +88,7 @@ NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/coffee       ClusterIP   10.96.189.37   <none>        80/TCP    40s
 ```
 
-## Configure HTTPS Termination and Routing
+## Configure HTTPS termination and routing
 
 For the HTTPS, we need a certificate and key that are stored in a secret. This secret will live in a separate namespace, so we will need a ReferenceGrant in order to access it.
 
@@ -238,7 +241,7 @@ Server address: 10.244.0.6:80
 Server name: coffee-6b8b6d6486-7fc78
 ```
 
-## Further Reading
+## Further reading
 
 To learn more about redirects using the Gateway API, see the following resource:
 

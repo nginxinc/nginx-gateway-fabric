@@ -1,14 +1,14 @@
 ---
-title: "Pushing an NGINX Plus image to a private registry"
-description: "This document describes how to pull a NGINX Plus image for NGINX Gateway Fabric from the official F5 Docker registry and upload it to your private registry."
+title: "Push an NGINX Plus image to a private registry"
 weight: 200
 doctypes: ["install"]
 toc: true
 docs: "DOCS-1433"
 ---
 
-{{<custom-styles>}}
+## Overview
 
+This document describes how to pull a NGINX Plus image for NGINX Gateway Fabric from the official F5 Docker registry and upload it to your private registry
 
 ## Before you begin
 
@@ -16,7 +16,6 @@ Before you start, you'll need these installed on your machine:
 
 - [Docker v18.09 or higher](https://docs.docker.com/engine/release-notes/18.09/).
 - The certificate (**nginx-repo.crt**) and key (**nginx-repo.key**) for a Connectivity Stack for Kubernetes subscription, obtainable from [MyF5l](https://my.f5.com) An NGINX Plus certificate and key will not work.
-
 
 ## Configuring Docker for the F5 Container Registry
 

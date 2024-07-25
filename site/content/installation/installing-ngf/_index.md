@@ -1,8 +1,8 @@
 ---
-title: "Installing NGINX Gateway Fabric"
+title: "Install NGINX Gateway Fabric"
 description:
 weight: 100
-linkTitle: "Installing NGINX Gateway Fabric"
+linkTitle: "Install NGINX Gateway Fabric"
 menu:
   docs:
     parent: Installation

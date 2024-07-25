@@ -1,6 +1,5 @@
 ---
-title: "Getting the NGINX Plus image using JWT"
-description: "This document describes how to use a JWT token to get an NGINX Plus image for NGINX Gateway Fabric from the F5 Docker registry."
+title: "Get the NGINX Plus image using JWT"
 weight: 100
 doctypes: ["install"]
 toc: true
@@ -8,6 +7,8 @@ docs: "DOCS-1432"
 ---
 
 ## Overview
+
+This document describes how to use a JWT token to get an NGINX Plus image for NGINX Gateway Fabric from the F5 Docker registry.
 
 Follow the steps in this document to pull the NGINX Plus image for NGINX Gateway Fabric from the F5 Docker registry into your Kubernetes cluster using your JWT token. To list available image tags using the Docker registry API, you will also need to download its certificate and key from [MyF5](https://my.f5.com).
 
