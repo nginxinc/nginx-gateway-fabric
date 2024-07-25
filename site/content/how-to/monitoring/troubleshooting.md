@@ -5,10 +5,7 @@ toc: true
 docs: "DOCS-1419"
 ---
 
-{{< custom-styles >}}
-
 This topic describes possible issues when using NGINX Gateway Fabric and general troubleshooting techniques. When possible, suggested workarounds are provided.
-
 
 ### General troubleshooting
 

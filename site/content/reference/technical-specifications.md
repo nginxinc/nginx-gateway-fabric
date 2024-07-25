@@ -1,5 +1,5 @@
 ---
-title: "Technical Specifications"
+title: "Technical specifications"
 draft: false
 description: "NGINX Gateway Fabric technical specifications."
 weight: 200

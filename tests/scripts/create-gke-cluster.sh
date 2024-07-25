@@ -28,7 +28,8 @@ gcloud container clusters create ${GKE_CLUSTER_NAME} \
     --monitoring=SYSTEM,POD,DEPLOYMENT \
     --logging=SYSTEM,WORKLOAD \
     --machine-type ${GKE_MACHINE_TYPE} \
-    --num-nodes ${GKE_NUM_NODES}
+    --num-nodes ${GKE_NUM_NODES} \
+    --no-enable-insecure-kubelet-readonly-port
 
 # Add current IP to GKE master control node access, if this script is not invoked during a CI run.
 if [ "${IS_CI}" = "false" ]; then

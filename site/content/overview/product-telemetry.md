@@ -1,9 +1,10 @@
 ---
-title: "Product Telemetry"
-description: "Learn how NGINX Gateway Fabric collects product telemetry to identify areas to focus development on improving."
+title: "Product telemetry"
 weight: 500
 toc: true
 ---
+
+Learn why, what and how NGINX Gateway Fabric collects telemetry.
 
 ## Overview
 

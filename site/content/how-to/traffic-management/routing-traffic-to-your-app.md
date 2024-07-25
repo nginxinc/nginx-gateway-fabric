@@ -1,16 +1,17 @@
 ---
-title: "Routing Traffic to Your Application"
-description: "Learn how to route external traffic to your Kubernetes applications using NGINX Gateway Fabric."
+title: "Routing traffic to applications"
 weight: 100
 toc: true
 docs: "DOCS-1426"
 ---
 
-{{<custom-styles>}}
+Learn how to route external traffic to your Kubernetes applications using NGINX Gateway Fabric.
+
+## Overview
 
 You can route traffic to your Kubernetes applications using the Gateway API and NGINX Gateway Fabric. Whether you're managing a web application or a REST backend API, you can use NGINX Gateway Fabric to expose your application outside the cluster.
 
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
 - [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
@@ -24,7 +25,7 @@ You can route traffic to your Kubernetes applications using the Gateway API and 
 
 The application we are going to use in this guide is a simple **coffee** application comprised of one service and two pods:
 
-{{<img src="img/route-all-traffic-app.png" alt="coffee app">}}
+{{<img src="img/route-all-traffic-app.png" alt="">}}
 
 Using this architecture, the **coffee** application is not accessible outside the cluster. We want to expose this application on the hostname "cafe.example.com" so that clients outside the cluster can access it.
 
@@ -169,7 +170,7 @@ The [**rules**](https://gateway-api.sigs.k8s.io/references/spec/#gateway.network
 
 ## Test the configuration
 
-To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [prerequisites](#prerequisites) section and verify that the response comes from one of the **coffee** pods.
+To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [Before you begin](#before-you-begin) section and verify that the response comes from one of the **coffee** pods.
 
 {{< note >}}Your clients should be able to resolve the domain name "cafe.example.com" to the public IP of the NGINX Gateway Fabric. In this guide we will simulate that using curl's `--resolve` option. {{< /note >}}
 
@@ -360,7 +361,7 @@ If you have any issues while testing the configuration, try the following to deb
 
 If your issue persists, [contact us](https://github.com/nginxinc/nginx-gateway-fabric#contacts).
 
-## Further Reading
+## Further reading
 
 To learn more about the Gateway API and the resources we created in this guide, check out the following resources:
 

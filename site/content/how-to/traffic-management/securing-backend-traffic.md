@@ -1,14 +1,18 @@
 ---
-title: "Securing Traffic to Backends"
-description: "Learn how to encrypt HTTP traffic between NGINX Gateway Fabric and your backend pods."
-weight: 600
+title: "Securing backend traffic"
+description:
+weight: 700
 toc: true
 docs: "DOCS-1423"
 ---
 
+Learn how to encrypt HTTP traffic between NGINX Gateway Fabric and your backend pods.
+
+## Overview
+
 In this guide, we will show how to specify the TLS configuration of the connection from the Gateway to a backend pod/s via the Service API object using a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). This covers the use-case where the service or backend owner is doing their own TLS and NGINX Gateway Fabric needs to know how to connect to this backend pod that has its own certificate over HTTPS.
 
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `--gateway-api-experimental-features` flag.
 - [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
@@ -122,7 +126,7 @@ NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/secure-app   ClusterIP   10.96.213.57   <none>        8443/TCP  9s
 ```
 
-## Configure Routing rules
+## Configure routing rules
 
 First, we will create the Gateway resource with an HTTP listener:
 
@@ -189,7 +193,7 @@ curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.
 
 We can see we a status 400 Bad Request message from NGINX.
 
-## Create the Backend TLS configuration
+## Create the backend TLS configuration
 
 To configure the backend TLS terminationm, first we will create the ConfigMap that holds the `ca.crt` entry for verifying our self-signed certificates:
 
@@ -305,7 +309,7 @@ curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.
 hello from pod secure-app
 ```
 
-## Further Reading
+## Further reading
 
 To learn more about configuring backend TLS termination using the Gateway API, see the following resources:
 

@@ -17,7 +17,7 @@ This guide explains how to enable tracing on HTTPRoutes using NGINX Gateway Fabr
 Tracing cannot be enabled for [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
 {{< /important >}}
 
-## Install the Collectors
+## Install the collectors
 
 The first step is to install the collectors. NGINX Gateway Fabric will be configured to export to the OpenTelemetry Collector, which is configured to export to Jaeger. This model allows the visualization collector (Jaeger) to be swapped with something else, or to add more collectors without needing to reconfigure NGINX Gateway Fabric. It is also possible to configure NGINX Gateway Fabric to export directly to Jaeger.
 
@@ -333,7 +333,7 @@ Select a trace to view the attributes.
 
 The trace includes the attribute from the global NginxProxy resource as well as the attribute from the ObservabilityPolicy.
 
-## Further Reading
+## Further reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
 - [API reference]({{< relref "reference/api.md" >}}): all configuration fields for the policies mentioned in this guide
