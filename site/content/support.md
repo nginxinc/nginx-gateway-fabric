@@ -7,7 +7,7 @@ tags: [ "docs" ]
 docs: "DOCS-1411"
 ---
 
-NGINX Gateway Fabric adheres to the support policy detailed at [nginx.com/support](https://nginx.com/support).
+NGINX Gateway Fabric adheres to the support policy detailed in the following knowledge base article: [K000140156](https://my.f5.com/manage/s/article/K000140156).
 
 **Support Channels:**
 
