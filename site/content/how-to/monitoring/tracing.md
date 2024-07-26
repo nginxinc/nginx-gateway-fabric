@@ -162,7 +162,7 @@ If you already have NGINX Gateway Fabric installed, then you can create the `Ngi
 kubectl edit gatewayclasses.gateway.networking.k8s.io nginx
 ```
 
-Next, [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III

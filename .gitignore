@@ -54,3 +54,7 @@ internal/mode/static/nginx/modules/coverage
 
 # SSH config files
 *.ssh
+
+# temporary files used for manifest generation
+config/base/deploy.yaml
+config/base/deploy.yaml.bak

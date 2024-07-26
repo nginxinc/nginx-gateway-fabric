@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# these replacements modify the version label for all resources with the tag specified in images.newTag below for NGF
+replacements:
+- source:
+    fieldPath: spec.template.spec.containers.[name=nginx-gateway].image
+    kind: Deployment
+    options:
+      delimiter: ':'
+      index: 1
+  targets:
+  - fieldPaths:
+    - metadata.labels.[app.kubernetes.io/version]
+    options:
+      create: true
+    select:
+      name: nginx
+  - fieldPaths:
+    - metadata.labels.[app.kubernetes.io/version]
+    options:
+      create: true
+    select:
+      name: nginx-gateway
+  - fieldPaths:
+    - metadata.labels.[app.kubernetes.io/version]
+    options:
+      create: true
+    select:
+      name: nginx-gateway-config
+
+# replace this with the path to the resources you want to deploy
+resources:
+- default/deploy.yaml
+
+images:
+# NGF image
+- name: ghcr.io/nginxinc/nginx-gateway-fabric
+  newName: my-registry/nginx-gateway-fabric
+  newTag: new-tag
+# NGINX image
+- name: ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+  newName: my-registry/nginx-gateway-fabric/nginx
+  newTag: new-tag

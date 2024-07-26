@@ -17,8 +17,7 @@ We'll begin by configuring an app with custom headers and a straightforward HTTP
 ## Before you begin
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP
-  address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III

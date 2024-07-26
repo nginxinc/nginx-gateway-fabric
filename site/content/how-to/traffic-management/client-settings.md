@@ -37,7 +37,7 @@ For all the possible configuration options for `ClientSettingsPolicy`, see the [
 ## Setup
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
   GW_IP=XXX.YYY.ZZZ.III
