@@ -256,6 +256,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		var times [maxCount]int
 		var count int
 
+		// parse the logs until it reaches a reconciling log line for a gateway resource, then it compares that
+		// timestamp to the next NGINX configuration update. When it reaches the NGINX configuration update line,
+		// it will reset the reconciling log line and set it to the next reconciling log line.
 		for _, line := range strings.Split(ngfLogs, "\n") {
 			// can't just do this line, need to do gateway specific resources
 			if reconcilingLine == "" &&
