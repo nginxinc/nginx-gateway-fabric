@@ -312,7 +312,7 @@ func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecke
 		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
 		// might get terminated half-way.
-		LeaderElection:          true,
+		LeaderElection:          cfg.LeaderElection.Enabled,
 		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
 		LeaderElectionID:        cfg.LeaderElection.LockName,
 		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
