@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration"), func() {
+var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
 	var (
 		scrapeInterval        = 15 * time.Second
 		queryRangeStep        = 5 * time.Second
@@ -66,8 +67,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		teardown(releaseName)
 		close(promPortForwardStopCh)
 		Expect(framework.UninstallPrometheus(resourceManager)).To(Succeed())
-
-		// might want to call cleanupResources here with 150 or the max resources.
 	})
 
 	createUniqueResources := func(resourceCount int, fileName string) error {
@@ -218,11 +217,115 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}, ns.Name)).To(Succeed())
 	}
 
+	getTimeStampFromLogLine := func(logLine string) string {
+		var timeStamp string
+
+		timeStamp = strings.Split(logLine, "\"ts\":\"")[1]
+		// sometimes the log message will contain information on a "logger" followed by the "msg"
+		// while other times the "logger" will be omitted
+		timeStamp = strings.Split(timeStamp, "\",\"msg\"")[0]
+		timeStamp = strings.Split(timeStamp, "\",\"logger\"")[0]
+
+		return timeStamp
+	}
+
+	calculateTimeDifferenceBetweenLogLines := func(firstLine, secondLine string) (int, error) {
+		firstTS := getTimeStampFromLogLine(firstLine)
+		secondTS := getTimeStampFromLogLine(secondLine)
+
+		// i might be able to just use the local constant timestamp layout
+		layout := "2006-01-02T15:04:05Z"
+
+		parsedTS1, err := time.Parse(layout, firstTS)
+		if err != nil {
+			return 0, err
+		}
+
+		parsedTS2, err := time.Parse(layout, secondTS)
+		if err != nil {
+			return 0, err
+		}
+
+		return int(parsedTS2.Sub(parsedTS1).Seconds()), nil
+	}
+
+	calculateTimeToReadyAverage := func(ngfLogs string) (string, error) {
+		var reconcilingLine, nginxReloadLine string
+		const maxCount = 5
+
+		var times [maxCount]int
+		var count int
+
+		for _, line := range strings.Split(ngfLogs, "\n") {
+			// can't just do this line, need to do gateway specific resources
+			if reconcilingLine == "" &&
+				strings.Contains(line, "Reconciling the resource\",\"controller\"") &&
+				strings.Contains(line, "\"controllerGroup\":\"gateway.networking.k8s.io\"") {
+				reconcilingLine = line
+			}
+
+			if strings.Contains(line, "NGINX configuration was successfully updated") && reconcilingLine != "" {
+				nginxReloadLine = line
+
+				timeDifference, err := calculateTimeDifferenceBetweenLogLines(reconcilingLine, nginxReloadLine)
+				if err != nil {
+					return "", err
+				}
+				reconcilingLine = ""
+
+				times[count] = timeDifference
+				count++
+				if count == maxCount-1 {
+					break
+				}
+			}
+		}
+
+		var sum float64
+		for _, time := range times {
+			sum += float64(time)
+		}
+
+		avgTime := sum / float64(count+1)
+
+		if avgTime < 1 {
+			return "< 1", nil
+		}
+
+		return strconv.FormatFloat(avgTime, 'f', -1, 64), nil
+	}
+
+	calculateTimeToReadyTotal := func(ngfLogs, startingLogSubstring string) (string, error) {
+		var firstLine, lastLine string
+		for _, line := range strings.Split(ngfLogs, "\n") {
+			if firstLine == "" && strings.Contains(line, startingLogSubstring) {
+				firstLine = line
+			}
+
+			if strings.Contains(line, "NGINX configuration was successfully updated") {
+				lastLine = line
+			}
+		}
+
+		timeToReadyTotal, err := calculateTimeDifferenceBetweenLogLines(firstLine, lastLine)
+		if err != nil {
+			return "", err
+		}
+
+		stringTimeToReadyTotal := strconv.Itoa(timeToReadyTotal)
+		if stringTimeToReadyTotal == "0" {
+			stringTimeToReadyTotal = "< 1"
+		}
+
+		return stringTimeToReadyTotal, nil
+	}
+
 	runTestWithMetrics := func(
 		testName string,
 		resourceCount int,
 		test func(resourceCount int) error,
 		startWithNGFSetup bool,
+		timeToReadyStartingLogSubstring string,
 	) {
 		var (
 			metricExistTimeout = 2 * time.Minute
@@ -331,6 +434,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
+		checkContainerLogsForErrors(ngfPodName, false)
+
 		reloadCount, err := framework.GetReloadCount(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
 		fmt.Println(reloadCount)
@@ -355,15 +460,31 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(err).ToNot(HaveOccurred())
 		fmt.Println(eventsBuckets)
 
+		logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+			Container: "nginx-gateway",
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		timeToReadyTotal, err := calculateTimeToReadyTotal(logs, timeToReadyStartingLogSubstring)
+		Expect(err).ToNot(HaveOccurred())
+
+		fmt.Println(timeToReadyTotal)
+
+		timeToReadyAvgSingle, err := calculateTimeToReadyAverage(logs)
+		Expect(err).ToNot(HaveOccurred())
+		fmt.Println(timeToReadyAvgSingle)
+
 		results := reconfigTestResults{
-			Name:               testName,
-			EventsBuckets:      eventsBuckets,
-			ReloadBuckets:      reloadBuckets,
-			NumResources:       resourceCount,
-			NGINXReloads:       int(reloadCount),
-			NGINXReloadAvgTime: int(reloadAvgTime),
-			EventsCount:        int(eventsCount),
-			EventsAvgTime:      int(eventsAvgTime),
+			Name:                 testName,
+			EventsBuckets:        eventsBuckets,
+			ReloadBuckets:        reloadBuckets,
+			NumResources:         resourceCount,
+			TimeToReadyTotal:     timeToReadyTotal,
+			TimeToReadyAvgSingle: timeToReadyAvgSingle,
+			NGINXReloads:         int(reloadCount),
+			NGINXReloadAvgTime:   int(reloadAvgTime),
+			EventsCount:          int(eventsCount),
+			EventsAvgTime:        int(eventsAvgTime),
 		}
 
 		err = writeReconfigResults(outFile, results)
@@ -373,31 +494,46 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	It("test 1", func() {
-		runTestWithMetrics("1", 30, createResourcesGWLast, false)
+		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+
+		runTestWithMetrics("1",
+			30,
+			createResourcesGWLast,
+			false,
+			timeToReadyStartingLogSubstring,
+		)
 	})
 
 	It("test 2", func() {
-		runTestWithMetrics("2", 30, createResourcesRoutesLast, true)
+		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+
+		runTestWithMetrics("2",
+			30,
+			createResourcesRoutesLast,
+			true,
+			timeToReadyStartingLogSubstring,
+		)
 	})
 
 	It("test 3", func() {
-		runTestWithMetrics("3", 30, createResourcesGWLast, true)
-	})
+		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
 
-	//It("test 2", func() {
-	//	Expect(createResourcesRoutesLast(30)).To(Succeed())
-	//	Expect(checkResourceCreation(30)).To(Succeed())
-	//	cleanupResources(30)
-	//})
+		runTestWithMetrics("3",
+			30,
+			createResourcesGWLast,
+			true,
+			timeToReadyStartingLogSubstring,
+		)
+	})
 })
 
 type reconfigTestResults struct {
 	Name                 string
+	TimeToReadyTotal     string
+	TimeToReadyAvgSingle string
 	EventsBuckets        []framework.Bucket
 	ReloadBuckets        []framework.Bucket
 	NumResources         int
-	TimeToReadyTotal     int
-	TimeToReadyAvgSingle int
 	NGINXReloads         int
 	NGINXReloadAvgTime   int
 	EventsCount          int
