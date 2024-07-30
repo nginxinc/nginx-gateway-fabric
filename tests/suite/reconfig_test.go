@@ -340,6 +340,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		getStartTime := func() time.Time { return startTime }
 		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
 
+		output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
+		Expect(err).ToNot(HaveOccurred(), string(output))
+
 		if startWithNGFSetup {
 			setup(getDefaultSetupCfg())
 
@@ -366,9 +369,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 					),
 				).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 			}
-		} else {
-			output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
-			Expect(err).ToNot(HaveOccurred(), string(output))
 		}
 
 		Expect(test(resourceCount)).To(Succeed())
@@ -493,9 +493,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		err = writeReconfigResults(outFile, results)
 		Expect(err).ToNot(HaveOccurred())
 
-		cleanupResources(30)
+		cleanupResources(resourceCount)
 	}
 
+	// Test 1 - Resources exist before start-up
 	It("test 1 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
 
@@ -518,6 +519,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	//	)
 	//})
 
+	// Test 2 - Start NGF, deploy Gateway, create many resources attached to GW
 	It("test 2 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
 
@@ -540,6 +542,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	//	)
 	//})
 
+	// Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway
 	It("test 3 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
 
