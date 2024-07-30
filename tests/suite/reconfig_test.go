@@ -496,7 +496,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		cleanupResources(30)
 	}
 
-	It("test 1", func() {
+	It("test 1 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
 
 		runTestWithMetrics("1",
@@ -507,7 +507,18 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		)
 	})
 
-	It("test 2", func() {
+	//It("test 1 - 150 resources", func() {
+	//	timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+	//
+	//	runTestWithMetrics("1",
+	//		150,
+	//		createResourcesGWLast,
+	//		false,
+	//		timeToReadyStartingLogSubstring,
+	//	)
+	//})
+
+	It("test 2 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
 
 		runTestWithMetrics("2",
@@ -518,7 +529,18 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		)
 	})
 
-	It("test 3", func() {
+	//It("test 2 - 150 resources", func() {
+	//	timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+	//
+	//	runTestWithMetrics("2",
+	//		150,
+	//		createResourcesRoutesLast,
+	//		true,
+	//		timeToReadyStartingLogSubstring,
+	//	)
+	//})
+
+	It("test 3 - 30 resources", func() {
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
 
 		runTestWithMetrics("3",
@@ -528,6 +550,17 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			timeToReadyStartingLogSubstring,
 		)
 	})
+
+	//It("test 3 - 150 resources", func() {
+	//	timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+	//
+	//	runTestWithMetrics("3",
+	//		150,
+	//		createResourcesGWLast,
+	//		true,
+	//		timeToReadyStartingLogSubstring,
+	//	)
+	//})
 })
 
 type reconfigTestResults struct {
