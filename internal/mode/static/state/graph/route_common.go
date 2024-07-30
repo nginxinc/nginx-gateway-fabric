@@ -6,6 +6,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -354,7 +355,11 @@ func tryToAttachRouteToListeners(
 	rk := CreateRouteKey(route.Source)
 
 	bind := func(l *Listener) (allowed, attached bool) {
-		if !routeAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
+		if !isRouteNamespaceAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
+			return false, false
+		}
+
+		if !isRouteKindAllowedByListener(l, route.Source.GetObjectKind()) {
 			return false, false
 		}
 
@@ -502,13 +507,14 @@ func GetMoreSpecificHostname(hostname1, hostname2 string) string {
 	return ""
 }
 
-func routeAllowedByListener(
+// isRouteNamespaceAllowedByListener checks if the route namespace is allowed by the listener.
+func isRouteNamespaceAllowedByListener(
 	listener *Listener,
 	routeNS,
 	gwNS string,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) bool {
-	if listener.Source.AllowedRoutes != nil {
+	if listener.Source.AllowedRoutes != nil && listener.Source.AllowedRoutes.Namespaces != nil {
 		switch *listener.Source.AllowedRoutes.Namespaces.From {
 		case v1.NamespacesFromAll:
 			return true
@@ -525,6 +531,26 @@ func routeAllowedByListener(
 			}
 			return listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels))
 		}
+	}
+	return true
+}
+
+// isRouteKindAllowedByListener checks if the route kind is allowed by the listener.
+// If the listener does not specify allowed kinds, all kinds can attach to it.
+// If the listener specifies allowed kinds, the route kind must be in the list.
+// If the listener specifies HTTPRoute, a GRPCRoute can be attached to it.
+func isRouteKindAllowedByListener(listener *Listener, routeKind schema.ObjectKind) bool {
+	if listener.Source.AllowedRoutes != nil && listener.Source.AllowedRoutes.Kinds != nil {
+		for _, kind := range listener.Source.AllowedRoutes.Kinds {
+			routeKind := v1.Kind(routeKind.GroupVersionKind().Kind)
+			if kind.Kind == routeKind {
+				return true
+			}
+			if kind.Kind == kinds.HTTPRoute && routeKind == kinds.GRPCRoute {
+				return true
+			}
+		}
+		return false
 	}
 	return true
 }
