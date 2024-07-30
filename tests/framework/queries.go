@@ -9,8 +9,6 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// TODO: having gomega and regular queries here is bad
-
 func getFirstValueOfVector(query string, promInstance PrometheusInstance) (float64, error) {
 	result, err := promInstance.Query(query)
 	if err != nil {
