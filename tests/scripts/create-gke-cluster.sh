@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 source scripts/vars.env
 
@@ -34,5 +34,5 @@ gcloud container clusters create ${GKE_CLUSTER_NAME} \
 # Add current IP to GKE master control node access, if this script is not invoked during a CI run.
 if [ "${IS_CI}" = "false" ]; then
     SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-    bash ${SCRIPT_DIR}/add-local-ip-auth-networks.sh
+    ./${SCRIPT_DIR}/add-local-ip-auth-networks.sh
 fi

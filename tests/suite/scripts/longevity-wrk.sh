@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SVC_IP=$(kubectl -n nginx-gateway get svc ngf-longevity-nginx-gateway-fabric -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 

@@ -37,7 +37,7 @@ run-conformance-tests: ## Run conformance tests
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
 						        --supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
-	bash scripts/check-pod-exit-code.sh
+	./scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
 	grpc_core_result=`yq '.profiles[0].core.result' conformance-profile.yaml`; \
@@ -77,27 +77,27 @@ setup-gcp-and-run-nfr-tests: create-gke-router create-and-setup-vm nfr-test ## C
 
 .PHONY: create-gke-cluster
 create-gke-cluster: ## Create a GKE cluster
-	bash scripts/create-gke-cluster.sh $(CI)
+	./scripts/create-gke-cluster.sh $(CI)
 
 .PHONY: create-and-setup-vm
 create-and-setup-vm: ## Create and setup a GCP VM for tests
-	bash scripts/create-and-setup-gcp-vm.sh
+	./scripts/create-and-setup-gcp-vm.sh
 
 .PHONY: create-gke-router
 create-gke-router: ## Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
-	bash scripts/create-gke-router.sh
+	./scripts/create-gke-router.sh
 
 .PHONY: sync-files-to-vm
 sync-files-to-vm: ## Syncs your local NGF files with the NGF repo on the VM
-	bash scripts/sync-files-to-vm.sh
+	./scripts/sync-files-to-vm.sh
 
 .PHONY: run-tests-on-vm
 run-tests-on-vm: ## Run the functional tests on a GCP VM
-	bash scripts/run-tests-gcp-vm.sh
+	./scripts/run-tests-gcp-vm.sh
 
 .PHONY: nfr-test
 nfr-test: ## Run the NFR tests on a GCP VM
-	NFR=true CI=$(CI) bash scripts/run-tests-gcp-vm.sh
+	NFR=true CI=$(CI) ./scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
 start-longevity-test: export START_LONGEVITY=true
@@ -135,19 +135,19 @@ cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP res
 
 .PHONY: cleanup-router
 cleanup-router: ## Delete the GKE router
-	bash scripts/cleanup-router.sh
+	./scripts/cleanup-router.sh
 
 .PHONY: cleanup-vm
 cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
-	bash scripts/cleanup-vm.sh
+	./scripts/cleanup-vm.sh
 
 .PHONY: delete-gke-cluster
 delete-gke-cluster: ## Delete the GKE cluster
-	bash scripts/delete-gke-cluster.sh
+	./scripts/delete-gke-cluster.sh
 
 .PHONY: add-local-ip-to-cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
-	bash scripts/add-local-ip-auth-networks.sh
+	./scripts/add-local-ip-auth-networks.sh
 
 HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
 
