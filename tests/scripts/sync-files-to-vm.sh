@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 source scripts/vars.env
 
-NGF_DIR=$(dirname "$PWD")
+NGF_DIR=$(dirname "$CUR")
 
 gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh > /dev/null
 
