@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -14,7 +14,6 @@ gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_
 gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} \
     --command="export START_LONGEVITY=${START_LONGEVITY} &&\
         export STOP_LONGEVITY=${STOP_LONGEVITY} &&\
-		source /etc/profile &&\
         bash -s" < ${SCRIPT_DIR}/remote-scripts/${SCRIPT}; retcode=$?
 
 if [ $retcode -ne 0 ]; then
