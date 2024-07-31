@@ -58,5 +58,6 @@ gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@
 cd nginx-gateway-fabric/tests
 git fetch -pP --all
 git checkout ${NGF_BRANCH}
+git pull
 gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet
 EOF" -- -t
