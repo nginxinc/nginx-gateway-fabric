@@ -217,6 +217,8 @@ spec:
           initialDelaySeconds: 3
           periodSeconds: 1
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           allowPrivilegeEscalation: false
           capabilities:
             add:
@@ -246,6 +248,8 @@ spec:
         - containerPort: 443
           name: https
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           capabilities:
             add:
             - NET_BIND_SERVICE
