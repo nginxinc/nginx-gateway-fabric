@@ -16,12 +16,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
-	ctlr "sigs.k8s.io/controller-runtime"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctlr "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
@@ -508,16 +506,16 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		)
 	})
 
-	//It("test 1 - 150 resources", func() {
-	//	timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
-	//
-	//	runTestWithMetrics("1",
-	//		150,
-	//		createResourcesGWLast,
-	//		false,
-	//		timeToReadyStartingLogSubstring,
-	//	)
-	//})
+	It("test 1 - 150 resources", func() {
+		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+
+		runTestWithMetrics("1",
+			150,
+			createResourcesGWLast,
+			false,
+			timeToReadyStartingLogSubstring,
+		)
+	})
 
 	// Test 2 - Start NGF, deploy Gateway, create many resources attached to GW
 	It("test 2 - 30 resources", func() {
@@ -531,16 +529,16 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		)
 	})
 
-	//It("test 2 - 150 resources", func() {
-	//	timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
-	//
-	//	runTestWithMetrics("2",
-	//		150,
-	//		createResourcesRoutesLast,
-	//		true,
-	//		timeToReadyStartingLogSubstring,
-	//	)
-	//})
+	It("test 2 - 150 resources", func() {
+		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+
+		runTestWithMetrics("2",
+			150,
+			createResourcesRoutesLast,
+			true,
+			timeToReadyStartingLogSubstring,
+		)
+	})
 
 	// Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway
 	It("test 3 - 30 resources", func() {
@@ -554,16 +552,16 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		)
 	})
 
-	//It("test 3 - 150 resources", func() {
-	//	timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
-	//
-	//	runTestWithMetrics("3",
-	//		150,
-	//		createResourcesGWLast,
-	//		true,
-	//		timeToReadyStartingLogSubstring,
-	//	)
-	//})
+	It("test 3 - 150 resources", func() {
+		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+
+		runTestWithMetrics("3",
+			150,
+			createResourcesGWLast,
+			true,
+			timeToReadyStartingLogSubstring,
+		)
+	})
 })
 
 type reconfigTestResults struct {
