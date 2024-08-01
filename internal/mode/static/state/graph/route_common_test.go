@@ -228,6 +228,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			Source: gatewayv1.Listener{
 				Name:     gatewayv1.SectionName(name),
 				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
+				Protocol: gatewayv1.HTTPProtocolType,
 			},
 			Valid:      true,
 			Attachable: true,
@@ -1117,44 +1118,6 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route allowed via all namespaces",
 		},
 		{
-			route: createNormalHTTPRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Kinds: []gatewayv1.RouteGroupKind{
-								{Kind: "GRPCRoute"},
-							},
-						}
-					}),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:         0,
-					Gateway:     client.ObjectKeyFromObject(gw),
-					SectionName: hr.Spec.ParentRefs[0].SectionName,
-					Attachment: &ParentRefAttachmentStatus{
-						Attached:          false,
-						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
-						AcceptedHostnames: map[string][]string{},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: "GRPCRoute"},
-						},
-					}
-				}),
-			},
-			name: "http route not allowed when listener allows only grpc routes",
-		},
-		{
 			route: createNormalGRPCRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
@@ -1178,10 +1141,9 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway:     client.ObjectKeyFromObject(gw),
 					SectionName: gr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
+						Attached:          false,
+						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
+						AcceptedHostnames: map[string][]string{},
 					},
 				},
 			},
@@ -1197,7 +1159,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					}
 				}),
 			},
-			name: "grpc route allowed when listener kind is HTTPRoute",
+			name: "grpc route not allowed when listener kind is HTTPRoute",
 		},
 		{
 			route: createNormalHTTPRoute(gw),
@@ -1771,4 +1733,83 @@ func TestRouteKeyForKind(t *testing.T) {
 	}
 
 	g.Expect(rk).To(Panic())
+}
+
+func TestAllowedRouteType(t *testing.T) {
+	test := []struct {
+		listener  *Listener
+		name      string
+		routeType RouteType
+		expResult bool
+	}{
+		{
+			name:      "httpRoute with listener protocol http",
+			routeType: RouteTypeHTTP,
+			listener: &Listener{
+				Source: gatewayv1.Listener{
+					Protocol: gatewayv1.HTTPProtocolType,
+				},
+			},
+			expResult: true,
+		},
+		{
+			name:      "grpcRoute with listener protocol https",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				Source: gatewayv1.Listener{
+					Protocol: gatewayv1.HTTPSProtocolType,
+				},
+			},
+			expResult: true,
+		},
+		{
+			name:      "grpcRoute with listener allowedRoutes set to httpRoute is not allowed",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				Source: gatewayv1.Listener{
+					AllowedRoutes: &gatewayv1.AllowedRoutes{
+						Kinds: []gatewayv1.RouteGroupKind{
+							{Kind: kinds.HTTPRoute},
+						},
+					},
+				},
+			},
+			expResult: false,
+		},
+		{
+			name:      "httpRoute with listener allowedRoutes set to grpcRoute is not allowed",
+			routeType: RouteTypeHTTP,
+			listener: &Listener{
+				Source: gatewayv1.Listener{
+					AllowedRoutes: &gatewayv1.AllowedRoutes{
+						Kinds: []gatewayv1.RouteGroupKind{
+							{Kind: kinds.GRPCRoute},
+						},
+					},
+				},
+			},
+			expResult: false,
+		},
+		{
+			name:      "grpcRoute with listener allowedRoutes set to grpcRoute is allowed",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				Source: gatewayv1.Listener{
+					AllowedRoutes: &gatewayv1.AllowedRoutes{
+						Kinds: []gatewayv1.RouteGroupKind{
+							{Kind: kinds.GRPCRoute},
+						},
+					},
+				},
+			},
+			expResult: true,
+		},
+	}
+
+	for _, test := range test {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(isRouteTypeAllowedByListener(test.listener, test.routeType)).To(Equal(test.expResult))
+		})
+	}
 }

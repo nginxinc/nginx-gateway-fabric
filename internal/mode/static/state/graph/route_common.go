@@ -6,7 +6,6 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -359,7 +358,7 @@ func tryToAttachRouteToListeners(
 			return false, false
 		}
 
-		if !isRouteKindAllowedByListener(l, route.Source.GetObjectKind()) {
+		if !isRouteTypeAllowedByListener(l, route.RouteType) {
 			return false, false
 		}
 
@@ -535,24 +534,26 @@ func isRouteNamespaceAllowedByListener(
 	return true
 }
 
-// isRouteKindAllowedByListener checks if the route kind is allowed by the listener.
-// If the listener does not specify allowed kinds, all kinds can attach to it.
+// isRouteKindAllowedByListener checks if the route is allowed to attach to the listener.
 // If the listener specifies allowed kinds, the route kind must be in the list.
-// If the listener specifies HTTPRoute, a GRPCRoute can be attached to it.
-func isRouteKindAllowedByListener(listener *Listener, routeKind schema.ObjectKind) bool {
+// If the listener does not specify allowedRoutes, allowed routes are determined using the listener protocol.
+func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool {
 	if listener.Source.AllowedRoutes != nil && listener.Source.AllowedRoutes.Kinds != nil {
 		for _, kind := range listener.Source.AllowedRoutes.Kinds {
-			routeKind := v1.Kind(routeKind.GroupVersionKind().Kind)
-			if kind.Kind == routeKind {
-				return true
-			}
-			if kind.Kind == kinds.HTTPRoute && routeKind == kinds.GRPCRoute {
-				return true
+			switch kind.Kind {
+			case kinds.HTTPRoute:
+				return routeType == RouteTypeHTTP
+			case kinds.GRPCRoute:
+				return routeType == RouteTypeGRPC
 			}
 		}
 		return false
 	}
-	return true
+
+	if listener.Source.Protocol == v1.HTTPProtocolType || listener.Source.Protocol == v1.HTTPSProtocolType {
+		return routeType == RouteTypeHTTP || routeType == RouteTypeGRPC
+	}
+	return false
 }
 
 func getHostname(h *v1.Hostname) string {
