@@ -115,6 +115,8 @@ spec:
           periodSeconds: 1
         {{- end }}
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
           capabilities:
             add:
@@ -151,6 +153,8 @@ spec:
         - containerPort: 443
           name: https
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           capabilities:
             add:
             - NET_BIND_SERVICE
