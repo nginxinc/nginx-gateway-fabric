@@ -99,7 +99,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	createResourcesGWLast := func(resourceCount int) error {
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
 		defer cancel()
 
 		for i := 1; i <= resourceCount; i++ {
@@ -136,7 +136,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	createResourcesRoutesLast := func(resourceCount int) error {
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
 		defer cancel()
 
 		for i := 1; i <= resourceCount; i++ {
