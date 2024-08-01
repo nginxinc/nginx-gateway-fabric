@@ -159,19 +159,7 @@ make install-ngf-local-no-build
 Or, to install NGF with NGINX Plus enabled:
 
 ```makefile
-make install-ngf-no-build-with-plus
-```
-
-> Note: If choosing this option, the following step _must_ be completed manually _before_ you build the image:
-
-```makefile
-make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
-```
-
-Or, if you are building the NGINX Plus image:
-
-```makefile
-make update-ngf-manifest-with-plus PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
+make install-ngf-local-no-build-with-plus
 ```
 
 #### Option 3 - Install NGINX Gateway Fabric from edge to configured kind cluster
