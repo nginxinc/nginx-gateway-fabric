@@ -541,8 +541,7 @@ func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool 
 	allowedRoutes := listener.Source.AllowedRoutes
 	if allowedRoutes != nil && allowedRoutes.Kinds != nil {
 		for _, kind := range allowedRoutes.Kinds {
-			if (kind.Kind == kinds.HTTPRoute && routeType == RouteTypeHTTP) ||
-				(kind.Kind == kinds.GRPCRoute && routeType == RouteTypeGRPC) {
+			if kind.Kind == convertRouteType(routeType) {
 				return true
 			}
 		}
@@ -555,6 +554,17 @@ func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool 
 	}
 
 	return false
+}
+
+func convertRouteType(routeType RouteType) v1.Kind {
+	switch routeType {
+	case RouteTypeHTTP:
+		return kinds.HTTPRoute
+	case RouteTypeGRPC:
+		return kinds.GRPCRoute
+	default:
+		return ""
+	}
 }
 
 func getHostname(h *v1.Hostname) string {
