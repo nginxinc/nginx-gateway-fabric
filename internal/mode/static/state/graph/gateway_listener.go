@@ -11,6 +11,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
@@ -228,18 +229,10 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	[]conditions.Condition,
 	[]v1.RouteGroupKind,
 ) {
-	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Kinds == nil {
-		return nil, []v1.RouteGroupKind{
-			{
-				Kind: kinds.HTTPRoute,
-			},
-		}
-	}
 	var conds []conditions.Condition
+	supportedKinds := make([]v1.RouteGroupKind, 0)
 
-	supportedKinds := make([]v1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
-
-	validHTTPProtocolRouteKind := func(kind v1.RouteGroupKind) bool {
+	validRouteKind := func(kind v1.RouteGroupKind) bool {
 		if kind.Kind != v1.Kind(kinds.HTTPRoute) && kind.Kind != v1.Kind(kinds.GRPCRoute) {
 			return false
 		}
@@ -249,17 +242,25 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 		return true
 	}
 
-	switch listener.Protocol {
-	case v1.HTTPProtocolType, v1.HTTPSProtocolType:
+	if listener.AllowedRoutes != nil && listener.AllowedRoutes.Kinds != nil {
 		for _, kind := range listener.AllowedRoutes.Kinds {
-			if !validHTTPProtocolRouteKind(kind) {
+			if !validRouteKind(kind) {
 				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
 				conds = append(conds, staticConds.NewListenerInvalidRouteKinds(msg)...)
 				continue
 			}
 			supportedKinds = append(supportedKinds, kind)
 		}
+	} else {
+		switch listener.Protocol {
+		case v1.HTTPProtocolType, v1.HTTPSProtocolType:
+			supportedKinds = []v1.RouteGroupKind{
+				{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+				{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+			}
+		}
 	}
+
 	return conds, supportedKinds
 }
 

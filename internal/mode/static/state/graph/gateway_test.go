@@ -347,6 +347,11 @@ func TestBuildGateway(t *testing.T) {
 		Valid: false,
 	}
 
+	supportedKindsForListeners := []v1.RouteGroupKind{
+		{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+		{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+	}
+
 	tests := []struct {
 		gateway      *v1.Gateway
 		gatewayClass *GatewayClass
@@ -361,24 +366,20 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8080",
-						Source:     foo8080Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8080",
+						Source:         foo8080Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -400,9 +401,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-8443-https",
@@ -411,9 +410,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -479,9 +476,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -502,10 +497,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerRefNotPermitted(
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -550,10 +543,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: []v1.RouteGroupKind{},
 					},
 				},
 				Valid: true,
@@ -582,10 +573,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:       "invalid-https-port",
@@ -595,10 +584,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 65536: port must be between 1-65535`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:       "invalid-protected-port",
@@ -608,10 +595,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -627,24 +612,20 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: []*Listener{
 					{
-						Name:       "invalid-hostname",
-						Source:     invalidHostnameListener,
-						Valid:      false,
-						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "invalid-hostname",
+						Source:         invalidHostnameListener,
+						Valid:          false,
+						Conditions:     staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "invalid-https-hostname",
-						Source:     invalidHTTPSHostnameListener,
-						Valid:      false,
-						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "invalid-https-hostname",
+						Source:         invalidHTTPSHostnameListener,
+						Valid:          false,
+						Conditions:     staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -666,9 +647,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -695,34 +674,28 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8080",
-						Source:     foo8080Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8080",
+						Source:         foo8080Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8081",
-						Source:     foo8081Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8081",
+						Source:         foo8081Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-443-https-1",
@@ -731,9 +704,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-8443-https",
@@ -742,19 +713,15 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "bar-80",
-						Source:     bar80Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "bar-80",
+						Source:         bar80Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-443-https",
@@ -763,9 +730,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-8443-https",
@@ -774,9 +739,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -801,37 +764,31 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "bar-80",
-						Source:     bar80Listener,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "bar-80",
+						Source:         bar80Listener,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-443",
-						Source:     foo443Listener,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-443",
+						Source:         foo443Listener,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-80-https",
@@ -841,9 +798,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-443-https-1",
@@ -853,9 +808,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-443-https",
@@ -865,9 +818,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,

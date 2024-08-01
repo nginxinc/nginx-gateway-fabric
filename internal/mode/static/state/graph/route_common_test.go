@@ -233,6 +233,10 @@ func TestBindRouteToListeners(t *testing.T) {
 			Valid:      true,
 			Attachable: true,
 			Routes:     map[RouteKey]*L7Route{},
+			SupportedKinds: []gatewayv1.RouteGroupKind{
+				{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+				{Kind: gatewayv1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+			},
 		}
 	}
 	createModifiedListener := func(name string, m func(*Listener)) *Listener {
@@ -1124,10 +1128,8 @@ func TestBindRouteToListeners(t *testing.T) {
 				Valid:  true,
 				Listeners: []*Listener{
 					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Kinds: []gatewayv1.RouteGroupKind{
-								{Kind: "HTTPRoute"},
-							},
+						l.SupportedKinds = []gatewayv1.RouteGroupKind{
+							{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
 						}
 						l.Routes = map[RouteKey]*L7Route{
 							CreateRouteKey(gr): getLastNormalGRPCRoute(),
@@ -1149,10 +1151,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
-						},
+					l.SupportedKinds = []gatewayv1.RouteGroupKind{
+						{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
 					}
 					l.Routes = map[RouteKey]*L7Route{
 						CreateRouteKey(gr): getLastNormalGRPCRoute(),
@@ -1743,45 +1743,11 @@ func TestAllowedRouteType(t *testing.T) {
 		expResult bool
 	}{
 		{
-			name:      "httpRoute attaches to listener with protocol http",
-			routeType: RouteTypeHTTP,
-			listener: &Listener{
-				Source: gatewayv1.Listener{
-					Protocol: gatewayv1.HTTPProtocolType,
-				},
-			},
-			expResult: true,
-		},
-		{
-			name:      "grpcRoute attaches to listener with protocol https",
-			routeType: RouteTypeGRPC,
-			listener: &Listener{
-				Source: gatewayv1.Listener{
-					Protocol: gatewayv1.HTTPSProtocolType,
-				},
-			},
-			expResult: true,
-		},
-		{
-			name:      "grpcRoute is not allowed to attach to listener with tcp protocol",
-			routeType: RouteTypeGRPC,
-			listener: &Listener{
-				Source: gatewayv1.Listener{
-					Protocol: gatewayv1.TCPProtocolType,
-				},
-			},
-			expResult: false,
-		},
-		{
 			name:      "grpcRoute attaches to listener with allowedRoutes set to grpcRoute",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
-				Source: gatewayv1.Listener{
-					AllowedRoutes: &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: kinds.GRPCRoute},
-						},
-					},
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.GRPCRoute},
 				},
 			},
 			expResult: true,
@@ -1790,13 +1756,9 @@ func TestAllowedRouteType(t *testing.T) {
 			name:      "grpcRoute attaches to listener with allowedRoutes set to grpcRoute and httpRoute",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
-				Source: gatewayv1.Listener{
-					AllowedRoutes: &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-							{Kind: kinds.GRPCRoute},
-						},
-					},
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.HTTPRoute},
+					{Kind: kinds.GRPCRoute},
 				},
 			},
 			expResult: true,
@@ -1805,12 +1767,8 @@ func TestAllowedRouteType(t *testing.T) {
 			name:      "grpcRoute not allowed to attach to listener with allowedRoutes set to httpRoute",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
-				Source: gatewayv1.Listener{
-					AllowedRoutes: &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
-					},
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.HTTPRoute},
 				},
 			},
 			expResult: false,
@@ -1819,26 +1777,8 @@ func TestAllowedRouteType(t *testing.T) {
 			name:      "httpRoute not allowed to attach to listener with allowedRoutes set to grpcRoute",
 			routeType: RouteTypeHTTP,
 			listener: &Listener{
-				Source: gatewayv1.Listener{
-					AllowedRoutes: &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: kinds.GRPCRoute},
-						},
-					},
-				},
-			},
-			expResult: false,
-		},
-		{
-			name:      "grpcRoute not allowed to attach to listener with allowedRoutes set to testRoute",
-			routeType: RouteTypeGRPC,
-			listener: &Listener{
-				Source: gatewayv1.Listener{
-					AllowedRoutes: &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: gatewayv1.Kind("testRoute")},
-						},
-					},
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.GRPCRoute},
 				},
 			},
 			expResult: false,

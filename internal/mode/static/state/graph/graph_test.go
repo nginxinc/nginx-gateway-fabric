@@ -534,6 +534,11 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	supportedKindsForListeners := []gatewayv1.RouteGroupKind{
+		{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+		{Kind: gatewayv1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+	}
+
 	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
 		return &Graph{
 			GatewayClass: &GatewayClass{
@@ -553,7 +558,7 @@ func TestBuildGraph(t *testing.T) {
 							CreateRouteKey(hr1): routeHR1,
 							CreateRouteKey(gr):  routeGR,
 						},
-						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
+						SupportedKinds:            supportedKindsForListeners,
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
 					{
@@ -563,7 +568,7 @@ func TestBuildGraph(t *testing.T) {
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{CreateRouteKey(hr3): routeHR3},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
-						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid:    true,

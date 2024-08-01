@@ -289,11 +289,13 @@ func TestValidateListenerHostname(t *testing.T) {
 }
 
 func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
-	HTTPRouteGroupKind := []v1.RouteGroupKind{
-		{
-			Kind:  kinds.HTTPRoute,
-			Group: helpers.GetPointer[v1.Group](v1.GroupName),
-		},
+	HTTPRouteGroupKind := v1.RouteGroupKind{
+		Kind:  kinds.HTTPRoute,
+		Group: helpers.GetPointer[v1.Group](v1.GroupName),
+	}
+	GRPCRouteGroupKind := v1.RouteGroupKind{
+		Kind:  kinds.GRPCRoute,
+		Group: helpers.GetPointer[v1.Group](v1.GroupName),
 	}
 	TCPRouteGroupKind := []v1.RouteGroupKind{
 		{
@@ -312,7 +314,6 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			protocol:  v1.TCPProtocolType,
 			expectErr: false,
 			name:      "unsupported protocol is ignored",
-			kind:      TCPRouteGroupKind,
 			expected:  []v1.RouteGroupKind{},
 		},
 		{
@@ -336,35 +337,30 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 		},
 		{
 			protocol:  v1.HTTPProtocolType,
-			kind:      HTTPRouteGroupKind,
+			kind:      []v1.RouteGroupKind{HTTPRouteGroupKind},
 			expectErr: false,
 			name:      "valid HTTP",
-			expected:  HTTPRouteGroupKind,
+			expected:  []v1.RouteGroupKind{HTTPRouteGroupKind},
 		},
 		{
 			protocol:  v1.HTTPSProtocolType,
-			kind:      HTTPRouteGroupKind,
+			kind:      []v1.RouteGroupKind{HTTPRouteGroupKind},
 			expectErr: false,
 			name:      "valid HTTPS",
-			expected:  HTTPRouteGroupKind,
+			expected:  []v1.RouteGroupKind{HTTPRouteGroupKind},
 		},
 		{
 			protocol:  v1.HTTPSProtocolType,
 			expectErr: false,
 			name:      "valid HTTPS no kind specified",
 			expected: []v1.RouteGroupKind{
-				{
-					Kind: kinds.HTTPRoute,
-				},
+				HTTPRouteGroupKind, GRPCRouteGroupKind,
 			},
 		},
 		{
 			protocol: v1.HTTPProtocolType,
 			kind: []v1.RouteGroupKind{
-				{
-					Kind:  kinds.HTTPRoute,
-					Group: helpers.GetPointer[v1.Group](v1.GroupName),
-				},
+				HTTPRouteGroupKind,
 				{
 					Kind:  "bad-kind",
 					Group: helpers.GetPointer[v1.Group](v1.GroupName),
@@ -372,7 +368,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			},
 			expectErr: true,
 			name:      "valid and invalid kinds",
-			expected:  HTTPRouteGroupKind,
+			expected:  []v1.RouteGroupKind{HTTPRouteGroupKind},
 		},
 	}
 

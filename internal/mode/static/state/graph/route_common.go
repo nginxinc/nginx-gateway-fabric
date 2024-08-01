@@ -538,21 +538,11 @@ func isRouteNamespaceAllowedByListener(
 // If the listener specifies allowed kinds, the route kind must be in the list.
 // If the listener does not specify allowedRoutes, allowed routes are determined using the listener protocol.
 func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool {
-	allowedRoutes := listener.Source.AllowedRoutes
-	if allowedRoutes != nil && allowedRoutes.Kinds != nil {
-		for _, kind := range allowedRoutes.Kinds {
-			if kind.Kind == convertRouteType(routeType) {
-				return true
-			}
+	for _, kind := range listener.SupportedKinds {
+		if kind.Kind == convertRouteType(routeType) {
+			return true
 		}
-		return false
 	}
-
-	switch listener.Source.Protocol {
-	case v1.HTTPProtocolType, v1.HTTPSProtocolType:
-		return routeType == RouteTypeHTTP || routeType == RouteTypeGRPC
-	}
-
 	return false
 }
 
