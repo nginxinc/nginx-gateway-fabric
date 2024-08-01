@@ -1,7 +1,5 @@
 # variables that should not be overridden by the user
 VERSION = edge
-GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
-DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 MANIFEST_DIR = $(CURDIR)/deploy/manifests
 CHART_DIR = $(SELF_DIR)charts/nginx-gateway-fabric
@@ -22,7 +20,7 @@ ENABLE_EXPERIMENTAL ?= false
 NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
-GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
+GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
