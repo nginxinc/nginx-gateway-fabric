@@ -550,9 +550,11 @@ func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool 
 		return false
 	}
 
-	if listener.Source.Protocol == v1.HTTPProtocolType || listener.Source.Protocol == v1.HTTPSProtocolType {
+	switch listener.Source.Protocol {
+	case v1.HTTPProtocolType, v1.HTTPSProtocolType:
 		return routeType == RouteTypeHTTP || routeType == RouteTypeGRPC
 	}
+
 	return false
 }
 
