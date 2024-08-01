@@ -84,14 +84,12 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 			sedOutput, err := sedCmd.Output()
 			if err != nil {
-				fmt.Println(err.Error() + ": " + string(sedOutput))
 				return err
 			}
 			kubectlCmd.Stdin = bytes.NewReader(sedOutput)
 
-			output, err := kubectlCmd.CombinedOutput()
+			_, err = kubectlCmd.CombinedOutput()
 			if err != nil {
-				fmt.Println(err.Error() + ": " + string(output))
 				return err
 			}
 		}
@@ -439,27 +437,21 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		reloadCount, err := framework.GetReloadCount(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(reloadCount)
 
 		reloadAvgTime, err := framework.GetReloadAvgTime(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(reloadAvgTime)
 
 		reloadBuckets, err := framework.GetReloadBuckets(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(reloadBuckets)
 
 		eventsCount, err := framework.GetEventsCount(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(eventsCount)
 
 		eventsAvgTime, err := framework.GetEventsAvgTime(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(eventsAvgTime)
 
 		eventsBuckets, err := framework.GetEventsBuckets(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(eventsBuckets)
 
 		logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 			Container: "nginx-gateway",
@@ -469,11 +461,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		timeToReadyTotal, err := calculateTimeToReadyTotal(logs, timeToReadyStartingLogSubstring)
 		Expect(err).ToNot(HaveOccurred())
 
-		fmt.Println(timeToReadyTotal)
-
 		timeToReadyAvgSingle, err := calculateTimeToReadyAverage(logs)
 		Expect(err).ToNot(HaveOccurred())
-		fmt.Println(timeToReadyAvgSingle)
 
 		results := reconfigTestResults{
 			Name:                 testName,
