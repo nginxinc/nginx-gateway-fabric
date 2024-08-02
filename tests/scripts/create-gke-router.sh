@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 source scripts/vars.env
 
 gcloud compute routers create "${RESOURCE_NAME}" \

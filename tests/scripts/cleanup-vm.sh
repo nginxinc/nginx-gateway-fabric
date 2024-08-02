@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 source scripts/vars.env
 
 skip_gke_master_control_node_access="${1:-false}"

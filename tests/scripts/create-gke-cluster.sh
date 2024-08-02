@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 source scripts/vars.env
 
 ip_random_digit=$((1 + RANDOM % 250))

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 source scripts/vars.env
 
 NGF_DIR=$(dirname "$PWD")
