@@ -4,6 +4,6 @@ source scripts/vars.env
 
 NGF_DIR=$(dirname "$PWD")
 
-gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh > /dev/null
+gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh >/dev/null
 
-rsync -ave 'ssh -F ngf-gcp.ssh' ${NGF_DIR} username@${RESOURCE_NAME}.${GKE_CLUSTER_ZONE}.${GKE_PROJECT}:~
+rsync -ave 'ssh -F ngf-gcp.ssh' "${NGF_DIR}" username@"${RESOURCE_NAME}"."${GKE_CLUSTER_ZONE}"."${GKE_PROJECT}":~

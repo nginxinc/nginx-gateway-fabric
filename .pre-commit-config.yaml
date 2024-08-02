@@ -81,6 +81,12 @@ repos:
           - --template-files=_templates.gotmpl
           - --template-files=README.md.gotmpl
 
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt-src
+        args: [-w, -s, -i, "4"]
+
 ci:
   skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]
   autofix_prs: false
