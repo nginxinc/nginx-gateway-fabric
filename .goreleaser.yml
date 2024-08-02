@@ -62,10 +62,3 @@ milestones:
 
 snapshot:
   name_template: "edge"
-
-release:
-  extra_files:
-    - glob: ./deploy/manifests/nginx-gateway.yaml
-    - glob: ./deploy/manifests/nginx-plus-gateway.yaml
-    - glob: ./deploy/manifests/nginx-gateway-experimental.yaml
-    - glob: ./deploy/manifests/nginx-plus-gateway-experimental.yaml

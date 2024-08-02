@@ -3,28 +3,26 @@ kind: Namespace
 metadata:
   name: nginx-gateway
 ---
-# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: v1
+imagePullSecrets:
+- name: nginx-plus-registry-secret
 kind: ServiceAccount
 metadata:
+  labels:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
   name: nginx-gateway
   namespace: nginx-gateway
-  labels:
-    app.kubernetes.io/name: nginx-gateway
-    app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
-  annotations:
-    {}
 ---
-# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: nginx-gateway
   labels:
-    app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
+  name: nginx-gateway
 rules:
 - apiGroups:
   - ""
@@ -32,6 +30,7 @@ rules:
   - namespaces
   - services
   - secrets
+  - configmaps
   verbs:
   - get
   - list
@@ -82,6 +81,7 @@ rules:
   - httproutes
   - referencegrants
   - grpcroutes
+  - backendtlspolicies
   verbs:
   - list
   - watch
@@ -92,6 +92,7 @@ rules:
   - gateways/status
   - gatewayclasses/status
   - grpcroutes/status
+  - backendtlspolicies/status
   verbs:
   - update
 - apiGroups:
@@ -135,15 +136,14 @@ rules:
   - list
   - watch
 ---
-# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: nginx-gateway
   labels:
-    app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
+  name: nginx-gateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -153,30 +153,54 @@ subjects:
   name: nginx-gateway
   namespace: nginx-gateway
 ---
-# Source: nginx-gateway-fabric/templates/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+  type: LoadBalancer
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
   name: nginx-gateway
   namespace: nginx-gateway
-  labels:
-    app.kubernetes.io/name: nginx-gateway
-    app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: nginx-gateway
       app.kubernetes.io/instance: nginx-gateway
+      app.kubernetes.io/name: nginx-gateway
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: nginx-gateway
-        app.kubernetes.io/instance: nginx-gateway
       annotations:
-        prometheus.io/scrape: "true"
         prometheus.io/port: "9113"
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/instance: nginx-gateway
+        app.kubernetes.io/name: nginx-gateway
     spec:
       containers:
       - args:
@@ -189,6 +213,7 @@ spec:
         - --metrics-port=9113
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
+        - --gateway-api-experimental-features
         env:
         - name: POD_IP
           valueFrom:
@@ -206,10 +231,10 @@ spec:
         imagePullPolicy: Always
         name: nginx-gateway
         ports:
-        - name: metrics
-          containerPort: 9113
-        - name: health
-          containerPort: 8081
+        - containerPort: 9113
+          name: metrics
+        - containerPort: 8081
+          name: health
         readinessProbe:
           httpGet:
             path: /readyz
@@ -217,8 +242,6 @@ spec:
           initialDelaySeconds: 3
           periodSeconds: 1
         securityContext:
-          seccompProfile:
-            type: RuntimeDefault
           allowPrivilegeEscalation: false
           capabilities:
             add:
@@ -226,20 +249,22 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsUser: 102
           runAsGroup: 1001
+          runAsUser: 102
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: module-includes
-          mountPath: /etc/nginx/module-includes
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-        - name: nginx-includes
-          mountPath: /etc/nginx/includes
-      - image: nginx-gateway-fabric/nginx-plus:edge
+        - mountPath: /etc/nginx/conf.d
+          name: nginx-conf
+        - mountPath: /etc/nginx/module-includes
+          name: module-includes
+        - mountPath: /etc/nginx/secrets
+          name: nginx-secrets
+        - mountPath: /var/run/nginx
+          name: nginx-run
+        - mountPath: /etc/nginx/includes
+          name: nginx-includes
+      - image: private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:edge
         imagePullPolicy: Always
         name: nginx
         ports:
@@ -248,71 +273,69 @@ spec:
         - containerPort: 443
           name: https
         securityContext:
-          seccompProfile:
-            type: RuntimeDefault
           capabilities:
             add:
             - NET_BIND_SERVICE
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsUser: 101
           runAsGroup: 1001
+          runAsUser: 101
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: module-includes
-          mountPath: /etc/nginx/module-includes
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-        - name: nginx-cache
-          mountPath: /var/cache/nginx
-        - name: nginx-includes
-          mountPath: /etc/nginx/includes
-      terminationGracePeriodSeconds: 30
-      serviceAccountName: nginx-gateway
-      shareProcessNamespace: true
+        - mountPath: /etc/nginx/conf.d
+          name: nginx-conf
+        - mountPath: /etc/nginx/module-includes
+          name: module-includes
+        - mountPath: /etc/nginx/secrets
+          name: nginx-secrets
+        - mountPath: /var/run/nginx
+          name: nginx-run
+        - mountPath: /var/cache/nginx
+          name: nginx-cache
+        - mountPath: /etc/nginx/includes
+          name: nginx-includes
       securityContext:
         fsGroup: 1001
         runAsNonRoot: true
+      serviceAccountName: nginx-gateway
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
-      - name: nginx-conf
-        emptyDir: {}
-      - name: module-includes
-        emptyDir: {}
-      - name: nginx-secrets
-        emptyDir: {}
-      - name: nginx-run
-        emptyDir: {}
-      - name: nginx-cache
-        emptyDir: {}
-      - name: nginx-includes
-        emptyDir: {}
+      - emptyDir: {}
+        name: nginx-conf
+      - emptyDir: {}
+        name: module-includes
+      - emptyDir: {}
+        name: nginx-secrets
+      - emptyDir: {}
+        name: nginx-run
+      - emptyDir: {}
+        name: nginx-cache
+      - emptyDir: {}
+        name: nginx-includes
 ---
-# Source: nginx-gateway-fabric/templates/gatewayclass.yaml
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: nginx
   labels:
-    app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
+  name: nginx
 spec:
   controllerName: gateway.nginx.org/nginx-gateway-controller
 ---
-# Source: nginx-gateway-fabric/templates/nginxgateway.yaml
 apiVersion: gateway.nginx.org/v1alpha1
 kind: NginxGateway
 metadata:
+  labels:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: edge
   name: nginx-gateway-config
   namespace: nginx-gateway
-  labels:
-    app.kubernetes.io/name: nginx-gateway
-    app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
 spec:
   logging:
     level: info

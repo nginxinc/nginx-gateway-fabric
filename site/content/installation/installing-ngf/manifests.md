@@ -46,80 +46,99 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
-{{<note>}}If you are deploying NGINX Gateway Fabric on OpenShift, we've supplied a baseline [SecurityContextConstraints](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/manifests/scc.yaml) manifest that you can download, modify if needed, and apply. You will also need to make sure the SecurityContextConstraints resource is added to the ClusterRole RBAC:
+{{<tabs name="install-manifests">}}
 
-```yaml
-. . .
-- apiGroups:
-  - security.openshift.io
-  resources:
-  - securitycontextconstraints
-  resourceNames:
-  -  nginx-gateway-scc
-  verbs:
-  - use
- ```
+{{%tab name="Default"%}}
 
-Alternatively, use [helm]({{< relref "installation/installing-ngf/helm.md" >}}), which will automatically configure the mentioned resources on OpenShift.
-{{</note>}}
-
-#### Stable release
-
-##### For NGINX
+Deploys NGINX Gateway Fabric with NGINX OSS.
 
 ```shell
-kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/default/deploy.yaml
 ```
 
-##### For NGINX Plus
+{{% /tab %}}
 
-Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-plus-gateway.yaml).
+{{%tab name="AWS NLB"%}}
 
-Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
-
-{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
+Deploys NGINX Gateway Fabric with NGINX OSS and an AWS Network Load Balancer service.
 
 ```shell
-kubectl apply -f nginx-plus-gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/aws-nlb/deploy.yaml
 ```
 
-#### Edge version
+{{% /tab %}}
 
-##### For NGINX
+{{%tab name="Azure"%}}
+
+Deploys NGINX Gateway Fabric with NGINX OSS and `nodeSelector` to deploy on Linux nodes.
 
 ```shell
-kubectl apply -f deploy/manifests/nginx-gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/azure/deploy.yaml
 ```
 
-##### For NGINX Plus
+{{% /tab %}}
 
-{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
+{{%tab name="NGINX Plus"%}}
+
+Deploys NGINX Gateway Fabric with NGINX Plus. The image is pulled from the
+NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the secret to use to pull the image.
+The secret must be created in the same namespace as the NGINX Gateway Fabric deployment.
+
+{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) and update the necessary fields before applying.{{< /important >}}
 
 ```shell
-kubectl apply -f deploy/manifests/nginx-plus-gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/nginx-plus/deploy.yaml
 ```
 
-Update the nginx-plus-gateway.yaml file to include your chosen image from the F5 Container registry or your custom container image.
+{{% /tab %}}
 
-#### Enable experimental features
+{{%tab name="Experimental"%}}
 
-We support a subset of the additional features provided by the Gateway API experimental channel. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric:
-
-##### For NGINX
+Deploys NGINX Gateway Fabric with NGINX OSS and experimental features.
 
 ```shell
-kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/experimental/deploy.yaml
 ```
-
-##### For NGINX Plus
-
-```shell
-kubectl apply -f deploy/manifests/nginx-plus-gateway-experimental.yaml
-```
-
-Update the nginx-plus-gateway-experimental.yaml file to include your chosen image from the F5 Container registry or your custom container image.
 
 {{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+
+{{% /tab %}}
+
+{{%tab name="NGINX Plus Experimental"%}}
+
+Deploys NGINX Gateway Fabric with NGINX Plus and experimental features. The image is pulled from the NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the secret to use to pull the image. The secret must be created in the same namespace as the NGINX Gateway Fabric deployment.
+
+{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) and update the necessary fields before applying.{{< /important >}}
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/nginx-plus-experimental/deploy.yaml
+```
+
+{{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+
+{{% /tab %}}
+
+{{%tab name="NodePort"%}}
+
+Deploys NGINX Gateway Fabric with NGINX OSS using a Service type of `NodePort`.
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/nodeport/deploy.yaml
+```
+
+{{% /tab %}}
+
+{{%tab name="OpenShift"%}}
+
+Deploys NGINX Gateway Fabric with NGINX OSS on OpenShift.
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/deploy/openshift/deploy.yaml
+```
+
+{{% /tab %}}
+
+{{</tabs>}}
 
 ### 4. Verify the Deployment
 
@@ -135,6 +154,10 @@ The output should look similar to this (note that the pod name will include a un
 NAME                             READY   STATUS    RESTARTS   AGE
 nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
 ```
+
+### 5. Access NGINX Gateway Fabric
+
+{{<include "installation/expose-nginx-gateway-fabric.md" >}}
 
 ## Upgrade NGINX Gateway Fabric
 
@@ -168,25 +191,7 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
 
-   - To upgrade your OSS deployment, run:
-
-     ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
-     ```
-
-   - To upgrade your Plus deployment:
-
-     Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-plus-gateway.yaml).
-
-     Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
-
-     ```shell
-     kubectl apply -f nginx-plus-gateway.yaml
-     ```
-
-   - To upgrade the deployment from NGINX OSS to NGINX Plus, follow the above instructions for upgrading your Plus deployment.
-
-    {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
+   Select the deployment manifest that matches your current deployment from the table above in the [Deploy NGINX Gateway Fabric](#3-deploy-nginx-gateway-fabric) section and apply it.
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
@@ -194,11 +199,11 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 Follow these steps to configure delayed pod termination:
 
-1. Open the `nginx-gateway.yaml` for editing.
+1. Open the `deploy.yaml` for editing.
 
 1. **Add delayed shutdown hooks**:
 
-   - In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
+   - In the `deploy.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
 
      ```yaml
      <...>
@@ -246,7 +251,9 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
    - To remove NGINX Gateway Fabric and its custom resource definitions (CRDs), run:
 
      ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.3.0/nginx-gateway.yaml
+     kubectl delete namespace nginx-gateway
+     kubectl delete cluterrole nginx-gateway
+     kubectl delete clusterrolebinding nginx-gateway
      ```
 
      ```shell
@@ -256,9 +263,3 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 1. **Remove the Gateway API resources:**
 
    - {{<include "installation/uninstall-gateway-api-resources.md" >}}
-
-## Next steps
-
-### Expose NGINX Gateway Fabric
-
-{{<include "installation/next-step-expose-fabric.md">}}

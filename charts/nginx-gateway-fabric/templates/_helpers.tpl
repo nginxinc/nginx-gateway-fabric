@@ -58,14 +58,12 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "nginx-gateway.labels" -}}
+helm.sh/chart: {{ include "nginx-gateway.chart" . }}
 {{ include "nginx-gateway.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
-{{- if eq (default "helm" .Values.creator) "helm" }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-helm.sh/chart: {{ include "nginx-gateway.chart" . }}
-{{- end -}}
 {{- end }}
 
 {{/*

@@ -29,8 +29,6 @@ rules:
     spaces: consistent
     indent-sequences: consistent
     check-multi-line-strings: true
-    ignore: |
-      deploy/manifests/nginx-gateway.yaml
   key-duplicates: enable
   key-ordering: disable
   line-length:
@@ -39,7 +37,6 @@ rules:
     allow-non-breakable-inline-mappings: true
     ignore: |
       .github/
-      deploy/manifests/nginx-gateway.yaml
       tests/suite/manifests/longevity/cronjob.yaml
       .goreleaser.yml
   new-line-at-end-of-file: enable

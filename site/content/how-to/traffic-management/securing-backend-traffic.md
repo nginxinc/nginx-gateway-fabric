@@ -15,7 +15,7 @@ In this guide, we will show how to specify the TLS configuration of the connecti
 ## Before you begin
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `--gateway-api-experimental-features` flag.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
