@@ -117,7 +117,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(
 			[]string{
-				"reconfig/certificate-ns-and-cafe-secret.yaml",
+				"reconfig/cafe-secret.yaml",
 				"reconfig/reference-grant.yaml",
 			},
 			ns.Name)).To(Succeed())
@@ -158,7 +158,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(
 			[]string{
-				"reconfig/certificate-ns-and-cafe-secret.yaml",
+				"reconfig/cafe-secret.yaml",
 				"reconfig/reference-grant.yaml",
 				"reconfig/gateway.yaml",
 			},
@@ -207,7 +207,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}
 
 		Expect(resourceManager.DeleteFromFiles([]string{
-			"reconfig/certificate-ns-and-cafe-secret.yaml",
+			"reconfig/cafe-secret.yaml",
 			"reconfig/reference-grant.yaml",
 			"reconfig/gateway.yaml",
 		}, ns.Name)).To(Succeed())

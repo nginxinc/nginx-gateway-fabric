@@ -22,4 +22,3 @@ spec:
       certificateRefs:
       - kind: Secret
         name: cafe-secret
-        namespace: certificate
