@@ -535,8 +535,6 @@ func isRouteNamespaceAllowedByListener(
 }
 
 // isRouteKindAllowedByListener checks if the route is allowed to attach to the listener.
-// If the listener specifies allowed kinds, the route kind must be in the list.
-// If the listener does not specify allowedRoutes, allowed routes are determined using the listener protocol.
 func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool {
 	for _, kind := range listener.SupportedKinds {
 		if kind.Kind == convertRouteType(routeType) {
@@ -553,7 +551,7 @@ func convertRouteType(routeType RouteType) v1.Kind {
 	case RouteTypeGRPC:
 		return kinds.GRPCRoute
 	default:
-		return ""
+		panic(fmt.Sprintf("unsupported route type: %s", routeType))
 	}
 }
 

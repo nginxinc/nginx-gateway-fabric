@@ -1743,7 +1743,7 @@ func TestAllowedRouteType(t *testing.T) {
 		expResult bool
 	}{
 		{
-			name:      "grpcRoute attaches to listener with allowedRoutes set to grpcRoute",
+			name:      "grpcRoute is allowed when listener supports grpcRoute kind",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
 				SupportedKinds: []gatewayv1.RouteGroupKind{
@@ -1753,7 +1753,7 @@ func TestAllowedRouteType(t *testing.T) {
 			expResult: true,
 		},
 		{
-			name:      "grpcRoute attaches to listener with allowedRoutes set to grpcRoute and httpRoute",
+			name:      "grpcRoute is allowed when listener supports grpcRoute and httpRoute kind",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
 				SupportedKinds: []gatewayv1.RouteGroupKind{
@@ -1764,7 +1764,7 @@ func TestAllowedRouteType(t *testing.T) {
 			expResult: true,
 		},
 		{
-			name:      "grpcRoute not allowed to attach to listener with allowedRoutes set to httpRoute",
+			name:      "grpcRoute is allowed when listener supports httpRoute kind",
 			routeType: RouteTypeGRPC,
 			listener: &Listener{
 				SupportedKinds: []gatewayv1.RouteGroupKind{
@@ -1774,7 +1774,7 @@ func TestAllowedRouteType(t *testing.T) {
 			expResult: false,
 		},
 		{
-			name:      "httpRoute not allowed to attach to listener with allowedRoutes set to grpcRoute",
+			name:      "httpRoute not allowed when listener supports grpcRoute kind",
 			routeType: RouteTypeHTTP,
 			listener: &Listener{
 				SupportedKinds: []gatewayv1.RouteGroupKind{

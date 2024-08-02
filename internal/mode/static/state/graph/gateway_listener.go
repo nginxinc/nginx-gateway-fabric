@@ -225,12 +225,15 @@ func validateListenerHostname(listener v1.Listener) (conds []conditions.Conditio
 	return nil, true
 }
 
+// getAndValidateListenerSupportedKinds validates the route kind and returns the supported kinds for the listener.
+// The supported kinds are determined based on the listener's allowedRoutes field.
+// If the listener does not specify allowedRoutes, listener determines allowed routes based on its protocol.
 func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	[]conditions.Condition,
 	[]v1.RouteGroupKind,
 ) {
 	var conds []conditions.Condition
-	supportedKinds := make([]v1.RouteGroupKind, 0)
+	var supportedKinds []v1.RouteGroupKind
 
 	validRouteKind := func(kind v1.RouteGroupKind) bool {
 		if kind.Kind != v1.Kind(kinds.HTTPRoute) && kind.Kind != v1.Kind(kinds.GRPCRoute) {
@@ -243,6 +246,7 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	}
 
 	if listener.AllowedRoutes != nil && listener.AllowedRoutes.Kinds != nil {
+		supportedKinds = make([]v1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
 		for _, kind := range listener.AllowedRoutes.Kinds {
 			if !validRouteKind(kind) {
 				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)

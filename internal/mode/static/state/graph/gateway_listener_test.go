@@ -314,7 +314,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			protocol:  v1.TCPProtocolType,
 			expectErr: false,
 			name:      "unsupported protocol is ignored",
-			expected:  []v1.RouteGroupKind{},
+			expected:  nil,
 		},
 		{
 			protocol: v1.HTTPProtocolType,

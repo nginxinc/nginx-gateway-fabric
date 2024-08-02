@@ -543,8 +543,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
-						Routes:         map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{},
+						Routes: map[RouteKey]*L7Route{},
 					},
 				},
 				Valid: true,
