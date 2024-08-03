@@ -206,11 +206,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			},
 		}
 
-		Expect(resourceManager.DeleteFromFiles([]string{
-			"reconfig/cafe-secret.yaml",
-			"reconfig/reference-grant.yaml",
-			"reconfig/gateway.yaml",
-		}, ns.Name)).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 	}
 
 	getTimeStampFromLogLine := func(logLine string) string {
