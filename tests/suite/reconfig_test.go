@@ -567,10 +567,10 @@ const reconfigResultTemplate = `
 
 ### Reloads and Time to Ready
 
-- TimeToReadyTotal: {{ .TimeToReadyTotal }}
-- TimeToReadyAvgSingle: {{ .TimeToReadyAvgSingle }}
+- TimeToReadyTotal: {{ .TimeToReadyTotal }}s
+- TimeToReadyAvgSingle: {{ .TimeToReadyAvgSingle }}s
 - NGINX Reloads: {{ .NGINXReloads }}
-- NGINX Reload Average Time: {{ .NGINXReloadAvgTime }}
+- NGINX Reload Average Time: {{ .NGINXReloadAvgTime }}ms
 - Reload distribution:
 {{- range .ReloadBuckets }}
 	- {{ .Le }}ms: {{ .Val }}
