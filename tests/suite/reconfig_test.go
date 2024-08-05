@@ -31,6 +31,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
 
+		reconfigNamespace core.Namespace
+
 		outFile *os.File
 	)
 
@@ -58,6 +60,15 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	})
 
 	BeforeEach(func() {
+		// need to redeclare this variable to reset its resource version. The framework has some bugs where
+		// if we set and declare this as a global variable, even after deleting the namespace, when we try to
+		// recreate it, it will error saying the resource version has already been set.
+		reconfigNamespace = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "reconfig",
+			},
+		}
+
 		teardown(releaseName)
 	})
 
@@ -109,18 +120,13 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(k8sClient.Create(ctx, &ns)).To(Succeed())
 		}
 
-		ns := core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "reconfig",
-			},
-		}
-		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+		Expect(resourceManager.Apply([]client.Object{&reconfigNamespace})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(
 			[]string{
 				"reconfig/cafe-secret.yaml",
 				"reconfig/reference-grant.yaml",
 			},
-			ns.Name)).To(Succeed())
+			reconfigNamespace.Name)).To(Succeed())
 
 		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
 
@@ -128,7 +134,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		time.Sleep(60 * time.Second)
 
-		Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, ns.Name)).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, reconfigNamespace.Name)).To(Succeed())
 
 		return nil
 	}
@@ -150,19 +156,14 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		time.Sleep(60 * time.Second)
 
-		ns := core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "reconfig",
-			},
-		}
-		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+		Expect(resourceManager.Apply([]client.Object{&reconfigNamespace})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(
 			[]string{
 				"reconfig/cafe-secret.yaml",
 				"reconfig/reference-grant.yaml",
 				"reconfig/gateway.yaml",
 			},
-			ns.Name)).To(Succeed())
+			reconfigNamespace.Name)).To(Succeed())
 
 		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
 
@@ -200,13 +201,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(resourceManager.DeleteNamespace(nsName)).To(Succeed())
 		}
 
-		ns := core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "reconfig",
-			},
-		}
-
-		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(reconfigNamespace.Name)).To(Succeed())
 	}
 
 	getTimeStampFromLogLine := func(logLine string) string {
