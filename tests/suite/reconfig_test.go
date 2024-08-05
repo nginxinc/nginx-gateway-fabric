@@ -25,12 +25,14 @@ import (
 )
 
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
+	// used for cleaning up resources
+	const maxResourceCount = 150
+
 	var (
 		scrapeInterval        = 15 * time.Second
 		queryRangeStep        = 5 * time.Second
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
-		maxResourceCount      = 150
 
 		reconfigNamespace core.Namespace
 
