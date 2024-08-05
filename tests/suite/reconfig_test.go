@@ -30,6 +30,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		queryRangeStep        = 5 * time.Second
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
+		maxResourceCount      = 150
 
 		reconfigNamespace core.Namespace
 
@@ -70,12 +71,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}
 
 		teardown(releaseName)
-	})
-
-	AfterAll(func() {
-		teardown(releaseName)
-		close(promPortForwardStopCh)
-		Expect(framework.UninstallPrometheus(resourceManager)).To(Succeed())
 	})
 
 	createUniqueResources := func(resourceCount int, fileName string) error {
@@ -195,13 +190,20 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		return nil
 	}
 
-	cleanupResources := func(resourceCount int) {
-		for i := 1; i <= resourceCount; i++ {
+	cleanupResources := func() error {
+		var err error
+
+		for i := 1; i <= maxResourceCount; i++ {
 			nsName := "namespace" + strconv.Itoa(i)
-			Expect(resourceManager.DeleteNamespace(nsName)).To(Succeed())
+			resultError := resourceManager.DeleteNamespace(nsName)
+			if resultError != nil {
+				err = resultError
+			}
 		}
 
 		Expect(resourceManager.DeleteNamespace(reconfigNamespace.Name)).To(Succeed())
+
+		return err
 	}
 
 	getTimeStampFromLogLine := func(logLine string) string {
@@ -470,8 +472,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		err = writeReconfigResults(outFile, results)
 		Expect(err).ToNot(HaveOccurred())
-
-		cleanupResources(resourceCount)
 	}
 
 	// Test 1 - Resources exist before start-up
@@ -541,6 +541,16 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			true,
 			timeToReadyStartingLogSubstring,
 		)
+	})
+
+	AfterEach(func() {
+		Expect(cleanupResources()).Should(Succeed())
+	})
+
+	AfterAll(func() {
+		teardown(releaseName)
+		close(promPortForwardStopCh)
+		Expect(framework.UninstallPrometheus(resourceManager)).Should(Succeed())
 	})
 })
 
