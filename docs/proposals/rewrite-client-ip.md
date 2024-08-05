@@ -80,23 +80,23 @@ flowchart LR
 and the following NGINX config:
 
 ```nginx configuration
- set_real_ip_from 55.55.55.1;
+ set_real_ip_from 3.3.3.3;
  real_ip_header X-Forwarded-For;
  real_ip_recursive on;
 ```
 
-Once the request hits NGF, the `X-Forwarded-For` header contains three IP addresses: `X-Forwarded-For: [11.11.11.11, 22.22.22.22, 55.55.55.1]`
+Once the request hits NGF, the `X-Forwarded-For` header contains three IP addresses: `X-Forwarded-For: [1.1.1.1, 2.2.2.2, 3.3.3.3]`
 
-Because `real_ip_recursive` is on, NGINX will set `$remote_addr` to 22.22.22.22. This is because it recurses on the values in X-Forwarded-Header from end of array to start of array and selects the first untrusted ip. If you wanted to set `$remote_addr` to the  user's IP address instead, and you trust the Proxy, you could achieve that by also specifying the Proxy's IP using `set_real_ip_from`:
+Because `real_ip_recursive` is on, NGINX will set `$remote_addr` to 2.2.2.2. This is because it recurses on the values in X-Forwarded-Header from end of array to start of array and selects the first untrusted ip. If you wanted to set `$remote_addr` to the user's IP address instead, and you trust the Proxy, you could achieve that by also specifying the Proxy's IP using `set_real_ip_from`:
 
 ```nginx configuration
- set_real_ip_from 55.55.55.1;
- set_real_ip_from 22.22.22.22;
+ set_real_ip_from 3.3.3.3;
+ set_real_ip_from 2.2.2.2;
  real_ip_header X-Forwarded-For;
  real_ip_recursive on;
 ```
 
-If `real_ip_recursive` is off, NGINX will set `$remote_addr` to 55.55.55.1 because it will select the rightmost address.
+If `real_ip_recursive` is off, NGINX will set `$remote_addr` to 3.3.3.3 because it will select the rightmost address.
 
 ## API, Customer Driven Interfaces, and User Experience
 
