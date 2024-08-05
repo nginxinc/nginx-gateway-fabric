@@ -41,7 +41,6 @@ type Location struct {
 	Rewrites        []string
 	Includes        []Include
 	GRPC            bool
-	Redirects       bool
 }
 
 // Header defines an HTTP header to be passed to the proxied server.

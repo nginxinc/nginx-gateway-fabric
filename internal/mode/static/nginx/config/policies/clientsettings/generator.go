@@ -51,12 +51,12 @@ func (g Generator) GenerateForServer(pols []policies.Policy, _ http.Server) poli
 	return generate(pols)
 }
 
-// GenerateForServer generates policy configuration for a normal location block.
+// GenerateForLocation generates policy configuration for a normal location block.
 func (g Generator) GenerateForLocation(pols []policies.Policy, _ http.Location) policies.GenerateResultFiles {
 	return generate(pols)
 }
 
-// GenerateForServer generates policy configuration for a normal location block.
+// GenerateForInternalLocation generates policy configuration for an internal location block.
 func (g Generator) GenerateForInternalLocation(pols []policies.Policy) policies.GenerateResultFiles {
 	return generate(pols)
 }

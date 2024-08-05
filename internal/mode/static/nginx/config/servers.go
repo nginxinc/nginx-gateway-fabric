@@ -144,13 +144,15 @@ func createServers(
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
-	for serverID, s := range httpServers {
+	for idx, s := range httpServers {
+		serverID := fmt.Sprintf("%d", idx)
 		httpServer, matchPairs := createServer(s, serverID, generator)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
-	for serverID, s := range sslServers {
+	for idx, s := range sslServers {
+		serverID := fmt.Sprintf("SSL_%d", idx)
 		sslServer, matchPairs := createSSLServer(s, serverID, generator)
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPairs)
@@ -161,7 +163,7 @@ func createServers(
 
 func createSSLServer(
 	virtualServer dataplane.VirtualServer,
-	serverIdx int,
+	serverID string,
 	generator policies.Generator,
 ) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
@@ -171,7 +173,6 @@ func createSSLServer(
 		}, nil
 	}
 
-	serverID := fmt.Sprintf("SSL_%d", serverIdx)
 	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
 
 	server := http.Server{
@@ -193,7 +194,7 @@ func createSSLServer(
 
 func createServer(
 	virtualServer dataplane.VirtualServer,
-	serverIdx int,
+	serverID string,
 	generator policies.Generator,
 ) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
@@ -203,7 +204,6 @@ func createServer(
 		}, nil
 	}
 
-	serverID := fmt.Sprintf("%d", serverIdx)
 	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
 
 	server := http.Server{
@@ -255,16 +255,15 @@ func createLocations(
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
+		for i := range extLocations {
+			extLocations[i].Includes = createIncludesFromPolicyGenerateResult(
+				generator.GenerateForLocation(rule.Policies, extLocations[i]),
+			)
+		}
 
 		if !needsInternalLocations(rule) {
 			for _, r := range rule.MatchRules {
-				extLocations = updateLocationsForFilters(r.Filters, extLocations, r, server.Port, rule.Path, rule.GRPC)
-			}
-
-			for i := range extLocations {
-				extLocations[i].Includes = createIncludesFromPolicyGenerateResult(
-					generator.GenerateForLocation(rule.Policies, extLocations[i]),
-				)
+				extLocations = updateLocations(r.Filters, extLocations, r, server.Port, rule.Path, rule.GRPC)
 			}
 
 			locs = append(locs, extLocations...)
@@ -274,24 +273,22 @@ func createLocations(
 		internalLocations := make([]http.Location, 0, len(rule.MatchRules))
 
 		for matchRuleIdx, r := range rule.MatchRules {
-			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
-				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match, grpc)
-				intLocation.Includes = createIncludesFromPolicyGenerateResult(
-					generator.GenerateForInternalLocation(rule.Policies),
-				)
+			intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match, grpc)
+			intLocation.Includes = createIncludesFromPolicyGenerateResult(
+				generator.GenerateForInternalLocation(rule.Policies),
+			)
 
-				intLocation = updateLocationForFilters(
-					r.Filters,
-					intLocation,
-					r,
-					server.Port,
-					rule.Path,
-					rule.GRPC,
-				)
+			intLocation = updateLocation(
+				r.Filters,
+				intLocation,
+				r,
+				server.Port,
+				rule.Path,
+				rule.GRPC,
+			)
 
-				internalLocations = append(internalLocations, intLocation)
-				matches = append(matches, match)
-			}
+			internalLocations = append(internalLocations, intLocation)
+			matches = append(matches, match)
 		}
 
 		httpMatchKey := serverID + "_" + strconv.Itoa(pathRuleIdx)
@@ -300,10 +297,6 @@ func createLocations(
 			// so we don't need nginx/njs to perform unnecessary matching.
 			// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
 			extLocations[i].HTTPMatchKey = httpMatchKey
-			extLocations[i].Includes = createIncludesFromPolicyGenerateResult(
-				generator.GenerateForLocation(rule.Policies, extLocations[i]),
-			)
-
 			matchPairs[extLocations[i].HTTPMatchKey] = matches
 		}
 
@@ -436,7 +429,8 @@ func initializeInternalLocation(
 	return createMatchLocation(path, grpc), createRouteMatch(match, path)
 }
 
-func updateLocationForFilters(
+// updateLocation updates a location with any relevant configurations, like proxy_pass, filters, tls settings, etc.
+func updateLocation(
 	filters dataplane.HTTPFilters,
 	location http.Location,
 	matchRule dataplane.MatchRule,
@@ -484,8 +478,9 @@ func updateLocationForFilters(
 	return location
 }
 
-// updateLocationsForFilters updates the existing locations with any relevant filters.
-func updateLocationsForFilters(
+// updateLocations updates the existing locations with any relevant configurations, like proxy_pass,
+// filters, tls settings, etc.
+func updateLocations(
 	filters dataplane.HTTPFilters,
 	buildLocations []http.Location,
 	matchRule dataplane.MatchRule,
@@ -496,7 +491,7 @@ func updateLocationsForFilters(
 	updatedLocations := make([]http.Location, len(buildLocations))
 
 	for i, loc := range buildLocations {
-		updatedLocations[i] = updateLocationForFilters(filters, loc, matchRule, listenerPort, path, grpc)
+		updatedLocations[i] = updateLocation(filters, loc, matchRule, listenerPort, path, grpc)
 	}
 
 	return updatedLocations

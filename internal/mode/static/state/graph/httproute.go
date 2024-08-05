@@ -228,7 +228,8 @@ func validatePathMatch(
 	}
 
 	if strings.HasPrefix(*path.Value, http.InternalRoutePathPrefix) {
-		msg := fmt.Sprintf("path cannot start with %s", http.InternalRoutePathPrefix)
+		msg := fmt.Sprintf("path cannot start with %s. This prefix is reserved for internal use",
+			http.InternalRoutePathPrefix)
 		return field.ErrorList{field.Invalid(fieldPath.Child("value"), *path.Value, msg)}
 	}
 

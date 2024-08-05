@@ -73,6 +73,9 @@ func NewGenerator(telemetry dataplane.Telemetry) *Generator {
 }
 
 // GenerateForServer generates policy configuration for a normal location block.
+// For a normal location, all directives are applied.
+// When the configuration involves a normal location redirecting to an internal location,
+// only otel_trace and otel_trace_context are applied to the normal location.
 func (g Generator) GenerateForLocation(pols []policies.Policy, location http.Location) policies.GenerateResultFiles {
 	buildTemplate := func(
 		tmplate *template.Template,
@@ -111,6 +114,8 @@ func (g Generator) GenerateForLocation(pols []policies.Policy, location http.Loc
 }
 
 // GenerateForInternalLocation generates policy configuration for an internal location block.
+// otel_span_attr and otel_span_name are set in the internal location, with otel_trace and otel_trace_context
+// being specified in the external location that redirects to the internal location.
 func (g Generator) GenerateForInternalLocation(pols []policies.Policy) policies.GenerateResultFiles {
 	for _, pol := range pols {
 		obs, ok := pol.(*ngfAPI.ObservabilityPolicy)

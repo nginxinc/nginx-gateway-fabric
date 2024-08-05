@@ -149,32 +149,28 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
+	g := NewWithT(t)
 
+	checkResults := func(resFiles policies.GenerateResultFiles, expStrings []string) {
+		g.Expect(resFiles).To(HaveLen(1))
+
+		for _, str := range expStrings {
+			g.Expect(string(resFiles[0].Content)).To(ContainSubstring(str))
+		}
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(_ *testing.T) {
 			generator := clientsettings.NewGenerator()
 
 			resFiles := generator.GenerateForServer([]policies.Policy{test.policy}, http.Server{})
-			g.Expect(resFiles).To(HaveLen(1))
-
-			for _, str := range test.expStrings {
-				g.Expect(string(resFiles[0].Content)).To(ContainSubstring(str))
-			}
+			checkResults(resFiles, test.expStrings)
 
 			resFiles = generator.GenerateForLocation([]policies.Policy{test.policy}, http.Location{})
-			g.Expect(resFiles).To(HaveLen(1))
-
-			for _, str := range test.expStrings {
-				g.Expect(string(resFiles[0].Content)).To(ContainSubstring(str))
-			}
+			checkResults(resFiles, test.expStrings)
 
 			resFiles = generator.GenerateForInternalLocation([]policies.Policy{test.policy})
-			g.Expect(resFiles).To(HaveLen(1))
-
-			for _, str := range test.expStrings {
-				g.Expect(string(resFiles[0].Content)).To(ContainSubstring(str))
-			}
+			checkResults(resFiles, test.expStrings)
 		})
 	}
 }
