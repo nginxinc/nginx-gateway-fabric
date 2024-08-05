@@ -183,7 +183,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		if err := k8sClient.List(ctx, &routes); err != nil {
 			return fmt.Errorf("error getting HTTPRoutes: %w", err)
 		}
-		Expect(len(routes.Items)).To(BeNumerically(">=", resourceCount*3))
+		Expect(len(routes.Items)).To(BeNumerically("==", resourceCount*3))
 
 		var pods core.PodList
 		if err := k8sClient.List(ctx, &pods); err != nil {
