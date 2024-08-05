@@ -205,7 +205,7 @@ The Go API above does not contain validation annotation. Annotations should be a
 
 ### Status
 
-Status is set on the GatewayClass, not the `NginxProxy` resource. If the `NginxProxy` is invalid, set the `Accepted` condition on the GatewayClass to `False` with the reason `InvalidParameters`. See [gateway settings proposal](gateway-settings.md#status) for more details on status.
+Status is set on the GatewayClass, not the `NginxProxy` resource. If the `NginxProxy` is invalid, set the `Accepted` condition reason on the GatewayClass to `InvalidParameters` but still mark `Accepted` as `True`. See [gateway settings proposal](gateway-settings.md#status) for more details on status.
 
 ### Future Work
 
