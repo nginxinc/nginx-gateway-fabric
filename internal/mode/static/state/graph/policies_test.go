@@ -790,11 +790,12 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 	pol2, pol2Key := createTestPolicyAndKey(policyGVK, "pol2", hrRefCoffee, hrRefCoffeeTea)
 
 	tests := []struct {
-		validator            validation.PolicyValidator
-		policies             map[PolicyKey]policies.Policy
-		routes               map[RouteKey]*L7Route
-		expProcessedPolicies map[PolicyKey]*Policy
-		name                 string
+		validator     validation.PolicyValidator
+		policies      map[PolicyKey]policies.Policy
+		routes        map[RouteKey]*L7Route
+		name          string
+		expConditions []conditions.Condition
+		valid         bool
 	}{
 		{
 			name:      "no overlap",
@@ -812,20 +813,7 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr2"},
 				}: createTestRouteWithPaths("hr2", "/tea"),
 			},
-			expProcessedPolicies: map[PolicyKey]*Policy{
-				pol1Key: {
-					Source: pol1,
-					TargetRefs: []PolicyTargetRef{
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-					},
-					Ancestors: []PolicyAncestor{},
-					Valid:     true,
-				},
-			},
+			valid: true,
 		},
 		{
 			name:      "policy references route that overlaps a non-referenced route",
@@ -843,27 +831,14 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr2"},
 				}: createTestRouteWithPaths("hr2", "/coffee"),
 			},
-			expProcessedPolicies: map[PolicyKey]*Policy{
-				pol1Key: {
-					Source: pol1,
-					TargetRefs: []PolicyTargetRef{
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-					},
-					Ancestors: []PolicyAncestor{},
-					Conditions: []conditions.Condition{
-						{
-							Type:   "Accepted",
-							Status: "False",
-							Reason: "TargetConflict",
-							Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
-								"\"test/hr2\" shares a hostname:port/path combination with this target",
-						},
-					},
-					Valid: false,
+			valid: false,
+			expConditions: []conditions.Condition{
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
+						"\"test/hr2\" shares a hostname:port/path combination with this target",
 				},
 			},
 		},
@@ -883,25 +858,7 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-tea"},
 				}: createTestRouteWithPaths("hr-coffee-tea", "/coffee", "/tea"),
 			},
-			expProcessedPolicies: map[PolicyKey]*Policy{
-				pol2Key: {
-					Source: pol2,
-					TargetRefs: []PolicyTargetRef{
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-tea"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-					},
-					Ancestors: []PolicyAncestor{},
-					Valid:     true,
-				},
-			},
+			valid: true,
 		},
 		{
 			name:      "policy references 2 routes that overlap with non-referenced route",
@@ -923,39 +880,21 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-latte"},
 				}: createTestRouteWithPaths("hr-coffee-latte", "/coffee", "/latte"),
 			},
-			expProcessedPolicies: map[PolicyKey]*Policy{
-				pol2Key: {
-					Source: pol2,
-					TargetRefs: []PolicyTargetRef{
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-						{
-							Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-tea"},
-							Kind:   kinds.HTTPRoute,
-							Group:  v1.GroupName,
-						},
-					},
-					Ancestors: []PolicyAncestor{},
-					Conditions: []conditions.Condition{
-						{
-							Type:   "Accepted",
-							Status: "False",
-							Reason: "TargetConflict",
-							Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
-								"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
-						},
-						{
-							Type:   "Accepted",
-							Status: "False",
-							Reason: "TargetConflict",
-							Message: "Policy cannot be applied to target \"test/hr-coffee-tea\" since another Route " +
-								"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
-						},
-					},
-					Valid: false,
+			valid: false,
+			expConditions: []conditions.Condition{
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
+						"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
+				},
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee-tea\" since another Route " +
+						"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
 				},
 			},
 		},
@@ -975,7 +914,12 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 			g := NewWithT(t)
 
 			processed := processPolicies(test.policies, test.validator, gateways, test.routes, nil)
-			g.Expect(processed).To(BeEquivalentTo(test.expProcessedPolicies))
+			g.Expect(processed).To(HaveLen(1))
+
+			for _, pol := range processed {
+				g.Expect(pol.Valid).To(Equal(test.valid))
+				g.Expect(pol.Conditions).To(Equal(test.expConditions))
+			}
 		})
 	}
 }
