@@ -69,8 +69,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 				Name: "reconfig",
 			},
 		}
-
-		teardown(releaseName)
 	})
 
 	createUniqueResources := func(resourceCount int, fileName string) error {
@@ -545,12 +543,18 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 	AfterEach(func() {
 		Expect(cleanupResources()).Should(Succeed())
+		teardown(releaseName)
 	})
 
 	AfterAll(func() {
-		teardown(releaseName)
 		close(promPortForwardStopCh)
 		Expect(framework.UninstallPrometheus(resourceManager)).Should(Succeed())
+		Expect(outFile.Close()).To(Succeed())
+
+		// restoring NGF shared among tests in the suite
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg)
 	})
 })
 
