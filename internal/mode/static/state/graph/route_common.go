@@ -354,7 +354,11 @@ func tryToAttachRouteToListeners(
 	rk := CreateRouteKey(route.Source)
 
 	bind := func(l *Listener) (allowed, attached bool) {
-		if !routeAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
+		if !isRouteNamespaceAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
+			return false, false
+		}
+
+		if !isRouteTypeAllowedByListener(l, route.RouteType) {
 			return false, false
 		}
 
@@ -502,13 +506,14 @@ func GetMoreSpecificHostname(hostname1, hostname2 string) string {
 	return ""
 }
 
-func routeAllowedByListener(
+// isRouteNamespaceAllowedByListener checks if the route namespace is allowed by the listener.
+func isRouteNamespaceAllowedByListener(
 	listener *Listener,
 	routeNS,
 	gwNS string,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) bool {
-	if listener.Source.AllowedRoutes != nil {
+	if listener.Source.AllowedRoutes != nil && listener.Source.AllowedRoutes.Namespaces != nil {
 		switch *listener.Source.AllowedRoutes.Namespaces.From {
 		case v1.NamespacesFromAll:
 			return true
@@ -527,6 +532,27 @@ func routeAllowedByListener(
 		}
 	}
 	return true
+}
+
+// isRouteKindAllowedByListener checks if the route is allowed to attach to the listener.
+func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool {
+	for _, kind := range listener.SupportedKinds {
+		if kind.Kind == convertRouteType(routeType) {
+			return true
+		}
+	}
+	return false
+}
+
+func convertRouteType(routeType RouteType) v1.Kind {
+	switch routeType {
+	case RouteTypeHTTP:
+		return kinds.HTTPRoute
+	case RouteTypeGRPC:
+		return kinds.GRPCRoute
+	default:
+		panic(fmt.Sprintf("unsupported route type: %s", routeType))
+	}
 }
 
 func getHostname(h *v1.Hostname) string {

@@ -228,10 +228,15 @@ func TestBindRouteToListeners(t *testing.T) {
 			Source: gatewayv1.Listener{
 				Name:     gatewayv1.SectionName(name),
 				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
+				Protocol: gatewayv1.HTTPProtocolType,
 			},
 			Valid:      true,
 			Attachable: true,
 			Routes:     map[RouteKey]*L7Route{},
+			SupportedKinds: []gatewayv1.RouteGroupKind{
+				{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+				{Kind: gatewayv1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+			},
 		}
 	}
 	createModifiedListener := func(name string, m func(*Listener)) *Listener {
@@ -262,6 +267,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				Namespace: "test",
 				Name:      "hr",
 			},
+			TypeMeta: metav1.TypeMeta{
+				Kind: "HTTPRoute",
+			},
 			Spec: gatewayv1.HTTPRouteSpec{
 				CommonRouteSpec: gatewayv1.CommonRouteSpec{
 					ParentRefs: []gatewayv1.ParentReference{
@@ -291,9 +299,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		nil,
 	)
 
-	var normalRoute *L7Route
-	createNormalRoute := func(gateway *gatewayv1.Gateway) *L7Route {
-		normalRoute = &L7Route{
+	var normalHTTPRoute *L7Route
+	createNormalHTTPRoute := func(gateway *gatewayv1.Gateway) *L7Route {
+		normalHTTPRoute = &L7Route{
 			RouteType: RouteTypeHTTP,
 			Source:    hr,
 			Spec: L7RouteSpec{
@@ -309,10 +317,11 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 		}
-		return normalRoute
+		return normalHTTPRoute
 	}
-	getLastNormalRoute := func() *L7Route {
-		return normalRoute
+
+	getLastNormalHTTPRoute := func() *L7Route {
+		return normalHTTPRoute
 	}
 
 	invalidAttachableRoute1 := &L7Route{
@@ -430,6 +439,62 @@ func TestBindRouteToListeners(t *testing.T) {
 		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
 	})
 
+	createGRPCRouteWithSectionNameAndPort := func(
+		sectionName *gatewayv1.SectionName,
+		port *gatewayv1.PortNumber,
+	) *gatewayv1.GRPCRoute {
+		return &gatewayv1.GRPCRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      "hr",
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind: "GRPCRoute",
+			},
+			Spec: gatewayv1.GRPCRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
+						{
+							Name:        gatewayv1.ObjectName(gw.Name),
+							SectionName: sectionName,
+							Port:        port,
+						},
+					},
+				},
+				Hostnames: []gatewayv1.Hostname{
+					"foo.example.com",
+				},
+			},
+		}
+	}
+
+	gr := createGRPCRouteWithSectionNameAndPort(helpers.GetPointer[gatewayv1.SectionName]("listener-80-1"), nil)
+
+	var normalGRPCRoute *L7Route
+	createNormalGRPCRoute := func(gateway *gatewayv1.Gateway) *L7Route {
+		normalGRPCRoute = &L7Route{
+			RouteType: RouteTypeGRPC,
+			Source:    gr,
+			Spec: L7RouteSpec{
+				Hostnames: gr.Spec.Hostnames,
+			},
+			Valid:      true,
+			Attachable: true,
+			ParentRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gateway),
+					SectionName: gr.Spec.ParentRefs[0].SectionName,
+				},
+			},
+		}
+		return normalGRPCRoute
+	}
+
+	getLastNormalGRPCRoute := func() *L7Route {
+		return normalGRPCRoute
+	}
+
 	tests := []struct {
 		route                    *L7Route
 		gateway                  *Gateway
@@ -439,7 +504,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		expectedConditions       []conditions.Condition
 	}{
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -463,7 +528,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
 					}
 				}),
 			},
@@ -620,7 +685,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener doesn't exist",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -646,7 +711,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener isn't valid and attachable",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -720,7 +785,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route isn't valid",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  false,
@@ -746,7 +811,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "invalid gateway",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -773,7 +838,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
 					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
 					}
 				}),
 			},
@@ -847,7 +912,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name:               "invalid attachable listener with invalid attachable route",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -889,7 +954,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route not allowed via labels",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -928,14 +993,14 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
 					}
 				}),
 			},
 			name: "route allowed via labels",
 		},
 		{
-			route: createNormalRoute(gwDiffNamespace),
+			route: createNormalHTTPRoute(gwDiffNamespace),
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
@@ -973,7 +1038,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route not allowed via same namespace",
 		},
 		{
-			route: createNormalRoute(gw),
+			route: createNormalHTTPRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -1008,14 +1073,14 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
 					}
 				}),
 			},
 			name: "route allowed via same namespace",
 		},
 		{
-			route: createNormalRoute(gwDiffNamespace),
+			route: createNormalHTTPRoute(gwDiffNamespace),
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
@@ -1050,11 +1115,96 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
 					}
 				}),
 			},
 			name: "route allowed via all namespaces",
+		},
+		{
+			route: createNormalGRPCRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
+						l.SupportedKinds = []gatewayv1.RouteGroupKind{
+							{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(gr): getLastNormalGRPCRoute(),
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: gr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:          false,
+						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
+						AcceptedHostnames: map[string][]string{},
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
+					l.SupportedKinds = []gatewayv1.RouteGroupKind{
+						{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+					}
+					l.Routes = map[RouteKey]*L7Route{
+						CreateRouteKey(gr): getLastNormalGRPCRoute(),
+					}
+				}),
+			},
+			name: "grpc route not allowed when listener kind is HTTPRoute",
+		},
+		{
+			route: createNormalHTTPRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Kinds: []gatewayv1.RouteGroupKind{
+								{Kind: "HTTPRoute"},
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+						Kinds: []gatewayv1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
+					}
+					l.Routes = map[RouteKey]*L7Route{
+						CreateRouteKey(hr): getLastNormalHTTPRoute(),
+					}
+				}),
+			},
+			name: "http route allowed when listener kind is HTTPRoute",
 		},
 	}
 
@@ -1583,4 +1733,62 @@ func TestRouteKeyForKind(t *testing.T) {
 	}
 
 	g.Expect(rk).To(Panic())
+}
+
+func TestAllowedRouteType(t *testing.T) {
+	test := []struct {
+		listener  *Listener
+		name      string
+		routeType RouteType
+		expResult bool
+	}{
+		{
+			name:      "grpcRoute is allowed when listener supports grpcRoute kind",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.GRPCRoute},
+				},
+			},
+			expResult: true,
+		},
+		{
+			name:      "grpcRoute is allowed when listener supports grpcRoute and httpRoute kind",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.HTTPRoute},
+					{Kind: kinds.GRPCRoute},
+				},
+			},
+			expResult: true,
+		},
+		{
+			name:      "grpcRoute is allowed when listener supports httpRoute kind",
+			routeType: RouteTypeGRPC,
+			listener: &Listener{
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.HTTPRoute},
+				},
+			},
+			expResult: false,
+		},
+		{
+			name:      "httpRoute not allowed when listener supports grpcRoute kind",
+			routeType: RouteTypeHTTP,
+			listener: &Listener{
+				SupportedKinds: []gatewayv1.RouteGroupKind{
+					{Kind: kinds.GRPCRoute},
+				},
+			},
+			expResult: false,
+		},
+	}
+
+	for _, test := range test {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(isRouteTypeAllowedByListener(test.listener, test.routeType)).To(Equal(test.expResult))
+		})
+	}
 }

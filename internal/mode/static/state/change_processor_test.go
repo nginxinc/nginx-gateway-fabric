@@ -519,12 +519,15 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: gw1,
 						Listeners: []*graph.Listener{
 							{
-								Name:           "listener-80-1",
-								Source:         gw1.Spec.Listeners[0],
-								Valid:          true,
-								Attachable:     true,
-								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
-								SupportedKinds: []v1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
+								Name:       "listener-80-1",
+								Source:     gw1.Spec.Listeners[0],
+								Valid:      true,
+								Attachable: true,
+								Routes:     map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+								SupportedKinds: []v1.RouteGroupKind{
+									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+									{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+								},
 							},
 							{
 								Name:           "listener-443-1",
@@ -533,7 +536,10 @@ var _ = Describe("ChangeProcessor", func() {
 								Attachable:     true,
 								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
-								SupportedKinds: []v1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
+								SupportedKinds: []v1.RouteGroupKind{
+									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+									{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+								},
 							},
 						},
 						Valid: true,
