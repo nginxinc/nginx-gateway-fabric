@@ -274,6 +274,7 @@ var _ = BeforeSuite(func() {
 		"longevity-teardown", // - running longevity teardown (deployment will already exist)
 		"telemetry",          // - running telemetry test (NGF will be deployed as part of the test)
 		"scale",              // - running scale test (this test will deploy its own version)
+		"reconfiguration",    // - running reconfiguration test (test will deploy its own instances)
 	}
 	for _, s := range skipSubstrings {
 		if strings.Contains(labelFilter, s) {
@@ -317,7 +318,8 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "scale")
+		strings.Contains(labelFilter, "scale") ||
+		strings.Contains(labelFilter, "reconfiguration")
 }
 
 var _ = ReportAfterSuite("Print info on failure", func(report Report) {
