@@ -293,4 +293,4 @@ Without reading the documentation, it would be difficult to figure out how to co
 - [NGINX Extensions Enhancement Proposal](nginx-extensions.md)
 - [Attaching Policy to GatewayClass](https://gateway-api.sigs.k8s.io/geps/gep-713/#attaching-policy-to-gatewayclass)
 - [Kubernetes API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md)
-- [Gateway Settings (NginxProxy CRD](gateway-settings.md)
+- [Gateway Settings (NginxProxy CRD)](gateway-settings.md)
