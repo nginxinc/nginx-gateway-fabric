@@ -64,7 +64,7 @@ This directive is also used by the `real_ip_recursive` directive.
 
 #### `real_ip_header`
 
-The [[`real_ip_header`](https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header)] directive sets the header whose value will be used to replace the client address. By default, NGINX will use the value of the X-Real-IP header. This directive can be set to X-Forwarded-To, proxy_protocol, or any other header name. If set to proxy_protocol, proxy_protocol must be enabled on the server.
+The [`real_ip_header`](https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header) directive sets the header whose value will be used to replace the client address. By default, NGINX will use the value of the X-Real-IP header. This directive can be set to X-Forwarded-To, proxy_protocol, or any other header name. If set to proxy_protocol, proxy_protocol must be enabled on the server.
 
 #### `real_ip_recursive`
 
