@@ -211,6 +211,7 @@ Status is set on the GatewayClass, not the `NginxProxy` resource. If the `NginxP
 
 - If requested by a user, add more `RewriteClientIPModes`, such as custom header or Forwarded.
 - Allow users to rate limit or apply security policies using the value of `$remote_addr`.
+- The `set_real_ip_from` directive accepts IP addresses, CIDR blocks, hostnames and the special value `unix:;` which trusts all UNIX-domain sockets. For simplicity, we will begin by only allowed CIDR blocks since this will cover most use cases. However, if a user requests it, we can extend the TrustedAddresses field to accept other types of addresses.
 
 ## Use Cases
 
