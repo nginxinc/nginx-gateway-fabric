@@ -27,6 +27,8 @@ import (
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
 	// used for cleaning up resources
 	const maxResourceCount = 150
+	const metricExistTimeout = 2 * time.Minute
+	const metricExistPolling = 1 * time.Second
 
 	var (
 		scrapeInterval        = 15 * time.Second
@@ -63,6 +65,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	})
 
 	BeforeEach(func() {
+		output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
+		Expect(err).ToNot(HaveOccurred(), string(output))
+
 		// need to redeclare this variable to reset its resource version. The framework has some bugs where
 		// if we set and declare this as a global variable, even after deleting the namespace, when we try to
 		// recreate it, it will error saying the resource version has already been set.
@@ -312,86 +317,47 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		return stringTimeToReadyTotal, nil
 	}
 
-	runTestWithMetrics := func(
-		testName string,
-		resourceCount int,
-		test func(resourceCount int) error,
-		startWithNGFSetup bool,
-		timeToReadyStartingLogSubstring string,
-	) {
-		var (
-			metricExistTimeout = 2 * time.Minute
-			metricExistPolling = 1 * time.Second
-			ngfPodName         string
-			startTime          time.Time
-		)
+	deployNGFReturnsNGFPodNameAndStartTime := func() (string, time.Time) {
+		var startTime time.Time
 
 		getStartTime := func() time.Time { return startTime }
 		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
 
-		output, err := framework.InstallGatewayAPI(getDefaultSetupCfg().gwAPIVersion)
-		Expect(err).ToNot(HaveOccurred(), string(output))
+		setup(getDefaultSetupCfg())
+		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(podNames).To(HaveLen(1))
+		ngfPodName := podNames[0]
+		startTime = time.Now()
 
-		if startWithNGFSetup {
-			setup(getDefaultSetupCfg())
-
-			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(podNames).To(HaveLen(1))
-			ngfPodName = podNames[0]
-			startTime = time.Now()
-
-			queries := []string{
-				fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
-				fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
-				// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
-				fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
-			}
-
-			for _, q := range queries {
-				Eventually(
-					framework.CreateMetricExistChecker(
-						promInstance,
-						q,
-						getStartTime,
-						modifyStartTime,
-					),
-				).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
-			}
+		queries := []string{
+			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
+			fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
+			// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
+			fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
 		}
 
-		Expect(test(resourceCount)).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
-
-		if !startWithNGFSetup {
-			setup(getDefaultSetupCfg())
-
-			podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(podNames).To(HaveLen(1))
-			ngfPodName = podNames[0]
-			startTime = time.Now()
-
-			// if i do a new instance of NGF each time, I might not need start time and can just do the endtime.
-			queries := []string{
-				fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
-				fmt.Sprintf(`container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}`, ngfPodName),
-				// We don't need to check all nginx_gateway_fabric_* metrics, as they are collected at the same time
-				fmt.Sprintf(`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`, ngfPodName),
-			}
-
-			for _, q := range queries {
-				Eventually(
-					framework.CreateMetricExistChecker(
-						promInstance,
-						q,
-						getStartTime,
-						modifyStartTime,
-					),
-				).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
-			}
+		for _, q := range queries {
+			Eventually(
+				framework.CreateMetricExistChecker(
+					promInstance,
+					q,
+					getStartTime,
+					modifyStartTime,
+				),
+			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
+		return ngfPodName, startTime
+	}
+
+	collectMetrics := func(
+		testName string,
+		resourceCount int,
+		timeToReadyStartingLogSubstring string,
+		ngfPodName string,
+		startTime time.Time,
+	) {
 		time.Sleep(2 * scrapeInterval)
 
 		endTime := time.Now()
@@ -476,70 +442,112 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 	// Test 1 - Resources exist before start-up
 	It("test 1 - 30 resources", func() {
+		resourceCount := 30
 		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+		test := createResourcesGWLast(resourceCount)
 
-		runTestWithMetrics("1",
-			30,
-			createResourcesGWLast,
-			false,
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		collectMetrics("1",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
 	It("test 1 - 150 resources", func() {
+		resourceCount := 150
 		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+		test := createResourcesGWLast(resourceCount)
 
-		runTestWithMetrics("1",
-			150,
-			createResourcesGWLast,
-			false,
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		collectMetrics("1",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
 	// Test 2 - Start NGF, deploy Gateway, create many resources attached to GW
 	It("test 2 - 30 resources", func() {
+		resourceCount := 30
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+		test := createResourcesRoutesLast(resourceCount)
 
-		runTestWithMetrics("2",
-			30,
-			createResourcesRoutesLast,
-			true,
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		collectMetrics("2",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
 	It("test 2 - 150 resources", func() {
+		resourceCount := 150
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+		test := createResourcesRoutesLast(resourceCount)
 
-		runTestWithMetrics("2",
-			150,
-			createResourcesRoutesLast,
-			true,
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		collectMetrics("2",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
-	// Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway
+	// Test 3 - Start NGF, create many resources attached to a Gateway, deploy the Gateway
 	It("test 3 - 30 resources", func() {
+		resourceCount := 30
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+		test := createResourcesGWLast(resourceCount)
 
-		runTestWithMetrics("3",
-			30,
-			createResourcesGWLast,
-			true,
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		collectMetrics("3",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
 	It("test 3 - 150 resources", func() {
+		resourceCount := 30
 		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+		test := createResourcesGWLast(resourceCount)
 
-		runTestWithMetrics("3",
-			150,
-			createResourcesGWLast,
-			true,
+		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+		Expect(test).To(Succeed())
+		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+		collectMetrics("3",
+			resourceCount,
 			timeToReadyStartingLogSubstring,
+			ngfPodName,
+			startTime,
 		)
 	})
 
