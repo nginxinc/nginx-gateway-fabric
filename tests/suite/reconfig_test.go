@@ -440,115 +440,118 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	// Test 1 - Resources exist before start-up
-	It("test 1 - 30 resources", func() {
-		resourceCount := 30
-		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
-		test := createResourcesGWLast(resourceCount)
+	When("resources exist before startup", func() {
+		It("gathers metrics after creating 30 resources", func() {
+			resourceCount := 30
+			timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+			test := createResourcesGWLast(resourceCount)
 
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-		collectMetrics("1",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
+			collectMetrics("1",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
+
+		It("gathers metrics after creating 150 resources", func() {
+			resourceCount := 150
+			timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
+			test := createResourcesGWLast(resourceCount)
+
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+			collectMetrics("1",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
 	})
 
-	It("test 1 - 150 resources", func() {
-		resourceCount := 150
-		timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
-		test := createResourcesGWLast(resourceCount)
+	When("NGF and Gateway resource are deployed first", func() {
+		It("gathers metrics after creating 30 resources", func() {
+			resourceCount := 30
+			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+			test := createResourcesRoutesLast(resourceCount)
 
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-		collectMetrics("1",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
+			collectMetrics("2",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
+
+		It("gathers metrics after creating 150 resources", func() {
+			resourceCount := 150
+			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
+			test := createResourcesRoutesLast(resourceCount)
+
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
+
+			collectMetrics("2",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
 	})
 
-	// Test 2 - Start NGF, deploy Gateway, create many resources attached to GW
-	It("test 2 - 30 resources", func() {
-		resourceCount := 30
-		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
-		test := createResourcesRoutesLast(resourceCount)
+	When("NGF and resources are deployed first", func() {
+		It("gathers metrics after creating 30 resources", func() {
+			resourceCount := 30
+			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+			test := createResourcesGWLast(resourceCount)
 
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-		collectMetrics("2",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
-	})
+			collectMetrics("3",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
 
-	It("test 2 - 150 resources", func() {
-		resourceCount := 150
-		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
-		test := createResourcesRoutesLast(resourceCount)
+		It("gathers metrics after creating 150 resources", func() {
+			resourceCount := 150
+			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
+			test := createResourcesGWLast(resourceCount)
 
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
+			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
+			Expect(test).To(Succeed())
+			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-		collectMetrics("2",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
-	})
-
-	// Test 3 - Start NGF, create many resources attached to a Gateway, deploy the Gateway
-	It("test 3 - 30 resources", func() {
-		resourceCount := 30
-		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
-		test := createResourcesGWLast(resourceCount)
-
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
-
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
-
-		collectMetrics("3",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
-	})
-
-	It("test 3 - 150 resources", func() {
-		resourceCount := 30
-		timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
-		test := createResourcesGWLast(resourceCount)
-
-		ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
-
-		Expect(test).To(Succeed())
-		Expect(checkResourceCreation(resourceCount)).To(Succeed())
-
-		collectMetrics("3",
-			resourceCount,
-			timeToReadyStartingLogSubstring,
-			ngfPodName,
-			startTime,
-		)
+			collectMetrics("3",
+				resourceCount,
+				timeToReadyStartingLogSubstring,
+				ngfPodName,
+				startTime,
+			)
+		})
 	})
 
 	AfterEach(func() {
