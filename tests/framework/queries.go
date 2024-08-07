@@ -59,18 +59,39 @@ func GetReloadCount(promInstance PrometheusInstance, ngfPodName string) (float64
 	)
 }
 
-//func getReloadErrsCount(promInstance PrometheusInstance, ngfPodName string, startTime time.Time) float64 {
-//	return getFirstValueOfVector(
-//		fmt.Sprintf(
-//			`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
-//				` - `+
-//				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
-//			ngfPodName,
-//			startTime.Unix(),
-//		),
-//		promInstance,
-//	)
-//}
+func GetReloadCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+func GetReloadErrsCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
 
 func GetReloadAvgTime(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
@@ -79,6 +100,27 @@ func GetReloadAvgTime(promInstance PrometheusInstance, ngfPodName string) (float
 				` / `+
 				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`,
 			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+func GetReloadAvgTimeWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+				` / `+
+				`(nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %[2]d)`,
+			ngfPodName,
+			startTime.Unix(),
 		),
 		promInstance,
 	)
@@ -94,11 +136,45 @@ func GetReloadBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Buc
 	)
 }
 
+func GetReloadBucketsWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
 func GetEventsCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
 	return getFirstValueOfVector(
 		fmt.Sprintf(
 			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`,
 			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+func GetEventsCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
 		),
 		promInstance,
 	)
@@ -116,11 +192,49 @@ func GetEventsAvgTime(promInstance PrometheusInstance, ngfPodName string) (float
 	)
 }
 
+func GetEventsAvgTimeWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+				` / `+
+				`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %[2]d)`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
 func GetEventsBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Bucket, error) {
 	return getBuckets(
 		fmt.Sprintf(
 			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`,
 			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+func GetEventsBucketsWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
 		),
 		promInstance,
 	)
@@ -175,20 +289,20 @@ func CreateEndTimeFinder(
 	}
 }
 
-//func createResponseChecker(url, address string, requestTimeout time.Duration) func() error {
-//	return func() error {
-//		status, _, err := Get(url, address, requestTimeout)
-//		if err != nil {
-//			return fmt.Errorf("bad response: %w", err)
-//		}
-//
-//		if status != 200 {
-//			return fmt.Errorf("unexpected status code: %d", status)
-//		}
-//
-//		return nil
-//	}
-//}
+func CreateResponseChecker(url, address string, requestTimeout time.Duration) func() error {
+	return func() error {
+		status, _, err := Get(url, address, requestTimeout)
+		if err != nil {
+			return fmt.Errorf("bad response: %w", err)
+		}
+
+		if status != 200 {
+			return fmt.Errorf("unexpected status code: %d", status)
+		}
+
+		return nil
+	}
+}
 
 type Bucket struct {
 	Le  string
