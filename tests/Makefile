@@ -9,7 +9,7 @@ GW_API_VERSION ?= $(shell sed -n 's/.*ref=v\(.*\)/\1/p' ../config/crd/gateway-ap
 GW_API_PREV_VERSION ?= 1.1.0## Supported Gateway API version from previous NGF release
 GW_SERVICE_TYPE = NodePort## Service type to use for the gateway
 GW_SVC_GKE_INTERNAL = false
-NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
+NGF_VERSION ?= edge## NGF version to be tested
 PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
 SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching

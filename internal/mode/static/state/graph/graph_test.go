@@ -306,9 +306,9 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
-	rgService := &v1beta1.ReferenceGrant{
+	hrToServiceNsRefGrant := &v1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "rg-service",
+			Name:      "hr-to-service",
 			Namespace: "service",
 		},
 		Spec: v1beta1.ReferenceGrantSpec{
@@ -316,6 +316,27 @@ func TestBuildGraph(t *testing.T) {
 				{
 					Group:     gatewayv1.GroupName,
 					Kind:      kinds.HTTPRoute,
+					Namespace: gatewayv1.Namespace(testNs),
+				},
+			},
+			To: []v1beta1.ReferenceGrantTo{
+				{
+					Kind: "Service",
+				},
+			},
+		},
+	}
+
+	grToServiceNsRefGrant := &v1beta1.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gr-to-service",
+			Namespace: "service",
+		},
+		Spec: v1beta1.ReferenceGrantSpec{
+			From: []v1beta1.ReferenceGrantFrom{
+				{
+					Group:     gatewayv1.GroupName,
+					Kind:      kinds.GRPCRoute,
 					Namespace: gatewayv1.Namespace(testNs),
 				},
 			},
@@ -443,8 +464,9 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(ns): ns,
 			},
 			ReferenceGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
-				client.ObjectKeyFromObject(rgSecret):  rgSecret,
-				client.ObjectKeyFromObject(rgService): rgService,
+				client.ObjectKeyFromObject(rgSecret):              rgSecret,
+				client.ObjectKeyFromObject(hrToServiceNsRefGrant): hrToServiceNsRefGrant,
+				client.ObjectKeyFromObject(grToServiceNsRefGrant): grToServiceNsRefGrant,
 			},
 			Secrets: map[types.NamespacedName]*v1.Secret{
 				client.ObjectKeyFromObject(secret): secret,

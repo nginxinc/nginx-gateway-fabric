@@ -11,6 +11,11 @@ linters-settings:
       - name: blank-imports
       - name: context-as-argument
       - name: context-keys-type
+      - name: dot-imports
+        arguments:
+          - allowedPackages:
+              - github.com/onsi/gomega
+              - github.com/onsi/ginkgo/v2
       - name: empty-block
       - name: error-naming
       - name: error-return
@@ -40,6 +45,10 @@ linters-settings:
   dupword:
     ignore:
       - "test"
+  stylecheck:
+    dot-import-whitelist:
+      - github.com/onsi/gomega
+      - github.com/onsi/ginkgo/v2
 linters:
   enable:
     - asasalint

@@ -92,6 +92,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			ReleaseName:          releaseName,
 			Namespace:            ngfNamespace,
 			ChartPath:            localChartPath,
+			ChartVersion:         chartVersion,
 			NgfImageRepository:   *ngfImageRepository,
 			NginxImageRepository: nginxImage,
 			ImageTag:             *imageTag,
