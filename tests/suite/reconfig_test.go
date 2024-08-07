@@ -132,7 +132,14 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
 
-		time.Sleep(60 * time.Second)
+		for i := 1; i <= resourceCount; i++ {
+			ns := core.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "namespace" + strconv.Itoa(i),
+				},
+			}
+			Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
+		}
 
 		Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, reconfigNamespace.Name)).To(Succeed())
 
@@ -154,7 +161,14 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe.yaml")).To(Succeed())
 
-		time.Sleep(60 * time.Second)
+		for i := 1; i <= resourceCount; i++ {
+			ns := core.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "namespace" + strconv.Itoa(i),
+				},
+			}
+			Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
+		}
 
 		Expect(resourceManager.Apply([]client.Object{&reconfigNamespace})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(
