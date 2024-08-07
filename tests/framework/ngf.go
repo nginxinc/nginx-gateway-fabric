@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	core "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +23,7 @@ type InstallationConfig struct {
 	ReleaseName          string
 	Namespace            string
 	ChartPath            string
+	ChartVersion         string
 	NgfImageRepository   string
 	NginxImageRepository string
 	ImageTag             string
@@ -58,6 +60,7 @@ func UninstallGatewayAPI(apiVersion string) ([]byte, error) {
 func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	args := []string{
 		"install",
+		"--debug",
 		cfg.ReleaseName,
 		cfg.ChartPath,
 		"--create-namespace",
@@ -65,9 +68,14 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 		"--wait",
 		"--set", "nginxGateway.productTelemetry.enable=false",
 	}
+	if cfg.ChartVersion != "" {
+		args = append(args, "--version", cfg.ChartVersion)
+	}
 
 	args = append(args, setImageArgs(cfg)...)
 	fullArgs := append(args, extraArgs...)
+
+	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
 
 	return exec.Command("helm", fullArgs...).CombinedOutput()
 }
@@ -81,15 +89,21 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 
 	args := []string{
 		"upgrade",
+		"--debug",
 		cfg.ReleaseName,
 		cfg.ChartPath,
 		"--namespace", cfg.Namespace,
 		"--wait",
 		"--set", "nginxGateway.productTelemetry.enable=false",
 	}
+	if cfg.ChartVersion != "" {
+		args = append(args, "--version", cfg.ChartVersion)
+	}
 
 	args = append(args, setImageArgs(cfg)...)
 	fullArgs := append(args, extraArgs...)
+
+	GinkgoWriter.Printf("Upgrading NGF with command: helm %v\n", strings.Join(fullArgs, " "))
 
 	return exec.Command("helm", fullArgs...).CombinedOutput()
 }

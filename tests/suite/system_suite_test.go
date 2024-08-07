@@ -73,6 +73,7 @@ var (
 	localChartPath    string
 	address           string
 	version           string
+	chartVersion      string
 	clusterInfo       framework.ClusterInfo
 	skipNFRTests      bool
 )
@@ -173,6 +174,11 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
+	} else {
+		if version == "edge" {
+			chartVersion = "0.0.0-edge"
+			installCfg.ChartVersion = chartVersion
+		}
 	}
 
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
