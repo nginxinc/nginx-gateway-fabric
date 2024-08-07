@@ -21,7 +21,7 @@ type Validator interface {
 	Conflicts(a, b Policy) bool
 }
 
-// CompositeValidator manages the validators and generators for NGF Policies.
+// CompositeValidator manages the validators for NGF Policies.
 type CompositeValidator struct {
 	validators     map[schema.GroupVersionKind]Validator
 	mustExtractGVK kinds.MustExtractGVK
@@ -36,7 +36,7 @@ type ManagerConfig struct {
 }
 
 // NewManager returns a new CompositeValidator.
-// Implements dataplane.ConfigGenerator and validation.PolicyValidator.
+// Implements validation.PolicyValidator.
 func NewManager(
 	mustExtractGVK kinds.MustExtractGVK,
 	configs ...ManagerConfig,

@@ -46,7 +46,7 @@ func (g *CompositeGenerator) GenerateForServer(policies []Policy, server http.Se
 	return compositeResult
 }
 
-// GenerateForServer calls all policy generators for a normal location block.
+// GenerateForLocation calls all policy generators for a normal location block.
 func (g *CompositeGenerator) GenerateForLocation(policies []Policy, location http.Location) GenerateResultFiles {
 	var compositeResult GenerateResultFiles
 

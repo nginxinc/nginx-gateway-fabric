@@ -72,7 +72,7 @@ func NewGenerator(telemetry dataplane.Telemetry) *Generator {
 	return &Generator{telemetryConf: telemetry}
 }
 
-// GenerateForServer generates policy configuration for a normal location block.
+// GenerateForLocation generates policy configuration for a normal location block.
 // For a normal location, all directives are applied.
 // When the configuration involves a normal location redirecting to an internal location,
 // only otel_trace and otel_trace_context are applied to the normal location.
