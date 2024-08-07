@@ -7,12 +7,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	policies "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	policiesfakes "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
-var _ = Describe("Policy Manager", func() {
+var _ = Describe("Policy CompositeValidator", func() {
 	orangeGVK := schema.GroupVersionKind{Group: "fruit", Version: "1", Kind: "orange"}
 	orangePolicy := &policiesfakes.FakePolicy{
 		GetNameStub: func() string {
@@ -47,9 +47,6 @@ var _ = Describe("Policy Manager", func() {
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return true },
 			},
-			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
-				return []byte("apple")
-			},
 			GVK: appleGVK,
 		},
 		policies.ManagerConfig{
@@ -58,9 +55,6 @@ var _ = Describe("Policy Manager", func() {
 					return []conditions.Condition{staticConds.NewPolicyInvalid("orange error")}
 				},
 				ConflictsStub: func(_ policies.Policy, _ policies.Policy) bool { return false },
-			},
-			Generator: func(_ policies.Policy, _ *policies.GlobalSettings) []byte {
-				return []byte("orange")
 			},
 			GVK: orangeGVK,
 		},
@@ -96,23 +90,6 @@ var _ = Describe("Policy Manager", func() {
 				}
 
 				Expect(conflict).To(Panic())
-			})
-		})
-	})
-	Context("Generation", func() {
-		When("Policy is registered with manager", func() {
-			It("Generates the configuration for the policy", func() {
-				Expect(mgr.Generate(applePolicy, nil)).To(Equal([]byte("apple")))
-				Expect(mgr.Generate(orangePolicy, nil)).To(Equal([]byte("orange")))
-			})
-		})
-		When("Policy is not registered with manager", func() {
-			It("Panics on generate", func() {
-				generate := func() {
-					_ = mgr.Generate(&policiesfakes.FakePolicy{}, nil)
-				}
-
-				Expect(generate).To(Panic())
 			})
 		})
 	})

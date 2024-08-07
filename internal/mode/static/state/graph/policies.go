@@ -11,7 +11,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	ngfsort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -167,7 +167,10 @@ func processPolicies(
 	processedPolicies := make(map[PolicyKey]*Policy)
 
 	for key, policy := range policies {
+		var conds []conditions.Condition
+
 		targetRefs := make([]PolicyTargetRef, 0, len(policy.GetTargetRefs()))
+		targetedRoutes := make(map[types.NamespacedName]*L7Route)
 
 		for _, ref := range policy.GetTargetRefs() {
 			refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.GetNamespace()}
@@ -179,8 +182,10 @@ func processPolicies(
 					continue
 				}
 			case hrGroupKind, grpcGroupKind:
-				if _, exists := routes[routeKeyForKind(ref.Kind, refNsName)]; !exists {
+				if route, exists := routes[routeKeyForKind(ref.Kind, refNsName)]; !exists {
 					continue
+				} else {
+					targetedRoutes[client.ObjectKeyFromObject(route.Source)] = route
 				}
 			default:
 				continue
@@ -198,7 +203,24 @@ func processPolicies(
 			continue
 		}
 
-		conds := validator.Validate(policy, globalSettings)
+		for _, targetedRoute := range targetedRoutes {
+			// We need to check if this route referenced in the policy has an overlapping
+			// hostname:port/path with any other route that isn't referenced by this policy.
+			// If so, deny the policy.
+			hostPortPaths := buildHostPortPaths(targetedRoute)
+
+			for _, route := range routes {
+				if _, ok := targetedRoutes[client.ObjectKeyFromObject(route.Source)]; ok {
+					continue
+				}
+
+				if cond := checkForRouteOverlap(route, hostPortPaths); cond != nil {
+					conds = append(conds, *cond)
+				}
+			}
+		}
+
+		conds = append(conds, validator.Validate(policy, globalSettings)...)
 
 		processedPolicies[key] = &Policy{
 			Source:     policy,
@@ -212,6 +234,48 @@ func processPolicies(
 	markConflictedPolicies(processedPolicies, validator)
 
 	return processedPolicies
+}
+
+// checkForRouteOverlap checks if any route references the same hostname:port/path combination
+// as a route referenced in a policy.
+func checkForRouteOverlap(route *L7Route, hostPortPaths map[string]string) *conditions.Condition {
+	for _, parentRef := range route.ParentRefs {
+		if parentRef.Attachment != nil {
+			port := parentRef.Attachment.ListenerPort
+			for _, hostname := range parentRef.Attachment.AcceptedHostnames {
+				for _, rule := range route.Spec.Rules {
+					for _, match := range rule.Matches {
+						if match.Path != nil && match.Path.Value != nil {
+							key := fmt.Sprintf("%s:%d%s", hostname, port, *match.Path.Value)
+							if val, ok := hostPortPaths[key]; !ok {
+								hostPortPaths[key] = fmt.Sprintf("%s/%s", route.Source.GetNamespace(), route.Source.GetName())
+							} else {
+								conflictingRouteName := fmt.Sprintf("%s/%s", route.Source.GetNamespace(), route.Source.GetName())
+								msg := fmt.Sprintf("Policy cannot be applied to target %q since another "+
+									"Route %q shares a hostname:port/path combination with this target", val, conflictingRouteName)
+								cond := staticConds.NewPolicyNotAcceptedTargetConflict(msg)
+
+								return &cond
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// buildHostPortPaths uses the same logic as checkForRouteOverlap, except it's
+// simply initializing the hostPortPaths map with the route that's referenced in the Policy,
+// so it doesn't care about the return value.
+func buildHostPortPaths(route *L7Route) map[string]string {
+	hostPortPaths := make(map[string]string)
+
+	checkForRouteOverlap(route, hostPortPaths)
+
+	return hostPortPaths
 }
 
 // markConflictedPolicies marks policies that conflict with a policy of greater precedence as invalid.

@@ -49,12 +49,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -232,7 +232,6 @@ func StartManager(cfg config.Config) error {
 		usageSecret:                   usageSecret,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
-		policyConfigGenerator:         policyManager,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -287,17 +286,15 @@ func StartManager(cfg config.Config) error {
 func createPolicyManager(
 	mustExtractGVK kinds.MustExtractGVK,
 	validator validation.GenericValidator,
-) *policies.Manager {
+) *policies.CompositeValidator {
 	cfgs := []policies.ManagerConfig{
 		{
 			GVK:       mustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
 			Validator: clientsettings.NewValidator(validator),
-			Generator: clientsettings.Generate,
 		},
 		{
 			GVK:       mustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
 			Validator: observability.NewValidator(validator),
-			Generator: observability.Generate,
 		},
 	}
 

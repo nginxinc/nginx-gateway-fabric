@@ -7,9 +7,9 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 )
 
 func TestGenerate(t *testing.T) {
@@ -149,25 +149,52 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
+	g := NewWithT(t)
+
+	checkResults := func(resFiles policies.GenerateResultFiles, expStrings []string) {
+		g.Expect(resFiles).To(HaveLen(1))
+
+		for _, str := range expStrings {
+			g.Expect(string(resFiles[0].Content)).To(ContainSubstring(str))
+		}
+	}
+
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
+		t.Run(test.name, func(_ *testing.T) {
+			generator := clientsettings.NewGenerator()
 
-			cfgString := string(clientsettings.Generate(test.policy, nil))
+			resFiles := generator.GenerateForServer([]policies.Policy{test.policy}, http.Server{})
+			checkResults(resFiles, test.expStrings)
 
-			for _, str := range test.expStrings {
-				g.Expect(cfgString).To(ContainSubstring(str))
-			}
+			resFiles = generator.GenerateForLocation([]policies.Policy{test.policy}, http.Location{})
+			checkResults(resFiles, test.expStrings)
+
+			resFiles = generator.GenerateForInternalLocation([]policies.Policy{test.policy})
+			checkResults(resFiles, test.expStrings)
 		})
 	}
 }
 
-func TestGeneratePanics(t *testing.T) {
+func TestGenerateNoPolicies(t *testing.T) {
 	g := NewWithT(t)
 
-	generate := func() {
-		clientsettings.Generate(&policiesfakes.FakePolicy{}, nil)
-	}
+	generator := clientsettings.NewGenerator()
 
-	g.Expect(generate).To(Panic())
+	resFiles := generator.GenerateForServer([]policies.Policy{}, http.Server{})
+	g.Expect(resFiles).To(BeEmpty())
+
+	resFiles = generator.GenerateForServer([]policies.Policy{&ngfAPI.ObservabilityPolicy{}}, http.Server{})
+	g.Expect(resFiles).To(BeEmpty())
+
+	resFiles = generator.GenerateForLocation([]policies.Policy{}, http.Location{})
+	g.Expect(resFiles).To(BeEmpty())
+
+	resFiles = generator.GenerateForLocation([]policies.Policy{&ngfAPI.ObservabilityPolicy{}}, http.Location{})
+	g.Expect(resFiles).To(BeEmpty())
+
+	resFiles = generator.GenerateForInternalLocation([]policies.Policy{})
+	g.Expect(resFiles).To(BeEmpty())
+
+	resFiles = generator.GenerateForInternalLocation([]policies.Policy{&ngfAPI.ObservabilityPolicy{}})
+	g.Expect(resFiles).To(BeEmpty())
 }

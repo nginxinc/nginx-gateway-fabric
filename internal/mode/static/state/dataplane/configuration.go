@@ -15,8 +15,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/observability"
+	policies "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -31,7 +30,6 @@ func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
 	resolver resolver.ServiceResolver,
-	generator policies.ConfigGenerator,
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
@@ -44,7 +42,7 @@ func BuildConfiguration(
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
 	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig.IPFamily)
-	httpServers, sslServers := buildServers(g, generator)
+	httpServers, sslServers := buildServers(g)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
@@ -205,7 +203,7 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	return verify
 }
 
-func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl []VirtualServer) {
+func buildServers(g *graph.Graph) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1.ProtocolType]portPathRules{
 		v1.HTTPProtocolType:  make(portPathRules),
 		v1.HTTPSProtocolType: make(portPathRules),
@@ -215,11 +213,11 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 		if l.Valid {
 			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
 			if rules == nil {
-				rules = newHostPathRules(generator)
+				rules = newHostPathRules()
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
-			rules.upsertListener(l, g.GlobalSettings)
+			rules.upsertListener(l)
 		}
 	}
 
@@ -228,14 +226,14 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 
 	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
 
-	additions := buildAdditions(g.Gateway.Policies, g.GlobalSettings, generator)
+	pols := buildPolicies(g.Gateway.Policies)
 
 	for i := range httpServers {
-		httpServers[i].Additions = additions
+		httpServers[i].Policies = pols
 	}
 
 	for i := range sslServers {
-		sslServers[i].Additions = additions
+		sslServers[i].Policies = pols
 	}
 
 	return httpServers, sslServers
@@ -265,7 +263,6 @@ type pathAndType struct {
 }
 
 type hostPathRules struct {
-	generator        policies.ConfigGenerator
 	rulesPerHost     map[string]map[pathAndType]PathRule
 	listenersForHost map[string]*graph.Listener
 	httpsListeners   []*graph.Listener
@@ -273,16 +270,15 @@ type hostPathRules struct {
 	listenersExist   bool
 }
 
-func newHostPathRules(generator policies.ConfigGenerator) *hostPathRules {
+func newHostPathRules() *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[pathAndType]PathRule),
 		listenersForHost: make(map[string]*graph.Listener),
 		httpsListeners:   make([]*graph.Listener, 0),
-		generator:        generator,
 	}
 }
 
-func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *policies.GlobalSettings) {
+func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
@@ -295,14 +291,13 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *poli
 			continue
 		}
 
-		hpr.upsertRoute(r, l, globalSettings)
+		hpr.upsertRoute(r, l)
 	}
 }
 
 func (hpr *hostPathRules) upsertRoute(
 	route *graph.L7Route,
 	listener *graph.Listener,
-	globalSettings *policies.GlobalSettings,
 ) {
 	var hostnames []string
 	GRPC := route.RouteType == graph.RouteTypeGRPC
@@ -350,7 +345,7 @@ func (hpr *hostPathRules) upsertRoute(
 			}
 		}
 
-		additions := buildAdditions(route.Policies, globalSettings, hpr.generator)
+		pols := buildPolicies(route.Policies)
 
 		for _, h := range hostnames {
 			for _, m := range rule.Matches {
@@ -370,13 +365,13 @@ func (hpr *hostPathRules) upsertRoute(
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
 				hostRule.GRPC = GRPC
+				hostRule.Policies = append(hostRule.Policies, pols...)
 
 				hostRule.MatchRules = append(hostRule.MatchRules, MatchRule{
 					Source:       objectSrc,
 					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
-					Additions:    additions,
 				})
 
 				hpr.rulesPerHost[h][key] = hostRule
@@ -651,6 +646,8 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 		tel.Interval = string(*telemetry.Exporter.Interval)
 	}
 
+	tel.SpanAttributes = setSpanAttributes(telemetry.SpanAttributes)
+
 	// FIXME(sberman): https://github.com/nginxinc/nginx-gateway-fabric/issues/2038
 	// Find a generic way to include relevant policy info at the http context so we don't need policy-specific
 	// logic in this function
@@ -658,7 +655,7 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	for _, pol := range g.NGFPolicies {
 		if obsPol, ok := pol.Source.(*ngfAPI.ObservabilityPolicy); ok {
 			if obsPol.Spec.Tracing != nil && obsPol.Spec.Tracing.Ratio != nil && *obsPol.Spec.Tracing.Ratio > 0 {
-				ratioName := observability.CreateRatioVarName(obsPol)
+				ratioName := CreateRatioVarName(*obsPol.Spec.Tracing.Ratio)
 				ratioMap[ratioName] = *obsPol.Spec.Tracing.Ratio
 			}
 		}
@@ -670,6 +667,25 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	}
 
 	return tel
+}
+
+func setSpanAttributes(spanAttributes []ngfAPI.SpanAttribute) []SpanAttribute {
+	spanAttrs := make([]SpanAttribute, 0, len(spanAttributes))
+	for _, spanAttr := range spanAttributes {
+		sa := SpanAttribute{
+			Key:   spanAttr.Key,
+			Value: spanAttr.Value,
+		}
+		spanAttrs = append(spanAttrs, sa)
+	}
+
+	return spanAttrs
+}
+
+// CreateRatioVarName builds a variable name for an ObservabilityPolicy to be used with
+// ratio-based trace sampling.
+func CreateRatioVarName(ratio int32) string {
+	return fmt.Sprintf("$otel_ratio_%d", ratio)
 }
 
 // buildBaseHTTPConfig generates the base http context config that should be applied to all servers.
@@ -699,32 +715,20 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	return baseConfig
 }
 
-func buildAdditions(
-	policies []*graph.Policy,
-	globalSettings *policies.GlobalSettings,
-	generator policies.ConfigGenerator,
-) []Addition {
-	if len(policies) == 0 {
+func buildPolicies(graphPolicies []*graph.Policy) []policies.Policy {
+	if len(graphPolicies) == 0 {
 		return nil
 	}
 
-	additions := make([]Addition, 0, len(policies))
+	finalPolicies := make([]policies.Policy, 0, len(graphPolicies))
 
-	for _, policy := range policies {
+	for _, policy := range graphPolicies {
 		if !policy.Valid {
 			continue
 		}
 
-		additions = append(additions, Addition{
-			Bytes: generator.Generate(policy.Source, globalSettings),
-			Identifier: fmt.Sprintf(
-				"%s_%s_%s",
-				policy.Source.GetObjectKind().GroupVersionKind().Kind,
-				policy.Source.GetNamespace(),
-				policy.Source.GetName(),
-			),
-		})
+		finalPolicies = append(finalPolicies, policy.Source)
 	}
 
-	return additions
+	return finalPolicies
 }

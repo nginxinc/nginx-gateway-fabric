@@ -14,8 +14,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	policiesfakes "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -557,16 +557,16 @@ func TestProcessPolicies(t *testing.T) {
 	gatewayWrongGroupRef := createTestRef(kinds.Gateway, "WrongGroup", "gw")
 	nonNGFGatewayRef := createTestRef(kinds.Gateway, v1.GroupName, "not-ours")
 
-	pol1, pol1Key := createTestPolicyAndKey(policyGVK, hrRef, "pol1")
-	pol2, pol2Key := createTestPolicyAndKey(policyGVK, grpcRef, "pol2")
-	pol3, pol3Key := createTestPolicyAndKey(policyGVK, gatewayRef, "pol3")
-	pol4, pol4Key := createTestPolicyAndKey(policyGVK, ignoredGatewayRef, "pol4")
-	pol5, pol5Key := createTestPolicyAndKey(policyGVK, hrDoesNotExistRef, "pol5")
-	pol6, pol6Key := createTestPolicyAndKey(policyGVK, hrWrongGroup, "pol6")
-	pol7, pol7Key := createTestPolicyAndKey(policyGVK, gatewayWrongGroupRef, "pol7")
-	pol8, pol8Key := createTestPolicyAndKey(policyGVK, nonNGFGatewayRef, "pol8")
+	pol1, pol1Key := createTestPolicyAndKey(policyGVK, "pol1", hrRef)
+	pol2, pol2Key := createTestPolicyAndKey(policyGVK, "pol2", grpcRef)
+	pol3, pol3Key := createTestPolicyAndKey(policyGVK, "pol3", gatewayRef)
+	pol4, pol4Key := createTestPolicyAndKey(policyGVK, "pol4", ignoredGatewayRef)
+	pol5, pol5Key := createTestPolicyAndKey(policyGVK, "pol5", hrDoesNotExistRef)
+	pol6, pol6Key := createTestPolicyAndKey(policyGVK, "pol6", hrWrongGroup)
+	pol7, pol7Key := createTestPolicyAndKey(policyGVK, "pol7", gatewayWrongGroupRef)
+	pol8, pol8Key := createTestPolicyAndKey(policyGVK, "pol8", nonNGFGatewayRef)
 
-	pol1Conflict, pol1ConflictKey := createTestPolicyAndKey(policyGVK, hrRef, "pol1-conflict")
+	pol1Conflict, pol1ConflictKey := createTestPolicyAndKey(policyGVK, "pol1-conflict", hrRef)
 
 	allValidValidator := &policiesfakes.FakeValidator{}
 
@@ -753,8 +753,22 @@ func TestProcessPolicies(t *testing.T) {
 	}
 
 	routes := map[RouteKey]*L7Route{
-		{RouteType: RouteTypeHTTP, NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr"}}:   {},
-		{RouteType: RouteTypeGRPC, NamespacedName: types.NamespacedName{Namespace: testNs, Name: "grpc"}}: {},
+		{RouteType: RouteTypeHTTP, NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr"}}: {
+			Source: &v1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "hr",
+					Namespace: testNs,
+				},
+			},
+		},
+		{RouteType: RouteTypeGRPC, NamespacedName: types.NamespacedName{Namespace: testNs, Name: "grpc"}}: {
+			Source: &v1.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "grpc",
+					Namespace: testNs,
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -763,6 +777,149 @@ func TestProcessPolicies(t *testing.T) {
 
 			processed := processPolicies(test.policies, test.validator, gateways, routes, nil)
 			g.Expect(processed).To(BeEquivalentTo(test.expProcessedPolicies))
+		})
+	}
+}
+
+func TestProcessPolicies_RouteOverlap(t *testing.T) {
+	hrRefCoffee := createTestRef(kinds.HTTPRoute, v1.GroupName, "hr-coffee")
+	hrRefCoffeeTea := createTestRef(kinds.HTTPRoute, v1.GroupName, "hr-coffee-tea")
+
+	policyGVK := schema.GroupVersionKind{Group: "Group", Version: "Version", Kind: "MyPolicy"}
+	pol1, pol1Key := createTestPolicyAndKey(policyGVK, "pol1", hrRefCoffee)
+	pol2, pol2Key := createTestPolicyAndKey(policyGVK, "pol2", hrRefCoffee, hrRefCoffeeTea)
+
+	tests := []struct {
+		validator     validation.PolicyValidator
+		policies      map[PolicyKey]policies.Policy
+		routes        map[RouteKey]*L7Route
+		name          string
+		expConditions []conditions.Condition
+		valid         bool
+	}{
+		{
+			name:      "no overlap",
+			validator: &policiesfakes.FakeValidator{},
+			policies: map[PolicyKey]policies.Policy{
+				pol1Key: pol1,
+			},
+			routes: map[RouteKey]*L7Route{
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
+				}: createTestRouteWithPaths("hr-coffee", "/coffee"),
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr2"},
+				}: createTestRouteWithPaths("hr2", "/tea"),
+			},
+			valid: true,
+		},
+		{
+			name:      "policy references route that overlaps a non-referenced route",
+			validator: &policiesfakes.FakeValidator{},
+			policies: map[PolicyKey]policies.Policy{
+				pol1Key: pol1,
+			},
+			routes: map[RouteKey]*L7Route{
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
+				}: createTestRouteWithPaths("hr-coffee", "/coffee"),
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr2"},
+				}: createTestRouteWithPaths("hr2", "/coffee"),
+			},
+			valid: false,
+			expConditions: []conditions.Condition{
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
+						"\"test/hr2\" shares a hostname:port/path combination with this target",
+				},
+			},
+		},
+		{
+			name:      "policy references 2 routes that overlap",
+			validator: &policiesfakes.FakeValidator{},
+			policies: map[PolicyKey]policies.Policy{
+				pol2Key: pol2,
+			},
+			routes: map[RouteKey]*L7Route{
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
+				}: createTestRouteWithPaths("hr-coffee", "/coffee"),
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-tea"},
+				}: createTestRouteWithPaths("hr-coffee-tea", "/coffee", "/tea"),
+			},
+			valid: true,
+		},
+		{
+			name:      "policy references 2 routes that overlap with non-referenced route",
+			validator: &policiesfakes.FakeValidator{},
+			policies: map[PolicyKey]policies.Policy{
+				pol2Key: pol2,
+			},
+			routes: map[RouteKey]*L7Route{
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee"},
+				}: createTestRouteWithPaths("hr-coffee", "/coffee"),
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-tea"},
+				}: createTestRouteWithPaths("hr-coffee-tea", "/coffee", "/tea"),
+				{
+					RouteType:      RouteTypeHTTP,
+					NamespacedName: types.NamespacedName{Namespace: testNs, Name: "hr-coffee-latte"},
+				}: createTestRouteWithPaths("hr-coffee-latte", "/coffee", "/latte"),
+			},
+			valid: false,
+			expConditions: []conditions.Condition{
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee\" since another Route " +
+						"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
+				},
+				{
+					Type:   "Accepted",
+					Status: "False",
+					Reason: "TargetConflict",
+					Message: "Policy cannot be applied to target \"test/hr-coffee-tea\" since another Route " +
+						"\"test/hr-coffee-latte\" shares a hostname:port/path combination with this target",
+				},
+			},
+		},
+	}
+
+	gateways := processedGateways{
+		Winner: &v1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gw",
+				Namespace: testNs,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			processed := processPolicies(test.policies, test.validator, gateways, test.routes, nil)
+			g.Expect(processed).To(HaveLen(1))
+
+			for _, pol := range processed {
+				g.Expect(pol.Valid).To(Equal(test.valid))
+				g.Expect(pol.Conditions).To(Equal(test.expConditions))
+			}
 		})
 	}
 }
@@ -796,12 +953,12 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "different policy types can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange"),
+					Source:     createTestPolicy(orangeGVK, "orange", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(appleGVK, "apple"): {
-					Source:     createTestPolicy(appleGVK, hrRef, "apple"),
+					Source:     createTestPolicy(appleGVK, "apple", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
@@ -813,12 +970,12 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "policies of the same type but with different target refs can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange1"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange1"),
+					Source:     createTestPolicy(orangeGVK, "orange1", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange2"): {
-					Source:     createTestPolicy(orangeGVK, grpcRef, "orange2"),
+					Source:     createTestPolicy(orangeGVK, "orange2", grpcRef),
 					TargetRefs: []PolicyTargetRef{grpcTargetRef},
 					Valid:      true,
 				},
@@ -830,12 +987,12 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "invalid policies can not conflict",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "valid"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "valid"),
+					Source:     createTestPolicy(orangeGVK, "valid", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "invalid"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "invalid"),
+					Source:     createTestPolicy(orangeGVK, "invalid", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      false,
 				},
@@ -848,27 +1005,27 @@ func TestMarkConflictedPolicies(t *testing.T) {
 				" condition is added",
 			policies: map[PolicyKey]*Policy{
 				createTestPolicyKey(orangeGVK, "orange1"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange1"),
+					Source:     createTestPolicy(orangeGVK, "orange1", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange2"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange2"),
+					Source:     createTestPolicy(orangeGVK, "orange2", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange3-conflicts-with-1"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange3-conflicts-with-1"),
+					Source:     createTestPolicy(orangeGVK, "orange3-conflicts-with-1", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange4"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange4"),
+					Source:     createTestPolicy(orangeGVK, "orange4", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
 				createTestPolicyKey(orangeGVK, "orange5-conflicts-with-4"): {
-					Source:     createTestPolicy(orangeGVK, hrRef, "orange5-conflicts-with-4"),
+					Source:     createTestPolicy(orangeGVK, "orange5-conflicts-with-4", hrRef),
 					TargetRefs: []PolicyTargetRef{hrTargetRef},
 					Valid:      true,
 				},
@@ -935,10 +1092,10 @@ func createTestPolicyWithAncestors(numAncestors int) policies.Policy {
 
 func createTestPolicyAndKey(
 	gvk schema.GroupVersionKind,
-	ref v1alpha2.LocalPolicyTargetReference,
 	name string,
+	refs ...v1alpha2.LocalPolicyTargetReference,
 ) (policies.Policy, PolicyKey) {
-	pol := createTestPolicy(gvk, ref, name)
+	pol := createTestPolicy(gvk, name, refs...)
 	key := createTestPolicyKey(gvk, name)
 
 	return pol, key
@@ -946,8 +1103,8 @@ func createTestPolicyAndKey(
 
 func createTestPolicy(
 	gvk schema.GroupVersionKind,
-	ref v1alpha2.LocalPolicyTargetReference,
 	name string,
+	refs ...v1alpha2.LocalPolicyTargetReference,
 ) policies.Policy {
 	return &policiesfakes.FakePolicy{
 		GetNameStub: func() string {
@@ -957,7 +1114,7 @@ func createTestPolicy(
 			return testNs
 		},
 		GetTargetRefsStub: func() []v1alpha2.LocalPolicyTargetReference {
-			return []v1alpha2.LocalPolicyTargetReference{ref}
+			return refs
 		},
 		GetObjectKindStub: func() schema.ObjectKind {
 			return &policiesfakes.FakeObjectKind{
@@ -982,4 +1139,41 @@ func createTestRef(kind v1.Kind, group v1.Group, name string) v1alpha2.LocalPoli
 		Kind:  kind,
 		Name:  v1.ObjectName(name),
 	}
+}
+
+func createTestRouteWithPaths(name string, paths ...string) *L7Route {
+	routeMatches := make([]v1.HTTPRouteMatch, 0, len(paths))
+
+	for _, path := range paths {
+		routeMatches = append(routeMatches, v1.HTTPRouteMatch{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchExact),
+				Value: helpers.GetPointer(path),
+			},
+		})
+	}
+
+	route := &L7Route{
+		Source: &v1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: testNs,
+			},
+		},
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{Matches: routeMatches},
+			},
+		},
+		ParentRefs: []ParentRef{
+			{
+				Attachment: &ParentRefAttachmentStatus{
+					AcceptedHostnames: map[string][]string{"listener-1": {"foo.example.com"}},
+					ListenerPort:      80,
+				},
+			},
+		},
+	}
+
+	return route
 }

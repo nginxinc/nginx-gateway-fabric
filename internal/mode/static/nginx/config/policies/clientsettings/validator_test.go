@@ -12,9 +12,9 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/policiesfakes"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 

@@ -3,6 +3,9 @@ package config
 import (
 	"path/filepath"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -85,7 +88,12 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, g.generateHTTPConfig(conf)...)
+	policyGenerator := policies.NewCompositeGenerator(
+		clientsettings.NewGenerator(),
+		observability.NewGenerator(conf.Telemetry),
+	)
+
+	files = append(files, g.generateHTTPConfig(conf, policyGenerator)...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
@@ -127,10 +135,13 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
+func (g GeneratorImpl) generateHTTPConfig(
+	conf dataplane.Configuration,
+	generator policies.Generator,
+) []file.File {
 	fileBytes := make(map[string][]byte)
 
-	for _, execute := range g.getExecuteFuncs() {
+	for _, execute := range g.getExecuteFuncs(generator) {
 		results := execute(conf)
 		for _, res := range results {
 			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
@@ -138,9 +149,9 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 	}
 
 	files := make([]file.File, 0, len(fileBytes))
-	for filepath, bytes := range fileBytes {
+	for fp, bytes := range fileBytes {
 		files = append(files, file.File{
-			Path:    filepath,
+			Path:    fp,
 			Content: bytes,
 			Type:    file.TypeRegular,
 		})
@@ -149,10 +160,10 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 	return files
 }
 
-func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
+func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
 	return []executeFunc{
 		executeBaseHTTPConfig,
-		executeServers,
+		newExecuteServersFunc(generator),
 		g.executeUpstreams,
 		executeSplitClients,
 		executeMaps,

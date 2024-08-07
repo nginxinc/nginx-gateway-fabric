@@ -8,7 +8,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -112,7 +112,10 @@ func (v *Validator) validateSettings(spec ngfAPI.ObservabilityPolicySpec) error 
 
 		if spec.Tracing.SpanName != nil {
 			if err := v.genericValidator.ValidateEscapedStringNoVarExpansion(*spec.Tracing.SpanName); err != nil {
-				allErrs = append(allErrs, field.Invalid(tracePath.Child("spanName"), *spec.Tracing.SpanName, err.Error()))
+				allErrs = append(
+					allErrs,
+					field.Invalid(tracePath.Child("spanName"), *spec.Tracing.SpanName, err.Error()),
+				)
 			}
 		}
 

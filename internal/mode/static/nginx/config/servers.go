@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -57,8 +58,14 @@ var grpcBaseHeaders = []http.Header{
 	},
 }
 
-func executeServers(conf dataplane.Configuration) []executeResult {
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
+func newExecuteServersFunc(generator policies.Generator) executeFunc {
+	return func(configuration dataplane.Configuration) []executeResult {
+		return executeServers(configuration, generator)
+	}
+}
+
+func executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, generator)
 
 	serverConfig := http.ServerConfig{
 		Servers:  servers,
@@ -82,10 +89,10 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 		data: httpMatchConf,
 	}
 
-	additionFileResults := createAdditionFileResults(conf)
+	includeFileResults := createIncludeFileResults(servers)
 
-	allResults := make([]executeResult, 0, len(additionFileResults)+2)
-	allResults = append(allResults, additionFileResults...)
+	allResults := make([]executeResult, 0, len(includeFileResults)+2)
+	allResults = append(allResults, includeFileResults...)
 	allResults = append(allResults, serverResult, httpMatchResult)
 
 	return allResults
@@ -103,34 +110,24 @@ func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
 	return http.IPFamily{IPv4: true, IPv6: true}
 }
 
-func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
-	uniqueAdditions := make(map[string][]byte)
+func createIncludeFileResults(servers []http.Server) []executeResult {
+	uniqueIncludes := make(map[string][]byte)
 
-	findUniqueAdditionsForServer := func(server dataplane.VirtualServer) {
-		for _, add := range server.Additions {
-			uniqueAdditions[createAdditionFileName(add)] = add.Bytes
+	for _, server := range servers {
+		for _, include := range server.Includes {
+			uniqueIncludes[include.Name] = include.Content
 		}
 
-		for _, pr := range server.PathRules {
-			for _, mr := range pr.MatchRules {
-				for _, add := range mr.Additions {
-					uniqueAdditions[createAdditionFileName(add)] = add.Bytes
-				}
+		for _, loc := range server.Locations {
+			for _, include := range loc.Includes {
+				uniqueIncludes[include.Name] = include.Content
 			}
 		}
 	}
 
-	for _, s := range conf.HTTPServers {
-		findUniqueAdditionsForServer(s)
-	}
+	results := make([]executeResult, 0, len(uniqueIncludes))
 
-	for _, s := range conf.SSLServers {
-		findUniqueAdditionsForServer(s)
-	}
-
-	results := make([]executeResult, 0, len(uniqueAdditions))
-
-	for filename, contents := range uniqueAdditions {
+	for filename, contents := range uniqueIncludes {
 		results = append(results, executeResult{
 			dest: filename,
 			data: contents,
@@ -140,44 +137,35 @@ func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
 	return results
 }
 
-func createAdditionFileName(addition dataplane.Addition) string {
-	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)
-}
-
-func createIncludes(additions []dataplane.Addition) []string {
-	if len(additions) == 0 {
-		return nil
-	}
-
-	includes := make([]string, 0, len(additions))
-
-	for _, addition := range additions {
-		includes = append(includes, createAdditionFileName(addition))
-	}
-
-	return includes
-}
-
-func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Server, httpMatchPairs) {
+func createServers(
+	httpServers, sslServers []dataplane.VirtualServer,
+	generator policies.Generator,
+) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
 
-	for serverID, s := range httpServers {
-		httpServer, matchPairs := createServer(s, serverID)
+	for idx, s := range httpServers {
+		serverID := fmt.Sprintf("%d", idx)
+		httpServer, matchPairs := createServer(s, serverID, generator)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
-	for serverID, s := range sslServers {
-		sslServer, matchPair := createSSLServer(s, serverID)
+	for idx, s := range sslServers {
+		serverID := fmt.Sprintf("SSL_%d", idx)
+		sslServer, matchPairs := createSSLServer(s, serverID, generator)
 		servers = append(servers, sslServer)
-		maps.Copy(finalMatchPairs, matchPair)
+		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
 	return servers, finalMatchPairs
 }
 
-func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
+func createSSLServer(
+	virtualServer dataplane.VirtualServer,
+	serverID string,
+	generator policies.Generator,
+) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
@@ -185,9 +173,9 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		}, nil
 	}
 
-	locs, matchPairs, grpc := createLocations(&virtualServer, serverID)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
 
-	return http.Server{
+	server := http.Server{
 		ServerName: virtualServer.Hostname,
 		SSL: &http.SSL{
 			Certificate:    generatePEMFileName(virtualServer.SSL.KeyPairID),
@@ -196,11 +184,19 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		Locations: locs,
 		Port:      virtualServer.Port,
 		GRPC:      grpc,
-		Includes:  createIncludes(virtualServer.Additions),
-	}, matchPairs
+	}
+
+	server.Includes = createIncludesFromPolicyGenerateResult(
+		generator.GenerateForServer(virtualServer.Policies, server),
+	)
+	return server, matchPairs
 }
 
-func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Server, httpMatchPairs) {
+func createServer(
+	virtualServer dataplane.VirtualServer,
+	serverID string,
+	generator policies.Generator,
+) (http.Server, httpMatchPairs) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultHTTP: true,
@@ -208,30 +204,42 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 		}, nil
 	}
 
-	locs, matchPairs, grpc := createLocations(&virtualServer, serverID)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
 
-	return http.Server{
+	server := http.Server{
 		ServerName: virtualServer.Hostname,
 		Locations:  locs,
 		Port:       virtualServer.Port,
 		GRPC:       grpc,
-		Includes:   createIncludes(virtualServer.Additions),
-	}, matchPairs
+	}
+
+	server.Includes = createIncludesFromPolicyGenerateResult(
+		generator.GenerateForServer(virtualServer.Policies, server),
+	)
+
+	return server, matchPairs
 }
 
 // rewriteConfig contains the configuration for a location to rewrite paths,
 // as specified in a URLRewrite filter.
 type rewriteConfig struct {
-	// Rewrite rewrites the original URI to the new URI (ex: /coffee -> /beans)
-	Rewrite string
+	// InternalRewrite rewrites an internal URI to the original URI (ex: /coffee_prefix_route0 -> /coffee)
+	InternalRewrite string
+	// MainRewrite rewrites the original URI to the new URI (ex: /coffee -> /beans)
+	MainRewrite string
 }
 
 type httpMatchPairs map[string][]routeMatch
 
-func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Location, httpMatchPairs, bool) {
+func createLocations(
+	server *dataplane.VirtualServer,
+	serverID string,
+	generator policies.Generator,
+) ([]http.Location, httpMatchPairs, bool) {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(server.PathRules)
 	locs := make([]http.Location, 0, maxLocs)
 	matchPairs := make(httpMatchPairs)
+
 	var rootPathExists bool
 	var grpc bool
 
@@ -247,42 +255,53 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
+		for i := range extLocations {
+			extLocations[i].Includes = createIncludesFromPolicyGenerateResult(
+				generator.GenerateForLocation(rule.Policies, extLocations[i]),
+			)
+		}
+
+		if !needsInternalLocations(rule) {
+			for _, r := range rule.MatchRules {
+				extLocations = updateLocations(r.Filters, extLocations, r, server.Port, rule.Path, rule.GRPC)
+			}
+
+			locs = append(locs, extLocations...)
+			continue
+		}
+
+		internalLocations := make([]http.Location, 0, len(rule.MatchRules))
 
 		for matchRuleIdx, r := range rule.MatchRules {
-			buildLocations := extLocations
+			intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match, grpc)
+			intLocation.Includes = createIncludesFromPolicyGenerateResult(
+				generator.GenerateForInternalLocation(rule.Policies),
+			)
 
-			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
-				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
-				buildLocations = []http.Location{intLocation}
-				matches = append(matches, match)
-			}
+			intLocation = updateLocation(
+				r.Filters,
+				intLocation,
+				r,
+				server.Port,
+				rule.Path,
+				rule.GRPC,
+			)
 
-			includes := createIncludes(r.Additions)
-
-			// buildLocations will either contain the extLocations OR the intLocation.
-			// If it contains the intLocation, the extLocations will be added to the final locations after we loop
-			// through all the MatchRules.
-			// It is safe to modify the buildLocations here by adding includes and filters.
-			buildLocations = updateLocationsForIncludes(buildLocations, includes)
-			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, server.Port, rule.Path, rule.GRPC)
-			locs = append(locs, buildLocations...)
+			internalLocations = append(internalLocations, intLocation)
+			matches = append(matches, match)
 		}
 
-		if len(matches) > 0 {
-			for i := range extLocations {
-				// FIXME(sberman): De-dupe matches and associated locations
-				// so we don't need nginx/njs to perform unnecessary matching.
-				// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
-				var key string
-				if server.SSL != nil {
-					key = "SSL"
-				}
-				key += strconv.Itoa(serverID) + "_" + strconv.Itoa(pathRuleIdx)
-				extLocations[i].HTTPMatchKey = key
-				matchPairs[extLocations[i].HTTPMatchKey] = matches
-			}
-			locs = append(locs, extLocations...)
+		httpMatchKey := serverID + "_" + strconv.Itoa(pathRuleIdx)
+		for i := range extLocations {
+			// FIXME(sberman): De-dupe matches and associated locations
+			// so we don't need nginx/njs to perform unnecessary matching.
+			// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
+			extLocations[i].HTTPMatchKey = httpMatchKey
+			matchPairs[extLocations[i].HTTPMatchKey] = matches
 		}
+
+		locs = append(locs, extLocations...)
+		locs = append(locs, internalLocations...)
 	}
 
 	if !rootPathExists {
@@ -292,12 +311,27 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	return locs, matchPairs, grpc
 }
 
-func updateLocationsForIncludes(locations []http.Location, includes []string) []http.Location {
-	for i := range locations {
-		locations[i].Includes = includes
+func needsInternalLocations(rule dataplane.PathRule) bool {
+	if len(rule.MatchRules) > 1 {
+		return true
+	}
+	return len(rule.MatchRules) == 1 && !isPathOnlyMatch(rule.MatchRules[0].Match)
+}
+
+func createIncludesFromPolicyGenerateResult(resFiles []policies.File) []http.Include {
+	if len(resFiles) == 0 {
+		return nil
 	}
 
-	return locations
+	includes := make([]http.Include, 0, len(resFiles))
+	for _, file := range resFiles {
+		includes = append(includes, http.Include{
+			Name:    includesFolder + "/" + file.Name,
+			Content: file.Content,
+		})
+	}
+
+	return includes
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
@@ -332,7 +366,9 @@ func initializeExternalLocations(
 	pathsAndTypes pathAndTypeMap,
 ) []http.Location {
 	extLocations := make([]http.Location, 0, 2)
+	locType := getLocationTypeForPathRule(rule)
 	externalLocPath := createPath(rule)
+
 	// If the path type is Prefix and doesn't contain a trailing slash, then we need a second location
 	// that handles the Exact prefix case (if it doesn't already exist), and the first location is updated
 	// to handle the trailing slash prefix case (if it doesn't already exist)
@@ -353,18 +389,21 @@ func initializeExternalLocations(
 		if !trailingSlashPrefixPathExists {
 			externalLocTrailing := http.Location{
 				Path: externalLocPath + "/",
+				Type: locType,
 			}
 			extLocations = append(extLocations, externalLocTrailing)
 		}
 		if !exactPathExists {
 			externalLocExact := http.Location{
 				Path: exactPath(externalLocPath),
+				Type: locType,
 			}
 			extLocations = append(extLocations, externalLocExact)
 		}
 	} else {
 		externalLoc := http.Location{
 			Path: externalLocPath,
+			Type: locType,
 		}
 		extLocations = []http.Location{externalLoc}
 	}
@@ -372,17 +411,76 @@ func initializeExternalLocations(
 	return extLocations
 }
 
+func getLocationTypeForPathRule(rule dataplane.PathRule) http.LocationType {
+	if needsInternalLocations(rule) {
+		return http.RedirectLocationType
+	}
+
+	return http.ExternalLocationType
+}
+
 func initializeInternalLocation(
 	pathruleIdx,
 	matchRuleIdx int,
 	match dataplane.Match,
+	grpc bool,
 ) (http.Location, routeMatch) {
-	path := fmt.Sprintf("@rule%d-route%d", pathruleIdx, matchRuleIdx)
-	return createMatchLocation(path), createRouteMatch(match, path)
+	path := fmt.Sprintf("%s-rule%d-route%d", http.InternalRoutePathPrefix, pathruleIdx, matchRuleIdx)
+	return createMatchLocation(path, grpc), createRouteMatch(match, path)
 }
 
-// updateLocationsForFilters updates the existing locations with any relevant filters.
-func updateLocationsForFilters(
+// updateLocation updates a location with any relevant configurations, like proxy_pass, filters, tls settings, etc.
+func updateLocation(
+	filters dataplane.HTTPFilters,
+	location http.Location,
+	matchRule dataplane.MatchRule,
+	listenerPort int32,
+	path string,
+	grpc bool,
+) http.Location {
+	if filters.InvalidFilter != nil {
+		location.Return = &http.Return{Code: http.StatusInternalServerError}
+		return location
+	}
+
+	if filters.RequestRedirect != nil {
+		ret := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort)
+		location.Return = ret
+		return location
+	}
+
+	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
+	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc)
+	responseHeaders := generateResponseHeaders(&matchRule.Filters)
+
+	if rewrites != nil {
+		if location.Type == http.InternalLocationType && rewrites.InternalRewrite != "" {
+			location.Rewrites = append(location.Rewrites, rewrites.InternalRewrite)
+		}
+		if rewrites.MainRewrite != "" {
+			location.Rewrites = append(location.Rewrites, rewrites.MainRewrite)
+		}
+	}
+
+	location.ProxySetHeaders = proxySetHeaders
+	location.ProxySSLVerify = createProxyTLSFromBackends(matchRule.BackendGroup.Backends)
+	proxyPass := createProxyPass(
+		matchRule.BackendGroup,
+		matchRule.Filters.RequestURLRewrite,
+		generateProtocolString(location.ProxySSLVerify, grpc),
+		grpc,
+	)
+
+	location.ResponseHeaders = responseHeaders
+	location.ProxyPass = proxyPass
+	location.GRPC = grpc
+
+	return location
+}
+
+// updateLocations updates the existing locations with any relevant configurations, like proxy_pass,
+// filters, tls settings, etc.
+func updateLocations(
 	filters dataplane.HTTPFilters,
 	buildLocations []http.Location,
 	matchRule dataplane.MatchRule,
@@ -390,44 +488,13 @@ func updateLocationsForFilters(
 	path string,
 	grpc bool,
 ) []http.Location {
-	if filters.InvalidFilter != nil {
-		for i := range buildLocations {
-			buildLocations[i].Return = &http.Return{Code: http.StatusInternalServerError}
-		}
-		return buildLocations
+	updatedLocations := make([]http.Location, len(buildLocations))
+
+	for i, loc := range buildLocations {
+		updatedLocations[i] = updateLocation(filters, loc, matchRule, listenerPort, path, grpc)
 	}
 
-	if filters.RequestRedirect != nil {
-		ret := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort)
-		for i := range buildLocations {
-			buildLocations[i].Return = ret
-		}
-		return buildLocations
-	}
-
-	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
-	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc)
-	responseHeaders := generateResponseHeaders(&matchRule.Filters)
-	for i := range buildLocations {
-		if rewrites != nil {
-			if rewrites.Rewrite != "" {
-				buildLocations[i].Rewrites = append(buildLocations[i].Rewrites, rewrites.Rewrite)
-			}
-		}
-		buildLocations[i].ProxySetHeaders = proxySetHeaders
-		buildLocations[i].ProxySSLVerify = createProxyTLSFromBackends(matchRule.BackendGroup.Backends)
-		proxyPass := createProxyPass(
-			matchRule.BackendGroup,
-			matchRule.Filters.RequestURLRewrite,
-			generateProtocolString(buildLocations[i].ProxySSLVerify, grpc),
-			grpc,
-		)
-		buildLocations[i].ResponseHeaders = responseHeaders
-		buildLocations[i].ProxyPass = proxyPass
-		buildLocations[i].GRPC = grpc
-	}
-
-	return buildLocations
+	return updatedLocations
 }
 
 func generateProtocolString(ssl *http.ProxySSLVerify, grpc bool) string {
@@ -528,9 +595,10 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 	rewrites := &rewriteConfig{}
 
 	if filter.Path != nil {
+		rewrites.InternalRewrite = "^ $request_uri"
 		switch filter.Path.Type {
 		case dataplane.ReplaceFullPath:
-			rewrites.Rewrite = fmt.Sprintf("^ %s break", filter.Path.Replacement)
+			rewrites.MainRewrite = fmt.Sprintf("^ %s break", filter.Path.Replacement)
 		case dataplane.ReplacePrefixMatch:
 			filterPrefix := filter.Path.Replacement
 			if filterPrefix == "" {
@@ -555,7 +623,7 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 				replacement = fmt.Sprintf("%s/$1", filterPrefix)
 			}
 
-			rewrites.Rewrite = fmt.Sprintf("%s %s break", regex, replacement)
+			rewrites.MainRewrite = fmt.Sprintf("%s %s break", regex, replacement)
 		}
 	}
 
@@ -662,10 +730,19 @@ func createProxyPass(
 	return protocol + "://" + backendName + requestURI
 }
 
-func createMatchLocation(path string) http.Location {
-	return http.Location{
-		Path: path,
+func createMatchLocation(path string, grpc bool) http.Location {
+	var rewrites []string
+	if grpc {
+		rewrites = []string{"^ $request_uri break"}
 	}
+
+	loc := http.Location{
+		Path:     path,
+		Rewrites: rewrites,
+		Type:     http.InternalLocationType,
+	}
+
+	return loc
 }
 
 func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.Header {

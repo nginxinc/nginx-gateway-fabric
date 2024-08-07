@@ -24,4 +24,9 @@ map $http_upgrade $connection_upgrade {
     default upgrade;
     '' close;
 }
+
+## Returns just the path from the original request URI.
+map $request_uri $request_uri_path {
+  "~^(?P<path>[^?]*)(\?.*)?$"  $path;
+}
 `

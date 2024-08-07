@@ -16,7 +16,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -193,10 +193,6 @@ func BuildGraph(
 		globalSettings = &policies.GlobalSettings{
 			NginxProxyValid:  npCfg.Valid,
 			TelemetryEnabled: spec.Telemetry != nil && spec.Telemetry.Exporter != nil,
-		}
-
-		if spec.Telemetry != nil {
-			globalSettings.TracingSpanAttributes = spec.Telemetry.SpanAttributes
 		}
 	}
 
