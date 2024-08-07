@@ -219,3 +219,140 @@ func TestFromHTTPRoute(t *testing.T) {
 	g := NewWithT(t)
 	g.Expect(ref).To(Equal(exp))
 }
+
+func TestFromGRPCRoute(t *testing.T) {
+	ref := fromGRPCRoute("ns")
+
+	exp := fromResource{
+		group:     v1beta1.GroupName,
+		kind:      kinds.GRPCRoute,
+		namespace: "ns",
+	}
+
+	g := NewWithT(t)
+	g.Expect(ref).To(Equal(exp))
+}
+
+func TestRefAllowedFrom(t *testing.T) {
+	gwNs := "gw-ns"
+	hrNs := "hr-ns"
+	grNs := "gr-ns"
+
+	allowedHTTPRouteNs := "hr-allowed-ns"
+	allowedHTTPRouteNsName := types.NamespacedName{Namespace: allowedHTTPRouteNs, Name: "all-allowed-in-ns"}
+
+	allowedGRPCRouteNs := "gr-allowed-ns"
+	allowedGRPCRouteNsName := types.NamespacedName{Namespace: allowedGRPCRouteNs, Name: "all-allowed-in-ns"}
+
+	allowedGatewayNs := "gw-allowed-ns"
+	allowedGatewayNsName := types.NamespacedName{Namespace: allowedGatewayNs, Name: "all-allowed-in-ns"}
+
+	notAllowedNsName := types.NamespacedName{Namespace: "not-allowed-ns", Name: "not-allowed-in-ns"}
+
+	refGrants := map[types.NamespacedName]*v1beta1.ReferenceGrant{
+		{Namespace: allowedGatewayNs, Name: "gw-2-secret"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      kinds.Gateway,
+						Namespace: v1beta1.Namespace(gwNs),
+					},
+				},
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Kind: "Secret",
+					},
+				},
+			},
+		},
+		{Namespace: allowedHTTPRouteNs, Name: "hr-2-svc"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      kinds.HTTPRoute,
+						Namespace: v1beta1.Namespace(hrNs),
+					},
+				},
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Kind: "Service",
+					},
+				},
+			},
+		},
+		{Namespace: allowedGRPCRouteNs, Name: "gr-2-svc"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      kinds.GRPCRoute,
+						Namespace: v1beta1.Namespace(grNs),
+					},
+				},
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Kind: "Service",
+					},
+				},
+			},
+		},
+	}
+
+	resolver := newReferenceGrantResolver(refGrants)
+	refAllowedFromGRPCRoute := resolver.refAllowedFrom(fromGRPCRoute(grNs))
+	refAllowedFromHTTPRoute := resolver.refAllowedFrom(fromHTTPRoute(hrNs))
+	refAllowedFromGateway := resolver.refAllowedFrom(fromGateway(gwNs))
+
+	tests := []struct {
+		name           string
+		refAllowedFrom func(resource toResource) bool
+		toResource     toResource
+		expAllowed     bool
+	}{
+		{
+			name:           "ref allowed from gateway to secret",
+			refAllowedFrom: refAllowedFromGateway,
+			toResource:     toSecret(allowedGatewayNsName),
+			expAllowed:     true,
+		},
+		{
+			name:           "ref not allowed from gateway to secret",
+			refAllowedFrom: refAllowedFromGateway,
+			toResource:     toSecret(notAllowedNsName),
+			expAllowed:     false,
+		},
+		{
+			name:           "ref allowed from httproute to service",
+			refAllowedFrom: refAllowedFromHTTPRoute,
+			toResource:     toService(allowedHTTPRouteNsName),
+			expAllowed:     true,
+		},
+		{
+			name:           "ref not allowed from httproute to service",
+			refAllowedFrom: refAllowedFromHTTPRoute,
+			toResource:     toService(notAllowedNsName),
+			expAllowed:     false,
+		},
+		{
+			name:           "ref allowed from grpcroute to service",
+			refAllowedFrom: refAllowedFromGRPCRoute,
+			toResource:     toService(allowedGRPCRouteNsName),
+			expAllowed:     true,
+		},
+		{
+			name:           "ref not allowed from grpcroute to service",
+			refAllowedFrom: refAllowedFromGRPCRoute,
+			toResource:     toService(notAllowedNsName),
+			expAllowed:     false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(test.refAllowedFrom(test.toResource)).To(Equal(test.expAllowed))
+		})
+	}
+}

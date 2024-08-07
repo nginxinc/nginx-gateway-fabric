@@ -84,11 +84,12 @@ func addBackendRefsToRules(
 
 		for refIdx, ref := range rule.RouteBackendRefs {
 			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
+			routeNs := route.Source.GetNamespace()
 
 			ref, cond := createBackendRef(
 				ref,
-				route.Source.GetNamespace(),
-				refGrantResolver,
+				routeNs,
+				refGrantResolver.refAllowedFrom(getRefGrantFromResourceForRoute(route.RouteType, routeNs)),
 				services,
 				refPath,
 				backendTLSPolicies,
@@ -118,7 +119,7 @@ func addBackendRefsToRules(
 func createBackendRef(
 	ref RouteBackendRef,
 	sourceNamespace string,
-	refGrantResolver *referenceGrantResolver,
+	refGrantResolver func(resource toResource) bool,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
@@ -347,7 +348,7 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 func validateRouteBackendRef(
 	ref RouteBackendRef,
 	routeNs string,
-	refGrantResolver *referenceGrantResolver,
+	refGrantResolver func(resource toResource) bool,
 	path *field.Path,
 ) (valid bool, cond conditions.Condition) {
 	// Because all errors cause the same condition but different reasons, we return as soon as we find an error
@@ -362,7 +363,7 @@ func validateRouteBackendRef(
 func validateBackendRef(
 	ref gatewayv1.BackendRef,
 	routeNs string,
-	refGrantResolver *referenceGrantResolver,
+	refGrantResolver func(toResource toResource) bool,
 	path *field.Path,
 ) (valid bool, cond conditions.Condition) {
 	// Because all errors cause same condition but different reasons, we return as soon as we find an error
@@ -382,7 +383,7 @@ func validateBackendRef(
 	if ref.Namespace != nil && string(*ref.Namespace) != routeNs {
 		refNsName := types.NamespacedName{Namespace: string(*ref.Namespace), Name: string(ref.Name)}
 
-		if !refGrantResolver.refAllowed(toService(refNsName), fromHTTPRoute(routeNs)) {
+		if !refGrantResolver(toService(refNsName)) {
 			msg := fmt.Sprintf("Backend ref to Service %s not permitted by any ReferenceGrant", refNsName)
 
 			return false, staticConds.NewRouteBackendRefRefNotPermitted(msg)
@@ -427,4 +428,15 @@ func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
 	}
 
 	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
+}
+
+func getRefGrantFromResourceForRoute(routeType RouteType, routeNs string) fromResource {
+	switch routeType {
+	case RouteTypeHTTP:
+		return fromHTTPRoute(routeNs)
+	case RouteTypeGRPC:
+		return fromGRPCRoute(routeNs)
+	default:
+		panic(fmt.Errorf("unknown route type %s", routeType))
+	}
 }
