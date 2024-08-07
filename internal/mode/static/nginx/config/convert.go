@@ -18,8 +18,13 @@ func ConvertEndpoints(eps []resolver.Endpoint) []ngxclient.UpstreamServer {
 			port = fmt.Sprintf(":%d", ep.Port)
 		}
 
+		format := "%s%s"
+		if ep.IPv6 {
+			format = "[%s]%s"
+		}
+
 		server := ngxclient.UpstreamServer{
-			Server: fmt.Sprintf("%s%s", ep.Address, port),
+			Server: fmt.Sprintf(format, ep.Address, port),
 		}
 
 		servers = append(servers, server)

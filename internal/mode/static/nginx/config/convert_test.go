@@ -19,6 +19,11 @@ func TestConvertEndpoints(t *testing.T) {
 			Address: "5.6.7.8",
 			Port:    0,
 		},
+		{
+			Address: "2001:db8::1",
+			Port:    443,
+			IPv6:    true,
+		},
 	}
 
 	expUpstreams := []ngxclient.UpstreamServer{
@@ -27,6 +32,9 @@ func TestConvertEndpoints(t *testing.T) {
 		},
 		{
 			Server: "5.6.7.8",
+		},
+		{
+			Server: "[2001:db8::1]:443",
 		},
 	}
 
