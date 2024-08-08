@@ -2,11 +2,13 @@ package framework
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// GetLogs returns the logs for all containers in all pods for a release.
 func GetLogs(rm ResourceManager, namespace string, releaseName string) string {
 	var returnLogs string
 	pods, err := rm.GetPods(namespace, client.MatchingLabels{
@@ -32,6 +34,7 @@ func GetLogs(rm ResourceManager, namespace string, releaseName string) string {
 	return returnLogs
 }
 
+// GetEvents returns the events for a namespace.
 func GetEvents(rm ResourceManager, namespace string) string {
 	var returnEvents string
 	events, err := rm.GetEvents(namespace)
@@ -52,4 +55,29 @@ func GetEvents(rm ResourceManager, namespace string) string {
 		returnEvents += "\n"
 	}
 	return returnEvents
+}
+
+// GetBuildInfo returns the build information.
+func GetBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
+	commitHash = "unknown"
+	commitTime = "unknown"
+	dirtyBuild = "unknown"
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	for _, kv := range info.Settings {
+		switch kv.Key {
+		case "vcs.revision":
+			commitHash = kv.Value
+		case "vcs.time":
+			commitTime = kv.Value
+		case "vcs.modified":
+			dirtyBuild = kv.Value
+		}
+	}
+
+	return
 }
