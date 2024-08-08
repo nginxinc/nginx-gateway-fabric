@@ -261,7 +261,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		// timestamp to the next NGINX configuration update. When it reaches the NGINX configuration update line,
 		// it will reset the reconciling log line and set it to the next reconciling log line.
 		for _, line := range strings.Split(ngfLogs, "\n") {
-			// can't just do this line, need to do gateway specific resources
 			if reconcilingLine == "" &&
 				strings.Contains(line, "Reconciling the resource\",\"controller\"") &&
 				strings.Contains(line, "\"controllerGroup\":\"gateway.networking.k8s.io\"") {
@@ -359,7 +358,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	collectMetrics := func(
-		testName string,
+		testDescription string,
 		resourceCount int,
 		timeToReadyStartingLogSubstring string,
 		ngfPodName string,
@@ -431,7 +430,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		Expect(err).ToNot(HaveOccurred())
 
 		results := reconfigTestResults{
-			Name:                 testName,
+			TestDescription:      testDescription,
 			EventsBuckets:        eventsBuckets,
 			ReloadBuckets:        reloadBuckets,
 			NumResources:         resourceCount,
@@ -448,6 +447,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	When("resources exist before startup", func() {
+		testDescription := "Test 1: Resources exist before startup"
+
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
@@ -458,7 +459,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			collectMetrics("1",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -476,7 +478,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			collectMetrics("1",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -486,6 +489,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	})
 
 	When("NGF and Gateway resource are deployed first", func() {
+		testDescription := "Test 2: Start NGF, deploy Gateway, create many resources attached to GW"
+
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
@@ -496,7 +501,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(test).To(Succeed())
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-			collectMetrics("2",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -514,7 +520,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(test).To(Succeed())
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-			collectMetrics("2",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -524,6 +531,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	})
 
 	When("NGF and resources are deployed first", func() {
+		testDescription := "Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway"
+
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
@@ -534,7 +543,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(test).To(Succeed())
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-			collectMetrics("3",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -552,7 +562,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			Expect(test).To(Succeed())
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
-			collectMetrics("3",
+			collectMetrics(
+				testDescription,
 				resourceCount,
 				timeToReadyStartingLogSubstring,
 				ngfPodName,
@@ -579,7 +590,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 })
 
 type reconfigTestResults struct {
-	Name                 string
+	TestDescription      string
 	TimeToReadyTotal     string
 	TimeToReadyAvgSingle string
 	EventsBuckets        []framework.Bucket
@@ -592,7 +603,7 @@ type reconfigTestResults struct {
 }
 
 const reconfigResultTemplate = `
-## Test {{ .Name }} NumResources {{ .NumResources }}
+## {{ .TestDescription }} - NumResources {{ .NumResources }}
 
 ### Reloads and Time to Ready
 
