@@ -45,8 +45,8 @@ endif
 
 .PHONY: help
 help: Makefile ## Display this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@grep -hE '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n	make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "	 \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "	 \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build-prod-images
 build-prod-images: build-prod-ngf-image build-prod-nginx-image ## Build the NGF and nginx docker images for production

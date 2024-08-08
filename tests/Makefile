@@ -16,11 +16,11 @@ PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
 SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 
 ifneq ($(GINKGO_LABEL),)
-    override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
+	override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
 endif
 
 ifeq ($(CI),true)
-    GITHUB_OUTPUT := --github-output
+	GITHUB_OUTPUT := --github-output
 endif
 
 .PHONY: update-go-modules
@@ -38,9 +38,9 @@ run-conformance-tests: ## Run conformance tests
 	kubectl apply -f conformance/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
-		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
+		--overrides='{ "spec": { "serviceAccountName": "conformance" }	}' \
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
-						        --supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
+								--supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
 	./scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
@@ -70,8 +70,8 @@ reset-go-modules: ## Reset the go modules changes
 
 # Check if PLUS_ENABLED is true
 ifeq ($(PLUS_ENABLED),true)
-    # If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
-    NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
+	# If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
+	NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
 endif
 
 .PHONY: setup-gcp-and-run-tests
@@ -116,7 +116,7 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 .PHONY: .vm-nfr-test
 .vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
 	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v -buildvcs --force-newlines $(GITHUB_OUTPUT) \
-	    --label-filter "nfr" $(GINKGO_FLAGS) --timeout 3h ./suite --  --gateway-api-version=$(GW_API_VERSION) \
+		--label-filter "nfr" $(GINKGO_FLAGS) --timeout 3h ./suite --  --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
