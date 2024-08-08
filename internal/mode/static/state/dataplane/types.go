@@ -295,6 +295,8 @@ type BaseHTTPConfig struct {
 	IPFamily IPFamilyType
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
+	// ProxyProtocol specifies whether the Proxy Protocol should be enabled for all servers.
+	ProxyProtocol bool
 }
 
 // IPFamilyType specifies the IP family to be used by NGINX.

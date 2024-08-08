@@ -694,6 +694,8 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		// HTTP2 should be enabled by default
 		HTTP2:    true,
 		IPFamily: Dual,
+		// EnableProxyProtocol should be disabled by default
+		ProxyProtocol: false,
 	}
 	if g.NginxProxy == nil || !g.NginxProxy.Valid {
 		return baseConfig
@@ -710,6 +712,10 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		case ngfAPI.IPv6:
 			baseConfig.IPFamily = IPv6
 		}
+	}
+
+	if g.NginxProxy.Source.Spec.EnableProxyProtocol {
+		baseConfig.ProxyProtocol = true
 	}
 
 	return baseConfig

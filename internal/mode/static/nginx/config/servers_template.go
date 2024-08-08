@@ -2,14 +2,15 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
+{{ $proxyProtocol := "" }}{{ if $.ProxyProtocol }}{{ $proxyProtocol = " proxy_protocol" }}{{ end }}
 {{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
         {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} ssl default_server;
+    listen {{ $s.Port }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
         {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} ssl default_server;
+    listen [::]:{{ $s.Port }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
 
     ssl_reject_handshake on;
@@ -17,10 +18,10 @@ server {
     {{- else if $s.IsDefaultHTTP }}
 server {
         {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} default_server;
+    listen {{ $s.Port }} default_server{{ $proxyProtocol }};
         {{- end }}
         {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} default_server;
+    listen [::]:{{ $s.Port }} default_server{{ $proxyProtocol }};
         {{- end }}
 
     default_type text/html;
@@ -30,10 +31,10 @@ server {
 server {
         {{- if $s.SSL }}
           {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} ssl;
+    listen {{ $s.Port }} ssl{{ $proxyProtocol }};
           {{- end }}
           {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} ssl;
+    listen [::]:{{ $s.Port }} ssl{{ $proxyProtocol }};
           {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
@@ -43,10 +44,10 @@ server {
     }
         {{- else }}
           {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }};
+    listen {{ $s.Port }}{{ $proxyProtocol }};
           {{- end }}
           {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }};
+    listen [::]:{{ $s.Port }}{{ $proxyProtocol }};
           {{- end }}
         {{- end }}
 

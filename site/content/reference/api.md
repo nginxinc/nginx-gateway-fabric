@@ -340,6 +340,19 @@ bool
 Default is false, meaning http2 will be enabled for all servers.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>enableProxyProtocol</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableProxyProtocol defines if the Proxy Protocol should be enabled for all servers.
+Default is false, meaning the Proxy Protocol will be disabled.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -960,6 +973,19 @@ bool
 <em>(Optional)</em>
 <p>DisableHTTP2 defines if http2 should be disabled for all servers.
 Default is false, meaning http2 will be enabled for all servers.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enableProxyProtocol</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableProxyProtocol defines if the Proxy Protocol should be enabled for all servers.
+Default is false, meaning the Proxy Protocol will be disabled.</p>
 </td>
 </tr>
 </tbody>
