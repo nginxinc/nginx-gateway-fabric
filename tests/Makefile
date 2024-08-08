@@ -70,17 +70,17 @@ ifeq ($(PLUS_ENABLED),true)
 endif
 
 .PHONY: setup-gcp-and-run-tests
-setup-gcp-and-run-tests: create-and-setup-vm run-tests-on-vm ## Create and setup a GCP VM for tests and run the functional tests
+setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the functional tests
 
 .PHONY: setup-gcp-and-run-nfr-tests
-setup-gcp-and-run-nfr-tests: create-and-setup-vm nfr-test ## Create and setup a GCP VM for tests and run the NFR tests
+setup-gcp-and-run-nfr-tests: create-gke-router create-and-setup-vm nfr-test ## Create and setup a GKE router and GCP VM for tests and run the NFR tests
 
 .PHONY: create-gke-cluster
 create-gke-cluster: ## Create a GKE cluster
 	./scripts/create-gke-cluster.sh $(CI)
 
 .PHONY: create-and-setup-vm
-create-and-setup-vm: create-gke-router ## Create and setup a GKE router and GCP VM for tests
+create-and-setup-vm: ## Create and setup a GCP VM for tests
 	./scripts/create-and-setup-gcp-vm.sh
 
 .PHONY: create-gke-router
