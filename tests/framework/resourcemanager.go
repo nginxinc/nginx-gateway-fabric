@@ -622,6 +622,23 @@ func (rm *ResourceManager) GetNGFDeployment(namespace, releaseName string) (*app
 	return &deployment, nil
 }
 
+// GetEvents returns all Events in the specified namespace.
+func (rm *ResourceManager) GetEvents(namespace string) (*core.EventList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var eventList core.EventList
+	if err := rm.K8sClient.List(
+		ctx,
+		&eventList,
+		client.InNamespace(namespace),
+	); err != nil {
+		return &core.EventList{}, fmt.Errorf("error getting list of Events: %w", err)
+	}
+
+	return &eventList, nil
+}
+
 // ScaleDeployment scales the Deployment to the specified number of replicas.
 func (rm *ResourceManager) ScaleDeployment(namespace, name string, replicas int32) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.UpdateTimeout)
