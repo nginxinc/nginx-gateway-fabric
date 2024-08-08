@@ -7,7 +7,7 @@ NGINX Plus: true
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1038001
+- k8s version: v1.29.6-gke.1254000
 - vCPUs per node: 16
 - RAM per node: 65855012Ki
 - Max pods per node: 110
@@ -18,9 +18,9 @@ GKE Cluster:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 867.428µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  653.414µs, 901.844µs, 879.015µs, 1.006ms, 1.051ms, 1.18ms, 12.8ms
-Bytes In      [total, mean]                     919993, 153.33
+Duration      [total, attack, wait]             59.991s, 59.99s, 872.066µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  645.151µs, 908.553µs, 868.227µs, 1.028ms, 1.081ms, 1.296ms, 12.693ms
+Bytes In      [total, mean]                     906000, 151.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -33,9 +33,9 @@ Error Set:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 839.172µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  421.992µs, 816.859µs, 820.308µs, 942.646µs, 983.206µs, 1.111ms, 11.939ms
-Bytes In      [total, mean]                     960000, 160.00
+Duration      [total, attack, wait]             59.991s, 59.99s, 800.464µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  634.294µs, 877.396µs, 842.202µs, 972.867µs, 1.028ms, 1.249ms, 12.692ms
+Bytes In      [total, mean]                     949941, 158.32
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
