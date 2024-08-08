@@ -233,16 +233,33 @@ func TestFromGRPCRoute(t *testing.T) {
 	g.Expect(ref).To(Equal(exp))
 }
 
+func TestFromTLSRoute(t *testing.T) {
+	ref := fromTLSRoute("ns")
+
+	exp := fromResource{
+		group:     v1beta1.GroupName,
+		kind:      kinds.TLSRoute,
+		namespace: "ns",
+	}
+
+	g := NewWithT(t)
+	g.Expect(ref).To(Equal(exp))
+}
+
 func TestRefAllowedFrom(t *testing.T) {
 	gwNs := "gw-ns"
 	hrNs := "hr-ns"
 	grNs := "gr-ns"
+	trNs := "tr-ns"
 
 	allowedHTTPRouteNs := "hr-allowed-ns"
 	allowedHTTPRouteNsName := types.NamespacedName{Namespace: allowedHTTPRouteNs, Name: "all-allowed-in-ns"}
 
 	allowedGRPCRouteNs := "gr-allowed-ns"
 	allowedGRPCRouteNsName := types.NamespacedName{Namespace: allowedGRPCRouteNs, Name: "all-allowed-in-ns"}
+
+	allowedTLSRouteNs := "tr-allowed-ns"
+	allowedTLSRouteNsName := types.NamespacedName{Namespace: allowedTLSRouteNs, Name: "all-allowed-in-ns"}
 
 	allowedGatewayNs := "gw-allowed-ns"
 	allowedGatewayNsName := types.NamespacedName{Namespace: allowedGatewayNs, Name: "all-allowed-in-ns"}
@@ -298,11 +315,28 @@ func TestRefAllowedFrom(t *testing.T) {
 				},
 			},
 		},
+		{Namespace: allowedTLSRouteNs, Name: "tr-2-svc"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      kinds.TLSRoute,
+						Namespace: v1beta1.Namespace(trNs),
+					},
+				},
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Kind: "Service",
+					},
+				},
+			},
+		},
 	}
 
 	resolver := newReferenceGrantResolver(refGrants)
 	refAllowedFromGRPCRoute := resolver.refAllowedFrom(fromGRPCRoute(grNs))
 	refAllowedFromHTTPRoute := resolver.refAllowedFrom(fromHTTPRoute(hrNs))
+	refAllowedFromTLSRoute := resolver.refAllowedFrom(fromTLSRoute(trNs))
 	refAllowedFromGateway := resolver.refAllowedFrom(fromGateway(gwNs))
 
 	tests := []struct {
@@ -344,6 +378,18 @@ func TestRefAllowedFrom(t *testing.T) {
 		{
 			name:           "ref not allowed from grpcroute to service",
 			refAllowedFrom: refAllowedFromGRPCRoute,
+			toResource:     toService(notAllowedNsName),
+			expAllowed:     false,
+		},
+		{
+			name:           "ref allowed from tlsroute to service",
+			refAllowedFrom: refAllowedFromTLSRoute,
+			toResource:     toService(allowedTLSRouteNsName),
+			expAllowed:     true,
+		},
+		{
+			name:           "ref not allowed from tlsroute to service",
+			refAllowedFrom: refAllowedFromTLSRoute,
 			toResource:     toService(notAllowedNsName),
 			expAllowed:     false,
 		},
