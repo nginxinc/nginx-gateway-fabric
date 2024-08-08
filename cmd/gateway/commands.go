@@ -501,16 +501,12 @@ func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
 	return flagKeys, flagValues
 }
 
-type buildInfoFunc func() (info *debug.BuildInfo, ok bool)
-
-var buildInfo buildInfoFunc = debug.ReadBuildInfo
-
 func getBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
 	commitHash = "unknown"
 	commitTime = "unknown"
 	dirtyBuild = "unknown"
 
-	info, ok := buildInfo()
+	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
 	}
