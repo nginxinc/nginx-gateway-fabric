@@ -88,7 +88,7 @@ jobs:
           TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Build NGF Docker Image
-        uses: docker/build-push-action@4f7cdeb0f05278b464e71357394bf2c61f94138e # v6.6.0
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # v6.6.1
         with:
           file: build/Dockerfile
           tags: ${{ steps.ngf-meta.outputs.tags }}
@@ -99,7 +99,7 @@ jobs:
           pull: true
 
       - name: Build NGINX Docker Image
-        uses: docker/build-push-action@4f7cdeb0f05278b464e71357394bf2c61f94138e # v6.6.0
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # v6.6.1
         with:
           file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'plus' && '.nginxplus' || ''}}
           tags: ${{ steps.nginx-meta.outputs.tags }}
@@ -118,7 +118,7 @@ jobs:
         working-directory: ./tests
 
       - name: Build Test Docker Image
-        uses: docker/build-push-action@4f7cdeb0f05278b464e71357394bf2c61f94138e # v6.6.0
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # v6.6.1
         with:
           file: tests/conformance/Dockerfile
           tags: conformance-test-runner:${{ github.sha }}
