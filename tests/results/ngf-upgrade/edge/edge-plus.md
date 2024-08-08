@@ -4,10 +4,16 @@
 
 NGINX Plus: true
 
+NGINX Gateway Fabric:
+
+- Commit: 809c0838e2f2658c3c4cd48325ffb0bc5a92a002
+- Date: 2024-08-08T18:03:35Z
+- Dirty: false
+
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1038001
+- k8s version: v1.29.6-gke.1254000
 - vCPUs per node: 16
 - RAM per node: 65855012Ki
 - Max pods per node: 110
@@ -17,10 +23,10 @@ GKE Cluster:
 ## Test: Send https /tea traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 867.428µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  653.414µs, 901.844µs, 879.015µs, 1.006ms, 1.051ms, 1.18ms, 12.8ms
-Bytes In      [total, mean]                     919993, 153.33
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.992s, 59.991s, 913.832µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  447.468µs, 877.575µs, 872.625µs, 1.029ms, 1.081ms, 1.224ms, 7.517ms
+Bytes In      [total, mean]                     920041, 153.34
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -32,10 +38,10 @@ Error Set:
 ## Test: Send http /coffee traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 839.172µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  421.992µs, 816.859µs, 820.308µs, 942.646µs, 983.206µs, 1.111ms, 11.939ms
-Bytes In      [total, mean]                     960000, 160.00
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.991s, 854.57µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  436.603µs, 833.46µs, 843.163µs, 992.309µs, 1.046ms, 1.198ms, 5.381ms
+Bytes In      [total, mean]                     962034, 160.34
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
