@@ -3285,6 +3285,7 @@ func TestCreateRatioVarName(t *testing.T) {
 	g := NewWithT(t)
 	g.Expect(CreateRatioVarName(25)).To(Equal("$otel_ratio_25"))
 }
+
 func TestCreatePassthroughServers(t *testing.T) {
 	getL4RouteKey := func(name string) graph.L4RouteKey {
 		return graph.L4RouteKey{
