@@ -4,10 +4,16 @@
 
 NGINX Plus: true
 
+ NGINX Gateway Fabric:
+
+- Commit: unknown
+- Date: unknown
+- Dirty: unknown
+
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1038001
+- k8s version: v1.29.6-gke.1254000
 - vCPUs per node: 16
 - RAM per node: 65855012Ki
 - Max pods per node: 110
@@ -17,10 +23,10 @@ GKE Cluster:
 ## Test: Send https /tea traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 867.428µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  653.414µs, 901.844µs, 879.015µs, 1.006ms, 1.051ms, 1.18ms, 12.8ms
-Bytes In      [total, mean]                     919993, 153.33
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.99s, 790.051µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  539.113µs, 939.415µs, 931.18µs, 1.073ms, 1.122ms, 1.273ms, 7.441ms
+Bytes In      [total, mean]                     920022, 153.34
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -32,9 +38,9 @@ Error Set:
 ## Test: Send http /coffee traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 839.172µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  421.992µs, 816.859µs, 820.308µs, 942.646µs, 983.206µs, 1.111ms, 11.939ms
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.99s, 1.055ms
+Latencies     [min, mean, 50, 90, 95, 99, max]  668.751µs, 950.712µs, 937.363µs, 1.071ms, 1.12ms, 1.248ms, 10.747ms
 Bytes In      [total, mean]                     960000, 160.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
