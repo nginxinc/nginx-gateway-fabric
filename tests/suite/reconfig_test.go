@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -80,30 +79,24 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 
 	createUniqueResources := func(resourceCount int, fileName string) error {
 		for i := 1; i <= resourceCount; i++ {
-			nsName := "namespace" + strconv.Itoa(i)
-			// Command to run sed and capture its output
-			//nolint:gosec
-			sedCmd := exec.Command("sed",
-				"-e",
-				"s/coffee/coffee"+nsName+"/g",
-				"-e",
-				"s/tea/tea"+nsName+"/g",
-				fileName,
-			)
-			// Command to apply using kubectl
-			kubectlCmd := exec.Command("kubectl", "apply", "-n", nsName, "-f", "-")
+			namespace := "namespace" + strconv.Itoa(i)
 
-			sedOutput, err := sedCmd.Output()
+			b, err := resourceManager.GetFileContents(fileName)
 			if err != nil {
-				return err
+				return fmt.Errorf("error getting manifest file: %w", err)
 			}
-			kubectlCmd.Stdin = bytes.NewReader(sedOutput)
 
-			_, err = kubectlCmd.CombinedOutput()
-			if err != nil {
-				return err
+			fileString := b.String()
+			fileString = strings.ReplaceAll(fileString, "coffee", "coffee"+namespace)
+			fileString = strings.ReplaceAll(fileString, "tea", "tea"+namespace)
+
+			data := bytes.NewBufferString(fileString)
+
+			if err := resourceManager.ApplyFromBuffer(data, namespace); err != nil {
+				return fmt.Errorf("error processing manifest file: %w", err)
 			}
 		}
+
 		return nil
 	}
 
