@@ -15,6 +15,7 @@ func GetLogs(rm ResourceManager, namespace string, releaseName string) string {
 	if err != nil {
 		return fmt.Sprintf("failed to get pods: %v", err)
 	}
+
 	for _, pod := range pods {
 		for _, container := range pod.Spec.Containers {
 			returnLogs += fmt.Sprintf("Logs for container %s:\n", container.Name)
@@ -37,10 +38,12 @@ func GetEvents(rm ResourceManager, namespace string) string {
 	if err != nil {
 		return fmt.Sprintf("failed to get events: %v", err)
 	}
+
 	eventGroups := make(map[string][]core.Event)
 	for _, event := range events.Items {
 		eventGroups[event.InvolvedObject.Name] = append(eventGroups[event.InvolvedObject.Name], event)
 	}
+
 	for name, events := range eventGroups {
 		returnEvents += fmt.Sprintf("Events for %s:\n", name)
 		for _, event := range events {
