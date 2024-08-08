@@ -23,6 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
+// Cluster node size must be greater than or equal to 4 for test to perform correctly.
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
 	// used for cleaning up resources
 	const maxResourceCount = 150
