@@ -1,4 +1,4 @@
-package suite
+package main
 
 import (
 	"bytes"
@@ -130,39 +130,39 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	}
 
 	const scaleResultTemplate = `
-	## Test {{ .Name }}
+## Test {{ .Name }}
 
-	### Reloads
+### Reloads
 
-	- Total: {{ .ReloadCount }}
-	- Total Errors: {{ .ReloadErrsCount }}
-	- Average Time: {{ .ReloadAvgTime }}ms
-	- Reload distribution:
-	{{- range .ReloadBuckets }}
-		- {{ .Le }}ms: {{ .Val }}
-	{{- end }}
+- Total: {{ .ReloadCount }}
+- Total Errors: {{ .ReloadErrsCount }}
+- Average Time: {{ .ReloadAvgTime }}ms
+- Reload distribution:
+{{- range .ReloadBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
 
-	### Event Batch Processing
+### Event Batch Processing
 
-	- Total: {{ .EventsCount }}
-	- Average Time: {{ .EventsAvgTime }}ms
-	- Event Batch Processing distribution:
-	{{- range .EventsBuckets }}
-		- {{ .Le }}ms: {{ .Val }}
-	{{- end }}
+- Total: {{ .EventsCount }}
+- Average Time: {{ .EventsAvgTime }}ms
+- Event Batch Processing distribution:
+{{- range .EventsBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
 
-	### Errors
+### Errors
 
-	- NGF errors: {{ .NGFErrors }}
-	- NGF container restarts: {{ .NGFContainerRestarts }}
-	- NGINX errors: {{ .NginxErrors }}
-	- NGINX container restarts: {{ .NginxContainerRestarts }}
+- NGF errors: {{ .NGFErrors }}
+- NGF container restarts: {{ .NGFContainerRestarts }}
+- NGINX errors: {{ .NginxErrors }}
+- NGINX container restarts: {{ .NginxContainerRestarts }}
 
-	### Graphs and Logs
+### Graphs and Logs
 
-	See [output directory](./{{ .Name }}) for more details.
-	The logs are attached only if there are errors.
-	`
+See [output directory](./{{ .Name }}) for more details.
+The logs are attached only if there are errors.
+`
 
 	writeScaleResults := func(dest io.Writer, results scaleTestResults) error {
 		tmpl, err := template.New("results").Parse(scaleResultTemplate)
@@ -905,7 +905,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 
 		Expect(framework.WriteMetricsResults(outFile, res.metrics)).To(Succeed())
 
-		link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
+		link := fmt.Sprintf("\n\n![%[1]v-oss.png](%[1]v-oss.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
 		if *plusEnabled {
 			link = fmt.Sprintf("\n\n![%[1]v-plus.png](%[1]v-plus.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
 		}
