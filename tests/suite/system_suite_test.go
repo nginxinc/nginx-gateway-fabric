@@ -1,4 +1,6 @@
-package suite
+// This package needs to be named main to get build info
+// because of https://github.com/golang/go/issues/33976
+package main
 
 import (
 	"context"
@@ -21,7 +23,7 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctlr "sigs.k8s.io/controller-runtime"
@@ -76,6 +78,7 @@ var (
 	chartVersion      string
 	clusterInfo       framework.ClusterInfo
 	skipNFRTests      bool
+	logs              string
 )
 
 const (
@@ -235,7 +238,7 @@ func teardown(relName string) {
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-			key := types.NamespacedName{Name: ngfNamespace}
+			key := k8sTypes.NamespacedName{Name: ngfNamespace}
 			if err := k8sClient.Get(ctx, key, &core.Namespace{}); err != nil && apierrors.IsNotFound(err) {
 				return true, nil
 			}
@@ -292,6 +295,11 @@ var _ = AfterSuite(func() {
 	if skipNFRTests {
 		Skip("")
 	}
+	events := framework.GetEvents(resourceManager, ngfNamespace)
+	AddReportEntry("Events", events, ReportEntryVisibilityNever)
+
+	logs = framework.GetLogs(resourceManager, ngfNamespace, releaseName)
+	AddReportEntry("Logs", logs, ReportEntryVisibilityNever)
 
 	labelFilter := GinkgoLabelFilter()
 	if !strings.Contains(labelFilter, "longevity-setup") {
@@ -311,3 +319,13 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "upgrade") ||
 		strings.Contains(labelFilter, "scale")
 }
+
+var _ = ReportAfterSuite("Print info on failure", func(report Report) {
+	if !report.SuiteSucceeded {
+		for _, specReport := range report.SpecReports {
+			for _, entry := range specReport.ReportEntries {
+				fmt.Println(entry.GetRawValue())
+			}
+		}
+	}
+})
