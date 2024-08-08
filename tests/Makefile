@@ -1,10 +1,11 @@
-CI=false
+CI ?= false
 CLUSTER_NAME ?= kind
 CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
 CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
 GINKGO_FLAGS =
 GINKGO_LABEL =
+GITHUB_OUTPUT =
 GW_API_VERSION ?= $(shell sed -n 's/.*ref=v\(.*\)/\1/p' ../config/crd/gateway-api/standard/kustomization.yaml)## Supported Gateway API version from current NGF
 GW_API_PREV_VERSION ?= 1.1.0## Supported Gateway API version from previous NGF release
 GW_SERVICE_TYPE = NodePort## Service type to use for the gateway
@@ -16,6 +17,10 @@ SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRou
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
+endif
+
+ifeq ($(CI),true)
+    GITHUB_OUTPUT := --github-output
 endif
 
 .PHONY: update-go-modules
@@ -107,10 +112,10 @@ start-longevity-test: nfr-test ## Start the longevity test to run for 4 days in 
 stop-longevity-test: export STOP_LONGEVITY=true
 stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
+
 .PHONY: .vm-nfr-test
 .vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v -buildvcs --force-newlines $(ifeq $(CI),true,--github-output) \
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v -buildvcs --force-newlines $(GITHUB_OUTPUT) \
 	    --label-filter "nfr" $(GINKGO_FLAGS) --timeout 3h ./suite --  --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
@@ -119,7 +124,7 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
 .PHONY: test
 test: ## Runs the functional tests on your default k8s cluster
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v --force-newlines \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v -buildvcs --force-newlines $(GITHUB_OUTPUT) \
 		--label-filter "functional" $(GINKGO_FLAGS) ./suite -- \
 		--gateway-api-version=$(GW_API_VERSION) --gateway-api-prev-version=$(GW_API_PREV_VERSION) \
 		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \

@@ -16,6 +16,7 @@ gcloud compute scp --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" "${SC
 gcloud compute ssh --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" username@"${RESOURCE_NAME}" \
     --command="export START_LONGEVITY=${START_LONGEVITY} &&\
         export STOP_LONGEVITY=${STOP_LONGEVITY} &&\
+		export CI=${CI} &&\
         bash -s" <"${SCRIPT_DIR}"/remote-scripts/${SCRIPT}
 retcode=$?
 
