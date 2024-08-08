@@ -4,10 +4,16 @@
 
 NGINX Plus: false
 
+NGINX Gateway Fabric:
+
+- Commit: 2ed7d4ae2f827623074c40653ac821b61ae72b63
+- Date: 2024-08-08T21:29:44Z
+- Dirty: false
+
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1038001
+- k8s version: v1.29.6-gke.1254000
 - vCPUs per node: 16
 - RAM per node: 65855012Ki
 - Max pods per node: 110
@@ -18,28 +24,28 @@ GKE Cluster:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.991s, 59.99s, 799.917µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  450.094µs, 821.717µs, 823.258µs, 951.13µs, 997.824µs, 1.126ms, 11.934ms
-Bytes In      [total, mean]                     920025, 153.34
+Duration      [total, attack, wait]             59.992s, 59.991s, 903.286µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  663.853µs, 993.737µs, 947.332µs, 1.156ms, 1.236ms, 1.5ms, 13.09ms
+Bytes In      [total, mean]                     912000, 152.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
 Error Set:
 ```
 
-![https.png](https.png)
+![https-oss.png](https-oss.png)
 
 ## Test: Send http /coffee traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 794.113µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  618.014µs, 872.17µs, 856.784µs, 991.181µs, 1.038ms, 1.148ms, 12.075ms
-Bytes In      [total, mean]                     960000, 160.00
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.992s, 59.991s, 966.094µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  621.594µs, 937.441µs, 902.062µs, 1.087ms, 1.153ms, 1.345ms, 12.671ms
+Bytes In      [total, mean]                     954000, 159.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
 Error Set:
 ```
 
-![http.png](http.png)
+![http-oss.png](http-oss.png)
