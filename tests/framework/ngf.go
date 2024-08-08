@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -142,6 +143,31 @@ func UninstallNGF(cfg InstallationConfig, k8sClient client.Client) ([]byte, erro
 	}
 
 	return nil, nil
+}
+
+// GetBuildInfo returns the build information.
+func GetBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
+	commitHash = "unknown"
+	commitTime = "unknown"
+	dirtyBuild = "unknown"
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	for _, kv := range info.Settings {
+		switch kv.Key {
+		case "vcs.revision":
+			commitHash = kv.Value
+		case "vcs.time":
+			commitTime = kv.Value
+		case "vcs.modified":
+			dirtyBuild = kv.Value
+		}
+	}
+
+	return
 }
 
 func setImageArgs(cfg InstallationConfig) []string {

@@ -1,4 +1,6 @@
-package suite
+// This package needs to be named main to get build info
+// because of https://github.com/golang/go/issues/33976
+package main
 
 import (
 	"context"
