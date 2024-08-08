@@ -49,5 +49,6 @@ func TestExecuteBaseHttp(t *testing.T) {
 		g.Expect(test.expCount).To(Equal(strings.Count(string(res[0].data), expSubStr)))
 		g.Expect(strings.Count(string(res[0].data), "map $http_host $gw_api_compliant_host {")).To(Equal(1))
 		g.Expect(strings.Count(string(res[0].data), "map $http_upgrade $connection_upgrade {")).To(Equal(1))
+		g.Expect(strings.Count(string(res[0].data), "map $request_uri $request_uri_path {")).To(Equal(1))
 	}
 }

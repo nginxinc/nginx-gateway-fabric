@@ -2,6 +2,7 @@ package graph
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -10,9 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
+	ngfSort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -57,12 +60,41 @@ const (
 	RouteTypeGRPC RouteType = "grpc"
 )
 
+// L4RouteKey is the unique identifier for a L4Route.
+type L4RouteKey struct {
+	// NamespacedName is the NamespacedName of the Route.
+	NamespacedName types.NamespacedName
+}
+
 // RouteKey is the unique identifier for a L7Route.
 type RouteKey struct {
 	// NamespacedName is the NamespacedName of the Route.
 	NamespacedName types.NamespacedName
 	// RouteType is the type of the Route.
 	RouteType RouteType
+}
+
+type L4Route struct {
+	// Source is the source Gateway API object of the Route.
+	Source client.Object
+	// ParentRefs describe the references to the parents in a Route.
+	ParentRefs []ParentRef
+	// Conditions define the conditions to be reported in the status of the Route.
+	Conditions []conditions.Condition
+	// Spec is the L4RouteSpec of the Route
+	Spec L4RouteSpec
+	// Valid indicates if the Route is valid.
+	Valid bool
+	// Attachable indicates if the Route is attachable to any Listener.
+	Attachable bool
+}
+
+type L4RouteSpec struct {
+	// Hostnames defines a set of hostnames used to select a Route used to process the request.
+	Hostnames []v1.Hostname
+	// FIXME (sarthyparty): change to slice of BackendRef, as for now we are only supporting one BackendRef.
+	// We will eventually support multiple BackendRef https://github.com/nginxinc/nginx-gateway-fabric/issues/2184
+	BackendRef BackendRef
 }
 
 // L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute.
@@ -132,6 +164,33 @@ func CreateRouteKey(obj client.Object) RouteKey {
 		NamespacedName: nsName,
 		RouteType:      routeType,
 	}
+}
+
+// CreateRouteKeyL4 takes a client.Object and creates a L4RouteKey.
+func CreateRouteKeyL4(obj client.Object) L4RouteKey {
+	return L4RouteKey{
+		NamespacedName: client.ObjectKeyFromObject(obj),
+	}
+}
+
+func buildL4RoutesForGateways(
+	tlsRoutes map[types.NamespacedName]*v1alpha.TLSRoute,
+	gatewayNsNames []types.NamespacedName,
+	services map[types.NamespacedName]*apiv1.Service,
+	npCfg *NginxProxy,
+) map[L4RouteKey]*L4Route {
+	if len(gatewayNsNames) == 0 {
+		return nil
+	}
+
+	routes := make(map[L4RouteKey]*L4Route)
+	for _, route := range tlsRoutes {
+		r := buildTLSRoute(route, gatewayNsNames, services, npCfg)
+		if r != nil {
+			routes[CreateRouteKeyL4(route)] = r
+		}
+	}
+	return routes
 }
 
 // buildGRPCRoutesForGateways builds routes from HTTP/GRPCRoutes that reference any of the specified Gateways.
@@ -247,7 +306,8 @@ func findGatewayForParentRef(
 }
 
 func bindRoutesToListeners(
-	routes map[RouteKey]*L7Route,
+	l7Routes map[RouteKey]*L7Route,
+	l4Routes map[L4RouteKey]*L4Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) {
@@ -255,12 +315,233 @@ func bindRoutesToListeners(
 		return
 	}
 
+	for _, r := range l7Routes {
+		bindL7RouteToListeners(r, gw, namespaces)
+	}
+
+	var routes []*L4Route
+	for _, r := range l4Routes {
+		routes = append(routes, r)
+	}
+
+	// Sort the slice by timestamp and name so that we process the routes in the priority order
+	sort.Slice(routes, func(i, j int) bool {
+		return ngfSort.LessClientObject(routes[i].Source, routes[j].Source)
+	})
+
+	// portHostnamesMap exists to detect duplicate hostnames on the same port
+	portHostnamesMap := make(map[string]struct{})
+
 	for _, r := range routes {
-		bindRouteToListeners(r, gw, namespaces)
+		bindL4RouteToListeners(r, gw, namespaces, portHostnamesMap)
 	}
 }
 
-func bindRouteToListeners(
+func validateParentRef(
+	ref *ParentRef,
+	gw *Gateway,
+) (status *ParentRefAttachmentStatus, attachableListeners []*Listener) {
+	attachment := &ParentRefAttachmentStatus{
+		AcceptedHostnames: make(map[string][]string),
+	}
+
+	ref.Attachment = attachment
+
+	path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
+
+	attachableListeners, listenerExists := findAttachableListeners(
+		getSectionName(ref.SectionName),
+		gw.Listeners,
+	)
+
+	// Case 1: Attachment is not possible because the specified SectionName does not match any Listeners in the
+	// Gateway.
+	if !listenerExists {
+		attachment.FailedCondition = staticConds.NewRouteNoMatchingParent()
+		return attachment, nil
+	}
+
+	// Case 2: Attachment is not possible due to unsupported configuration.
+
+	if ref.Port != nil {
+		valErr := field.Forbidden(path.Child("port"), "cannot be set")
+		attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
+		return attachment, attachableListeners
+	}
+
+	// Case 3: the parentRef references an ignored Gateway resource.
+
+	referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
+
+	if !referencesWinningGw {
+		attachment.FailedCondition = staticConds.NewRouteNotAcceptedGatewayIgnored()
+		return attachment, attachableListeners
+	}
+
+	// Case 4: Attachment is not possible because Gateway is invalid
+
+	if !gw.Valid {
+		attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
+		return attachment, attachableListeners
+	}
+	return attachment, attachableListeners
+}
+
+func bindL4RouteToListeners(
+	route *L4Route,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+	portHostnamesMap map[string]struct{},
+) {
+	if !route.Attachable {
+		return
+	}
+
+	for i := range route.ParentRefs {
+		ref := &(route.ParentRefs)[i]
+
+		attachment, attachableListeners := validateParentRef(ref, gw)
+
+		if attachment.FailedCondition != (conditions.Condition{}) {
+			continue
+		}
+
+		// Winning Gateway
+		// Try to attach Route to all matching listeners
+
+		cond, attached := tryToAttachL4RouteToListeners(
+			ref.Attachment,
+			attachableListeners,
+			route,
+			gw,
+			namespaces,
+			portHostnamesMap,
+		)
+		if !attached {
+			attachment.FailedCondition = cond
+			continue
+		}
+		if cond != (conditions.Condition{}) {
+			route.Conditions = append(route.Conditions, cond)
+		}
+
+		attachment.Attached = true
+	}
+}
+
+// tryToAttachL4RouteToListeners tries to attach the L4Route to listeners that match the parentRef and the hostnames.
+// There are two cases:
+// (1) If it succeeds in attaching at least one listener it will return true. The returned condition will be empty if
+// at least one of the listeners is valid. Otherwise, it will return the failure condition.
+// (2) If it fails to attach the route, it will return false and the failure condition.
+func tryToAttachL4RouteToListeners(
+	refStatus *ParentRefAttachmentStatus,
+	attachableListeners []*Listener,
+	route *L4Route,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+	portHostnamesMap map[string]struct{},
+) (conditions.Condition, bool) {
+	if len(attachableListeners) == 0 {
+		return staticConds.NewRouteInvalidListener(), false
+	}
+
+	var (
+		attachedToAtLeastOneValidListener  bool
+		allowed, attached, hostnamesUnique bool
+	)
+
+	// Sorting the listeners from most specific hostname to least specific hostname
+	sort.Slice(attachableListeners, func(i, j int) bool {
+		h1 := ""
+		h2 := ""
+		if attachableListeners[i].Source.Hostname != nil {
+			h1 = string(*attachableListeners[i].Source.Hostname)
+		}
+		if attachableListeners[j].Source.Hostname != nil {
+			h2 = string(*attachableListeners[j].Source.Hostname)
+		}
+		return h1 == GetMoreSpecificHostname(h1, h2)
+	})
+
+	for _, l := range attachableListeners {
+		routeAllowed, routeAttached, routeHostnamesUnique := bindToListenerL4(
+			l,
+			route,
+			gw,
+			namespaces,
+			portHostnamesMap,
+			refStatus,
+		)
+		allowed = allowed || routeAllowed
+		attached = attached || routeAttached
+		hostnamesUnique = hostnamesUnique || routeHostnamesUnique
+		attachedToAtLeastOneValidListener = attachedToAtLeastOneValidListener || (routeAttached && l.Valid)
+	}
+
+	if !attached {
+		if !allowed {
+			return staticConds.NewRouteNotAllowedByListeners(), false
+		}
+		if !hostnamesUnique {
+			return staticConds.NewRouteHostnameConflict(), false
+		}
+		return staticConds.NewRouteNoMatchingListenerHostname(), false
+	}
+
+	if !attachedToAtLeastOneValidListener {
+		return staticConds.NewRouteInvalidListener(), true
+	}
+
+	return conditions.Condition{}, true
+}
+
+func bindToListenerL4(
+	l *Listener,
+	route *L4Route,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+	portHostnamesMap map[string]struct{},
+	refStatus *ParentRefAttachmentStatus,
+) (allowed, attached, notConflicting bool) {
+	if !isRouteNamespaceAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
+		return false, false, false
+	}
+
+	if !isRouteTypeAllowedByListener(l, kinds.TLSRoute) {
+		return false, false, false
+	}
+
+	acceptedListenerHostnames := findAcceptedHostnames(l.Source.Hostname, route.Spec.Hostnames)
+
+	hostnames := make([]string, 0)
+
+	for _, h := range acceptedListenerHostnames {
+		portHostname := fmt.Sprintf("%s:%d", h, l.Source.Port)
+		_, ok := portHostnamesMap[portHostname]
+		if !ok {
+			portHostnamesMap[portHostname] = struct{}{}
+			hostnames = append(hostnames, h)
+		}
+	}
+
+	// We only add a condition if there are no valid hostnames left. If there are none left, then we will want to check
+	// if any hostnames were removed because of conflicts first, and add that condition first. Otherwise, we know that
+	// the hostnames were all removed because they didn't match the listener hostname, so we add that condition.
+	if len(hostnames) == 0 && len(acceptedListenerHostnames) > 0 {
+		return true, false, false
+	}
+	if len(hostnames) == 0 {
+		return true, false, true
+	}
+
+	refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
+	l.L4Routes[CreateRouteKeyL4(route.Source)] = route
+
+	return true, true, true
+}
+
+func bindL7RouteToListeners(
 	route *L7Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
@@ -270,55 +551,18 @@ func bindRouteToListeners(
 	}
 
 	for i := range route.ParentRefs {
-		attachment := &ParentRefAttachmentStatus{
-			AcceptedHostnames: make(map[string][]string),
-		}
-		ref := &route.ParentRefs[i]
-		ref.Attachment = attachment
+		ref := &(route.ParentRefs)[i]
 
-		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
+		attachment, attachableListeners := validateParentRef(ref, gw)
 
-		attachableListeners, listenerExists := findAttachableListeners(
-			getSectionName(ref.SectionName),
-			gw.Listeners,
-		)
-
-		// Case 1: Attachment is not possible because the specified SectionName does not match any Listeners in the
-		// Gateway.
-		if !listenerExists {
-			attachment.FailedCondition = staticConds.NewRouteNoMatchingParent()
+		if attachment.FailedCondition != (conditions.Condition{}) {
 			continue
 		}
 
-		// Case 2: Attachment is not possible due to unsupported configuration.
-
-		if ref.Port != nil {
-			valErr := field.Forbidden(path.Child("port"), "cannot be set")
-			attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
-			continue
-		}
-
-		// Case 3: the parentRef references an ignored Gateway resource.
-
-		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
-
-		if !referencesWinningGw {
-			attachment.FailedCondition = staticConds.NewRouteNotAcceptedGatewayIgnored()
-			continue
-		}
-
-		// Case 4: Attachment is not possible because Gateway is invalid
-
-		if !gw.Valid {
-			attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
-			continue
-		}
-
-		// Case 5 - winning Gateway
-
+		// Winning Gateway
 		// Try to attach Route to all matching listeners
 
-		cond, attached := tryToAttachRouteToListeners(
+		cond, attached := tryToAttachL7RouteToListeners(
 			ref.Attachment,
 			attachableListeners,
 			route,
@@ -342,7 +586,7 @@ func bindRouteToListeners(
 // (1) If it succeeds in attaching at least one listener it will return true. The returned condition will be empty if
 // at least one of the listeners is valid. Otherwise, it will return the failure condition.
 // (2) If it fails to attach the route, it will return false and the failure condition.
-func tryToAttachRouteToListeners(
+func tryToAttachL7RouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	attachableListeners []*Listener,
 	route *L7Route,
@@ -360,7 +604,7 @@ func tryToAttachRouteToListeners(
 			return false, false
 		}
 
-		if !isRouteTypeAllowedByListener(l, route.RouteType) {
+		if !isRouteTypeAllowedByListener(l, convertRouteType(route.RouteType)) {
 			return false, false
 		}
 
@@ -368,10 +612,12 @@ func tryToAttachRouteToListeners(
 		if len(hostnames) == 0 {
 			return true, false
 		}
+
 		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
 		refStatus.ListenerPort = l.Source.Port
 
 		l.Routes[rk] = route
+
 		return true, true
 	}
 
@@ -538,9 +784,9 @@ func isRouteNamespaceAllowedByListener(
 }
 
 // isRouteKindAllowedByListener checks if the route is allowed to attach to the listener.
-func isRouteTypeAllowedByListener(listener *Listener, routeType RouteType) bool {
-	for _, kind := range listener.SupportedKinds {
-		if kind.Kind == convertRouteType(routeType) {
+func isRouteTypeAllowedByListener(listener *Listener, kind v1.Kind) bool {
+	for _, supportedKind := range listener.SupportedKinds {
+		if supportedKind.Kind == kind {
 			return true
 		}
 	}

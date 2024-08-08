@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -105,6 +106,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&ngfAPI.NginxProxyList{},
 				partialObjectMetadataList,
 				&gatewayv1alpha3.BackendTLSPolicyList{},
+				&gatewayv1alpha2.TLSRouteList{},
 				&gatewayv1.GRPCRouteList{},
 				&ngfAPI.ClientSettingsPolicyList{},
 				&ngfAPI.ObservabilityPolicyList{},

@@ -89,6 +89,8 @@ type Layer4VirtualServer struct {
 	UpstreamName string
 	// Port is the port of the server.
 	Port int32
+	// IsDefault refers to whether this server is created for the default listener hostname.
+	IsDefault bool
 }
 
 // Upstream is a pool of endpoints to be load balanced.

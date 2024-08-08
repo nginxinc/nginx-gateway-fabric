@@ -5,10 +5,10 @@ js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-        {{- if $.IPFamily.IPv4 }}
+        {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
     listen {{ $s.Listen }} ssl default_server;
         {{- end }}
-        {{- if $.IPFamily.IPv6 }}
+        {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
     listen [::]:{{ $s.Listen }} ssl default_server;
         {{- end }}
 
@@ -29,10 +29,10 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-          {{- if $.IPFamily.IPv4 }}
+          {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
     listen {{ $s.Listen }} ssl;
           {{- end }}
-          {{- if $.IPFamily.IPv6 }}
+          {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
     listen [::]:{{ $s.Listen }} ssl;
           {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};

@@ -9,6 +9,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 func TestExecuteStreamServers(t *testing.T) {
@@ -28,6 +29,26 @@ func TestExecuteStreamServers(t *testing.T) {
 				Hostname:     "cafe.example.com",
 				Port:         8080,
 				UpstreamName: "backend2",
+			},
+		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name: "backend2",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
 			},
 		},
 	}
@@ -69,9 +90,43 @@ func TestCreateStreamServers(t *testing.T) {
 				UpstreamName: "backend2",
 			},
 			{
-				Hostname:     "wrong.example.com",
+				Hostname:     "blank-upstream.example.com",
 				Port:         8081,
 				UpstreamName: "",
+			},
+			{
+				Hostname:     "dne-upstream.example.com",
+				Port:         8081,
+				UpstreamName: "dne",
+			},
+			{
+				Hostname:     "no-endpoints.example.com",
+				Port:         8081,
+				UpstreamName: "no-endpoints",
+			},
+		},
+		StreamUpstreams: []dataplane.Upstream{
+			{
+				Name: "backend1",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name: "backend2",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "1.1.1.1",
+						Port:    80,
+					},
+				},
+			},
+			{
+				Name:      "no-endpoints",
+				Endpoints: nil,
 			},
 		},
 	}
@@ -85,16 +140,19 @@ func TestCreateStreamServers(t *testing.T) {
 			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[0].Port, conf.TLSPassthroughServers[0].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[0].UpstreamName,
 			SSLPreread: false,
+			IsSocket:   true,
 		},
 		{
 			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[1].Port, conf.TLSPassthroughServers[1].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[1].UpstreamName,
 			SSLPreread: false,
+			IsSocket:   true,
 		},
 		{
 			Listen:     getSocketNameTLS(conf.TLSPassthroughServers[2].Port, conf.TLSPassthroughServers[2].Hostname),
 			ProxyPass:  conf.TLSPassthroughServers[2].UpstreamName,
 			SSLPreread: false,
+			IsSocket:   true,
 		},
 		{
 			Listen:     fmt.Sprint(8081),
@@ -108,6 +166,88 @@ func TestCreateStreamServers(t *testing.T) {
 		},
 	}
 	g.Expect(streamServers).To(ConsistOf(expectedStreamServers))
+}
+
+func TestExecuteStreamServersForIPFamily(t *testing.T) {
+	passThroughServers := []dataplane.Layer4VirtualServer{
+		{
+			UpstreamName: "backend1",
+			Hostname:     "cafe.example.com",
+			Port:         8443,
+		},
+	}
+	streamUpstreams := []dataplane.Upstream{
+		{
+			Name: "backend1",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "1.1.1.1",
+				},
+			},
+		},
+	}
+	tests := []struct {
+		msg                  string
+		expectedServerConfig map[string]int
+		config               dataplane.Configuration
+	}{
+		{
+			msg: "tls servers with IPv4 IP family",
+			config: dataplane.Configuration{
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv4,
+				},
+				TLSPassthroughServers: passThroughServers,
+				StreamUpstreams:       streamUpstreams,
+			},
+			expectedServerConfig: map[string]int{
+				"listen 8443;": 1,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;": 1,
+			},
+		},
+		{
+			msg: "tls servers with IPv6 IP family",
+			config: dataplane.Configuration{
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv6,
+				},
+				TLSPassthroughServers: passThroughServers,
+				StreamUpstreams:       streamUpstreams,
+			},
+			expectedServerConfig: map[string]int{
+				"listen [::]:8443;": 1,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;": 1,
+			},
+		},
+		{
+			msg: "tls servers with dual IP family",
+			config: dataplane.Configuration{
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+				},
+				TLSPassthroughServers: passThroughServers,
+				StreamUpstreams:       streamUpstreams,
+			},
+			expectedServerConfig: map[string]int{
+				"listen 8443;":      1,
+				"listen [::]:8443;": 1,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;": 1,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			results := executeStreamServers(test.config)
+			g.Expect(results).To(HaveLen(1))
+			serverConf := string(results[0].data)
+
+			for expSubStr, expCount := range test.expectedServerConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
+	}
 }
 
 func TestCreateStreamServersWithNone(t *testing.T) {

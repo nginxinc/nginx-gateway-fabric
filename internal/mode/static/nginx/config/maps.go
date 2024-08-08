@@ -11,12 +11,18 @@ import (
 
 var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText))
 
-// emptyStringSocket is used when the stream server has an invalid upstream. In this case, we pass the connection
-// to the empty socket so that NGINX will close the connection with an error in the error log --
-// no host in pass "" -- and set $status variable to 500 (logged by stream access log),
-// which will indicate the problem to the user.
-// https://nginx.org/en/docs/stream/ngx_stream_core_module.html#var_status
-const emptyStringSocket = `""`
+const (
+	// emptyStringSocket is used when the stream server has an invalid upstream. In this case, we pass the connection
+	// to the empty socket so that NGINX will close the connection with an error in the error log --
+	// no host in pass "" -- and set $status variable to 500 (logged by stream access log),
+	// which will indicate the problem to the user.
+	// https://nginx.org/en/docs/stream/ngx_stream_core_module.html#var_status
+	emptyStringSocket = `""`
+
+	// connectionClosedStreamServerSocket is used when we want to listen on a port but have no service configured,
+	// so we pass to this server that just returns an empty string to tell users that we are listening.
+	connectionClosedStreamServerSocket = "unix:/var/run/nginx/connection-closed-server.sock"
+)
 
 func executeMaps(conf dataplane.Configuration) []executeResult {
 	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
@@ -44,32 +50,43 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 		return nil
 	}
 	portsToMap := make(map[int32]shared.Map)
+	portHasDefault := make(map[int32]struct{})
+	upstreams := make(map[string]dataplane.Upstream)
+
+	for _, u := range conf.StreamUpstreams {
+		upstreams[u.Name] = u
+	}
 
 	for _, server := range conf.TLSPassthroughServers {
 		streamMap, portInUse := portsToMap[server.Port]
 
 		socket := emptyStringSocket
 
-		if server.UpstreamName != "" {
+		if u, ok := upstreams[server.UpstreamName]; ok && server.UpstreamName != "" && len(u.Endpoints) > 0 {
 			socket = getSocketNameTLS(server.Port, server.Hostname)
 		}
 
-		mapParam := shared.MapParameter{
-			Value:  server.Hostname,
-			Result: socket,
+		if server.IsDefault {
+			socket = connectionClosedStreamServerSocket
 		}
 
 		if !portInUse {
-			m := shared.Map{
-				Source:   "$ssl_preread_server_name",
-				Variable: getTLSPassthroughVarName(server.Port),
-				Parameters: []shared.MapParameter{
-					mapParam,
-				},
+			streamMap = shared.Map{
+				Source:       "$ssl_preread_server_name",
+				Variable:     getTLSPassthroughVarName(server.Port),
+				Parameters:   make([]shared.MapParameter, 0),
 				UseHostnames: true,
 			}
-			portsToMap[server.Port] = m
-		} else {
+			portsToMap[server.Port] = streamMap
+		}
+
+		// If the hostname is empty, we don't want to add an entry to the map. This case occurs when
+		// the gateway listener hostname is not specified
+		if server.Hostname != "" {
+			mapParam := shared.MapParameter{
+				Value:  server.Hostname,
+				Result: socket,
+			}
 			streamMap.Parameters = append(streamMap.Parameters, mapParam)
 			portsToMap[server.Port] = streamMap
 		}
@@ -82,6 +99,7 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 
 		if server.IsDefault {
 			hostname = "default"
+			portHasDefault[server.Port] = struct{}{}
 		}
 
 		if portInUse {
@@ -95,7 +113,13 @@ func createStreamMaps(conf dataplane.Configuration) []shared.Map {
 
 	maps := make([]shared.Map, 0, len(portsToMap))
 
-	for _, m := range portsToMap {
+	for p, m := range portsToMap {
+		if _, ok := portHasDefault[p]; !ok {
+			m.Parameters = append(m.Parameters, shared.MapParameter{
+				Value:  "default",
+				Result: connectionClosedStreamServerSocket,
+			})
+		}
 		maps = append(maps, m)
 	}
 

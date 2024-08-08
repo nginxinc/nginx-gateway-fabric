@@ -372,6 +372,10 @@ func TestCreateStreamUpstreams(t *testing.T) {
 					Address: "10.0.0.2",
 					Port:    80,
 				},
+				{
+					Address: "2001:db8::1",
+					IPv6:    true,
+				},
 			},
 		},
 		{
@@ -402,6 +406,9 @@ func TestCreateStreamUpstreams(t *testing.T) {
 				},
 				{
 					Address: "10.0.0.2:80",
+				},
+				{
+					Address: "[2001:db8::1]:0",
 				},
 			},
 		},

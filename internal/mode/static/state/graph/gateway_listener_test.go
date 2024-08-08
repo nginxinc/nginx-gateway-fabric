@@ -303,6 +303,10 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 			Group: helpers.GetPointer[v1.Group](v1.GroupName),
 		},
 	}
+	TLSRouteGroupKind := v1.RouteGroupKind{
+		Kind:  kinds.TLSRoute,
+		Group: helpers.GetPointer[v1.Group](v1.GroupName),
+	}
 	tests := []struct {
 		protocol  v1.ProtocolType
 		name      string
@@ -357,6 +361,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 				HTTPRouteGroupKind, GRPCRouteGroupKind,
 			},
 		},
+
 		{
 			protocol: v1.HTTPProtocolType,
 			kind: []v1.RouteGroupKind{
@@ -365,10 +370,48 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 					Kind:  "bad-kind",
 					Group: helpers.GetPointer[v1.Group](v1.GroupName),
 				},
+				TLSRouteGroupKind,
 			},
 			expectErr: true,
 			name:      "valid and invalid kinds",
 			expected:  []v1.RouteGroupKind{HTTPRouteGroupKind},
+		},
+		{
+			protocol: v1.TLSProtocolType,
+			kind: []v1.RouteGroupKind{
+				HTTPRouteGroupKind,
+				{
+					Kind:  "bad-kind",
+					Group: helpers.GetPointer[v1.Group](v1.GroupName),
+				},
+				TLSRouteGroupKind,
+				GRPCRouteGroupKind,
+			},
+			expectErr: true,
+			name:      "valid and invalid kinds for TLS protocol",
+			expected:  []v1.RouteGroupKind{TLSRouteGroupKind},
+		},
+		{
+			protocol: v1.TLSProtocolType,
+			kind: []v1.RouteGroupKind{
+				HTTPRouteGroupKind,
+				{
+					Kind:  "bad-kind",
+					Group: helpers.GetPointer[v1.Group](v1.GroupName),
+				},
+				GRPCRouteGroupKind,
+			},
+			expectErr: true,
+			name:      "invalid kinds for TLS protocol",
+			expected:  []v1.RouteGroupKind{},
+		},
+		{
+			protocol: v1.TLSProtocolType,
+			kind: []v1.RouteGroupKind{
+				TLSRouteGroupKind,
+			},
+			name:     "valid kinds for TLS protocol",
+			expected: []v1.RouteGroupKind{TLSRouteGroupKind},
 		},
 	}
 
@@ -468,6 +511,113 @@ func TestValidateListenerPort(t *testing.T) {
 		t.Run(fmt.Sprintf("invalid port %d", p), func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(validateListenerPort(p, protectedPorts)).ToNot(Succeed())
+		})
+	}
+}
+
+func TestListenerNamesHaveOverlap(t *testing.T) {
+	tests := []struct {
+		hostname1    *v1.Hostname
+		hostname2    *v1.Hostname
+		msg          string
+		expectResult bool
+	}{
+		{
+			hostname1:    (*v1.Hostname)(helpers.GetPointer("*.example.com")),
+			hostname2:    (*v1.Hostname)(helpers.GetPointer("*.example.com")),
+			expectResult: true,
+			msg:          "same hostnames with wildcard",
+		},
+		{
+			hostname1:    nil,
+			hostname2:    nil,
+			expectResult: true,
+			msg:          "two nil hostnames",
+		},
+		{
+			hostname1:    (*v1.Hostname)(helpers.GetPointer("cafe.example.com")),
+			hostname2:    (*v1.Hostname)(helpers.GetPointer("app.example.com")),
+			expectResult: false,
+			msg:          "two different hostnames no wildcard",
+		},
+		{
+			hostname1:    (*v1.Hostname)(helpers.GetPointer("cafe.example.com")),
+			hostname2:    nil,
+			expectResult: true,
+			msg:          "hostname1 is nil",
+		},
+		{
+			hostname1:    nil,
+			hostname2:    (*v1.Hostname)(helpers.GetPointer("cafe.example.com")),
+			expectResult: true,
+			msg:          "hostname2 is nil",
+		},
+		{
+			hostname1:    (*v1.Hostname)(helpers.GetPointer("*.example.com")),
+			hostname2:    (*v1.Hostname)(helpers.GetPointer("*.example.org")),
+			expectResult: false,
+			msg:          "wildcard hostnames that do not overlap",
+		},
+		{
+			hostname1:    (*v1.Hostname)(helpers.GetPointer("*.example.com")),
+			hostname2:    (*v1.Hostname)(helpers.GetPointer("cafe.example.com")),
+			expectResult: true,
+			msg:          "one wildcard hostname and one hostname that overlap",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(haveOverlap(test.hostname1, test.hostname2)).To(Equal(test.expectResult))
+		})
+	}
+}
+
+func TestValidateTLSFieldOnTLSListener(t *testing.T) {
+	tests := []struct {
+		listener     v1.Listener
+		msg          string
+		expectedCond []conditions.Condition
+		expectValid  bool
+	}{
+		{
+			listener: v1.Listener{},
+			expectedCond: staticConds.NewListenerUnsupportedValue(
+				"TLS: Required value: tls must be defined for TLS listener",
+			),
+			expectValid: false,
+			msg:         "TLS listener without tls field",
+		},
+		{
+			listener: v1.Listener{TLS: nil},
+			expectedCond: staticConds.NewListenerUnsupportedValue(
+				"TLS: Required value: tls must be defined for TLS listener",
+			),
+			expectValid: false,
+			msg:         "TLS listener with TLS field nil",
+		},
+		{
+			listener: v1.Listener{TLS: &v1.GatewayTLSConfig{Mode: helpers.GetPointer(v1.TLSModeTerminate)}},
+			expectedCond: staticConds.NewListenerUnsupportedValue(
+				"TLS.Mode: Required value: Mode must be passthrough for TLS listener",
+			),
+			expectValid: false,
+			msg:         "TLS listener with TLS mode terminate",
+		},
+		{
+			listener:    v1.Listener{TLS: &v1.GatewayTLSConfig{Mode: helpers.GetPointer(v1.TLSModePassthrough)}},
+			expectValid: true,
+			msg:         "TLS listener with TLS mode passthrough",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			cond, valid := validateTLSFieldOnTLSListener(test.listener)
+
+			g.Expect(cond).To(BeEquivalentTo(test.expectedCond))
+			g.Expect(valid).To(BeEquivalentTo(test.expectValid))
 		})
 	}
 }

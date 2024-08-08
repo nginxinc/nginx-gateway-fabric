@@ -75,6 +75,7 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make generate-static-deployment PLUS_ENABLED=${{ inputs.image == 'plus' && 'true' || 'false' }} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
@@ -146,6 +147,7 @@ jobs:
 
       - name: Run conformance tests
         run: |
+          if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make run-conformance-tests CONFORMANCE_TAG=${{ github.sha }} NGF_VERSION=${{ github.ref_name }} CLUSTER_NAME=${{ github.run_id }}
           core_result=$(cat conformance-profile.yaml | yq '.profiles[0].core.result')
           extended_result=$(cat conformance-profile.yaml | yq '.profiles[0].extended.result')
