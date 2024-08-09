@@ -129,8 +129,10 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+          {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
         - name: nginx-stream-conf
           mountPath: /etc/nginx/stream-conf.d
+          {{ end }}
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -168,8 +170,10 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+          {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
         - name: nginx-stream-conf
           mountPath: /etc/nginx/stream-conf.d
+          {{ end }}
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -204,8 +208,10 @@ spec:
       volumes:
       - name: nginx-conf
         emptyDir: {}
+        {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
       - name: nginx-stream-conf
         emptyDir: {}
+        {{ end }}
       - name: module-includes
         emptyDir: {}
       - name: nginx-secrets
