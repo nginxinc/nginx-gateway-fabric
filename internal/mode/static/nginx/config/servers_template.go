@@ -2,7 +2,7 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
-{{- range $s := .Servers -}}
+{{ range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
         {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
@@ -52,9 +52,13 @@ server {
 
     server_name {{ $s.ServerName }};
 
+        {{- if $.Plus }}
+    status_zone {{ $s.ServerName }};
+        {{- end }}
+
         {{- range $i := $s.Includes }}
     include {{ $i.Name }};
-        {{ end -}}
+        {{- end }}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
@@ -85,6 +89,7 @@ server {
         include /etc/nginx/grpc-error-pages.conf;
         {{- end }}
 
+        proxy_http_version 1.1;
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}
         {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
@@ -100,7 +105,6 @@ server {
             {{ range $h := $l.ResponseHeaders.Remove }}
         proxy_hide_header {{ $h }};
             {{- end }}
-        proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
         {{ $proxyOrGRPC }}_ssl_server_name on;
         {{ $proxyOrGRPC }}_ssl_verify on;
