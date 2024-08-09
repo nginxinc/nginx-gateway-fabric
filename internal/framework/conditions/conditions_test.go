@@ -8,6 +8,7 @@ import (
 )
 
 func TestDeduplicateConditions(t *testing.T) {
+	t.Parallel()
 	conds := []Condition{
 		{
 			Type:    "Type1",
@@ -61,6 +62,7 @@ func TestDeduplicateConditions(t *testing.T) {
 }
 
 func TestConvertConditions(t *testing.T) {
+	t.Parallel()
 	conds := []Condition{
 		{
 			Type:    "Type1",
