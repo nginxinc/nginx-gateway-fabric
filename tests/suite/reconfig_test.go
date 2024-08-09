@@ -25,10 +25,13 @@ import (
 
 // Cluster node size must be greater than or equal to 4 for test to perform correctly.
 var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
-	// used for cleaning up resources
-	const maxResourceCount = 150
-	const metricExistTimeout = 2 * time.Minute
-	const metricExistPolling = 1 * time.Second
+	const (
+		// used for cleaning up resources
+		maxResourceCount = 150
+
+		metricExistTimeout = 2 * time.Minute
+		metricExistPolling = 1 * time.Second
+	)
 
 	var (
 		scrapeInterval        = 15 * time.Second
@@ -101,7 +104,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		return nil
 	}
 
-	createResourcesGWLast := func(resourceCount int) error {
+	createResourcesGWLast := func(resourceCount int) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
 		defer cancel()
 
@@ -136,11 +139,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		}
 
 		Expect(resourceManager.ApplyFromFiles([]string{"reconfig/gateway.yaml"}, reconfigNamespace.Name)).To(Succeed())
-
-		return nil
 	}
 
-	createResourcesRoutesLast := func(resourceCount int) error {
+	createResourcesRoutesLast := func(resourceCount int) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
 		defer cancel()
 
@@ -174,8 +175,6 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 			reconfigNamespace.Name)).To(Succeed())
 
 		Expect(createUniqueResources(resourceCount, "manifests/reconfig/cafe-routes.yaml")).To(Succeed())
-
-		return nil
 	}
 
 	checkResourceCreation := func(resourceCount int) error {
@@ -453,9 +452,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
-			test := createResourcesGWLast(resourceCount)
 
-			Expect(test).To(Succeed())
+			createResourcesGWLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
@@ -472,9 +470,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 150 resources", func() {
 			resourceCount := 150
 			timeToReadyStartingLogSubstring := "Starting NGINX Gateway Fabric"
-			test := createResourcesGWLast(resourceCount)
 
-			Expect(test).To(Succeed())
+			createResourcesGWLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
@@ -495,11 +492,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
-			test := createResourcesRoutesLast(resourceCount)
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			Expect(test).To(Succeed())
+			createResourcesRoutesLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			collectMetrics(
@@ -514,11 +510,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 150 resources", func() {
 			resourceCount := 150
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"httproute\""
-			test := createResourcesRoutesLast(resourceCount)
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			Expect(test).To(Succeed())
+			createResourcesRoutesLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			collectMetrics(
@@ -537,11 +532,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 30 resources", func() {
 			resourceCount := 30
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
-			test := createResourcesGWLast(resourceCount)
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			Expect(test).To(Succeed())
+			createResourcesGWLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			collectMetrics(
@@ -556,11 +550,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		It("gathers metrics after creating 150 resources", func() {
 			resourceCount := 150
 			timeToReadyStartingLogSubstring := "Reconciling the resource\",\"controller\":\"gateway\""
-			test := createResourcesGWLast(resourceCount)
 
 			ngfPodName, startTime := deployNGFReturnsNGFPodNameAndStartTime()
 
-			Expect(test).To(Succeed())
+			createResourcesGWLast(resourceCount)
 			Expect(checkResourceCreation(resourceCount)).To(Succeed())
 
 			collectMetrics(
