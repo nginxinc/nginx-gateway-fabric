@@ -8,6 +8,7 @@ import (
 )
 
 func TestValidateGatewayControllerName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		value  string
@@ -51,7 +52,9 @@ func TestValidateGatewayControllerName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateGatewayControllerName(test.value)
@@ -66,6 +69,7 @@ func TestValidateGatewayControllerName(t *testing.T) {
 }
 
 func TestValidateResourceName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		value  string
@@ -114,7 +118,9 @@ func TestValidateResourceName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateResourceName(test.value)
@@ -129,6 +135,7 @@ func TestValidateResourceName(t *testing.T) {
 }
 
 func TestValidateNamespaceName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		value  string
@@ -177,7 +184,9 @@ func TestValidateNamespaceName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateNamespaceName(test.value)
@@ -192,6 +201,7 @@ func TestValidateNamespaceName(t *testing.T) {
 }
 
 func TestParseNamespacedResourceName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		value             string
@@ -239,7 +249,9 @@ func TestParseNamespacedResourceName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			nsName, err := parseNamespacedResourceName(test.value)
@@ -256,6 +268,7 @@ func TestParseNamespacedResourceName(t *testing.T) {
 }
 
 func TestValidateQualifiedName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		value  string
@@ -304,7 +317,9 @@ func TestValidateQualifiedName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateQualifiedName(test.value)
@@ -318,6 +333,7 @@ func TestValidateQualifiedName(t *testing.T) {
 }
 
 func TestValidateURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		url    string
@@ -366,7 +382,9 @@ func TestValidateURL(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateURL(tc.url)
@@ -380,6 +398,7 @@ func TestValidateURL(t *testing.T) {
 }
 
 func TestValidateIP(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		expSubMsg string
@@ -406,7 +425,9 @@ func TestValidateIP(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateIP(tc.ip)
@@ -420,6 +441,7 @@ func TestValidateIP(t *testing.T) {
 }
 
 func TestValidateEndpoint(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		endp   string
@@ -473,7 +495,9 @@ func TestValidateEndpoint(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateEndpoint(tc.endp)
@@ -487,6 +511,7 @@ func TestValidateEndpoint(t *testing.T) {
 }
 
 func TestValidatePort(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		port   int
@@ -510,7 +535,9 @@ func TestValidatePort(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validatePort(tc.port)
@@ -524,6 +551,7 @@ func TestValidatePort(t *testing.T) {
 }
 
 func TestEnsureNoPortCollisions(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	g.Expect(ensureNoPortCollisions(9113, 8081)).To(Succeed())
