@@ -231,11 +231,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	calculateTimeDifferenceBetweenLogLines := func(firstLine, secondLine string) (int, error) {
+		layout := time.RFC3339
+
 		firstTS := getTimeStampFromLogLine(firstLine)
 		secondTS := getTimeStampFromLogLine(secondLine)
-
-		// i might be able to just use the local constant timestamp layout
-		layout := "2006-01-02T15:04:05Z"
 
 		parsedTS1, err := time.Parse(layout, firstTS)
 		if err != nil {
