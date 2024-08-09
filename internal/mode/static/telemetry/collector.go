@@ -62,6 +62,8 @@ type NGFResourceCounts struct {
 	GatewayClassCount int64
 	// HTTPRouteCount is the number of relevant HTTPRoutes.
 	HTTPRouteCount int64
+	// TLSRouteCount is the number of relevant TLSRoutes.
+	TLSRouteCount int64
 	// SecretCount is the number of relevant Secrets.
 	SecretCount int64
 	// ServiceCount is the number of relevant Services.
@@ -188,7 +190,11 @@ func collectGraphResourceCount(
 		ngfResourceCounts.GatewayCount++
 	}
 
-	ngfResourceCounts.HTTPRouteCount, ngfResourceCounts.GRPCRouteCount = computeRouteCount(g.Routes)
+	routeCounts := computeRouteCount(g.Routes, g.L4Routes)
+	ngfResourceCounts.HTTPRouteCount = routeCounts.HTTPRouteCount
+	ngfResourceCounts.GRPCRouteCount = routeCounts.GRPCRouteCount
+	ngfResourceCounts.TLSRouteCount = routeCounts.TLSRouteCount
+
 	ngfResourceCounts.SecretCount = int64(len(g.ReferencedSecrets))
 	ngfResourceCounts.ServiceCount = int64(len(g.ReferencedServices))
 
@@ -224,7 +230,19 @@ func collectGraphResourceCount(
 	return ngfResourceCounts, nil
 }
 
-func computeRouteCount(routes map[graph.RouteKey]*graph.L7Route) (httpRouteCount, grpcRouteCount int64) {
+type RouteCounts struct {
+	HTTPRouteCount int64
+	GRPCRouteCount int64
+	TLSRouteCount  int64
+}
+
+func computeRouteCount(
+	routes map[graph.RouteKey]*graph.L7Route,
+	l4routes map[graph.L4RouteKey]*graph.L4Route,
+) RouteCounts {
+	httpRouteCount := int64(0)
+	grpcRouteCount := int64(0)
+
 	for _, r := range routes {
 		if r.RouteType == graph.RouteTypeHTTP {
 			httpRouteCount = httpRouteCount + 1
@@ -233,7 +251,12 @@ func computeRouteCount(routes map[graph.RouteKey]*graph.L7Route) (httpRouteCount
 			grpcRouteCount = grpcRouteCount + 1
 		}
 	}
-	return httpRouteCount, grpcRouteCount
+
+	return RouteCounts{
+		HTTPRouteCount: httpRouteCount,
+		GRPCRouteCount: grpcRouteCount,
+		TLSRouteCount:  int64(len(l4routes)),
+	}
 }
 
 func getPodReplicaSet(
