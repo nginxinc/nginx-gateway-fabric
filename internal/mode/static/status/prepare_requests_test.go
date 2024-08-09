@@ -211,6 +211,7 @@ var (
 )
 
 func TestBuildHTTPRouteStatuses(t *testing.T) {
+	t.Parallel()
 	hrValid := &v1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -283,6 +284,7 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 }
 
 func TestBuildGRPCRouteStatuses(t *testing.T) {
+	t.Parallel()
 	grValid := &v1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -355,6 +357,7 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 }
 
 func TestBuildRouteStatusesNginxErr(t *testing.T) {
+	t.Parallel()
 	const gatewayCtlrName = "controller"
 
 	hr1 := &v1.HTTPRoute{
@@ -455,6 +458,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 }
 
 func TestBuildGatewayClassStatuses(t *testing.T) {
+	t.Parallel()
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
 
 	tests := []struct {
@@ -546,7 +550,9 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClient := createK8sClientFor(&v1.GatewayClass{})
@@ -585,6 +591,7 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 }
 
 func TestBuildGatewayStatuses(t *testing.T) {
+	t.Parallel()
 	createGateway := func() *v1.Gateway {
 		return &v1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1039,7 +1046,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClient := createK8sClientFor(&v1.Gateway{})
@@ -1085,6 +1094,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 }
 
 func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
+	t.Parallel()
 	const gatewayCtlrName = "controller"
 
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
@@ -1265,7 +1275,9 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClient := createK8sClientFor(&v1alpha3.BackendTLSPolicy{})
@@ -1295,6 +1307,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 }
 
 func TestBuildNginxGatewayStatus(t *testing.T) {
+	t.Parallel()
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
 
 	tests := []struct {
@@ -1357,7 +1370,9 @@ func TestBuildNginxGatewayStatus(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClient := createK8sClientFor(&ngfAPI.NginxGateway{})
@@ -1388,6 +1403,7 @@ func TestBuildNginxGatewayStatus(t *testing.T) {
 }
 
 func TestBuildNGFPolicyStatuses(t *testing.T) {
+	t.Parallel()
 	const gatewayCtlrName = "controller"
 
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
@@ -1649,7 +1665,9 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			k8sClient := createK8sClientFor(&ngfAPI.ClientSettingsPolicy{})

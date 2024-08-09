@@ -15,6 +15,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	ratio := helpers.GetPointer[int32](25)
 	zeroRatio := helpers.GetPointer[int32](0)
 	context := helpers.GetPointer[ngfAPI.TraceContext](ngfAPI.TraceContextExtract)
@@ -241,7 +242,9 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			generator := observability.NewGenerator(test.telemetryConf)

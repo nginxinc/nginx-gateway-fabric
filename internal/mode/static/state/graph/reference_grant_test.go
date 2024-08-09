@@ -12,6 +12,7 @@ import (
 )
 
 func TestReferenceGrantResolver(t *testing.T) {
+	t.Parallel()
 	gwNs := "gw-ns"
 	secretNsName := types.NamespacedName{Namespace: "test", Name: "certificate"}
 
@@ -160,7 +161,9 @@ func TestReferenceGrantResolver(t *testing.T) {
 	resolver := newReferenceGrantResolver(refGrants)
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(resolver.refAllowed(test.to, test.from)).To(Equal(test.allowed))
@@ -169,6 +172,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 }
 
 func TestToSecret(t *testing.T) {
+	t.Parallel()
 	ref := toSecret(types.NamespacedName{Namespace: "ns", Name: "secret"})
 
 	exp := toResource{
@@ -182,6 +186,7 @@ func TestToSecret(t *testing.T) {
 }
 
 func TestToService(t *testing.T) {
+	t.Parallel()
 	ref := toService(types.NamespacedName{Namespace: "ns", Name: "service"})
 
 	exp := toResource{
@@ -195,6 +200,7 @@ func TestToService(t *testing.T) {
 }
 
 func TestFromGateway(t *testing.T) {
+	t.Parallel()
 	ref := fromGateway("ns")
 
 	exp := fromResource{
@@ -208,6 +214,7 @@ func TestFromGateway(t *testing.T) {
 }
 
 func TestFromHTTPRoute(t *testing.T) {
+	t.Parallel()
 	ref := fromHTTPRoute("ns")
 
 	exp := fromResource{

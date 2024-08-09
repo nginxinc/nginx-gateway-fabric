@@ -30,6 +30,7 @@ func getTestHTTPClient() *http.Client {
 }
 
 func TestVerifyClient(t *testing.T) {
+	t.Parallel()
 	c := verifyClient{
 		client:  getTestHTTPClient(),
 		timeout: 25 * time.Millisecond,
@@ -86,7 +87,9 @@ func TestVerifyClient(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := c.waitForCorrectVersion(test.ctx, test.expectedVersion, "/childfile", []byte("1 2 3"), test.readFile)
@@ -101,6 +104,7 @@ func TestVerifyClient(t *testing.T) {
 }
 
 func TestEnsureNewNginxWorkers(t *testing.T) {
+	t.Parallel()
 	previousContents := []byte("1 2 3")
 	newContents := []byte("4 5 6")
 
@@ -162,7 +166,9 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := ensureNewNginxWorkers(

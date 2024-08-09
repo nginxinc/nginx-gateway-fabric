@@ -37,6 +37,7 @@ func getModifiedRef(mod func(ref gatewayv1.BackendRef) gatewayv1.BackendRef) gat
 }
 
 func TestValidateRouteBackendRef(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		expectedCondition conditions.Condition
 		name              string
@@ -84,7 +85,9 @@ func TestValidateRouteBackendRef(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
 
@@ -97,6 +100,7 @@ func TestValidateRouteBackendRef(t *testing.T) {
 }
 
 func TestValidateBackendRef(t *testing.T) {
+	t.Parallel()
 	alwaysFalseRefGrantResolver := func(_ toResource) bool { return false }
 	alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
 
@@ -203,7 +207,9 @@ func TestValidateBackendRef(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			valid, cond := validateBackendRef(test.ref, "test", test.refGrantResolver, field.NewPath("test"))
@@ -215,6 +221,7 @@ func TestValidateBackendRef(t *testing.T) {
 }
 
 func TestValidateWeight(t *testing.T) {
+	t.Parallel()
 	validWeights := []int32{0, 1, 1000000}
 	invalidWeights := []int32{-1, 1000001}
 
@@ -231,6 +238,7 @@ func TestValidateWeight(t *testing.T) {
 }
 
 func TestGetIPFamilyAndPortFromRef(t *testing.T) {
+	t.Parallel()
 	svc1 := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service1",
@@ -300,7 +308,9 @@ func TestGetIPFamilyAndPortFromRef(t *testing.T) {
 	refPath := field.NewPath("test")
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			svcIPFamily, servicePort, err := getIPFamilyAndPortFromRef(test.ref, test.svcNsName, services, refPath)
@@ -389,6 +399,7 @@ func TestVerifyIPFamily(t *testing.T) {
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
+	// t.Parallel()
 	sectionNameRefs := []ParentRef{
 		{
 			Idx:     0,
@@ -731,7 +742,9 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		// test := test
 		t.Run(test.name, func(t *testing.T) {
+			// t.Parallel()
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 			addBackendRefsToRules(test.route, resolver, services, test.policies, nil)
@@ -748,6 +761,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 }
 
 func TestCreateBackend(t *testing.T) {
+	t.Parallel()
 	createService := func(name string) *v1.Service {
 		return &v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1006,7 +1020,9 @@ func TestCreateBackend(t *testing.T) {
 	refPath := field.NewPath("test")
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
@@ -1035,6 +1051,7 @@ func TestCreateBackend(t *testing.T) {
 }
 
 func TestGetServicePort(t *testing.T) {
+	t.Parallel()
 	svc := &v1.Service{
 		Spec: v1.ServiceSpec{
 			Ports: []v1.ServicePort{
@@ -1065,6 +1082,7 @@ func TestGetServicePort(t *testing.T) {
 }
 
 func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
+	t.Parallel()
 	getBtp := func(name, caCertName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
 			Source: &v1alpha3.BackendTLSPolicy{
@@ -1155,7 +1173,9 @@ func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			cond := validateBackendTLSPolicyMatchingAllBackends(test.backendRefs)
@@ -1166,6 +1186,7 @@ func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
 }
 
 func TestFindBackendTLSPolicyForService(t *testing.T) {
+	t.Parallel()
 	oldCreationTimestamp := metav1.Now()
 	newCreationTimestamp := metav1.Now()
 	getBtp := func(name string, timestamp metav1.Time) *BackendTLSPolicy {
@@ -1230,7 +1251,9 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref.Namespace, string(ref.Name), "test")

@@ -17,6 +17,7 @@ import (
 )
 
 func TestExecuteServers(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		HTTPServers: []dataplane.VirtualServer{
 			{
@@ -253,6 +254,7 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 }
 
 func TestExecuteForDefaultServers(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg       string
 		httpPorts []int
@@ -320,7 +322,9 @@ func TestExecuteForDefaultServers(t *testing.T) {
 	httpDefaultFmt := "listen %d default_server"
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			serverResults := executeServers(tc.conf, &policiesfakes.FakeGenerator{})
@@ -341,6 +345,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 }
 
 func TestCreateServers(t *testing.T) {
+	t.Parallel()
 	const (
 		sslKeyPairID = "test-keypair"
 	)
@@ -1254,6 +1259,7 @@ func modifyMatchPairs(matchPairs httpMatchPairs) httpMatchPairs {
 }
 
 func TestCreateServersConflicts(t *testing.T) {
+	t.Parallel()
 	fooGroup := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
 		RuleIdx: 0,
@@ -1426,7 +1432,9 @@ func TestCreateServersConflicts(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			httpServers := []dataplane.VirtualServer{
 				{
 					IsDefault: true,
@@ -1459,6 +1467,7 @@ func TestCreateServersConflicts(t *testing.T) {
 }
 
 func TestCreateLocationsRootPath(t *testing.T) {
+	t.Parallel()
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
 	fooGroup := dataplane.BackendGroup{
@@ -1624,7 +1633,9 @@ func TestCreateLocationsRootPath(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			locs, httpMatchPair, grpc := createLocations(&dataplane.VirtualServer{
@@ -1639,6 +1650,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 }
 
 func TestCreateReturnValForRedirectFilter(t *testing.T) {
+	t.Parallel()
 	const listenerPortCustom = 123
 	const listenerPortHTTP = 80
 	const listenerPortHTTPS = 443
@@ -1760,7 +1772,9 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
@@ -1770,6 +1784,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 }
 
 func TestCreateRewritesValForRewriteFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filter   *dataplane.HTTPURLRewriteFilter
 		expected *rewriteConfig
@@ -1886,7 +1901,9 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := createRewritesValForRewriteFilter(test.filter, test.path)
@@ -1896,6 +1913,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 }
 
 func TestCreateRouteMatch(t *testing.T) {
+	t.Parallel()
 	testPath := "/internal_loc"
 
 	testMethodMatch := helpers.GetPointer("PUT")
@@ -2045,7 +2063,9 @@ func TestCreateRouteMatch(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := createRouteMatch(tc.match, testPath)
@@ -2055,6 +2075,7 @@ func TestCreateRouteMatch(t *testing.T) {
 }
 
 func TestCreateQueryParamKeyValString(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	expected := "key=value"
@@ -2081,6 +2102,7 @@ func TestCreateQueryParamKeyValString(t *testing.T) {
 }
 
 func TestCreateHeaderKeyValString(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	expected := "kEy:vALUe"
@@ -2096,6 +2118,7 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 }
 
 func TestIsPathOnlyMatch(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		msg      string
 		match    dataplane.Match
@@ -2140,7 +2163,9 @@ func TestIsPathOnlyMatch(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := isPathOnlyMatch(tc.match)
@@ -2150,6 +2175,7 @@ func TestIsPathOnlyMatch(t *testing.T) {
 }
 
 func TestCreateProxyPass(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	tests := []struct {
@@ -2225,6 +2251,7 @@ func TestCreateProxyPass(t *testing.T) {
 }
 
 func TestCreateMatchLocation(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	expectedNoGRPC := http.Location{
@@ -2248,6 +2275,7 @@ func TestCreateMatchLocation(t *testing.T) {
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filters         *dataplane.HTTPFilters
 		msg             string
@@ -2392,7 +2420,9 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			headers := generateProxySetHeaders(tc.filters, tc.GRPC)
@@ -2402,7 +2432,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 }
 
 func TestConvertBackendTLSFromGroup(t *testing.T) {
-	g := NewWithT(t)
+	t.Parallel()
 
 	tests := []struct {
 		expected *http.ProxySSLVerify
@@ -2483,7 +2513,10 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.msg, func(_ *testing.T) {
+		tc := tc
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 			result := createProxyTLSFromBackends(tc.grp)
 			g.Expect(result).To(Equal(tc.expected))
 		})
@@ -2491,6 +2524,7 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 }
 
 func TestGenerateResponseHeaders(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filters         *dataplane.HTTPFilters
 		msg             string
@@ -2549,7 +2583,9 @@ func TestGenerateResponseHeaders(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			headers := generateResponseHeaders(tc.filters)
@@ -2559,6 +2595,7 @@ func TestGenerateResponseHeaders(t *testing.T) {
 }
 
 func TestCreateIncludesFromPolicyGenerateResult(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		files    []policies.File
@@ -2603,7 +2640,9 @@ func TestCreateIncludesFromPolicyGenerateResult(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			includes := createIncludesFromPolicyGenerateResult(test.files)
@@ -2613,6 +2652,7 @@ func TestCreateIncludesFromPolicyGenerateResult(t *testing.T) {
 }
 
 func TestCreateIncludeFileResults(t *testing.T) {
+	t.Parallel()
 	servers := []http.Server{
 		{
 			Includes: []http.Include{
@@ -2703,6 +2743,7 @@ func TestCreateIncludeFileResults(t *testing.T) {
 }
 
 func TestGetIPFamily(t *testing.T) {
+	t.Parallel()
 	test := []struct {
 		msg            string
 		baseHTTPConfig dataplane.BaseHTTPConfig
@@ -2726,7 +2767,9 @@ func TestGetIPFamily(t *testing.T) {
 	}
 
 	for _, tc := range test {
+		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := getIPFamily(tc.baseHTTPConfig)
 			g.Expect(result).To(Equal(tc.expected))

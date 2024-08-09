@@ -11,6 +11,7 @@ import (
 )
 
 func TestExecuteMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
@@ -99,6 +100,7 @@ func TestExecuteMaps(t *testing.T) {
 }
 
 func TestBuildAddHeaderMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{

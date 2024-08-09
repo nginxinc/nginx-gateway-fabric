@@ -16,6 +16,7 @@ import (
 )
 
 func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
+	t.Parallel()
 	backendTLSPolicies := map[types.NamespacedName]*v1alpha3.BackendTLSPolicy{
 		{Namespace: "test", Name: "tls-policy"}: {
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,7 +71,9 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			processed := processBackendTLSPolicies(test.backendTLSPolicies, nil, "test", test.gateway)
@@ -81,6 +84,7 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 }
 
 func TestValidateBackendTLSPolicy(t *testing.T) {
+	// t.Parallel()
 	targetRefNormalCase := []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
 		{
 			LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
@@ -394,7 +398,9 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 	configMapResolver := newConfigMapResolver(configMaps)
 
 	for _, test := range tests {
+		// test := test
 		t.Run(test.name, func(t *testing.T) {
+			// t.Parallel()
 			g := NewWithT(t)
 
 			valid, ignored, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test")

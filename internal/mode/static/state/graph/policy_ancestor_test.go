@@ -11,6 +11,7 @@ import (
 )
 
 func TestBackendTLSPolicyAncestorsFull(t *testing.T) {
+	t.Parallel()
 	createCurStatus := func(numAncestors int, ctlrName string) []v1alpha2.PolicyAncestorStatus {
 		statuses := make([]v1alpha2.PolicyAncestorStatus, 0, numAncestors)
 
@@ -46,7 +47,9 @@ func TestBackendTLSPolicyAncestorsFull(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			full := backendTLSPolicyAncestorsFull(test.curStatus, "nginx-gateway")
@@ -56,6 +59,7 @@ func TestBackendTLSPolicyAncestorsFull(t *testing.T) {
 }
 
 func TestNGFPolicyAncestorsFull(t *testing.T) {
+	t.Parallel()
 	type ancestorConfig struct {
 		numCurrNGFAncestors    int
 		numCurrNonNGFAncestors int
@@ -156,7 +160,9 @@ func TestNGFPolicyAncestorsFull(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			policy := createPolicy(test.cfg)

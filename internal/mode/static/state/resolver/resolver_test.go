@@ -104,6 +104,7 @@ var (
 )
 
 func TestFilterEndpointSliceList(t *testing.T) {
+	t.Parallel()
 	test := []struct {
 		msg                string
 		sliceList          discoveryV1.EndpointSliceList
@@ -169,6 +170,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 }
 
 func TestGetDefaultPort(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg     string
 		svcPort v1.ServicePort
@@ -206,6 +208,7 @@ func TestGetDefaultPort(t *testing.T) {
 }
 
 func TestIgnoreEndpointSlice(t *testing.T) {
+	t.Parallel()
 	var (
 		port4000 int32 = 4000
 		port8080 int32 = 8080
@@ -314,6 +317,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 }
 
 func TestEndpointReady(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		endpoint discoveryV1.Endpoint
 		msg      string
@@ -354,6 +358,7 @@ func TestEndpointReady(t *testing.T) {
 }
 
 func TestFindPort(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg     string
 		ports   []discoveryV1.EndpointPort
@@ -486,6 +491,7 @@ func TestFindPort(t *testing.T) {
 }
 
 func TestCalculateReadyEndpoints(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	slices := []discoveryV1.EndpointSlice{

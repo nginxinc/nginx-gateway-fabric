@@ -10,6 +10,7 @@ import (
 )
 
 func TestCronJob(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	readyChannel := make(chan struct{})
@@ -50,6 +51,7 @@ func TestCronJob(t *testing.T) {
 }
 
 func TestCronJob_ContextCanceled(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	readyChannel := make(chan struct{})

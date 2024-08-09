@@ -10,6 +10,7 @@ import (
 )
 
 func TestExecuteBaseHttp(t *testing.T) {
+	t.Parallel()
 	confOn := dataplane.Configuration{
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
 			HTTP2: true,

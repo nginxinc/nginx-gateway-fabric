@@ -10,6 +10,7 @@ import (
 )
 
 func TestLoggingExporter(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	var buffer bytes.Buffer
