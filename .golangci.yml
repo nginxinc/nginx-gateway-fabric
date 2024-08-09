@@ -88,6 +88,7 @@ linters:
     - stylecheck
     - tenv
     - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam
