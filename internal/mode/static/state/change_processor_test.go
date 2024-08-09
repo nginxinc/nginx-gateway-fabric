@@ -199,6 +199,7 @@ func createScheme() *runtime.Scheme {
 
 	utilruntime.Must(v1.Install(scheme))
 	utilruntime.Must(v1beta1.Install(scheme))
+	utilruntime.Must(v1alpha2.Install(scheme))
 	utilruntime.Must(v1alpha3.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
@@ -528,6 +529,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:      true,
 								Attachable: true,
 								Routes:     map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+								L4Routes:   map[graph.L4RouteKey]*graph.L4Route{},
 								SupportedKinds: []v1.RouteGroupKind{
 									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 									{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
@@ -539,6 +541,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								Attachable:     true,
 								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+								L4Routes:       map[graph.L4RouteKey]*graph.L4Route{},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
 								SupportedKinds: []v1.RouteGroupKind{
 									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
@@ -549,6 +552,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Valid: true,
 					},
 					IgnoredGateways:   map[types.NamespacedName]*v1.Gateway{},
+					L4Routes:          map[graph.L4RouteKey]*graph.L4Route{},
 					Routes:            map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
 					ReferencedServices: map[types.NamespacedName]struct{}{

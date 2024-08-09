@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -1220,7 +1221,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			bindRouteToListeners(
+			bindL7RouteToListeners(
 				test.route,
 				test.gateway,
 				namespaces,
@@ -1788,7 +1789,692 @@ func TestAllowedRouteType(t *testing.T) {
 	for _, test := range test {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(isRouteTypeAllowedByListener(test.listener, test.routeType)).To(Equal(test.expResult))
+			g.Expect(isRouteTypeAllowedByListener(test.listener, convertRouteType(test.routeType))).To(Equal(test.expResult))
 		})
 	}
+}
+
+func TestBindL4RouteToListeners(t *testing.T) {
+	// we create a new listener each time because the function under test can modify it
+	createListener := func(name string) *Listener {
+		return &Listener{
+			Name: name,
+			Source: gatewayv1.Listener{
+				Name:     gatewayv1.SectionName(name),
+				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
+				Protocol: gatewayv1.TLSProtocolType,
+				TLS: helpers.GetPointer(gatewayv1.GatewayTLSConfig{
+					Mode: helpers.GetPointer(gatewayv1.TLSModeTerminate),
+				}),
+			},
+			SupportedKinds: []gatewayv1.RouteGroupKind{
+				{Kind: kinds.TLSRoute, Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+			},
+			Valid:      true,
+			Attachable: true,
+			Routes:     map[RouteKey]*L7Route{},
+			L4Routes:   map[L4RouteKey]*L4Route{},
+		}
+	}
+	createModifiedListener := func(name string, m func(*Listener)) *Listener {
+		l := createListener(name)
+		m(l)
+		return l
+	}
+
+	gw := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gateway",
+		},
+	}
+
+	gwWrongNamespace := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "wrong",
+			Name:      "gateway",
+		},
+	}
+
+	createTLSRouteWithSectionNameAndPort := func(
+		sectionName *gatewayv1.SectionName,
+		port *gatewayv1.PortNumber,
+		ns string,
+	) *v1alpha2.TLSRoute {
+		return &v1alpha2.TLSRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      "hr",
+			},
+			Spec: v1alpha2.TLSRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
+						{
+							Name:        gatewayv1.ObjectName(gw.Name),
+							SectionName: sectionName,
+							Port:        port,
+						},
+					},
+				},
+				Hostnames: []gatewayv1.Hostname{
+					"foo.example.com",
+				},
+			},
+		}
+	}
+
+	tr := createTLSRouteWithSectionNameAndPort(helpers.GetPointer[gatewayv1.SectionName]("listener-443"), nil, "test")
+
+	var normalRoute *L4Route
+	createNormalRoute := func(gateway *gatewayv1.Gateway) *L4Route {
+		normalRoute = &L4Route{
+			Source: tr,
+			Spec: L4RouteSpec{
+				Hostnames: tr.Spec.Hostnames,
+			},
+			Valid:      true,
+			Attachable: true,
+			ParentRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gateway),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+				},
+			},
+		}
+		return normalRoute
+	}
+
+	makeModifiedRoute := func(gateway *gatewayv1.Gateway, m func(r *L4Route)) *L4Route {
+		normalRoute = createNormalRoute(gateway)
+		m(normalRoute)
+		return normalRoute
+	}
+	getLastNormalRoute := func() *L4Route {
+		return normalRoute
+	}
+
+	noMatchingParentAttachment := ParentRefAttachmentStatus{
+		AcceptedHostnames: map[string][]string{},
+		FailedCondition:   staticConds.NewRouteNoMatchingParent(),
+	}
+
+	notAttachableRoute := &L4Route{
+		Source: tr,
+		Spec: L4RouteSpec{
+			Hostnames: tr.Spec.Hostnames,
+		},
+		Valid: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: tr.Spec.ParentRefs[0].SectionName,
+			},
+		},
+	}
+	notAttachableRoutePort := &L4Route{
+		Source: tr,
+		Spec: L4RouteSpec{
+			Hostnames: tr.Spec.Hostnames,
+		},
+		Valid: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: tr.Spec.ParentRefs[0].SectionName,
+				Port:        helpers.GetPointer[gatewayv1.PortNumber](80),
+			},
+		},
+		Attachable: true,
+	}
+	routeReferencesWrongNamespace := &L4Route{
+		Source: tr,
+		Spec: L4RouteSpec{
+			Hostnames: tr.Spec.Hostnames,
+		},
+		Valid: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gwWrongNamespace),
+				SectionName: tr.Spec.ParentRefs[0].SectionName,
+			},
+		},
+		Attachable: true,
+	}
+
+	tests := []struct {
+		route                    *L4Route
+		gateway                  *Gateway
+		expectedGatewayListeners []*Listener
+		name                     string
+		expectedSectionNameRefs  []ParentRef
+		expectedConditions       []conditions.Condition
+	}{
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-443": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.L4Routes = map[L4RouteKey]*L4Route{
+						CreateRouteKeyL4(tr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "normal case",
+		},
+		{
+			route: notAttachableRoute,
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-443"),
+			},
+			name: "route is not attachable",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-444"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Attachment:  &noMatchingParentAttachment,
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					Idx:         0,
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-444"),
+			},
+			name: "section name is wrong",
+		},
+		{
+			route: notAttachableRoutePort,
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition: conditions.Condition{
+							Type:    "Accepted",
+							Status:  "False",
+							Reason:  "UnsupportedValue",
+							Message: "spec.parentRefs[0].port: Forbidden: cannot be set",
+						},
+						Attached: false,
+					},
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Port:        helpers.GetPointer[gatewayv1.PortNumber](80),
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-443"),
+			},
+			name: "port is not nil",
+		},
+		{
+			route: routeReferencesWrongNamespace,
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition: conditions.Condition{
+							Type:    "Accepted",
+							Status:  "False",
+							Reason:  "GatewayIgnored",
+							Message: "The Gateway is ignored by the controller",
+						},
+						Attached: false,
+					},
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Gateway:     client.ObjectKeyFromObject(gwWrongNamespace),
+					Idx:         0,
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-443"),
+			},
+			name: "ignored gateway",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  false,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition: conditions.Condition{
+							Type:    "Accepted",
+							Status:  "False",
+							Reason:  "InvalidGateway",
+							Message: "Gateway is invalid",
+						},
+						Attached: false,
+					},
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					Idx:         0,
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-443"),
+			},
+			name: "invalid gateway",
+		},
+		{
+			route: createNormalRoute(gwWrongNamespace),
+			gateway: &Gateway{
+				Source: gwWrongNamespace,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-443", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
+								gatewayv1.FromNamespaces("Same"),
+							)},
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gwWrongNamespace),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition: conditions.Condition{
+							Type:    "Accepted",
+							Status:  "False",
+							Reason:  "NotAllowedByListeners",
+							Message: "Route is not allowed by any listener",
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+						Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
+							gatewayv1.FromNamespaces("Same"),
+						)},
+					}
+				}),
+			},
+			name: "route not allowed by listener; in different namespace",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-443", func(l *Listener) {
+						l.Valid = false
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{
+							"listener-443": {"foo.example.com"},
+						},
+						Attached: true,
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.Valid = false
+					r := createNormalRoute(gw)
+					r.Conditions = append(r.Conditions, staticConds.NewRouteInvalidListener())
+					r.ParentRefs = []ParentRef{
+						{
+							Idx:         0,
+							Gateway:     client.ObjectKeyFromObject(gw),
+							SectionName: tr.Spec.ParentRefs[0].SectionName,
+							Attachment: &ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{
+									"listener-443": {"foo.example.com"},
+								},
+								Attached: true,
+							},
+						},
+					}
+					l.L4Routes = map[L4RouteKey]*L4Route{
+						CreateRouteKeyL4(tr): r,
+					}
+				}),
+			},
+			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
+			name:               "invalid attachable listener",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-443", func(l *Listener) {
+						l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNoMatchingListenerHostname(),
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
+				}),
+			},
+			name: "route hostname does not match any listener",
+		},
+		{
+			route: makeModifiedRoute(gw, func(r *L4Route) {
+				r.ParentRefs[0].SectionName = nil
+			}),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-443": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.L4Routes = map[L4RouteKey]*L4Route{
+						CreateRouteKeyL4(tr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "nil section name",
+		},
+		{
+			route: makeModifiedRoute(gw, func(r *L4Route) {
+				r.ParentRefs[0].SectionName = helpers.GetPointer[gatewayv1.SectionName]("")
+			}),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-443": {"foo.example.com"},
+						},
+					},
+					SectionName: helpers.GetPointer[gatewayv1.SectionName](""),
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.L4Routes = map[L4RouteKey]*L4Route{
+						CreateRouteKeyL4(tr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "empty section name",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source:    gw,
+				Valid:     true,
+				Listeners: []*Listener{},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Attachment:  &noMatchingParentAttachment,
+					SectionName: tr.Spec.ParentRefs[0].SectionName,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					Idx:         0,
+				},
+			},
+			expectedGatewayListeners: []*Listener{},
+			name:                     "listener does not exist",
+		},
+		{
+			route: makeModifiedRoute(gw, func(r *L4Route) {
+				r.Valid = false
+			}),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createListener("listener-443"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-443": {"foo.example.com"},
+						},
+					},
+					SectionName: helpers.GetPointer[gatewayv1.SectionName]("listener-443"),
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.L4Routes = map[L4RouteKey]*L4Route{
+						CreateRouteKeyL4(tr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "invalid attachable route",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: []*Listener{
+					createModifiedListener("listener-443", func(l *Listener) {
+						l.SupportedKinds = nil
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
+					},
+					SectionName: helpers.GetPointer[gatewayv1.SectionName]("listener-443"),
+				},
+			},
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-443", func(l *Listener) {
+					l.SupportedKinds = nil
+				}),
+			},
+			name: "route kind not allowed",
+		},
+	}
+
+	namespaces := map[types.NamespacedName]*v1.Namespace{
+		{Name: "test"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "test",
+				Labels: map[string]string{"app": "allowed"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			bindL4RouteToListeners(
+				test.route,
+				test.gateway,
+				namespaces,
+				map[string]struct{}{},
+			)
+
+			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
+			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
+			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
+		})
+	}
+}
+
+func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
+	g := NewWithT(t)
+
+	nsName := types.NamespacedName{Namespace: testNs, Name: "hi"}
+
+	tlsRoutes := map[types.NamespacedName]*v1alpha2.TLSRoute{
+		nsName: {
+			Spec: v1alpha2.TLSRouteSpec{
+				Hostnames: []v1alpha2.Hostname{"app.example.com"},
+			},
+		},
+	}
+
+	services := map[types.NamespacedName]*v1.Service{
+		nsName: {
+			Spec: v1.ServiceSpec{
+				Ports: []v1.ServicePort{},
+			},
+		},
+	}
+
+	g.Expect(buildL4RoutesForGateways(
+		tlsRoutes,
+		nil,
+		services,
+		nil,
+	)).To(BeNil())
+}
+
+func TestTryToAttachL4RouteToListeners_NoAttachableListeners(t *testing.T) {
+	g := NewWithT(t)
+
+	route := &L4Route{
+		Spec: L4RouteSpec{
+			Hostnames: []v1alpha2.Hostname{"app.example.com"},
+		},
+		Valid:      true,
+		Attachable: true,
+	}
+
+	gw := &Gateway{
+		Valid: true,
+		Listeners: []*Listener{
+			{
+				Name: "listener1",
+			},
+			{
+				Name: "listener2",
+			},
+		},
+	}
+
+	cond, attachable := tryToAttachL4RouteToListeners(
+		nil,
+		nil,
+		route,
+		gw,
+		nil,
+		map[string]struct{}{},
+	)
+	g.Expect(cond).To(Equal(staticConds.NewRouteInvalidListener()))
+	g.Expect(attachable).To(BeFalse())
 }
