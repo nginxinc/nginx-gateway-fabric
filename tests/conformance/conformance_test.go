@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance"
 	conf_v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -35,9 +34,12 @@ func TestConformance(t *testing.T) {
 	g := NewWithT(t)
 
 	t.Logf(`Running conformance tests with %s GatewayClass\n cleanup: %t\n`+
-		`debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]`,
+		`debug: %t\n enable all features: %t \n supported extended features: [%v]\n exempt features: [%v]\n`+
+		`conformance profiles: [%v]\n skip tests: [%v]`,
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug,
-		*flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
+		*flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures,
+		*flags.ConformanceProfiles, *flags.SkipTests,
+	)
 
 	opts := conformance.DefaultOptions(t)
 	opts.Implementation = conf_v1.Implementation{
@@ -49,7 +51,6 @@ func TestConformance(t *testing.T) {
 			"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
 		},
 	}
-	opts.ConformanceProfiles = sets.New(suite.GatewayHTTPConformanceProfileName, suite.GatewayGRPCConformanceProfileName)
 
 	testSuite, err := suite.NewConformanceTestSuite(opts)
 	g.Expect(err).To(Not(HaveOccurred()))

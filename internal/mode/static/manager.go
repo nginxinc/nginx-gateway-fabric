@@ -31,6 +31,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -73,6 +74,7 @@ func init() {
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
 	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(gatewayv1alpha3.Install(scheme))
+	utilruntime.Must(gatewayv1alpha2.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
@@ -489,6 +491,12 @@ func registerControllers(
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
 			},
+			{
+				objectType: &gatewayv1alpha2.TLSRoute{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
 		}
 		controllerRegCfgs = append(controllerRegCfgs, gwExpFeatures...)
 	}
@@ -663,6 +671,7 @@ func prepareFirstEventBatchPreparerArgs(
 			objectLists,
 			&gatewayv1alpha3.BackendTLSPolicyList{},
 			&apiv1.ConfigMapList{},
+			&gatewayv1alpha2.TLSRouteList{},
 		)
 	}
 

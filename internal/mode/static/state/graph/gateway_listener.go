@@ -3,6 +3,7 @@ package graph
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,6 +26,8 @@ type Listener struct {
 	// Routes holds the GRPC/HTTPRoutes attached to the Listener.
 	// Only valid routes are attached.
 	Routes map[RouteKey]*L7Route
+	// L4Routes holds the TLSRoutes attached to the Listener.
+	L4Routes map[L4RouteKey]*L4Route
 	// AllowedRouteLabelSelector is the label selector for this Listener's allowed routes, if defined.
 	AllowedRouteLabelSelector labels.Selector
 	// ResolvedSecret is the namespaced name of the Secret resolved for this listener.
@@ -61,7 +64,7 @@ func buildListeners(
 }
 
 type listenerConfiguratorFactory struct {
-	http, https, unsupportedProtocol *listenerConfigurator
+	http, https, tls, unsupportedProtocol *listenerConfigurator
 }
 
 func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1.Listener) *listenerConfigurator {
@@ -70,6 +73,8 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1.Listener) 
 		return f.http
 	case v1.HTTPSProtocolType:
 		return f.https
+	case v1.TLSProtocolType:
+		return f.tls
 	default:
 		return f.unsupportedProtocol
 	}
@@ -90,7 +95,7 @@ func newListenerConfiguratorFactory(
 					valErr := field.NotSupported(
 						field.NewPath("protocol"),
 						listener.Protocol,
-						[]string{string(v1.HTTPProtocolType), string(v1.HTTPSProtocolType)},
+						[]string{string(v1.HTTPProtocolType), string(v1.HTTPSProtocolType), string(v1.TLSProtocolType)},
 					)
 					return staticConds.NewListenerUnsupportedProtocol(valErr.Error()), false /* not attachable */
 				},
@@ -120,6 +125,18 @@ func newListenerConfiguratorFactory(
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
 				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretResolver, refGrantResolver),
 			},
+		},
+		tls: &listenerConfigurator{
+			validators: []listenerValidator{
+				validateListenerAllowedRouteKind,
+				validateListenerLabelSelector,
+				validateListenerHostname,
+				validateTLSFieldOnTLSListener,
+			},
+			conflictResolvers: []listenerConflictResolver{
+				sharedPortConflictResolver,
+			},
+			externalReferenceResolvers: []listenerExternalReferenceResolver{},
 		},
 	}
 }
@@ -184,6 +201,7 @@ func (c *listenerConfigurator) configure(listener v1.Listener) *Listener {
 		Conditions:                conds,
 		AllowedRouteLabelSelector: allowedRouteSelector,
 		Routes:                    make(map[RouteKey]*L7Route),
+		L4Routes:                  make(map[L4RouteKey]*L4Route),
 		Valid:                     valid,
 		Attachable:                attachable,
 		SupportedKinds:            supportedKinds,
@@ -235,37 +253,51 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	var conds []conditions.Condition
 	var supportedKinds []v1.RouteGroupKind
 
-	validRouteKind := func(kind v1.RouteGroupKind) bool {
-		if kind.Kind != v1.Kind(kinds.HTTPRoute) && kind.Kind != v1.Kind(kinds.GRPCRoute) {
+	var validKinds []v1.RouteGroupKind
+
+	switch listener.Protocol {
+	case v1.HTTPProtocolType, v1.HTTPSProtocolType:
+		validKinds = []v1.RouteGroupKind{
+			{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+			{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+		}
+	case v1.TLSProtocolType:
+		validKinds = []v1.RouteGroupKind{
+			{Kind: v1.Kind(kinds.TLSRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+		}
+	}
+
+	validProtocolRouteKind := func(kind v1.RouteGroupKind) bool {
+		if kind.Group != nil && *kind.Group != v1.GroupName {
 			return false
 		}
-		if kind.Group == nil || *kind.Group != v1.GroupName {
-			return false
+		for _, k := range validKinds {
+			if k.Kind == kind.Kind {
+				return true
+			}
 		}
-		return true
+
+		return false
 	}
 
 	if listener.AllowedRoutes != nil && listener.AllowedRoutes.Kinds != nil {
 		supportedKinds = make([]v1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
 		for _, kind := range listener.AllowedRoutes.Kinds {
-			if !validRouteKind(kind) {
-				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
+			if !validProtocolRouteKind(kind) {
+				group := v1.GroupName
+				if kind.Group != nil {
+					group = string(*kind.Group)
+				}
+				msg := fmt.Sprintf("Unsupported route kind for protocol %s \"%s/%s\"", listener.Protocol, group, kind.Kind)
 				conds = append(conds, staticConds.NewListenerInvalidRouteKinds(msg)...)
 				continue
 			}
 			supportedKinds = append(supportedKinds, kind)
 		}
-	} else {
-		switch listener.Protocol {
-		case v1.HTTPProtocolType, v1.HTTPSProtocolType:
-			supportedKinds = []v1.RouteGroupKind{
-				{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
-				{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
-			}
-		}
+		return conds, supportedKinds
 	}
 
-	return conds, supportedKinds
+	return conds, validKinds
 }
 
 func validateListenerAllowedRouteKind(listener v1.Listener) (conds []conditions.Condition, attachable bool) {
@@ -319,6 +351,19 @@ func validateListenerPort(port v1.PortNumber, protectedPorts ProtectedPorts) err
 	}
 
 	return nil
+}
+
+func validateTLSFieldOnTLSListener(listener v1.Listener) (conds []conditions.Condition, attachable bool) {
+	tlspath := field.NewPath("TLS")
+	if listener.TLS == nil {
+		valErr := field.Required(tlspath, "tls must be defined for TLS listener")
+		return staticConds.NewListenerUnsupportedValue(valErr.Error()), false
+	}
+	if listener.TLS.Mode == nil || *listener.TLS.Mode != v1.TLSModePassthrough {
+		valErr := field.Required(tlspath.Child("Mode"), "Mode must be passthrough for TLS listener")
+		return staticConds.NewListenerUnsupportedValue(valErr.Error()), false
+	}
+	return nil, true
 }
 
 func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidator {
@@ -387,12 +432,24 @@ func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidat
 }
 
 func createPortConflictResolver() listenerConflictResolver {
+	const (
+		secureProtocolGroup   int = 0
+		insecureProtocolGroup int = 1
+	)
+	protocolGroups := map[v1.ProtocolType]int{
+		v1.TLSProtocolType:   secureProtocolGroup,
+		v1.HTTPProtocolType:  insecureProtocolGroup,
+		v1.HTTPSProtocolType: secureProtocolGroup,
+	}
 	conflictedPorts := make(map[v1.PortNumber]bool)
-	portProtocolOwner := make(map[v1.PortNumber]v1.ProtocolType)
+	portProtocolOwner := make(map[v1.PortNumber]int)
 	listenersByPort := make(map[v1.PortNumber][]*Listener)
 
 	format := "Multiple listeners for the same port %d specify incompatible protocols; " +
 		"ensure only one protocol per port"
+
+	formatHostname := "HTTPS and TLS listeners for the same port %d specify overlapping hostnames; " +
+		"ensure no overlapping hostnames for HTTPS and TLS listeners for the same port"
 
 	return func(l *Listener) {
 		port := l.Source.Port
@@ -409,24 +466,45 @@ func createPortConflictResolver() listenerConflictResolver {
 		// otherwise, we add the listener to the list of listeners for this port
 		// and then check if the protocol owner for the port is different from the current listener's protocol.
 
-		listenersByPort[port] = append(listenersByPort[port], l)
-
-		protocol, ok := portProtocolOwner[port]
+		protocolGroup, ok := portProtocolOwner[port]
 		if !ok {
-			portProtocolOwner[port] = l.Source.Protocol
+			portProtocolOwner[port] = protocolGroups[l.Source.Protocol]
+			listenersByPort[port] = append(listenersByPort[port], l)
 			return
 		}
 
-		// if protocol owner doesn't match the listener's protocol we mark the port as conflicted,
+		// if protocol group owner doesn't match the listener's protocol group we mark the port as conflicted,
 		// and invalidate all listeners we've seen for this port.
-		if protocol != l.Source.Protocol {
+		if protocolGroup != protocolGroups[l.Source.Protocol] {
 			conflictedPorts[port] = true
-			for _, l := range listenersByPort[port] {
-				l.Valid = false
+			for _, listener := range listenersByPort[port] {
+				listener.Valid = false
 				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+				listener.Conditions = append(listener.Conditions, conflictedConds...)
+			}
+			l.Valid = false
+			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+			l.Conditions = append(l.Conditions, conflictedConds...)
+		} else {
+			foundConflict := false
+			for _, listener := range listenersByPort[port] {
+				if listener.Source.Protocol != l.Source.Protocol &&
+					haveOverlap(l.Source.Hostname, listener.Source.Hostname) {
+					listener.Valid = false
+					conflictedConds := staticConds.NewListenerHostnameConflict(fmt.Sprintf(formatHostname, port))
+					listener.Conditions = append(listener.Conditions, conflictedConds...)
+					foundConflict = true
+				}
+			}
+
+			if foundConflict {
+				l.Valid = false
+				conflictedConds := staticConds.NewListenerHostnameConflict(fmt.Sprintf(formatHostname, port))
 				l.Conditions = append(l.Conditions, conflictedConds...)
 			}
 		}
+
+		listenersByPort[port] = append(listenersByPort[port], l)
 	}
 }
 
@@ -481,4 +559,32 @@ func GetAllowedRouteLabelSelector(l v1.Listener) *metav1.LabelSelector {
 	}
 
 	return nil
+}
+
+// matchesWildcard checks if hostname2 matches the wildcard pattern of hostname1.
+func matchesWildcard(hostname1, hostname2 string) bool {
+	matchesWildcard := func(h1, h2 string) bool {
+		if strings.HasPrefix(h1, "*.") {
+			// Remove the "*." from h1
+			h1 = h1[2:]
+			// Check if h2 ends with h1
+			return strings.HasSuffix(h2, h1)
+		}
+		return false
+	}
+	return matchesWildcard(hostname1, hostname2) || matchesWildcard(hostname2, hostname1)
+}
+
+// haveOverlap checks for overlap between two hostnames.
+func haveOverlap(hostname1, hostname2 *v1.Hostname) bool {
+	// Check if hostname1 matches wildcard pattern of hostname2 or vice versa
+	if hostname1 == nil || hostname2 == nil {
+		return true
+	}
+	h1, h2 := string(*hostname1), string(*hostname2)
+
+	if h1 == h2 {
+		return true
+	}
+	return matchesWildcard(h1, h2)
 }

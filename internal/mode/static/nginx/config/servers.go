@@ -11,6 +11,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -65,7 +66,7 @@ func newExecuteServersFunc(generator policies.Generator) executeFunc {
 }
 
 func executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, generator)
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSPassthroughServers, generator)
 
 	serverConfig := http.ServerConfig{
 		Servers:  servers,
@@ -99,15 +100,15 @@ func executeServers(conf dataplane.Configuration, generator policies.Generator) 
 }
 
 // getIPFamily returns whether the server should be configured for IPv4, IPv6, or both.
-func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) http.IPFamily {
+func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) shared.IPFamily {
 	switch baseHTTPConfig.IPFamily {
 	case dataplane.IPv4:
-		return http.IPFamily{IPv4: true}
+		return shared.IPFamily{IPv4: true}
 	case dataplane.IPv6:
-		return http.IPFamily{IPv6: true}
+		return shared.IPFamily{IPv6: true}
 	}
 
-	return http.IPFamily{IPv4: true, IPv6: true}
+	return shared.IPFamily{IPv4: true, IPv6: true}
 }
 
 func createIncludeFileResults(servers []http.Server) []executeResult {
@@ -138,11 +139,18 @@ func createIncludeFileResults(servers []http.Server) []executeResult {
 }
 
 func createServers(
-	httpServers, sslServers []dataplane.VirtualServer,
+	httpServers,
+	sslServers []dataplane.VirtualServer,
+	tlsPassthroughServers []dataplane.Layer4VirtualServer,
 	generator policies.Generator,
 ) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 	finalMatchPairs := make(httpMatchPairs)
+	sharedTLSPorts := make(map[int32]struct{})
+
+	for _, passthroughServer := range tlsPassthroughServers {
+		sharedTLSPorts[passthroughServer.Port] = struct{}{}
+	}
 
 	for idx, s := range httpServers {
 		serverID := fmt.Sprintf("%d", idx)
@@ -153,7 +161,12 @@ func createServers(
 
 	for idx, s := range sslServers {
 		serverID := fmt.Sprintf("SSL_%d", idx)
+
 		sslServer, matchPairs := createSSLServer(s, serverID, generator)
+		if _, portInUse := sharedTLSPorts[s.Port]; portInUse {
+			sslServer.Listen = getSocketNameHTTPS(s.Port)
+			sslServer.IsSocket = true
+		}
 		servers = append(servers, sslServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
@@ -166,10 +179,11 @@ func createSSLServer(
 	serverID string,
 	generator policies.Generator,
 ) (http.Server, httpMatchPairs) {
+	listen := fmt.Sprint(virtualServer.Port)
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
-			Port:         virtualServer.Port,
+			Listen:       listen,
 		}, nil
 	}
 
@@ -182,8 +196,8 @@ func createSSLServer(
 			CertificateKey: generatePEMFileName(virtualServer.SSL.KeyPairID),
 		},
 		Locations: locs,
-		Port:      virtualServer.Port,
 		GRPC:      grpc,
+		Listen:    listen,
 	}
 
 	server.Includes = createIncludesFromPolicyGenerateResult(
@@ -197,10 +211,12 @@ func createServer(
 	serverID string,
 	generator policies.Generator,
 ) (http.Server, httpMatchPairs) {
+	listen := fmt.Sprint(virtualServer.Port)
+
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultHTTP: true,
-			Port:          virtualServer.Port,
+			Listen:        listen,
 		}, nil
 	}
 
@@ -209,7 +225,7 @@ func createServer(
 	server := http.Server{
 		ServerName: virtualServer.Hostname,
 		Locations:  locs,
-		Port:       virtualServer.Port,
+		Listen:     listen,
 		GRPC:       grpc,
 	}
 

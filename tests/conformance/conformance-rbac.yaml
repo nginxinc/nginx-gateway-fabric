@@ -39,6 +39,7 @@ rules:
   - grpcroutes
   - referencegrants
   - gatewayclasses
+  - tlsroutes
   verbs:
   - create
   - delete

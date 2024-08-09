@@ -246,6 +246,7 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 		gcReqs = status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
 	}
 	routeReqs := status.PrepareRouteRequests(
+		graph.L4Routes,
 		graph.Routes,
 		transitionTime,
 		h.latestReloadResult,

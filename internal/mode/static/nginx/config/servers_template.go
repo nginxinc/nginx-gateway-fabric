@@ -5,11 +5,11 @@ js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-        {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} ssl default_server;
+        {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }} ssl default_server;
         {{- end }}
-        {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} ssl default_server;
+        {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
+    listen [::]:{{ $s.Listen }} ssl default_server;
         {{- end }}
 
     ssl_reject_handshake on;
@@ -17,10 +17,10 @@ server {
     {{- else if $s.IsDefaultHTTP }}
 server {
         {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} default_server;
+    listen {{ $s.Listen }} default_server;
         {{- end }}
         {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} default_server;
+    listen [::]:{{ $s.Listen }} default_server;
         {{- end }}
 
     default_type text/html;
@@ -29,11 +29,11 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-          {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }} ssl;
+          {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }} ssl;
           {{- end }}
-          {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }} ssl;
+          {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
+    listen [::]:{{ $s.Listen }} ssl;
           {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
@@ -43,10 +43,10 @@ server {
     }
         {{- else }}
           {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Port }};
+    listen {{ $s.Listen }};
           {{- end }}
           {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Port }};
+    listen [::]:{{ $s.Listen }};
           {{- end }}
         {{- end }}
 

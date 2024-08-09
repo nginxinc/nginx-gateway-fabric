@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -107,6 +108,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
 		NginxProxies:       make(map[types.NamespacedName]*ngfAPI.NginxProxy),
 		GRPCRoutes:         make(map[types.NamespacedName]*v1.GRPCRoute),
+		TLSRoutes:          make(map[types.NamespacedName]*v1alpha2.TLSRoute),
 		NGFPolicies:        make(map[graph.PolicyKey]policies.Policy),
 	}
 
@@ -210,6 +212,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       cfg.MustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
 				store:     commonPolicyObjectStore,
 				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
+			},
+			{
+				gvk:       cfg.MustExtractGVK(&v1alpha2.TLSRoute{}),
+				store:     newObjectStoreMapAdapter(clusterStore.TLSRoutes),
+				predicate: nil,
 			},
 		},
 	)

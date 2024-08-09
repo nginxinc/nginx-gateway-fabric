@@ -27,12 +27,36 @@ type NginxReloadResult struct {
 
 // PrepareRouteRequests prepares status UpdateRequests for the given Routes.
 func PrepareRouteRequests(
+	l4routes map[graph.L4RouteKey]*graph.L4Route,
 	routes map[graph.RouteKey]*graph.L7Route,
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
 	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
+
+	for routeKey, r := range l4routes {
+		routeStatus := prepareRouteStatus(
+			gatewayCtlrName,
+			r.ParentRefs,
+			r.Conditions,
+			nginxReloadRes,
+			transitionTime,
+			r.Source.GetGeneration(),
+		)
+
+		status := v1alpha2.TLSRouteStatus{
+			RouteStatus: routeStatus,
+		}
+
+		req := frameworkStatus.UpdateRequest{
+			NsName:       routeKey.NamespacedName,
+			ResourceType: &v1alpha2.TLSRoute{},
+			Setter:       newTLSRouteStatusSetter(status, gatewayCtlrName),
+		}
+
+		reqs = append(reqs, req)
+	}
 
 	for routeKey, r := range routes {
 		routeStatus := prepareRouteStatus(
@@ -260,7 +284,7 @@ func prepareGatewayRequest(
 		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
 			Name:           v1.SectionName(l.Name),
 			SupportedKinds: l.SupportedKinds,
-			AttachedRoutes: int32(len(l.Routes)),
+			AttachedRoutes: int32(len(l.Routes)) + int32(len(l.L4Routes)),
 			Conditions:     apiConds,
 		})
 	}
