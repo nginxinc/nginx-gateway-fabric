@@ -287,6 +287,11 @@ var _ = Describe("Collector", Ordered, func() {
 						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-1"}}: {RouteType: graph.RouteTypeGRPC},
 						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-2"}}: {RouteType: graph.RouteTypeGRPC},
 					},
+					L4Routes: map[graph.L4RouteKey]*graph.L4Route{
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "tr-1"}}: {},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "tr-2"}}: {},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "tr-3"}}: {},
+					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 						client.ObjectKeyFromObject(secret1): {
 							Source: secret1,
@@ -366,6 +371,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayCount:                             3,
 					GatewayClassCount:                        3,
 					HTTPRouteCount:                           3,
+					TLSRouteCount:                            3,
 					SecretCount:                              3,
 					ServiceCount:                             3,
 					EndpointCount:                            4,
@@ -512,6 +518,9 @@ var _ = Describe("Collector", Ordered, func() {
 				Routes: map[graph.RouteKey]*graph.L7Route{
 					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {RouteType: graph.RouteTypeHTTP},
 				},
+				L4Routes: map[graph.L4RouteKey]*graph.L4Route{
+					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "tr-1"}}: {},
+				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					client.ObjectKeyFromObject(secret): {
 						Source: secret,
@@ -604,6 +613,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayCount:                             1,
 					GatewayClassCount:                        1,
 					HTTPRouteCount:                           1,
+					TLSRouteCount:                            1,
 					SecretCount:                              1,
 					ServiceCount:                             1,
 					EndpointCount:                            1,
@@ -626,6 +636,7 @@ var _ = Describe("Collector", Ordered, func() {
 					GatewayCount:                             0,
 					GatewayClassCount:                        0,
 					HTTPRouteCount:                           0,
+					TLSRouteCount:                            0,
 					SecretCount:                              0,
 					ServiceCount:                             0,
 					EndpointCount:                            0,
