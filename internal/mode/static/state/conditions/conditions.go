@@ -32,6 +32,10 @@ const (
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1.RouteConditionReason = "InvalidListener"
 
+	// RouteReasonHostnameConflict is used with the "Accepted" condition when a route has the exact same hostname
+	// as another route.
+	RouteReasonHostnameConflict v1.RouteConditionReason = "HostnameConflict"
+
 	// RouteReasonGatewayNotProgrammed is used when the associated Gateway is not programmed.
 	// Used with Accepted (false).
 	RouteReasonGatewayNotProgrammed v1.RouteConditionReason = "GatewayNotProgrammed"
@@ -184,6 +188,17 @@ func NewRouteInvalidListener() conditions.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidListener),
 		Message: "Listener is invalid for this parent ref",
+	}
+}
+
+// NewRouteHostnameConflict returns a Condition that indicates that the Route is not accepted because of a
+// conflicting hostname on the same port.
+func NewRouteHostnameConflict() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonHostnameConflict),
+		Message: "Hostname(s) conflict with another route of the same kind on the same port",
 	}
 }
 
@@ -418,6 +433,26 @@ func NewListenerProtocolConflict(msg string) []conditions.Condition {
 			Type:    string(v1.ListenerConditionConflicted),
 			Status:  metav1.ConditionTrue,
 			Reason:  string(v1.ListenerReasonProtocolConflict),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
+// NewListenerHostnameConflict returns Conditions that indicate multiple Listeners are specified with the same
+// Listener port, but are HTTPS and TLS and have overlapping hostnames.
+func NewListenerHostnameConflict(msg string) []conditions.Condition {
+	return []conditions.Condition{
+		{
+			Type:    string(v1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1.ListenerReasonHostnameConflict),
+			Message: msg,
+		},
+		{
+			Type:    string(v1.ListenerConditionConflicted),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1.ListenerReasonHostnameConflict),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),

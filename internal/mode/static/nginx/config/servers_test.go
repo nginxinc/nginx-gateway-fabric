@@ -13,6 +13,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -165,6 +166,26 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 			Port: 8443,
 		},
 	}
+	sslServers443 := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 443,
+		},
+	}
+	passThroughServers := []dataplane.Layer4VirtualServer{
+		{
+			IsDefault: true,
+			Hostname:  "*.example.com",
+			Port:      8443,
+		},
+	}
 	tests := []struct {
 		msg                string
 		expectedHTTPConfig map[string]int
@@ -191,23 +212,26 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 			},
 		},
 		{
-			msg: "http and ssl servers with IPv6 IP family",
+			msg: "http, ssl servers, and tls servers with IPv6 IP family",
 			config: dataplane.Configuration{
 				HTTPServers: httpServers,
-				SSLServers:  sslServers,
+				SSLServers:  append(sslServers, sslServers443...),
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.IPv6,
 				},
+				TLSPassthroughServers: passThroughServers,
 			},
 			expectedHTTPConfig: map[string]int{
-				"listen [::]:8080 default_server;":                         1,
-				"listen [::]:8080;":                                        1,
-				"listen [::]:8443 ssl default_server;":                     1,
-				"listen [::]:8443 ssl;":                                    1,
-				"server_name example.com;":                                 2,
-				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
-				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
-				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                              1,
+				"listen [::]:8080;":                                             1,
+				"listen [::]:443 ssl default_server;":                           1,
+				"listen [::]:443 ssl;":                                          1,
+				"listen unix:/var/run/nginx/https8443.sock ssl;":                1,
+				"listen unix:/var/run/nginx/https8443.sock ssl default_server;": 1,
+				"server_name example.com;":                                      3,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":          2,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;":      2,
+				"ssl_reject_handshake on;":                                      2,
 			},
 		},
 		{
@@ -761,6 +785,14 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
+		{
+			Hostname:     "app.example.com",
+			Port:         8443,
+			UpstreamName: "sup",
+		},
+	}
+
 	expMatchPairs := httpMatchPairs{
 		"1_0": {
 			{Method: "POST", RedirectPath: "/_ngf-internal-rule0-route0"},
@@ -1197,17 +1229,18 @@ func TestCreateServers(t *testing.T) {
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
-			Port:          8080,
+			Listen:        "8080",
 		},
 		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
-			Port:       8080,
+			Listen:     "8080",
 			GRPC:       true,
 		},
 		{
 			IsDefaultSSL: true,
-			Port:         8443,
+			Listen:       getSocketNameHTTPS(8443),
+			IsSocket:     true,
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1216,7 +1249,8 @@ func TestCreateServers(t *testing.T) {
 				CertificateKey: expectedPEMPath,
 			},
 			Locations: getExpectedLocations(true),
-			Port:      8443,
+			Listen:    getSocketNameHTTPS(8443),
+			IsSocket:  true,
 			GRPC:      true,
 		},
 	}
@@ -1237,7 +1271,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	})
 
-	result, httpMatchPair := createServers(httpServers, sslServers, fakeGenerator)
+	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers, fakeGenerator)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1441,18 +1475,23 @@ func TestCreateServersConflicts(t *testing.T) {
 			expectedServers := []http.Server{
 				{
 					IsDefaultHTTP: true,
-					Port:          8080,
+					Listen:        "8080",
 				},
 				{
 					ServerName: "cafe.example.com",
 					Locations:  test.expLocs,
-					Port:       8080,
+					Listen:     "8080",
 				},
 			}
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{}, &policiesfakes.FakeGenerator{})
+			result, _ := createServers(
+				httpServers,
+				[]dataplane.VirtualServer{},
+				[]dataplane.Layer4VirtualServer{},
+				&policiesfakes.FakeGenerator{},
+			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
@@ -2706,22 +2745,22 @@ func TestGetIPFamily(t *testing.T) {
 	test := []struct {
 		msg            string
 		baseHTTPConfig dataplane.BaseHTTPConfig
-		expected       http.IPFamily
+		expected       shared.IPFamily
 	}{
 		{
 			msg:            "ipv4",
 			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv4},
-			expected:       http.IPFamily{IPv4: true, IPv6: false},
+			expected:       shared.IPFamily{IPv4: true, IPv6: false},
 		},
 		{
 			msg:            "ipv6",
 			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv6},
-			expected:       http.IPFamily{IPv4: false, IPv6: true},
+			expected:       shared.IPFamily{IPv4: false, IPv6: true},
 		},
 		{
 			msg:            "dual",
 			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.Dual},
-			expected:       http.IPFamily{IPv4: true, IPv6: true},
+			expected:       shared.IPFamily{IPv4: true, IPv6: true},
 		},
 	}
 

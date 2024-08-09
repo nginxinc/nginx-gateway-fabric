@@ -13,7 +13,17 @@ GW_SVC_GKE_INTERNAL = false
 NGF_VERSION ?= edge## NGF version to be tested
 PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
-SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
+SUPPORTED_EXTENDED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification
+STANDARD_CONFORMANCE_PROFILES = GATEWAY-HTTP,GATEWAY-GRPC
+EXPERIMENTAL_CONFORMANCE_PROFILES = GATEWAY-TLS
+CONFORMANCE_PROFILES = $(STANDARD_CONFORMANCE_PROFILES) # by default we use the standard conformance profiles. If experimental is enabled we override this and add the experimental profiles.
+SKIP_TESTS = TLSRouteInvalidReferenceGrant
+
+# Check if ENABLE_EXPERIMENTAL is true
+ifeq ($(ENABLE_EXPERIMENTAL),true)
+    # If true, add the experimental conformance profiles
+    CONFORMANCE_PROFILES = $(EXPERIMENTAL_CONFORMANCE_PROFILES),$(STANDARD_CONFORMANCE_PROFILES)
+endif
 
 ifneq ($(GINKGO_LABEL),)
 	override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
@@ -40,7 +50,7 @@ run-conformance-tests: ## Run conformance tests
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
 		--overrides='{ "spec": { "serviceAccountName": "conformance" }	}' \
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
-								--supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
+						        --supported-features=$(SUPPORTED_EXTENDED_FEATURES) --version=$(NGF_VERSION) --skip-tests=$(SKIP_TESTS) --conformance-profiles=$(CONFORMANCE_PROFILES) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
 	./scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml

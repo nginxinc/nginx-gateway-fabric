@@ -19,6 +19,8 @@ const (
 	HTTPRoute = "HTTPRoute"
 	// GRPCRoute is the GRPCRoute kind.
 	GRPCRoute = "GRPCRoute"
+	// TLSRoute is the TLSRoute kind.
+	TLSRoute = "TLSRoute"
 )
 
 // NGINX Gateway Fabric kinds.

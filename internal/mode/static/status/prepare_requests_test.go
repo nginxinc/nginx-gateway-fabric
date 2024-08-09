@@ -33,6 +33,7 @@ func createK8sClientFor(resourceType ngftypes.ObjectType) client.Client {
 
 	// for simplicity, we add all used schemes here
 	utilruntime.Must(v1.Install(scheme))
+	utilruntime.Must(v1alpha2.Install(scheme))
 	utilruntime.Must(v1alpha3.Install(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 
@@ -221,6 +222,7 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 			CommonRouteSpec: commonRouteSpecValid,
 		},
 	}
+
 	hrInvalid := &v1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -267,7 +269,13 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
+	reqs := PrepareRouteRequests(
+		map[graph.L4RouteKey]*graph.L4Route{},
+		routes,
+		transitionTime,
+		NginxReloadResult{},
+		gatewayCtlrName,
+	)
 
 	updater.Update(context.Background(), reqs...)
 
@@ -339,7 +347,13 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
+	reqs := PrepareRouteRequests(
+		map[graph.L4RouteKey]*graph.L4Route{},
+		routes,
+		transitionTime,
+		NginxReloadResult{},
+		gatewayCtlrName,
+	)
 
 	updater.Update(context.Background(), reqs...)
 
@@ -347,6 +361,82 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 
 	for nsname, expected := range expectedStatuses {
 		var hr v1.GRPCRoute
+
+		err := k8sClient.Get(context.Background(), nsname, &hr)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(helpers.Diff(expected, hr.Status)).To(BeEmpty())
+	}
+}
+
+func TestBuildTLSRouteStatuses(t *testing.T) {
+	trValid := &v1alpha2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "tr-valid",
+			Generation: 3,
+		},
+		Spec: v1alpha2.TLSRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+	trInvalid := &v1alpha2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "tr-invalid",
+			Generation: 3,
+		},
+		Spec: v1alpha2.TLSRouteSpec{
+			CommonRouteSpec: commonRouteSpecInvalid,
+		},
+	}
+	routes := map[graph.L4RouteKey]*graph.L4Route{
+		graph.CreateRouteKeyL4(trValid): {
+			Valid:      true,
+			Source:     trValid,
+			ParentRefs: parentRefsValid,
+		},
+		graph.CreateRouteKeyL4(trInvalid): {
+			Valid:      false,
+			Conditions: []conditions.Condition{invalidRouteCondition},
+			Source:     trInvalid,
+			ParentRefs: parentRefsInvalid,
+		},
+	}
+
+	expectedStatuses := map[types.NamespacedName]v1alpha2.TLSRouteStatus{
+		{Namespace: "test", Name: "tr-valid"}: {
+			RouteStatus: routeStatusValid,
+		},
+		{Namespace: "test", Name: "tr-invalid"}: {
+			RouteStatus: routeStatusInvalid,
+		},
+	}
+
+	g := NewWithT(t)
+
+	k8sClient := createK8sClientFor(&v1alpha2.TLSRoute{})
+
+	for _, r := range routes {
+		err := k8sClient.Create(context.Background(), r.Source)
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	updater := statusFramework.NewUpdater(k8sClient, zap.New())
+
+	reqs := PrepareRouteRequests(
+		routes,
+		map[graph.RouteKey]*graph.L7Route{},
+		transitionTime,
+		NginxReloadResult{},
+		gatewayCtlrName,
+	)
+
+	updater.Update(context.Background(), reqs...)
+
+	g.Expect(reqs).To(HaveLen(len(expectedStatuses)))
+
+	for nsname, expected := range expectedStatuses {
+		var hr v1alpha2.TLSRoute
 
 		err := k8sClient.Get(context.Background(), nsname, &hr)
 		g.Expect(err).ToNot(HaveOccurred())
@@ -437,6 +527,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
 	reqs := PrepareRouteRequests(
+		map[graph.L4RouteKey]*graph.L4Route{},
 		routes,
 		transitionTime,
 		NginxReloadResult{Error: errors.New("test error")},

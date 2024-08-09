@@ -29,7 +29,7 @@ const (
 func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
-	resolver resolver.ServiceResolver,
+	serviceResolver resolver.ServiceResolver,
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
@@ -41,26 +41,162 @@ func BuildConfiguration(
 	}
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver, baseHTTPConfig.IPFamily)
+
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	httpServers, sslServers := buildServers(g)
+	passthroughServers := buildPassthroughServers(g)
+	streamUpstreams := buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
 
 	config := Configuration{
-		HTTPServers:    httpServers,
-		SSLServers:     sslServers,
-		Upstreams:      upstreams,
-		BackendGroups:  backendGroups,
-		SSLKeyPairs:    keyPairs,
-		Version:        configVersion,
-		CertBundles:    certBundles,
-		Telemetry:      telemetry,
-		BaseHTTPConfig: baseHTTPConfig,
+		HTTPServers:           httpServers,
+		SSLServers:            sslServers,
+		TLSPassthroughServers: passthroughServers,
+		Upstreams:             upstreams,
+		StreamUpstreams:       streamUpstreams,
+		BackendGroups:         backendGroups,
+		SSLKeyPairs:           keyPairs,
+		Version:               configVersion,
+		CertBundles:           certBundles,
+		Telemetry:             telemetry,
+		BaseHTTPConfig:        baseHTTPConfig,
 	}
 
 	return config
+}
+
+// buildPassthroughServers builds TLSPassthroughServers from TLSRoutes attaches to listeners.
+func buildPassthroughServers(g *graph.Graph) []Layer4VirtualServer {
+	passthroughServersMap := make(map[graph.L4RouteKey][]Layer4VirtualServer)
+	listenerPassthroughServers := make([]Layer4VirtualServer, 0)
+
+	passthroughServerCount := 0
+
+	for _, l := range g.Gateway.Listeners {
+		if !l.Valid || l.Source.Protocol != v1.TLSProtocolType {
+			continue
+		}
+		foundRouteMatchingListenerHostname := false
+		for key, r := range l.L4Routes {
+			if !r.Valid {
+				continue
+			}
+
+			var hostnames []string
+
+			for _, p := range r.ParentRefs {
+				if val, exist := p.Attachment.AcceptedHostnames[l.Name]; exist {
+					hostnames = val
+					break
+				}
+			}
+
+			if _, ok := passthroughServersMap[key]; !ok {
+				passthroughServersMap[key] = make([]Layer4VirtualServer, 0)
+			}
+
+			passthroughServerCount += len(hostnames)
+
+			for _, h := range hostnames {
+				if l.Source.Hostname != nil && h == string(*l.Source.Hostname) {
+					foundRouteMatchingListenerHostname = true
+				}
+				passthroughServersMap[key] = append(passthroughServersMap[key], Layer4VirtualServer{
+					Hostname:     h,
+					UpstreamName: r.Spec.BackendRef.ServicePortReference(),
+					Port:         int32(l.Source.Port),
+				})
+			}
+		}
+		if !foundRouteMatchingListenerHostname {
+			if l.Source.Hostname != nil {
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname:  string(*l.Source.Hostname),
+					IsDefault: true,
+					Port:      int32(l.Source.Port),
+				})
+			} else {
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname: "",
+					Port:     int32(l.Source.Port),
+				})
+			}
+		}
+	}
+	passthroughServers := make([]Layer4VirtualServer, 0, passthroughServerCount+len(listenerPassthroughServers))
+
+	for _, r := range passthroughServersMap {
+		passthroughServers = append(passthroughServers, r...)
+	}
+
+	passthroughServers = append(passthroughServers, listenerPassthroughServers...)
+
+	return passthroughServers
+}
+
+// buildStreamUpstreams builds all stream upstreams.
+func buildStreamUpstreams(
+	ctx context.Context,
+	listeners []*graph.Listener,
+	serviceResolver resolver.ServiceResolver,
+	ipFamily IPFamilyType,
+) []Upstream {
+	// There can be duplicate upstreams if multiple routes reference the same upstream.
+	// We use a map to deduplicate them.
+	uniqueUpstreams := make(map[string]Upstream)
+
+	for _, l := range listeners {
+		if !l.Valid || l.Source.Protocol != v1.TLSProtocolType {
+			continue
+		}
+
+		for _, route := range l.L4Routes {
+			if !route.Valid {
+				continue
+			}
+
+			br := route.Spec.BackendRef
+
+			if !br.Valid {
+				continue
+			}
+
+			upstreamName := br.ServicePortReference()
+
+			if _, exist := uniqueUpstreams[upstreamName]; exist {
+				continue
+			}
+
+			var errMsg string
+
+			allowedAddressType := getAllowedAddressType(ipFamily)
+
+			eps, err := serviceResolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
+			if err != nil {
+				errMsg = err.Error()
+			}
+
+			uniqueUpstreams[upstreamName] = Upstream{
+				Name:      upstreamName,
+				Endpoints: eps,
+				ErrorMsg:  errMsg,
+			}
+		}
+	}
+
+	if len(uniqueUpstreams) == 0 {
+		return nil
+	}
+
+	upstreams := make([]Upstream, 0, len(uniqueUpstreams))
+
+	for _, up := range uniqueUpstreams {
+		upstreams = append(upstreams, up)
+	}
+	return upstreams
 }
 
 // buildSSLKeyPairs builds the SSLKeyPairs from the Secrets. It will only include Secrets that are referenced by
@@ -210,6 +346,9 @@ func buildServers(g *graph.Graph) (http, ssl []VirtualServer) {
 	}
 
 	for _, l := range g.Gateway.Listeners {
+		if l.Source.Protocol == v1.TLSProtocolType {
+			continue
+		}
 		if l.Valid {
 			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
 			if rules == nil {
@@ -313,6 +452,7 @@ func (hpr *hostPathRules) upsertRoute(
 	for _, p := range route.ParentRefs {
 		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
 			hostnames = val
+			break
 		}
 	}
 

@@ -20,6 +20,9 @@ const (
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
 
+	// streamFolder is the folder where NGINX Stream configuration files are stored.
+	streamFolder = configFolder + "/stream-conf.d"
+
 	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
 	modulesIncludesFolder = configFolder + "/module-includes"
 
@@ -32,6 +35,9 @@ const (
 	// httpConfigFile is the path to the configuration file with HTTP configuration.
 	httpConfigFile = httpFolder + "/http.conf"
 
+	// streamConfigFile is the path to the configuration file with Stream configuration.
+	streamConfigFile = streamFolder + "/stream.conf"
+
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
 
@@ -43,7 +49,7 @@ const (
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder, streamFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -168,6 +174,9 @@ func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFu
 		executeSplitClients,
 		executeMaps,
 		executeTelemetry,
+		executeStreamServers,
+		g.executeStreamUpstreams,
+		executeStreamMaps,
 	}
 }
 

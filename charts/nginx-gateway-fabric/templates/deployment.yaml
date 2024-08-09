@@ -129,6 +129,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-stream-conf
+          mountPath: /etc/nginx/stream-conf.d
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -166,6 +168,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-stream-conf
+          mountPath: /etc/nginx/stream-conf.d
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -199,6 +203,8 @@ spec:
       {{- end }}
       volumes:
       - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-stream-conf
         emptyDir: {}
       - name: module-includes
         emptyDir: {}

@@ -477,6 +477,181 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 	}
 }
 
+func TestNewTLSRouteStatusSetter(t *testing.T) {
+	const (
+		controllerName      = "controller"
+		otherControllerName = "different"
+	)
+
+	tests := []struct {
+		name                         string
+		status, newStatus, expStatus v1alpha2.TLSRouteStatus
+		expStatusSet                 bool
+	}{
+		{
+			name: "TLSRoute has no status",
+			newStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: v1alpha2.RouteStatus{
+					Parents: []v1alpha2.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "TLSRoute has old status",
+			newStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "TLSRoute has old status, keep other controller statuses",
+			newStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "TLSRoute has same status",
+			newStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.TLSRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newTLSRouteStatusSetter(test.newStatus, controllerName)
+			obj := &v1alpha2.TLSRoute{Status: test.status}
+
+			statusSet := setter(obj)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.expStatus))
+		})
+	}
+}
+
 func TestNewGatewayClassStatusSetter(t *testing.T) {
 	tests := []struct {
 		name              string

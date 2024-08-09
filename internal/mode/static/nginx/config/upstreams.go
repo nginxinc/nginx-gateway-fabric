@@ -6,6 +6,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -22,6 +23,10 @@ const (
 	ossZoneSize = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
 	plusZoneSize = "1m"
+	// ossZoneSize is the upstream zone size for nginx open source.
+	ossZoneSizeStream = "512k"
+	// plusZoneSize is the upstream zone size for nginx plus.
+	plusZoneSizeStream = "1m"
 )
 
 func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
@@ -33,6 +38,53 @@ func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeR
 	}
 
 	return []executeResult{result}
+}
+
+func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []executeResult {
+	upstreams := g.createStreamUpstreams(conf.StreamUpstreams)
+
+	result := executeResult{
+		dest: streamConfigFile,
+		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),
+	}
+
+	return []executeResult{result}
+}
+
+func (g GeneratorImpl) createStreamUpstreams(upstreams []dataplane.Upstream) []stream.Upstream {
+	ups := make([]stream.Upstream, 0, len(upstreams))
+
+	for _, u := range upstreams {
+		if len(u.Endpoints) != 0 {
+			ups = append(ups, g.createStreamUpstream(u))
+		}
+	}
+
+	return ups
+}
+
+func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstream {
+	zoneSize := ossZoneSizeStream
+	if g.plus {
+		zoneSize = plusZoneSizeStream
+	}
+
+	upstreamServers := make([]stream.UpstreamServer, len(up.Endpoints))
+	for idx, ep := range up.Endpoints {
+		format := "%s:%d"
+		if ep.IPv6 {
+			format = "[%s]:%d"
+		}
+		upstreamServers[idx] = stream.UpstreamServer{
+			Address: fmt.Sprintf(format, ep.Address, ep.Port),
+		}
+	}
+
+	return stream.Upstream{
+		Name:     up.Name,
+		ZoneSize: zoneSize,
+		Servers:  upstreamServers,
+	}
 }
 
 func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
