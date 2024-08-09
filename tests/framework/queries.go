@@ -9,44 +9,9 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-func getFirstValueOfVector(query string, promInstance PrometheusInstance) (float64, error) {
-	result, err := promInstance.Query(query)
-	if err != nil {
-		return 0, err
-	}
-
-	val, err := GetFirstValueOfPrometheusVector(result)
-	if err != nil {
-		return 0, err
-	}
-
-	return val, nil
-}
-
-func getBuckets(query string, promInstance PrometheusInstance) ([]Bucket, error) {
-	result, err := promInstance.Query(query)
-	if err != nil {
-		return nil, err
-	}
-
-	res, ok := result.(model.Vector)
-	if !ok {
-		return nil, errors.New("could not convert result to vector")
-	}
-
-	buckets := make([]Bucket, 0, len(res))
-
-	for _, sample := range res {
-		le := sample.Metric["le"]
-		val := float64(sample.Value)
-		bucket := Bucket{
-			Le:  string(le),
-			Val: int(val),
-		}
-		buckets = append(buckets, bucket)
-	}
-
-	return buckets, nil
+type Bucket struct {
+	Le  string
+	Val int
 }
 
 func GetReloadCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
@@ -304,7 +269,42 @@ func CreateResponseChecker(url, address string, requestTimeout time.Duration) fu
 	}
 }
 
-type Bucket struct {
-	Le  string
-	Val int
+func getFirstValueOfVector(query string, promInstance PrometheusInstance) (float64, error) {
+	result, err := promInstance.Query(query)
+	if err != nil {
+		return 0, err
+	}
+
+	val, err := GetFirstValueOfPrometheusVector(result)
+	if err != nil {
+		return 0, err
+	}
+
+	return val, nil
+}
+
+func getBuckets(query string, promInstance PrometheusInstance) ([]Bucket, error) {
+	result, err := promInstance.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	res, ok := result.(model.Vector)
+	if !ok {
+		return nil, errors.New("could not convert result to vector")
+	}
+
+	buckets := make([]Bucket, 0, len(res))
+
+	for _, sample := range res {
+		le := sample.Metric["le"]
+		val := float64(sample.Value)
+		bucket := Bucket{
+			Le:  string(le),
+			Val: int(val),
+		}
+		buckets = append(buckets, bucket)
+	}
+
+	return buckets, nil
 }
