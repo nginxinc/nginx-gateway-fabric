@@ -7,82 +7,85 @@
 		/** The time our edge ingested the event */
 		long ingestTime;
 
-		
+
 		/** ImageSource tells whether the image was built by GitHub or locally (values are 'gha', 'local', or 'unknown') */
 		string? ImageSource = null;
-		
+
 		/** ProjectName is the name of the project. */
 		string? ProjectName = null;
-		
+
 		/** ProjectVersion is the version of the project. */
 		string? ProjectVersion = null;
-		
+
 		/** ProjectArchitecture is the architecture of the project. For example, "amd64". */
 		string? ProjectArchitecture = null;
-		
+
 		/** ClusterID is the unique id of the Kubernetes cluster where the project is installed.
 It is the UID of the `kube-system` Namespace. */
 		string? ClusterID = null;
-		
+
 		/** ClusterVersion is the Kubernetes version of the cluster. */
 		string? ClusterVersion = null;
-		
+
 		/** ClusterPlatform is the Kubernetes platform of the cluster. */
 		string? ClusterPlatform = null;
-		
+
 		/** InstallationID is the unique id of the project installation in the cluster. */
 		string? InstallationID = null;
-		
+
 		/** ClusterNodeCount is the number of nodes in the cluster. */
 		long? ClusterNodeCount = null;
-		
+
 		/** FlagNames contains the command-line flag names. */
 		union {null, array<string>} FlagNames = null;
-		
+
 		/** FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
 at the same index.
 Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags. */
 		union {null, array<string>} FlagValues = null;
-		
+
 		/** GatewayCount is the number of relevant Gateways. */
 		long? GatewayCount = null;
-		
+
 		/** GatewayClassCount is the number of relevant GatewayClasses. */
 		long? GatewayClassCount = null;
-		
+
 		/** HTTPRouteCount is the number of relevant HTTPRoutes. */
 		long? HTTPRouteCount = null;
-		
+
+		/** TLSRouteCount is the number of relevant TLSRoutes. */
+        long? TLSRouteCount = null;
+
 		/** SecretCount is the number of relevant Secrets. */
 		long? SecretCount = null;
-		
+
 		/** ServiceCount is the number of relevant Services. */
 		long? ServiceCount = null;
-		
+
 		/** EndpointCount include the total count of Endpoints(IP:port) across all referenced services. */
 		long? EndpointCount = null;
-		
+
 		/** GRPCRouteCount is the number of relevant GRPCRoutes. */
 		long? GRPCRouteCount = null;
-		
+
 		/** BackendTLSPolicyCount is the number of relevant BackendTLSPolicies. */
 		long? BackendTLSPolicyCount = null;
-		
+
 		/** GatewayAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies
 attached at the Gateway level. */
 		long? GatewayAttachedClientSettingsPolicyCount = null;
-		
+
 		/** RouteAttachedClientSettingsPolicyCount is the number of relevant ClientSettingsPolicies attached at the Route level. */
 		long? RouteAttachedClientSettingsPolicyCount = null;
-		
+
 		/** ObservabilityPolicyCount is the number of relevant ObservabilityPolicies. */
 		long? ObservabilityPolicyCount = null;
-		
+
 		/** NginxProxyCount is the number of NginxProxies. */
 		long? NginxProxyCount = null;
-		
+
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
-		
+
 	}
 }
