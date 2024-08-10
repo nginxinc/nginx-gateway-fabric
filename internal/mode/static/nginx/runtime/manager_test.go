@@ -3,6 +3,7 @@ package runtime_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"testing"
 	"time"
@@ -63,6 +64,52 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			Expect(metrics.IncReloadErrorsCallCount()).To(Equal(0))
 		})
 
+		It("Fails to find the main process", func() {
+			process.FindMainProcessReturns(0, fmt.Errorf("failed to find process"))
+
+			err := manager.Reload(context.Background(), 1)
+
+			Expect(err).To(MatchError("failed to find NGINX main process: failed to find process"))
+			Expect(process.ReadFileCallCount()).To(Equal(0))
+			Expect(process.KillCallCount()).To(Equal(0))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(0))
+		})
+
+		It("Fails to read file", func() {
+			process.FindMainProcessReturns(1234, nil)
+			process.ReadFileReturns(nil, fmt.Errorf("failed to read file"))
+
+			err := manager.Reload(context.Background(), 1)
+
+			Expect(err).To(MatchError("failed to read file"))
+			Expect(process.KillCallCount()).To(Equal(0))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(0))
+		})
+
+		It("Fails to send kill signal", func() {
+			process.FindMainProcessReturns(1234, nil)
+			process.ReadFileReturns([]byte("child1\nchild2"), nil)
+			process.KillReturns(fmt.Errorf("failed to send kill signal"))
+
+			err := manager.Reload(context.Background(), 1)
+
+			Expect(err).To(MatchError("failed to send the HUP signal to NGINX main: failed to send kill signal"))
+			Expect(metrics.IncReloadErrorsCallCount()).To(Equal(1))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(0))
+		})
+
+		It("times out waiting for correct version", func() {
+			process.FindMainProcessReturns(1234, nil)
+			process.ReadFileReturns([]byte("child1\nchild2"), nil)
+			process.KillReturns(nil)
+			verifyClient.WaitForCorrectVersionReturns(fmt.Errorf("timeout waiting for correct version"))
+
+			err := manager.Reload(context.Background(), 1)
+
+			Expect(err).To(MatchError("timeout waiting for correct version"))
+			Expect(metrics.IncReloadErrorsCallCount()).To(Equal(1))
+		})
+
 		When("MetricsCollector is nil", func() {
 			It("panics", func() {
 				metrics = nil
@@ -108,6 +155,36 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(upstreams).To(BeEmpty())
+		})
+
+		It("successfully returns server upstreams", func() {
+			upstreams := ngxclient.Upstreams{
+				"upstream1": {
+					Zone: "zone1",
+					Peers: []ngxclient.Peer{
+						{ID: 1, Name: "peer1-name"},
+					},
+					Queue:      ngxclient.Queue{Size: 10},
+					Keepalives: 5,
+					Zombies:    2,
+				},
+				"upstream2": {
+					Zone: "zone2",
+					Peers: []ngxclient.Peer{
+						{ID: 2, Name: "peer2-name"},
+					},
+					Queue:      ngxclient.Queue{Size: 20},
+					Keepalives: 3,
+					Zombies:    1,
+				},
+			}
+
+			ngxPlusClient.GetUpstreamsReturns(&upstreams, nil)
+
+			upstreams, err := manager.GetUpstreams()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(upstreams).To(Equal(upstreams))
 		})
 
 		It("returns an error when GetUpstreams fails", func() {

@@ -21,9 +21,9 @@ import (
 const (
 	// PidFile specifies the location of the PID file for the Nginx process
 	PidFile = "/var/run/nginx/nginx.pid"
-	// pidFileTimeout defines the timeout duration for accessing the PID file
+	// PidFileTimeout defines the timeout duration for accessing the PID file
 	PidFileTimeout = 10000 * time.Millisecond
-	/// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
+	// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
 	NginxReloadTimeout = 60000 * time.Millisecond
 )
 

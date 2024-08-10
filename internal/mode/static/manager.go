@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -144,7 +145,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
 	}
 
-	processHandler := &ngxruntime.NewProcessHandlerImpl{}
+	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
 	if _, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout); err != nil {
