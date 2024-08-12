@@ -3520,15 +3520,21 @@ func TestBuildStreamUpstreams(t *testing.T) {
 	}
 
 	fakeResolver := resolverfakes.FakeServiceResolver{}
-	fakeResolver.ResolveReturnsOnCall(0, nil, errors.New("error"))
 	fakeEndpoints := []resolver.Endpoint{
 		{Address: "1.1.1.1", Port: 80},
 	}
-	fakeResolver.ResolveReturnsOnCall(
-		1,
-		fakeEndpoints,
-		nil,
-	)
+
+	fakeResolver.ResolveStub = func(
+		_ context.Context,
+		nsName types.NamespacedName,
+		_ apiv1.ServicePort,
+		_ []discoveryV1.AddressType,
+	) ([]resolver.Endpoint, error) {
+		if nsName == secureAppKey.NamespacedName {
+			return nil, errors.New("error")
+		}
+		return fakeEndpoints, nil
+	}
 
 	streamUpstreams := buildStreamUpstreams(context.Background(), testGraph.Gateway.Listeners, &fakeResolver, Dual)
 

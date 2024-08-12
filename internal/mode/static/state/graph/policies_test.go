@@ -918,7 +918,7 @@ func TestProcessPolicies_RouteOverlap(t *testing.T) {
 
 			for _, pol := range processed {
 				g.Expect(pol.Valid).To(Equal(test.valid))
-				g.Expect(pol.Conditions).To(Equal(test.expConditions))
+				g.Expect(pol.Conditions).To(ConsistOf(test.expConditions))
 			}
 		})
 	}
