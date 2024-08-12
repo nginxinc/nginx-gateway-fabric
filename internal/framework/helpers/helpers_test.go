@@ -13,6 +13,7 @@ import (
 )
 
 func TestMustCastObject(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	var obj client.Object = &gatewayv1.Gateway{}
@@ -27,6 +28,7 @@ func TestMustCastObject(t *testing.T) {
 }
 
 func TestEqualPointers(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		p1       *string
 		p2       *string
@@ -78,7 +80,9 @@ func TestEqualPointers(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			val := helpers.EqualPointers(test.p1, test.p2)
@@ -88,6 +92,7 @@ func TestEqualPointers(t *testing.T) {
 }
 
 func TestMustExecuteTemplate(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	tmpl := template.Must(template.New("test").Parse(`Hello {{.}}`))
@@ -96,6 +101,7 @@ func TestMustExecuteTemplate(t *testing.T) {
 }
 
 func TestMustExecuteTemplatePanics(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	execute := func() {

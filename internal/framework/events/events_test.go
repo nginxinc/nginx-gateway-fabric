@@ -8,6 +8,7 @@ import (
 )
 
 func TestEventLoop_SwapBatches(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	eventLoop := NewEventLoop(nil, zap.New(), nil, nil)
 
