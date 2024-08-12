@@ -9,6 +9,7 @@ import (
 )
 
 func TestGatewayClassPredicate(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	p := GatewayClassPredicate{ControllerName: "nginx-ctlr"}

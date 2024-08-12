@@ -11,6 +11,7 @@ import (
 )
 
 func TestServiceNameIndexFunc(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg       string
 		obj       client.Object
@@ -49,6 +50,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 }
 
 func TestServiceNameIndexFuncPanics(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		g := NewWithT(t)
 		g.Expect(recover()).ToNot(BeNil())

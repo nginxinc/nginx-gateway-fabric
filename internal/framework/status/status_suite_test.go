@@ -8,6 +8,7 @@ import (
 )
 
 func TestStatus(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Status Suite")
 }
