@@ -105,7 +105,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	createResourcesGWLast := func(resourceCount int) {
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout*5)
 		defer cancel()
 
 		for i := 1; i <= resourceCount; i++ {
@@ -142,7 +142,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	}
 
 	createResourcesRoutesLast := func(resourceCount int) {
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.CreateTimeout*5)
 		defer cancel()
 
 		for i := 1; i <= resourceCount; i++ {
@@ -205,6 +205,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	cleanupResources := func() error {
 		var err error
 
+		// FIXME (bjee19): https://github.com/nginxinc/nginx-gateway-fabric/issues/2376
+		// Find a way to bulk delete these namespaces.
 		for i := 1; i <= maxResourceCount; i++ {
 			nsName := "namespace" + strconv.Itoa(i)
 			resultError := resourceManager.DeleteNamespace(nsName)
@@ -422,6 +424,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		// FIXME (bjee19): https://github.com/nginxinc/nginx-gateway-fabric/issues/2374
+		// Find a way to calculate time to ready metrics without having to rely on specific log lines.
 		timeToReadyTotal, err := calculateTimeToReadyTotal(logs, timeToReadyStartingLogSubstring)
 		Expect(err).ToNot(HaveOccurred())
 
