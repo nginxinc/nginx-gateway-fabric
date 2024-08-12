@@ -59,18 +59,19 @@ var grpcBaseHeaders = []http.Header{
 	},
 }
 
-func newExecuteServersFunc(generator policies.Generator) executeFunc {
+func (g GeneratorImpl) newExecuteServersFunc(generator policies.Generator) executeFunc {
 	return func(configuration dataplane.Configuration) []executeResult {
-		return executeServers(configuration, generator)
+		return g.executeServers(configuration, generator)
 	}
 }
 
-func executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
+func (g GeneratorImpl) executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSPassthroughServers, generator)
 
 	serverConfig := http.ServerConfig{
 		Servers:  servers,
 		IPFamily: getIPFamily(conf.BaseHTTPConfig),
+		Plus:     g.plus,
 	}
 
 	serverResult := executeResult{

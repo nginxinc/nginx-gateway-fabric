@@ -11,12 +11,13 @@ import (
 
 var streamServersTemplate = gotemplate.Must(gotemplate.New("streamServers").Parse(streamServersTemplateText))
 
-func executeStreamServers(conf dataplane.Configuration) []executeResult {
+func (g GeneratorImpl) executeStreamServers(conf dataplane.Configuration) []executeResult {
 	streamServers := createStreamServers(conf)
 
 	streamServerConfig := stream.ServerConfig{
 		Servers:  streamServers,
 		IPFamily: getIPFamily(conf.BaseHTTPConfig),
+		Plus:     g.plus,
 	}
 
 	streamServerResult := executeResult{
@@ -46,9 +47,10 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		if u, ok := upstreams[server.UpstreamName]; ok && server.UpstreamName != "" {
 			if server.Hostname != "" && len(u.Endpoints) > 0 {
 				streamServers = append(streamServers, stream.Server{
-					Listen:    getSocketNameTLS(server.Port, server.Hostname),
-					ProxyPass: server.UpstreamName,
-					IsSocket:  true,
+					Listen:     getSocketNameTLS(server.Port, server.Hostname),
+					StatusZone: server.Hostname,
+					ProxyPass:  server.UpstreamName,
+					IsSocket:   true,
 				})
 			}
 		}
@@ -60,6 +62,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		portSet[server.Port] = struct{}{}
 		streamServers = append(streamServers, stream.Server{
 			Listen:     fmt.Sprint(server.Port),
+			StatusZone: server.Hostname,
 			Pass:       getTLSPassthroughVarName(server.Port),
 			SSLPreread: true,
 		})

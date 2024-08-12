@@ -97,6 +97,7 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 		"proxy_ssl_server_name on;":                                1,
+		"status_zone":                                              0,
 	}
 
 	type assertion func(g *WithT, data string)
@@ -131,7 +132,8 @@ func TestExecuteServers(t *testing.T) {
 		},
 	})
 
-	results := executeServers(conf, fakeGenerator)
+	gen := GeneratorImpl{}
+	results := gen.executeServers(conf, fakeGenerator)
 	g.Expect(results).To(HaveLen(len(expectedResults)))
 
 	for _, res := range results {
@@ -142,7 +144,7 @@ func TestExecuteServers(t *testing.T) {
 	}
 }
 
-func TestExecuteServersForIPFamily(t *testing.T) {
+func TestExecuteServers_IPFamily(t *testing.T) {
 	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
@@ -256,6 +258,7 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 				"listen [::]:8080;":                                        1,
 				"listen [::]:8443 ssl default_server;":                     1,
 				"listen [::]:8443 ssl;":                                    1,
+				"status_zone":                                              0,
 			},
 		},
 	}
@@ -263,7 +266,9 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
-			results := executeServers(test.config, &policiesfakes.FakeGenerator{})
+
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -273,6 +278,44 @@ func TestExecuteServersForIPFamily(t *testing.T) {
 				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
 			}
 		})
+	}
+}
+
+func TestExecuteServers_Plus(t *testing.T) {
+	config := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				Hostname: "example.com",
+			},
+			{
+				Hostname: "example2.com",
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "example.com",
+				SSL: &dataplane.SSL{
+					KeyPairID: "test-keypair",
+				},
+			},
+		},
+	}
+
+	expectedHTTPConfig := map[string]int{
+		"status_zone example.com;":  2,
+		"status_zone example2.com;": 1,
+	}
+
+	g := NewWithT(t)
+
+	gen := GeneratorImpl{plus: true}
+	results := gen.executeServers(config, &policiesfakes.FakeGenerator{})
+	g.Expect(results).To(HaveLen(2))
+
+	serverConf := string(results[0].data)
+
+	for expSubStr, expCount := range expectedHTTPConfig {
+		g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
 	}
 }
 
@@ -347,7 +390,8 @@ func TestExecuteForDefaultServers(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			serverResults := executeServers(tc.conf, &policiesfakes.FakeGenerator{})
+			gen := GeneratorImpl{}
+			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{})
 			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
