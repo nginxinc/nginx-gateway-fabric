@@ -1,6 +1,6 @@
 ---
 title: "Upgrade applications without downtime"
-weight: 400
+weight: 500
 toc: true
 docs: "DOCS-1420"
 ---

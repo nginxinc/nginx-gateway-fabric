@@ -5,7 +5,7 @@ toc: true
 docs: "DOCS-1416"
 ---
 
-Learn how to dynamically update the Gateway Fabric control plane configuration.
+Learn how to dynamically update the NGINX Gateway Fabric control plane configuration.
 
 ## Overview
 
@@ -22,42 +22,22 @@ If the resource is invalid to the OpenAPI schema, the Kubernetes API server will
 
 Additionally, the control plane updates the status of the resource (if it exists) to reflect whether it is valid or not.
 
-### Spec
-
-{{< bootstrap-table "table table-striped table-bordered" >}}
-| name    | description                                                     | type                     | required |
-|---------|-----------------------------------------------------------------|--------------------------|----------|
-| logging | Logging defines logging related settings for the control plane. | [logging](#speclogging) | no       |
-{{< /bootstrap-table >}}
-
-### Spec.Logging
-
-{{< bootstrap-table "table table-striped table-bordered" >}}
-| name  | description                                                            | type   | required |
-|-------|------------------------------------------------------------------------|--------|----------|
-| level | Level defines the logging level. Supported values: info, debug, error. | string | no       |
-{{< /bootstrap-table >}}
+**For a full list of configuration options that can be set, see the `NginxGateway spec` in the [API reference]({{< relref "reference/api.md" >}}).**
 
 ## Viewing and Updating the Configuration
 
-{{< note >}} For the following examples, the name `nginx-gateway-config` should be updated to the name of the resource created for your installation. {{< /note >}}
+{{< note >}} For the following examples, the name `ngf-config` should be updated to the name of the resource created for your installation.{{< /note >}}
 
-To view the current configuration:
+To view the current configuration and its status:
 
 ```shell
-kubectl -n nginx-gateway get nginxgateways nginx-gateway-config -o yaml
+kubectl -n nginx-gateway describe nginxgateways ngf-config
 ```
 
 To update the configuration:
 
 ```shell
-kubectl -n nginx-gateway edit nginxgateways nginx-gateway-config
+kubectl -n nginx-gateway edit nginxgateways ngf-config
 ```
 
 This will open the configuration in your default editor. You can then update and save the configuration, which is applied automatically to the control plane.
-
-To view the status of the configuration:
-
-```shell
-kubectl -n nginx-gateway describe nginxgateways nginx-gateway-config
-```
