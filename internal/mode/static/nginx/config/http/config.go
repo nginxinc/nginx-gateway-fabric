@@ -111,6 +111,7 @@ type ProxySSLVerify struct {
 type ServerConfig struct {
 	Servers  []Server
 	IPFamily shared.IPFamily
+	Plus     bool
 }
 
 // Include defines a file that's included via the include directive.

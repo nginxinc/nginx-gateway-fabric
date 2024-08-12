@@ -169,12 +169,12 @@ func (g GeneratorImpl) generateHTTPConfig(
 func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
 	return []executeFunc{
 		executeBaseHTTPConfig,
-		newExecuteServersFunc(generator),
+		g.newExecuteServersFunc(generator),
 		g.executeUpstreams,
 		executeSplitClients,
 		executeMaps,
 		executeTelemetry,
-		executeStreamServers,
+		g.executeStreamServers,
 		g.executeStreamUpstreams,
 		executeStreamMaps,
 	}

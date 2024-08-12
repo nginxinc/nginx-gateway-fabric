@@ -9,6 +9,11 @@ server {
 	{{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
     listen [::]:{{ $s.Listen }};
 	{{- end }}
+
+	{{- if $.Plus }}
+    status_zone {{ $s.StatusZone }};
+    {{- end }}
+
 	{{- if $s.ProxyPass }}
     proxy_pass {{ $s.ProxyPass }};
 	{{- end }}
