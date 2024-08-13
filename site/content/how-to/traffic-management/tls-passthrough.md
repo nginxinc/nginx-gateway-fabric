@@ -5,7 +5,7 @@ toc: true
 docs: "DOCS-000"
 ---
 
-Learn how to passthrough TLS connection using NGINX Gateway Fabric.
+Learn how to passthrough TLS connections using NGINX Gateway Fabric.
 
 ## Overview
 
@@ -118,7 +118,7 @@ This will create the **secure-app** service and a deployment. Run the following 
 kubectl get pods,svc
 ```
 
-Your output should include the **secure-app** pod and the **secure-app** service:
+The output should include the **secure-app** pod and the **secure-app** service:
 
 ```text
 NAME                              READY   STATUS      RESTARTS   AGE
@@ -128,7 +128,7 @@ NAME                  TYPE        CLUSTER-IP        EXTERNAL-IP   PORT(S)    AGE
 service/secure-app    ClusterIP   192.168.194.152   <none>        8443/TCP   12s
 ```
 
-Next, let's create a gateway. This will create TLS listener with the hostname *.example.com. Copy paste this into your terminal.
+Create a gateway. This will create TLS listener with the hostname *.example.com. Copy paste this into your terminal.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -154,7 +154,7 @@ spec:
 EOF
 ```
 
-Finally, let's create a TLS Route. This will reference our service and the gateway.
+Create a TLSRoute, this will reference the service and the gateway.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -177,13 +177,13 @@ spec:
 EOF
 ```
 
-## Send Traffic
+## Send traffic
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee application.
+Using the external IP address and port for NGINX Gateway Fabric, send traffic to the coffee application.
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
-To test that NGINX sends an HTTPS redirect, we will send requests to the `secure-app` service on the HTTPS port.
+Send a request to the `secure-app` service on the HTTPS port with the `--insecure` flag. The `--insecure` flag is required because the `secure-app` is using self-signed certificates.
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP https://cafe.example.com:$GW_PORT --insecure
