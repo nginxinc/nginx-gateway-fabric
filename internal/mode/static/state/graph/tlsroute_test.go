@@ -37,6 +37,8 @@ func createTLSRoute(
 }
 
 func TestBuildTLSRoute(t *testing.T) {
+	t.Parallel()
+
 	parentRef := gatewayv1.ParentReference{
 		Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 		Name:        "gateway",
@@ -551,6 +553,8 @@ func TestBuildTLSRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
+			t.Parallel()
+
 			r := buildTLSRoute(
 				test.gtr,
 				test.gatewayNsNames,
