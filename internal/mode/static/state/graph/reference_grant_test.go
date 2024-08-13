@@ -162,6 +162,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 	resolver := newReferenceGrantResolver(refGrants)
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
 			t.Parallel()
 
@@ -414,6 +415,7 @@ func TestRefAllowedFrom(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
