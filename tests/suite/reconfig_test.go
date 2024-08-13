@@ -333,7 +333,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		getStartTime := func() time.Time { return startTime }
 		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
 
-		setup(getDefaultSetupCfg())
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg)
+
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).To(HaveLen(1))
