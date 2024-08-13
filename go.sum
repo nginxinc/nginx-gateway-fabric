@@ -101,8 +101,8 @@ github.com/nginxinc/nginx-plus-go-client v1.2.2 h1:sl7HqNDDZq2EVu0eQQVoZ6PKYGa4h
 github.com/nginxinc/nginx-plus-go-client v1.2.2/go.mod h1:n8OFLzrJulJ2fur28Cwa1Qp5DZNS2VicLV+Adt30LQ4=
 github.com/nginxinc/nginx-prometheus-exporter v1.3.0 h1:1JtdxsZH0Uwhu1nL/j/QyOXytP5V5j68AEo2X+DFWb0=
 github.com/nginxinc/nginx-prometheus-exporter v1.3.0/go.mod h1:hXoH+X6aIKSyQuO6QTIiPKH3eZyxqy/wW8GYiE3dflU=
-github.com/nginxinc/telemetry-exporter v0.1.0 h1:wF71jYx4PQpHv5ML0Ba4qN/o37ZNLfiHENXMZsVO7EQ=
-github.com/nginxinc/telemetry-exporter v0.1.0/go.mod h1:Hcb/Fz6TvTZLxF/p9Fa1YDmdScnZ9Azdl8isO4Hd9v4=
+github.com/nginxinc/telemetry-exporter v0.1.1 h1:6wRjxra+6997GtVrkRjq5CqJyreQTbwdtmRGyqw7VyY=
+github.com/nginxinc/telemetry-exporter v0.1.1/go.mod h1:aNsh1EGGlozhvc3e8lnBfz1V+kfsknHZaUNscHV+yLo=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
