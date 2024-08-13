@@ -9,13 +9,13 @@ Learn how to dynamically update the NGINX Gateway Fabric global data plane confi
 
 ## Overview
 
-NGINX Gateway Fabric can dynamically update the global data plane configuration without restarting. The data plane configuration is a global configuration for nginx that has options that are not available using the standard Gateway API resources. This includes such things as setting an OpenTelemetry collector config, disabling http2, or changing the IP family.
+NGINX Gateway Fabric can dynamically update the global data plane configuration without restarting. The data plane configuration is a global configuration for NGINX that has options that are not available using the standard Gateway API resources. This includes such things as setting an OpenTelemetry collector config, disabling http2, or changing the IP family.
 
 The data plane configuration is stored in the NginxProxy custom resource, which is a cluster-scoped resource that is attached to the `nginx` GatewayClass.
 
 By default, the NginxProxy resource is not created when installing NGINX Gateway Fabric. However, you can set configuration options in the `nginx.config` Helm values, and the resource will be created and attached when NGINX Gateway Fabric is installed using Helm. You can also [manually create and attach](#manually-creating-the-configuration) the resource after NGINX Gateway Fabric is already installed.
 
-If installed using the Helm chart, the NginxProxy resource is named `<release-name>-proxy-config`.
+When installed using the Helm chart, the NginxProxy resource is named `<release-name>-proxy-config`.
 
 **For a full list of configuration options that can be set, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).**
 
@@ -45,6 +45,18 @@ To view the status of the configuration, check the GatewayClass that it is attac
 
 ```shell
 kubectl describe gatewayclasses nginx
+```
+
+```text
+...
+Status:
+  Conditions:
+     ...
+    Message:               parametersRef resource is resolved
+    Observed Generation:   1
+    Reason:                ResolvedRefs
+    Status:                True
+    Type:                  ResolvedRefs
 ```
 
 If everything is valid, the `ResolvedRefs` condition should be `True`. Otherwise, you will see an `InvalidParameters` condition in the status.
@@ -85,6 +97,18 @@ After updating, you can check the status of the GatewayClass to see if the confi
 
 ```shell
 kubectl describe gatewayclasses nginx
+```
+
+```text
+...
+Status:
+  Conditions:
+     ...
+    Message:               parametersRef resource is resolved
+    Observed Generation:   1
+    Reason:                ResolvedRefs
+    Status:                True
+    Type:                  ResolvedRefs
 ```
 
 If everything is valid, the `ResolvedRefs` condition should be `True`. Otherwise, you will see an `InvalidParameters` condition in the status.
