@@ -45,6 +45,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	)
 
 	BeforeAll(func() {
+		// Reconfiguration tests deploy NGF in the test, so we want to tear down any existing instances.
+		teardown(releaseName)
+
 		resultsDir, err := framework.CreateResultsDir("reconfig", version)
 		Expect(err).ToNot(HaveOccurred())
 
