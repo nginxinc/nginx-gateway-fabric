@@ -43,9 +43,14 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		g := NewWithT(t)
-		output := ServiceNameIndexFunc(tc.obj)
-		g.Expect(output).To(Equal(tc.expOutput))
+		tc := tc
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			output := ServiceNameIndexFunc(tc.obj)
+			g.Expect(output).To(Equal(tc.expOutput))
+		})
 	}
 }
 
