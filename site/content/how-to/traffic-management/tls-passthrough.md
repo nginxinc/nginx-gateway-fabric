@@ -2,7 +2,7 @@
 title: "TLS Passthrough"
 weight: 600
 toc: true
-docs: "DOCS-1421"
+docs: "DOCS-000"
 ---
 
 Learn how to passthrough TLS connection using NGINX Gateway Fabric.
