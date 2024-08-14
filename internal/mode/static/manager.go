@@ -552,9 +552,6 @@ func createTelemetryJob(
 
 		options := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(cfg.ProductTelemetryConfig.Endpoint),
-			otlptracegrpc.WithHeaders(map[string]string{
-				"X-F5-OTEL": "GRPC",
-			}),
 		}
 		if cfg.ProductTelemetryConfig.EndpointInsecure {
 			options = append(options, otlptracegrpc.WithInsecure())
