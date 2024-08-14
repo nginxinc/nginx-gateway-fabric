@@ -1,11 +1,11 @@
 ---
 title: "TLS Passthrough"
-weight: 600
+weight: 800
 toc: true
 docs: "DOCS-000"
 ---
 
-Learn how to passthrough TLS connections using NGINX Gateway Fabric.
+Learn how to use TLSRoutes to configure TLS Passthrough load-balancing with NGINX Gateway Fabric.
 
 ## Overview
 
@@ -18,19 +18,14 @@ In this guide, we will show how to configure TLS passthrough for your applicatio
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
-   GW_PORT=<port number>
-   ```
-
-  Save the ports of NGINX Gateway Fabric:
-
-   ```text
-   GW_HTTP_PORT=<http port number>
-   GW_HTTPS_PORT=<https port number>
+   GW_TLS_PORT=<port number>
    ```
 
 {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
 
-Create the tls-backend application by copying and pasting the following block into your terminal:
+## Set up
+
+Create the `secure-app` application by copying and pasting the following block into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -98,7 +93,7 @@ data:
       default_type text/plain;
 
       location / {
-        return 200 "hello from pod $hostname\n";
+        return 200 "hello from pod \$hostname\n";
       }
     }
 ---
@@ -112,7 +107,9 @@ data:
 EOF
 ```
 
-This will create the **secure-app** service and a deployment. Run the following command to verify the resources were created:
+This will create the **secure-app** service and a deployment. The secure app is configured to serve HTTPS traffic on port 8443 for the host app.example.com. For TLS termination, a self-signed TLS certificate, with the common name `app.example.com`, and key are used. The app responds to clients HTTPS requests with a simple text response "hello from pod $POD_HOSTNAME".
+
+Run the following command to verify the resources were created:
 
 ```shell
 kubectl get pods,svc
@@ -128,7 +125,7 @@ NAME                  TYPE        CLUSTER-IP        EXTERNAL-IP   PORT(S)    AGE
 service/secure-app    ClusterIP   192.168.194.152   <none>        8443/TCP   12s
 ```
 
-Create a gateway. This will create TLS listener with the hostname *.example.com. Copy paste this into your terminal.
+Create a gateway. This will create a TLS listener with the hostname `*.example.com` and a TLS mode of passthrough. Copy and paste this into your terminal.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -154,7 +151,11 @@ spec:
 EOF
 ```
 
-Create a TLSRoute, this will reference the service and the gateway.
+This gateway will configure NGINX Gateway Fabric to accept TLS connections on port 443 and route them to the corresponding backend services without decryption. The routing is done based on the SNI, which allows clients to specify a server name (like example.com) during the SSL handshake.
+
+{{< note >}} It is possible to add an HTTPS listener on the same port that terminates TLS connections so long as the hostname does not overlap with the TLS listener hostname. {{< /note >}}
+
+Create a TLSRoute that attaches to the gateway and routes requests to `app.example.com` to the `secure-app` service:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -168,7 +169,6 @@ spec:
   - name: gateway
     namespace: default
   hostnames:
-  - "cafe.example.com"
   - "app.example.com"
   rules:
   - backendRefs:
@@ -177,18 +177,55 @@ spec:
 EOF
 ```
 
+{{< note >}}To route to a service in a namespace different from the TLSRoute namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1beta1.ReferenceGrant) to permit the cross-namespace reference. {{< /note >}}
+
 ## Send traffic
 
-Using the external IP address and port for NGINX Gateway Fabric, send traffic to the coffee application.
+Using the external IP address and port for NGINX Gateway Fabric, send traffic to the `secure-app` application.
 
-{{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
+{{< note >}}If you have a DNS record allocated for `app.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
-Send a request to the `secure-app` service on the HTTPS port with the `--insecure` flag. The `--insecure` flag is required because the `secure-app` is using self-signed certificates.
+Send a request to the `secure-app` service on the TLS port with the `--insecure` flag. The `--insecure` flag is required because the `secure-app` is using self-signed certificates.
 
 ```shell
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP https://cafe.example.com:$GW_PORT --insecure
+curl --resolve app.example.com:$GW_TLS_PORT:$GW_IP https://app.example.com:$GW_TLS_PORT --insecure -v
 ```
 
 ```text
+Added app.example.com:8443:127.0.0.1 to DNS cache
+* Hostname app.example.com was found in DNS cache
+*   Trying 127.0.0.1:8443...
+* Connected to app.example.com (127.0.0.1) port 8443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES256-GCM-SHA384 / [blank] / UNDEF
+* ALPN: server accepted http/1.1
+* Server certificate:
+*  subject: C=US; ST=CA; L=San Francisco; CN=app.example.com
+*  start date: Mar 23 23:20:43 2020 GMT
+*  expire date: Mar 23 23:20:43 2023 GMT
+*  issuer: C=US; ST=CA; L=San Francisco; CN=app.example.com
+*  SSL certificate verify result: self signed certificate (18), continuing anyway.
+* using HTTP/1.x
+> GET / HTTP/1.1
+> Host: app.example.com:8443
+> User-Agent: curl/8.6.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Server: nginx/1.27.0
+< Date: Wed, 14 Aug 2024 20:41:21 GMT
+< Content-Type: text/plain
+< Content-Length: 43
+< Connection: keep-alive
+<
 hello from pod secure-app-575785644-kzqf6
 ```
+
+Note that the server certificate used to terminate the TLS connection has the subject common name of `app.example.com`. This is the server certificate that the `secure-app` is configured with and shows that the TLS connection was terminated by the `secure-app`, not NGINX Gateway Fabric.
