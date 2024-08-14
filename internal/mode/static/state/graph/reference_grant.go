@@ -81,6 +81,14 @@ func fromGRPCRoute(namespace string) fromResource {
 	}
 }
 
+func fromTLSRoute(namespace string) fromResource {
+	return fromResource{
+		group:     v1.GroupName,
+		kind:      kinds.TLSRoute,
+		namespace: namespace,
+	}
+}
+
 // newReferenceGrantResolver creates a new referenceGrantResolver.
 func newReferenceGrantResolver(refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant) *referenceGrantResolver {
 	allowed := make(map[allowedReference]struct{})

@@ -178,6 +178,7 @@ func buildL4RoutesForGateways(
 	gatewayNsNames []types.NamespacedName,
 	services map[types.NamespacedName]*apiv1.Service,
 	npCfg *NginxProxy,
+	resolver *referenceGrantResolver,
 ) map[L4RouteKey]*L4Route {
 	if len(gatewayNsNames) == 0 {
 		return nil
@@ -185,7 +186,13 @@ func buildL4RoutesForGateways(
 
 	routes := make(map[L4RouteKey]*L4Route)
 	for _, route := range tlsRoutes {
-		r := buildTLSRoute(route, gatewayNsNames, services, npCfg)
+		r := buildTLSRoute(
+			route,
+			gatewayNsNames,
+			services,
+			npCfg,
+			resolver.refAllowedFrom(fromTLSRoute(route.Namespace)),
+		)
 		if r != nil {
 			routes[CreateRouteKeyL4(route)] = r
 		}
