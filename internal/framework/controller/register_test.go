@@ -27,6 +27,7 @@ import (
 )
 
 func TestRegister(t *testing.T) {
+	t.Parallel()
 	type fakes struct {
 		mgr     *controllerfakes.FakeManager
 		indexer *controllerfakes.FakeFieldIndexer
@@ -120,7 +121,9 @@ func TestRegister(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {

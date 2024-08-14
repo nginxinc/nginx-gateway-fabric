@@ -37,6 +37,8 @@ func createTLSRoute(
 }
 
 func TestBuildTLSRoute(t *testing.T) {
+	t.Parallel()
+
 	parentRef := gatewayv1.ParentReference{
 		Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 		Name:        "gateway",
@@ -136,7 +138,7 @@ func TestBuildTLSRoute(t *testing.T) {
 		},
 	)
 
-	wrongBackendRefNamespaceGtr8 := createTLSRoute("app.example.com",
+	diffNsBackendRef := createTLSRoute("app.example.com",
 		[]v1alpha2.TLSRouteRule{
 			{
 				BackendRefs: []gatewayv1.BackendRef{
@@ -144,7 +146,7 @@ func TestBuildTLSRoute(t *testing.T) {
 						BackendObjectReference: gatewayv1.BackendObjectReference{
 							Name:      "hi",
 							Port:      helpers.GetPointer[gatewayv1.PortNumber](80),
-							Namespace: helpers.GetPointer[gatewayv1.Namespace]("wrong"),
+							Namespace: helpers.GetPointer[gatewayv1.Namespace]("diff"),
 						},
 					},
 				},
@@ -190,13 +192,33 @@ func TestBuildTLSRoute(t *testing.T) {
 			parentRef,
 		},
 	)
+
+	validRefSameNs := createTLSRoute("app.example.com",
+		[]v1alpha2.TLSRouteRule{
+			{
+				BackendRefs: []gatewayv1.BackendRef{
+					{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name:      "hi",
+							Port:      helpers.GetPointer[gatewayv1.PortNumber](80),
+							Namespace: helpers.GetPointer[gatewayv1.Namespace]("test"),
+						},
+					},
+				},
+			},
+		},
+		[]gatewayv1.ParentReference{
+			parentRef,
+		},
+	)
+
 	svcNsName := types.NamespacedName{
 		Namespace: "test",
 		Name:      "hi",
 	}
 
-	svcNsNameWrong := types.NamespacedName{
-		Namespace: "wrong",
+	diffSvcNsName := types.NamespacedName{
+		Namespace: "diff",
 		Name:      "hi",
 	}
 
@@ -214,9 +236,9 @@ func TestBuildTLSRoute(t *testing.T) {
 		}
 	}
 
-	badNsSvc := &apiv1.Service{
+	diffNsSvc := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "wrong",
+			Namespace: "diff",
 			Name:      "hi",
 		},
 		Spec: apiv1.ServiceSpec{
@@ -241,19 +263,27 @@ func TestBuildTLSRoute(t *testing.T) {
 		},
 	}
 
+	alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
+	alwaysFalseRefGrantResolver := func(_ toResource) bool { return false }
+
 	tests := []struct {
 		expected       *L4Route
 		gtr            *v1alpha2.TLSRoute
 		services       map[types.NamespacedName]*apiv1.Service
+		resolver       func(resource toResource) bool
 		name           string
 		gatewayNsNames []types.NamespacedName
 		npCfg          NginxProxy
 	}{
 		{
-			gtr:            duplicateParentRefsGtr,
-			expected:       &L4Route{Source: duplicateParentRefsGtr},
+			gtr: duplicateParentRefsGtr,
+			expected: &L4Route{
+				Source: duplicateParentRefsGtr,
+				Valid:  false,
+			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services:       map[types.NamespacedName]*apiv1.Service{},
+			resolver:       alwaysTrueRefGrantResolver,
 			name:           "duplicate parent refs",
 		},
 		{
@@ -261,6 +291,7 @@ func TestBuildTLSRoute(t *testing.T) {
 			expected:       nil,
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services:       map[types.NamespacedName]*apiv1.Service{},
+			resolver:       alwaysTrueRefGrantResolver,
 			name:           "no parent refs",
 		},
 		{
@@ -275,9 +306,11 @@ func TestBuildTLSRoute(t *testing.T) {
 						"ter (e.g. 'example.com', regex used for validation is '[a-z0-9](" +
 						"[-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')",
 				)},
+				Valid: false,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services:       map[types.NamespacedName]*apiv1.Service{},
+			resolver:       alwaysTrueRefGrantResolver,
 			name:           "invalid hostname",
 		},
 		{
@@ -293,9 +326,11 @@ func TestBuildTLSRoute(t *testing.T) {
 				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefUnsupportedValue(
 					"Must have exactly one Rule and BackendRef",
 				)},
+				Valid: false,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services:       map[types.NamespacedName]*apiv1.Service{},
+			resolver:       alwaysTrueRefGrantResolver,
 			name:           "invalid rule",
 		},
 		{
@@ -312,15 +347,18 @@ func TestBuildTLSRoute(t *testing.T) {
 							Namespace: "test",
 							Name:      "hi",
 						},
+						Valid: false,
 					},
 				},
 				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefRefBackendNotFound(
 					"spec.rules[0].backendRefs[0].name: Not found: \"hi\"",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services:       map[types.NamespacedName]*apiv1.Service{},
+			resolver:       alwaysTrueRefGrantResolver,
 			name:           "BackendRef not found",
 		},
 		{
@@ -333,8 +371,7 @@ func TestBuildTLSRoute(t *testing.T) {
 						"app.example.com",
 					},
 					BackendRef: BackendRef{
-						SvcNsName:   svcNsName,
-						ServicePort: apiv1.ServicePort{Port: 80},
+						Valid: false,
 					},
 				},
 				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefInvalidKind(
@@ -342,12 +379,14 @@ func TestBuildTLSRoute(t *testing.T) {
 						" Unsupported value: \"wrong\": supported values: \"core\", \"\"",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services: map[types.NamespacedName]*apiv1.Service{
 				svcNsName: createSvc("hi", 80),
 			},
-			name: "BackendRef group wrong",
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "BackendRef group wrong",
 		},
 		{
 			gtr: wrongBackendRefKindGtr,
@@ -359,8 +398,7 @@ func TestBuildTLSRoute(t *testing.T) {
 						"app.example.com",
 					},
 					BackendRef: BackendRef{
-						SvcNsName:   svcNsName,
-						ServicePort: apiv1.ServicePort{Port: 80},
+						Valid: false,
 					},
 				},
 				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefInvalidKind(
@@ -368,37 +406,40 @@ func TestBuildTLSRoute(t *testing.T) {
 						" Unsupported value: \"not service\": supported values: \"Service\"",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services: map[types.NamespacedName]*apiv1.Service{
 				svcNsName: createSvc("hi", 80),
 			},
-			name: "BackendRef kind wrong",
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "BackendRef kind wrong",
 		},
 		{
-			gtr: wrongBackendRefNamespaceGtr8,
+			gtr: diffNsBackendRef,
 			expected: &L4Route{
-				Source:     wrongBackendRefNamespaceGtr8,
+				Source:     diffNsBackendRef,
 				ParentRefs: []ParentRef{parentRefGraph},
 				Spec: L4RouteSpec{
 					Hostnames: []gatewayv1.Hostname{
 						"app.example.com",
 					},
 					BackendRef: BackendRef{
-						SvcNsName:   svcNsNameWrong,
-						ServicePort: apiv1.ServicePort{Port: 80},
+						Valid: false,
 					},
 				},
-				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefUnsupportedValue(
-					"Cross-namespace routing is not supported",
+				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefRefNotPermitted(
+					"Backend ref to Service diff/hi not permitted by any ReferenceGrant",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services: map[types.NamespacedName]*apiv1.Service{
-				svcNsNameWrong: badNsSvc,
+				diffSvcNsName: diffNsSvc,
 			},
-			name: "BackendRef namespace wrong",
+			resolver: alwaysFalseRefGrantResolver,
+			name:     "BackendRef in diff namespace not permitted by any reference grant",
 		},
 		{
 			gtr: portNilBackendRefGtr,
@@ -409,18 +450,22 @@ func TestBuildTLSRoute(t *testing.T) {
 					Hostnames: []gatewayv1.Hostname{
 						"app.example.com",
 					},
-					BackendRef: BackendRef{},
+					BackendRef: BackendRef{
+						Valid: false,
+					},
 				},
 				Conditions: []conditions.Condition{staticConds.NewRouteBackendRefUnsupportedValue(
 					"spec.rules[0].backendRefs[0].port: Required value: port cannot be nil",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services: map[types.NamespacedName]*apiv1.Service{
-				svcNsNameWrong: createSvc("hi", 80),
+				diffSvcNsName: createSvc("hi", 80),
 			},
-			name: "BackendRef port nil",
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "BackendRef port nil",
 		},
 		{
 			gtr: ipFamilyMismatchGtr,
@@ -440,27 +485,83 @@ func TestBuildTLSRoute(t *testing.T) {
 					"Service configured with IPv4 family but NginxProxy is configured with IPv6",
 				)},
 				Attachable: true,
+				Valid:      true,
 			},
 			gatewayNsNames: []types.NamespacedName{gatewayNsName},
 			services: map[types.NamespacedName]*apiv1.Service{
 				svcNsName: ipv4Svc,
 			},
-			name: "service and npcfg ip family mismatch",
 			npCfg: NginxProxy{
 				Source: &ngfAPI.NginxProxy{Spec: ngfAPI.NginxProxySpec{IPFamily: helpers.GetPointer(ngfAPI.IPv6)}},
 				Valid:  true,
 			},
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "service and npcfg ip family mismatch",
+		},
+		{
+			gtr: diffNsBackendRef,
+			expected: &L4Route{
+				Source:     diffNsBackendRef,
+				ParentRefs: []ParentRef{parentRefGraph},
+				Spec: L4RouteSpec{
+					Hostnames: []gatewayv1.Hostname{
+						"app.example.com",
+					},
+					BackendRef: BackendRef{
+						SvcNsName:   diffSvcNsName,
+						ServicePort: apiv1.ServicePort{Port: 80},
+						Valid:       true,
+					},
+				},
+				Attachable: true,
+				Valid:      true,
+			},
+			gatewayNsNames: []types.NamespacedName{gatewayNsName},
+			services: map[types.NamespacedName]*apiv1.Service{
+				diffSvcNsName: diffNsSvc,
+			},
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "valid; backendRef in diff namespace permitted by a reference grant",
+		},
+		{
+			gtr: validRefSameNs,
+			expected: &L4Route{
+				Source:     validRefSameNs,
+				ParentRefs: []ParentRef{parentRefGraph},
+				Spec: L4RouteSpec{
+					Hostnames: []gatewayv1.Hostname{
+						"app.example.com",
+					},
+					BackendRef: BackendRef{
+						SvcNsName:   svcNsName,
+						ServicePort: apiv1.ServicePort{Port: 80},
+						Valid:       true,
+					},
+				},
+				Attachable: true,
+				Valid:      true,
+			},
+			gatewayNsNames: []types.NamespacedName{gatewayNsName},
+			services: map[types.NamespacedName]*apiv1.Service{
+				svcNsName: ipv4Svc,
+			},
+			resolver: alwaysTrueRefGrantResolver,
+			name:     "valid; same namespace",
 		},
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
+			t.Parallel()
+
 			r := buildTLSRoute(
 				test.gtr,
 				test.gatewayNsNames,
 				test.services,
 				&test.npCfg,
+				test.resolver,
 			)
 			g.Expect(helpers.Diff(test.expected, r)).To(BeEmpty())
 		})
