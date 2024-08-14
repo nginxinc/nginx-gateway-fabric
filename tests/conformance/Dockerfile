@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.8
-FROM golang:1.22
+FROM golang:1.23
 
 WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric/tests/conformance
 
