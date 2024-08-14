@@ -228,6 +228,7 @@ func BuildGraph(
 		processedGws.GetAllNsNames(),
 		state.Services,
 		npCfg,
+		refGrantResolver,
 	)
 
 	bindRoutesToListeners(routes, l4routes, gw, state.Namespaces)

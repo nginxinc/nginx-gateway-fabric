@@ -10,7 +10,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/nginxinc/nginx-plus-go-client v1.2.2
 	github.com/nginxinc/nginx-prometheus-exporter v1.3.0
-	github.com/nginxinc/telemetry-exporter v0.1.0
+	github.com/nginxinc/telemetry-exporter v0.1.1
 	github.com/onsi/ginkgo/v2 v2.20.0
 	github.com/onsi/gomega v1.34.1
 	github.com/prometheus/client_golang v1.19.1

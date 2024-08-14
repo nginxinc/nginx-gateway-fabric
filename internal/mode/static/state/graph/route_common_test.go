@@ -2436,11 +2436,14 @@ func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
 		},
 	}
 
+	refGrantResolver := newReferenceGrantResolver(nil)
+
 	g.Expect(buildL4RoutesForGateways(
 		tlsRoutes,
 		nil,
 		services,
 		nil,
+		refGrantResolver,
 	)).To(BeNil())
 }
 

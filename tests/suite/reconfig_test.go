@@ -45,6 +45,9 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 	)
 
 	BeforeAll(func() {
+		// Reconfiguration tests deploy NGF in the test, so we want to tear down any existing instances.
+		teardown(releaseName)
+
 		resultsDir, err := framework.CreateResultsDir("reconfig", version)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -330,7 +333,10 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfig
 		getStartTime := func() time.Time { return startTime }
 		modifyStartTime := func() { startTime = startTime.Add(500 * time.Millisecond) }
 
-		setup(getDefaultSetupCfg())
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg)
+
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).To(HaveLen(1))
