@@ -34,6 +34,18 @@ To view the current configuration and its status:
 kubectl -n nginx-gateway describe nginxgateways ngf-config
 ```
 
+```text
+...
+Status:
+  Conditions:
+    Last Transition Time:  2024-08-13T19:22:14Z
+    Message:               NginxGateway is valid
+    Observed Generation:   1
+    Reason:                Valid
+    Status:                True
+    Type:                  Valid
+```
+
 To update the configuration:
 
 ```shell
