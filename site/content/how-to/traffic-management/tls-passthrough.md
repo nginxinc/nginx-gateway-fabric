@@ -107,7 +107,7 @@ data:
 EOF
 ```
 
-This will create the **secure-app** Service and a Deployment. The secure app is configured to serve HTTPS traffic on port 8443 for the host app.example.com. For TLS termination, a self-signed TLS certificate, with the common name `app.example.com`, and key are used. The app responds to clients HTTPS requests with a simple text response "hello from pod $POD_HOSTNAME".
+This will create the **secure-app** Service and a Deployment. The secure app is configured to serve HTTPS traffic on port 8443 for the host app.example.com. For TLS termination, a self-signed TLS certificate, with the common name `app.example.com`, and key are used. The app responds to a client's HTTPS requests with a simple text response "hello from pod $POD_HOSTNAME".
 
 Run the following command to verify the resources were created:
 
