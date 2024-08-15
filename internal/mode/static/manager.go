@@ -403,14 +403,14 @@ func registerControllers(
 		},
 		{
 			objectType: &apiv1.Service{},
-			name:       "user-service",
+			name:       "user-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 			},
 		},
 		{
 			objectType: &apiv1.Service{},
-			name:       "ngf-service",
+			name:       "ngf-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: func() []controller.Option {
 				svcNSName := types.NamespacedName{
 					Namespace: cfg.GatewayPodConfig.Namespace,
