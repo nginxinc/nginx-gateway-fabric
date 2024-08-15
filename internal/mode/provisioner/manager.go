@@ -94,6 +94,7 @@ func StartManager(cfg Config) error {
 		if err := controller.Register(
 			ctx,
 			regCfg.objectType,
+			regCfg.objectType.GetObjectKind().GroupVersionKind().Kind,
 			mgr,
 			eventCh,
 			regCfg.options...,
