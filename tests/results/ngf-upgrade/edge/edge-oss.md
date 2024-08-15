@@ -6,8 +6,8 @@ NGINX Plus: false
 
 NGINX Gateway Fabric:
 
-- Commit: 9a85dbcc0797e31557a3731688795aa166ee0f96
-- Date: 2024-08-13T21:12:05Z
+- Commit: 3c029b1417c1f89f2a29aeef07f47078640e28b2
+- Date: 2024-08-15T00:04:25Z
 - Dirty: false
 
 GKE Cluster:
@@ -20,12 +20,27 @@ GKE Cluster:
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
 
+## Test: Send http /coffee traffic
+
+```text
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.99s, 879.288µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  624.858µs, 833.765µs, 811.136µs, 926.889µs, 971.561µs, 1.103ms, 12.54ms
+Bytes In      [total, mean]                     962028, 160.34
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:6000  
+Error Set:
+```
+
+![http-oss.png](http-oss.png)
+
 ## Test: Send https /tea traffic
 
 ```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 763.57µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  631.935µs, 834.342µs, 818.106µs, 916.549µs, 953.194µs, 1.06ms, 12.108ms
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.99s, 877.076µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  630.112µs, 888.373µs, 853.502µs, 995.531µs, 1.046ms, 1.215ms, 12.537ms
 Bytes In      [total, mean]                     918000, 153.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
@@ -34,18 +49,3 @@ Error Set:
 ```
 
 ![https-oss.png](https-oss.png)
-
-## Test: Send http /coffee traffic
-
-```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 761.784µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  605.288µs, 828.183µs, 816.906µs, 927.903µs, 968.164µs, 1.089ms, 3.097ms
-Bytes In      [total, mean]                     960000, 160.00
-Bytes Out     [total, mean]                     0, 0.00
-Success       [ratio]                           100.00%
-Status Codes  [code:count]                      200:6000  
-Error Set:
-```
-
-![http-oss.png](http-oss.png)
