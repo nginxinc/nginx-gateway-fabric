@@ -356,6 +356,7 @@ func registerControllers(
 	controlConfigNSName types.NamespacedName,
 ) error {
 	type ctlrCfg struct {
+		name       string
 		objectType ngftypes.ObjectType
 		options    []controller.Option
 	}
@@ -402,12 +403,14 @@ func registerControllers(
 		},
 		{
 			objectType: &apiv1.Service{},
+			name:       "user-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 			},
 		},
 		{
 			objectType: &apiv1.Service{},
+			name:       "ngf-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: func() []controller.Option {
 				svcNSName := types.NamespacedName{
 					Namespace: cfg.GatewayPodConfig.Namespace,
@@ -521,9 +524,15 @@ func registerControllers(
 	}
 
 	for _, regCfg := range controllerRegCfgs {
+		name := regCfg.objectType.GetObjectKind().GroupVersionKind().Kind
+		if regCfg.name != "" {
+			name = regCfg.name
+		}
+
 		if err := controller.Register(
 			ctx,
 			regCfg.objectType,
+			name,
 			mgr,
 			eventCh,
 			regCfg.options...,

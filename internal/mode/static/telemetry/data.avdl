@@ -54,6 +54,9 @@ Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-
 		/** HTTPRouteCount is the number of relevant HTTPRoutes. */
 		long? HTTPRouteCount = null;
 		
+		/** TLSRouteCount is the number of relevant TLSRoutes. */
+		long? TLSRouteCount = null;
+		
 		/** SecretCount is the number of relevant Secrets. */
 		long? SecretCount = null;
 		

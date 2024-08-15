@@ -139,6 +139,7 @@ func TestRegister(t *testing.T) {
 				return controller.Register(
 					context.Background(),
 					test.objectType,
+					test.msg, // unique controller name for each loop iteration
 					test.fakes.mgr,
 					eventCh,
 					controller.WithNamespacedNameFilter(nsNameFilter),
