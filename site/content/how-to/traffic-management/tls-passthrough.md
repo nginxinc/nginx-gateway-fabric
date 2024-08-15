@@ -21,7 +21,7 @@ In this guide, we will show how to configure TLS passthrough for your applicatio
    GW_TLS_PORT=<port number>
    ```
 
-{{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
+{{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the Gateway will forward for.{{< /note >}}
 
 ## Set up
 
@@ -107,7 +107,7 @@ data:
 EOF
 ```
 
-This will create the **secure-app** service and a deployment. The secure app is configured to serve HTTPS traffic on port 8443 for the host app.example.com. For TLS termination, a self-signed TLS certificate, with the common name `app.example.com`, and key are used. The app responds to clients HTTPS requests with a simple text response "hello from pod $POD_HOSTNAME".
+This will create the **secure-app** Service and a Deployment. The secure app is configured to serve HTTPS traffic on port 8443 for the host app.example.com. For TLS termination, a self-signed TLS certificate, with the common name `app.example.com`, and key are used. The app responds to clients HTTPS requests with a simple text response "hello from pod $POD_HOSTNAME".
 
 Run the following command to verify the resources were created:
 
@@ -115,7 +115,7 @@ Run the following command to verify the resources were created:
 kubectl get pods,svc
 ```
 
-The output should include the **secure-app** pod and the **secure-app** service:
+The output should include the **secure-app** pod and the **secure-app** Service:
 
 ```text
 NAME                              READY   STATUS      RESTARTS   AGE
@@ -125,7 +125,7 @@ NAME                  TYPE        CLUSTER-IP        EXTERNAL-IP   PORT(S)    AGE
 service/secure-app    ClusterIP   192.168.194.152   <none>        8443/TCP   12s
 ```
 
-Create a gateway. This will create a TLS listener with the hostname `*.example.com` and a TLS mode of passthrough. Copy and paste this into your terminal.
+Create a Gateway. This will create a TLS listener with the hostname `*.example.com` and passthrough TLS mode. Copy and paste this into your terminal.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -151,11 +151,11 @@ spec:
 EOF
 ```
 
-This gateway will configure NGINX Gateway Fabric to accept TLS connections on port 443 and route them to the corresponding backend services without decryption. The routing is done based on the SNI, which allows clients to specify a server name (like example.com) during the SSL handshake.
+This Gateway will configure NGINX Gateway Fabric to accept TLS connections on port 443 and route them to the corresponding backend Services without decryption. The routing is done based on the SNI, which allows clients to specify a server name (like example.com) during the SSL handshake.
 
 {{< note >}} It is possible to add an HTTPS listener on the same port that terminates TLS connections so long as the hostname does not overlap with the TLS listener hostname. {{< /note >}}
 
-Create a TLSRoute that attaches to the gateway and routes requests to `app.example.com` to the `secure-app` service:
+Create a TLSRoute that attaches to the Gateway and routes requests to `app.example.com` to the `secure-app` Service:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -177,7 +177,7 @@ spec:
 EOF
 ```
 
-{{< note >}}To route to a service in a namespace different from the TLSRoute namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1beta1.ReferenceGrant) to permit the cross-namespace reference. {{< /note >}}
+{{< note >}}To route to a Service in a Namespace different from the TLSRoute Namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1beta1.ReferenceGrant) to permit the cross-namespace reference. {{< /note >}}
 
 ## Send traffic
 
@@ -185,7 +185,7 @@ Using the external IP address and port for NGINX Gateway Fabric, send traffic to
 
 {{< note >}}If you have a DNS record allocated for `app.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
-Send a request to the `secure-app` service on the TLS port with the `--insecure` flag. The `--insecure` flag is required because the `secure-app` is using self-signed certificates.
+Send a request to the `secure-app` Service on the TLS port with the `--insecure` flag. The `--insecure` flag is required because the `secure-app` is using self-signed certificates.
 
 ```shell
 curl --resolve app.example.com:$GW_TLS_PORT:$GW_IP https://app.example.com:$GW_TLS_PORT --insecure -v
