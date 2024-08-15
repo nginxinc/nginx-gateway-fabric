@@ -153,7 +153,7 @@ EOF
 
 This Gateway will configure NGINX Gateway Fabric to accept TLS connections on port 443 and route them to the corresponding backend Services without decryption. The routing is done based on the SNI, which allows clients to specify a server name (like example.com) during the SSL handshake.
 
-{{< note >}} It is possible to add an HTTPS listener on the same port that terminates TLS connections so long as the hostname does not overlap with the TLS listener hostname. {{< /note >}}
+{{< note >}}It is possible to add an HTTPS listener on the same port that terminates TLS connections so long as the hostname does not overlap with the TLS listener hostname.{{< /note >}}
 
 Create a TLSRoute that attaches to the Gateway and routes requests to `app.example.com` to the `secure-app` Service:
 
