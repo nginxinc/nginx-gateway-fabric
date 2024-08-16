@@ -68,7 +68,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.4.0"
 spec:
   type: NodePort
   selector:

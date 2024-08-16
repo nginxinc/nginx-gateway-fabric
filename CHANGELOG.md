@@ -22,10 +22,13 @@ BUG FIXES:
 - Disallow routes from attaching to listeners if not present in allowed routes. [2314](https://github.com/nginxinc/nginx-gateway-fabric/pull/2314)
 - Honor ReferenceGrants that allow GRPCRoutes to reference Services in different namespaces. [2337](https://github.com/nginxinc/nginx-gateway-fabric/pull/2337)
 - Fixed an issue that prevented ClientSettingsPolicies and ObservabilityPolicies from working when attached to an HTTPRoute where matching conditions were defined. [2318](https://github.com/nginxinc/nginx-gateway-fabric/pull/2318)
+- Replace TODO route condition with an Accepted/False condition. [2228](https://github.com/nginxinc/nginx-gateway-fabric/pull/2228)
 
 DOCUMENTATION:
 
 - Enhanced the troubleshooting guide with more details and scenarios. [2141](https://github.com/nginxinc/nginx-gateway-fabric/pull/2141)
+- Update kubectl exec syntax to remove deprecation warning. [2218](https://github.com/nginxinc/nginx-gateway-fabric/pull/2218). Thanks [aknot242](https://github.com/aknot242).
+- Add info on setting up host network access. [2263](https://github.com/nginxinc/nginx-gateway-fabric/pull/2263). Thanks [fardarter](https://github.com/fardarter).
 
 HELM CHART:
 
@@ -33,6 +36,7 @@ HELM CHART:
 - Add capability to set resource requests and limits on nginx-gateway deployment. [2216](https://github.com/nginxinc/nginx-gateway-fabric/pull/2216). Thanks to [anwbtom](https://github.com/anwbtom).
 - Add capability to configure custom annotations for the nginx-gateway-fabric pod(s). [2250](https://github.com/nginxinc/nginx-gateway-fabric/pull/2250). Thanks to [Robsta86](https://github.com/Robsta86).
 - Add helm chart examples. [2292](https://github.com/nginxinc/nginx-gateway-fabric/pull/2292)
+- Add seccompProfile. [2323](https://github.com/nginxinc/nginx-gateway-fabric/pull/2323)
 
 COMPATIBILITY:
 
