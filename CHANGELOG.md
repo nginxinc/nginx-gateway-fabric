@@ -4,6 +4,57 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.4.0
+
+* Update Troubleshooting guide by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2141
+* Allow resource allocation by @anwbtom in https://github.com/nginxinc/nginx-gateway-fabric/pull/2216
+* Add possibility to provide custom pod annotations by @Robsta86 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2250
+* Add support for IPv6 by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2190
+* Check for ReferenceGrants from GRPCRoutes to Services by @kate-osborn in https://github.com/nginxinc/nginx-gateway-fabric/pull/2337
+* Restrict policies to non-duplicate routes by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2318
+* Add support for TLS Passthrough using TLSRoutes by @sarthyparty in https://github.com/nginxinc/nginx-gateway-fabric/pull/2356
+* Add server zone metrics by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2360
+* Support cross-namespace routing with TLSRoutes by @kate-osborn in https://github.com/nginxinc/nginx-gateway-fabric/pull/2379
+
+%%DATE%%
+
+FEATURES:
+
+-
+
+BUG FIXES:
+
+-
+
+DOCUMENTATION:
+
+-
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.4.0
+-
+
+UPGRADE:
+
+-
+
+KNOWN ISSUES:
+
+-
+
+COMPATIBILITY:
+
+- The Gateway API version: ``
+- NGINX version: ``
+- NGINX Plus version: ``
+- Kubernetes version: ``
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.4.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.4.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.4.0`
 ## Release 1.3.0
 
 _June 11, 2024_
