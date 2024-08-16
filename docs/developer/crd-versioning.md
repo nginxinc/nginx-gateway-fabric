@@ -37,12 +37,15 @@ We'll allow a bit more flexibility for this case when dealing with alpha APIs.
 For more in depth information on how to handle API changes, see the Kubernetes [API changes doc](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md#backward-compatibility-gotchas).
 
 
-NGF version should not need to change when CRD versions change. CRDs are not embedded into NGF; they have their own versions. NGF releases are directly tied to the CRD version they support and users are required to upgrade CRD versions when upgrading NGF. This ensures that the CRD version is supported by NGF. However, the user may need to fix their CRDs if they aren't compatible.
+The NGINX Gateway Fabric version should not need to change when CRD versions change. CRDs are not embedded into NGF; they have their own versions.
 
+NGINX Gateway Fabric releases are directly tied to the CRD version they support and users are required to upgrade CRD versions when upgrading NGF. This ensures that the CRDs remain compatible with NGINX Gateway Fabric.
+
+However, the user may need to fix any incompatible CRDs.
 
 ## Graduating to v1 (stable)
 
-Having an alpha API allows us more flexibility in making breaking API changes as we further design and craft the API to fit the necessary use cases. However, at some point these APIs need to become stable and no longer have breaking changes, so that a user can rely on them without the worry of things not working from release to release.
+An alpha API allows us more flexibility in making breaking API changes as we further design and craft the API to fit the necessary use cases. However, at some point these APIs need to become stable and no longer have breaking changes, so that a user can rely on them without the worry of things not working from release to release.
 
 When we've determined that an API is stable and should no longer have breaking changes or refactors, we can promote it to `v1`. Once promoted, this API **should not** be subject to changes that require a version bump. Only when absolutely necessary should we consider changes that would lead to a `v2alpha1` or `v2` version.
 
