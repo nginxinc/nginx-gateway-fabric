@@ -228,7 +228,6 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 	p := ServicePortsChangedPredicate{}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
@@ -445,7 +444,6 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 	p := GatewayServicePredicate{NSName: types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx"}}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
