@@ -136,4 +136,4 @@ Please read our [Contributing guide](CONTRIBUTING.md) if you'd like to contribut
 
 ## Support
 
-For NGINX Plus customers NGINX Ingress Controller (when used with NGINX Plus) is covered by the support contract.
+For NGINX Plus customers NGINX Gateway Fabric (when used with NGINX Plus) is covered by the support contract.
