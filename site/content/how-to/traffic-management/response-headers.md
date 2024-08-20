@@ -31,7 +31,7 @@ We'll begin by configuring an app with custom headers and a straightforward HTTP
 Begin by deploying the example application `headers`. It is a simple application that adds response headers which we'll later tweak and customize.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-response-header-filter/headers.yaml
 ```
 
 This will create the headers Service and a Deployment with one Pod. Run the following command to verify the resources were created:
