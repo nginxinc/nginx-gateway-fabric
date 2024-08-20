@@ -158,7 +158,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		})
 
 		It("successfully returns server upstreams", func() {
-			upstreams := ngxclient.Upstreams{
+			expUpstreams := ngxclient.Upstreams{
 				"upstream1": {
 					Zone: "zone1",
 					Peers: []ngxclient.Peer{
@@ -179,12 +179,12 @@ var _ = Describe("NGINX Runtime Manager", func() {
 				},
 			}
 
-			ngxPlusClient.GetUpstreamsReturns(&upstreams, nil)
+			ngxPlusClient.GetUpstreamsReturns(&expUpstreams, nil)
 
 			upstreams, err := manager.GetUpstreams()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(upstreams).To(Equal(upstreams))
+			Expect(upstreams).To(Equal(expUpstreams))
 		})
 
 		It("returns an error when GetUpstreams fails", func() {

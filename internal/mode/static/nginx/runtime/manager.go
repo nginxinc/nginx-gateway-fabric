@@ -49,22 +49,6 @@ type nginxPlusClient interface {
 	GetUpstreams() (*ngxclient.Upstreams, error)
 }
 
-//counterfeiter:generate . ProcessHandler
-
-type ProcessHandler interface {
-	FindMainProcess(
-		ctx context.Context,
-		timeout time.Duration,
-	) (int, error)
-	ReadFile(file string) ([]byte, error)
-	Kill(pid int) error
-}
-
-type ProcessHandlerImpl struct {
-	readFile  ReadFileFunc
-	checkFile CheckFileFunc
-}
-
 //counterfeiter:generate . Manager
 
 // Manager manages the runtime of NGINX.
@@ -191,6 +175,22 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 	}
 
 	return *upstreams, nil
+}
+
+//counterfeiter:generate . ProcessHandler
+
+type ProcessHandler interface {
+	FindMainProcess(
+		ctx context.Context,
+		timeout time.Duration,
+	) (int, error)
+	ReadFile(file string) ([]byte, error)
+	Kill(pid int) error
+}
+
+type ProcessHandlerImpl struct {
+	readFile  ReadFileFunc
+	checkFile CheckFileFunc
 }
 
 func NewProcessHandlerImpl(readFile ReadFileFunc, checkFile CheckFileFunc) *ProcessHandlerImpl {
