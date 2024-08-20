@@ -284,7 +284,7 @@ func prepareGatewayRequest(
 		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
 			Name:           v1.SectionName(l.Name),
 			SupportedKinds: l.SupportedKinds,
-			AttachedRoutes: int32(len(l.Routes)) + int32(len(l.L4Routes)),
+			AttachedRoutes: int32(len(l.Routes)) + int32(len(l.L4Routes)), //nolint:gosec // num routes will not overflow
 			Conditions:     apiConds,
 		})
 	}
