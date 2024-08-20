@@ -19,11 +19,11 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 const (
-	// PidFile specifies the location of the PID file for the Nginx process
+	// PidFile specifies the location of the PID file for the Nginx process.
 	PidFile = "/var/run/nginx/nginx.pid"
-	// PidFileTimeout defines the timeout duration for accessing the PID file
+	// PidFileTimeout defines the timeout duration for accessing the PID file.
 	PidFileTimeout = 10000 * time.Millisecond
-	// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration
+	// NginxReloadTimeout sets the timeout duration for reloading the Nginx configuration.
 	NginxReloadTimeout = 60000 * time.Millisecond
 )
 
@@ -239,7 +239,7 @@ func (p *ProcessHandlerImpl) FindMainProcess(
 }
 
 func (p *ProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
-	return p.ReadFile(file)
+	return p.readFile(file)
 }
 
 func (p *ProcessHandlerImpl) Kill(pid int) error {

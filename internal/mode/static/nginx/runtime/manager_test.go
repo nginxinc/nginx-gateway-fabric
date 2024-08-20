@@ -164,18 +164,16 @@ var _ = Describe("NGINX Runtime Manager", func() {
 					Peers: []ngxclient.Peer{
 						{ID: 1, Name: "peer1-name"},
 					},
-					Queue:      ngxclient.Queue{Size: 10},
-					Keepalives: 5,
-					Zombies:    2,
+					Queue:   ngxclient.Queue{Size: 10},
+					Zombies: 2,
 				},
 				"upstream2": {
 					Zone: "zone2",
 					Peers: []ngxclient.Peer{
 						{ID: 2, Name: "peer2-name"},
 					},
-					Queue:      ngxclient.Queue{Size: 20},
-					Keepalives: 3,
-					Zombies:    1,
+					Queue:   ngxclient.Queue{Size: 20},
+					Zombies: 1,
 				},
 			}
 
@@ -184,7 +182,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			upstreams, err := manager.GetUpstreams()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(upstreams).To(Equal(expUpstreams))
+			Expect(expUpstreams).To(Equal(upstreams))
 		})
 
 		It("returns an error when GetUpstreams fails", func() {
