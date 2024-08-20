@@ -136,4 +136,4 @@ Please read our [Contributing guide](CONTRIBUTING.md) if you'd like to contribut
 
 ## Support
 
-NGINX Gateway Fabric is not covered by any support contract.
+For NGINX Plus customers NGINX Ingress Controller (when used with NGINX Plus) is covered by the support contract.
