@@ -155,7 +155,7 @@ jobs:
         working-directory: ./tests
 
       - name: Upload profile to release
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && inputs.enable-experimental == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.ref_name }} conformance-profile.yaml --clobber

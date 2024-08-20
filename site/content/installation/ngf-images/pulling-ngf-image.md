@@ -34,11 +34,11 @@ If you are not using a Linux operating system, read the [Docker for Windows](htt
 
 Once configured, you can now pull images from `private-registry.nginx.com`. To find your desired image, read the [Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric#technical-specifications).
 
-Run this command step to pull an image, replacing `<version-tag>` with the specific version you need, such as `1.3.0`.
+Run this command step to pull an image, replacing `<version-tag>` with the specific version you need, such as `1.4.0`.
 
 
   ```shell
-  docker pull private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.3.0
+  docker pull private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.4.0
   ```
 
 You can use the Docker registry API to list available image tags using your client certificate and key. The `jq` command is used to format the JSON output for easier reading.
