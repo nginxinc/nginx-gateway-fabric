@@ -27,6 +27,8 @@ supplementalGroups:
     max: 1001
 seLinuxContext:
   type: MustRunAs
+seccompProfiles:
+- runtime/default
 volumes:
 - emptyDir
 - secret

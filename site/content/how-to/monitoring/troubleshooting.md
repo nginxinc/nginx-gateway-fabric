@@ -5,10 +5,7 @@ toc: true
 docs: "DOCS-1419"
 ---
 
-{{< custom-styles >}}
-
 This topic describes possible issues when using NGINX Gateway Fabric and general troubleshooting techniques. When possible, suggested workarounds are provided.
-
 
 ### General troubleshooting
 
@@ -405,6 +402,58 @@ Or view the following error message in the NGINX logs:
 The request body exceeds the [client_max_body_size](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size).
 To **resolve** this, you can configure the `client_max_body_size` using the `ClientSettingsPolicy` API. Read the [Client Settings Policy]({{< relref "how-to/traffic-management/client-settings.md" >}}) documentation for more information.
 
+##### IP Family Mismatch Errors
+
+If you `describe` your HTTPRoute and see the following error:
+
+```text
+    Conditions:
+      Last Transition Time:  2024-07-14T23:36:37Z
+      Message:               The route is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-07-14T23:36:37Z
+      Message:               Service configured with IPv4 family but NginxProxy is configured with IPv6
+      Observed Generation:   1
+      Reason:                InvalidServiceIPFamily
+      Status:                False
+      Type:                  ResolvedRefs
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+```
+
+The Service associated with your HTTPRoute is configured with a IP Family different than the one specified in the NginxProxy configuration.
+To **resolve** this, you can do one of the following:
+
+- Update the NginxProxy configuration with the proper [`ipFamily`](({{< relref "reference/api.md" >}})) field. You can edit the NginxProxy configuration using `kubectl edit`. For example:
+
+  ```shell
+  kubectl edit -n nginx-gateway nginxproxies.gateway.nginx.org ngf-proxy-config
+  ```
+
+- When installing NGINX Gateway Fabric, change the IPFamily by modifying the field `nginx.config.ipFamily` in the `values.yaml` or add the `--set nginx.config.ipFamily=` flag to the `helm install` command. The supported IPFamilies are `ipv4`, `ipv6` and `dual` (default).
+
+- Adjust the IPFamily of your Service to match that of the NginxProxy configuration.
+
+##### Policy cannot be applied to target
+
+If you `describe` your Policy and see the following error:
+
+```text
+    Conditions:
+      Last Transition Time:  2024-08-20T14:48:53Z
+      Message:               Policy cannot be applied to target "default/route1" since another Route "default/route2" shares a hostname:port/path combination with this target
+      Observed Generation:   3
+      Reason:                TargetConflict
+      Status:                False
+      Type:                  Accepted
+```
+
+This means you are attempting to attach a Policy to a Route that has an overlapping hostname:port/path combination with another Route. To work around this, you can do one of the following:
+
+- Combine the Route rules for the overlapping path into a single route.
+- If the Policy allows it, specify both Routes in the `targetRefs` list.
 
 ### Further reading
 

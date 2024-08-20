@@ -1,5 +1,5 @@
 ---
-title: "Resource Validation"
+title: "Resource validation"
 weight: 400
 toc: true
 docs: "DOCS-1414"
@@ -9,7 +9,7 @@ docs: "DOCS-1414"
 
 This document describes how NGINX Gateway Fabric validates Gateway API and NGINX Gateway Fabric Kubernetes resources.
 
-## Gateway API Resource Validation
+## Gateway API resource validation
 
 NGINX Gateway Fabric validates Gateway API resources for several reasons:
 
@@ -110,7 +110,7 @@ Status:
 
 {{< note>}}Make sure the reported observed generation is the same as the resource generation.{{< /note >}}
 
-## NGINX Gateway Fabric Resource Validation
+## NGINX Gateway Fabric Resource validation
 
 ### Step 1 - OpenAPI Scheme validation by Kubernetes API Server
 

@@ -134,8 +134,22 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
 
 1. Create a `kind` cluster:
 
+   To create a `kind` cluster with dual (IPv4 and IPv6) enabled:
+
    ```makefile
    make create-kind-cluster
+   ```
+
+   To create a `kind` cluster with IPv6 or IPv4 only, edit kind cluster config located at `nginx-gateway-fabric/config/cluster/kind-cluster.yaml`:
+
+   ```yaml
+   kind: Cluster
+   apiVersion: kind.x-k8s.io/v1alpha4
+   nodes:
+   - role: control-plane
+   networking:
+     ipFamily: ipv6
+     apiServerAddress: 127.0.0.1
    ```
 
 2. Load the previously built images onto your `kind` cluster:
@@ -180,30 +194,16 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
 
    - To install with manifests:
 
-     ```shell
-     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
-     kubectl apply -f deploy/crds.yaml
-     kubectl apply -f deploy/manifests/nginx-gateway.yaml
-     kubectl apply -f deploy/manifests/service/nodeport.yaml
-     ```
+     The mainifests files are genarated using Helm from the [examples](/examples/helm) directory. To generate a custom one you can modify the `values.yaml` file in the example you want to use with the desired values and follow the instructions about [manifests generation](/examples/helm/README.md#manifests-generation).
 
-   - To install NGINX Plus with manifests:
+     If the only change is the image repository and tag, you can update the `kustomization.yaml` file in `deploy/` with the desired values and deployment mainifest and run the following commands:
 
      ```shell
-     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
-     kubectl apply -f deploy/crds.yaml
-     kubectl apply -f deploy/manifests/nginx-gateway.yaml
-     kubectl apply -f deploy/manifests/service/nodeport.yaml
+      kubectl apply -f deploy/crds.yaml
+      kubectl kustomize deploy | kubectl apply -f -
      ```
 
-   - To install with experimental manifests:
-
-     ```shell
-     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
-     kubectl apply -f deploy/crds.yaml
-     kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
-     kubectl apply -f deploy/manifests/service/nodeport.yaml
-     ```
+  > For more information on how to use the manifests, see the [deployment manifests](/deploy/README.md) documentation.
 
 ### Run Examples
 

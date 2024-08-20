@@ -11,6 +11,9 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -28,11 +31,8 @@ func TestExecuteServers(t *testing.T) {
 			{
 				Hostname: "cafe.example.com",
 				Port:     8080,
-				Additions: []dataplane.Addition{
-					{
-						Bytes:      []byte("addition-1"),
-						Identifier: "addition-1",
-					},
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
 				},
 			},
 		},
@@ -80,15 +80,8 @@ func TestExecuteServers(t *testing.T) {
 						},
 					},
 				},
-				Additions: []dataplane.Addition{
-					{
-						Bytes:      []byte("addition-1"),
-						Identifier: "addition-1", // duplicate
-					},
-					{
-						Bytes:      []byte("addition-2"),
-						Identifier: "addition-2",
-					},
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
 				},
 			},
 		},
@@ -104,6 +97,7 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 		"proxy_ssl_server_name on;":                                1,
+		"status_zone":                                              0,
 	}
 
 	type assertion func(g *WithT, data string)
@@ -117,16 +111,29 @@ func TestExecuteServers(t *testing.T) {
 		httpMatchVarsFile: func(g *WithT, data string) {
 			g.Expect(data).To(Equal("{}"))
 		},
-		includesFolder + "/addition-1.conf": func(g *WithT, data string) {
-			g.Expect(data).To(Equal("addition-1"))
+		includesFolder + "/include-1.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("include-1"))
 		},
-		includesFolder + "/addition-2.conf": func(g *WithT, data string) {
-			g.Expect(data).To(Equal("addition-2"))
+		includesFolder + "/include-2.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("include-2"))
 		},
 	}
 	g := NewWithT(t)
 
-	results := executeServers(conf)
+	fakeGenerator := &policiesfakes.FakeGenerator{}
+	fakeGenerator.GenerateForServerReturns(policies.GenerateResultFiles{
+		{
+			Name:    "include-1.conf",
+			Content: []byte("include-1"),
+		},
+		{
+			Name:    "include-2.conf",
+			Content: []byte("include-2"),
+		},
+	})
+
+	gen := GeneratorImpl{}
+	results := gen.executeServers(conf, fakeGenerator)
 	g.Expect(results).To(HaveLen(len(expectedResults)))
 
 	for _, res := range results {
@@ -134,6 +141,181 @@ func TestExecuteServers(t *testing.T) {
 
 		assertData := expectedResults[res.dest]
 		assertData(g, string(res.data))
+	}
+}
+
+func TestExecuteServers_IPFamily(t *testing.T) {
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname: "example.com",
+			Port:     8080,
+		},
+	}
+	sslServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 8443,
+		},
+	}
+	sslServers443 := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 443,
+		},
+	}
+	passThroughServers := []dataplane.Layer4VirtualServer{
+		{
+			IsDefault: true,
+			Hostname:  "*.example.com",
+			Port:      8443,
+		},
+	}
+	tests := []struct {
+		msg                string
+		expectedHTTPConfig map[string]int
+		config             dataplane.Configuration
+	}{
+		{
+			msg: "http and ssl servers with IPv4 IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv4,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+			},
+		},
+		{
+			msg: "http, ssl servers, and tls servers with IPv6 IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  append(sslServers, sslServers443...),
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.IPv6,
+				},
+				TLSPassthroughServers: passThroughServers,
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen [::]:8080 default_server;":                              1,
+				"listen [::]:8080;":                                             1,
+				"listen [::]:443 ssl default_server;":                           1,
+				"listen [::]:443 ssl;":                                          1,
+				"listen unix:/var/run/nginx/https8443.sock ssl;":                1,
+				"listen unix:/var/run/nginx/https8443.sock ssl default_server;": 1,
+				"server_name example.com;":                                      3,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":          2,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;":      2,
+				"ssl_reject_handshake on;":                                      2,
+			},
+		},
+		{
+			msg: "http and ssl servers with Dual IP family",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
+				"status_zone":                                              0,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
+
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
+	}
+}
+
+func TestExecuteServers_Plus(t *testing.T) {
+	config := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				Hostname: "example.com",
+			},
+			{
+				Hostname: "example2.com",
+			},
+		},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Hostname: "example.com",
+				SSL: &dataplane.SSL{
+					KeyPairID: "test-keypair",
+				},
+			},
+		},
+	}
+
+	expectedHTTPConfig := map[string]int{
+		"status_zone example.com;":  2,
+		"status_zone example2.com;": 1,
+	}
+
+	g := NewWithT(t)
+
+	gen := GeneratorImpl{plus: true}
+	results := gen.executeServers(config, &policiesfakes.FakeGenerator{})
+	g.Expect(results).To(HaveLen(2))
+
+	serverConf := string(results[0].data)
+
+	for expSubStr, expCount := range expectedHTTPConfig {
+		g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
 	}
 }
 
@@ -208,7 +390,8 @@ func TestExecuteForDefaultServers(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			serverResults := executeServers(tc.conf)
+			gen := GeneratorImpl{}
+			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{})
 			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
@@ -584,36 +767,30 @@ func TestCreateServers(t *testing.T) {
 			GRPC: true,
 		},
 		{
-			Path:     "/addition-path-only-match",
+			Path:     "/include-path-only-match",
 			PathType: dataplane.PathTypeExact,
+			Policies: []policies.Policy{
+				&policiesfakes.FakePolicy{},
+			},
 			MatchRules: []dataplane.MatchRule{
 				{
 					Match:        dataplane.Match{},
 					BackendGroup: fooGroup,
-					Additions: []dataplane.Addition{
-						{
-							Bytes:      []byte("path-only-match-addition"),
-							Identifier: "path-only-match-addition",
-						},
-					},
 				},
 			},
 		},
 		{
-			Path:     "/addition-header-match",
+			Path:     "/include-header-match",
 			PathType: dataplane.PathTypeExact,
+			Policies: []policies.Policy{
+				&policiesfakes.FakePolicy{},
+			},
 			MatchRules: []dataplane.MatchRule{
 				{
 					Match: dataplane.Match{
 						Method: helpers.GetPointer("GET"),
 					},
 					BackendGroup: fooGroup,
-					Additions: []dataplane.Addition{
-						{
-							Bytes:      []byte("match-addition"),
-							Identifier: "match-addition",
-						},
-					},
 				},
 			},
 		},
@@ -628,15 +805,9 @@ func TestCreateServers(t *testing.T) {
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
 			Port:      8080,
-			Additions: []dataplane.Addition{
-				{
-					Bytes:      []byte("server-addition-1"),
-					Identifier: "server-addition-1",
-				},
-				{
-					Bytes:      []byte("server-addition-2"),
-					Identifier: "server-addition-2",
-				},
+			Policies: []policies.Policy{
+				&policiesfakes.FakePolicy{},
+				&policiesfakes.FakePolicy{},
 			},
 		},
 	}
@@ -651,52 +822,54 @@ func TestCreateServers(t *testing.T) {
 			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
 			PathRules: cafePathRules,
 			Port:      8443,
-			Additions: []dataplane.Addition{
-				{
-					Bytes:      []byte("server-addition-1"),
-					Identifier: "server-addition-1",
-				},
-				{
-					Bytes:      []byte("server-addition-3"),
-					Identifier: "server-addition-3",
-				},
+			Policies: []policies.Policy{
+				&policiesfakes.FakePolicy{},
+				&policiesfakes.FakePolicy{},
 			},
+		},
+	}
+
+	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
+		{
+			Hostname:     "app.example.com",
+			Port:         8443,
+			UpstreamName: "sup",
 		},
 	}
 
 	expMatchPairs := httpMatchPairs{
 		"1_0": {
-			{Method: "POST", RedirectPath: "@rule0-route0"},
-			{Method: "PATCH", RedirectPath: "@rule0-route1"},
-			{RedirectPath: "@rule0-route2", Any: true},
+			{Method: "POST", RedirectPath: "/_ngf-internal-rule0-route0"},
+			{Method: "PATCH", RedirectPath: "/_ngf-internal-rule0-route1"},
+			{RedirectPath: "/_ngf-internal-rule0-route2", Any: true},
 		},
 		"1_1": {
 			{
 				Method:       "GET",
 				Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 				QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-				RedirectPath: "@rule1-route0",
+				RedirectPath: "/_ngf-internal-rule1-route0",
 			},
 		},
 		"1_6": {
-			{RedirectPath: "@rule6-route0", Headers: []string{"redirect:this"}},
+			{RedirectPath: "/_ngf-internal-rule6-route0", Headers: []string{"redirect:this"}},
 		},
 		"1_8": {
 			{
 				Headers:      []string{"rewrite:this"},
-				RedirectPath: "@rule8-route0",
+				RedirectPath: "/_ngf-internal-rule8-route0",
 			},
 		},
 		"1_10": {
 			{
 				Headers:      []string{"filter:this"},
-				RedirectPath: "@rule10-route0",
+				RedirectPath: "/_ngf-internal-rule10-route0",
 			},
 		},
 		"1_12": {
 			{
 				Method:       "GET",
-				RedirectPath: "@rule12-route0",
+				RedirectPath: "/_ngf-internal-rule12-route0",
 				Headers:      nil,
 				QueryParams:  nil,
 				Any:          false,
@@ -705,7 +878,7 @@ func TestCreateServers(t *testing.T) {
 		"1_17": {
 			{
 				Method:       "GET",
-				RedirectPath: "@rule17-route0",
+				RedirectPath: "/_ngf-internal-rule17-route0",
 			},
 		},
 	}
@@ -734,52 +907,75 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	externalIncludes := []http.Include{
+		{Name: "/etc/nginx/includes/include-1.conf", Content: []byte("include-1")},
+	}
+	internalIncludes := []http.Include{
+		{Name: "/etc/nginx/includes/internal-include-1.conf", Content: []byte("include-1")},
+	}
+
 	getExpectedLocations := func(isHTTPS bool) []http.Location {
 		port := 8080
 		ssl := ""
 		if isHTTPS {
 			port = 8443
-			ssl = "SSL"
+			ssl = "SSL_"
 		}
 
 		return []http.Location{
 			{
-				Path:            "@rule0-route0",
-				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: httpBaseHeaders,
-			},
-			{
-				Path:            "@rule0-route1",
-				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: httpBaseHeaders,
-			},
-			{
-				Path:            "@rule0-route2",
-				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: httpBaseHeaders,
-			},
-			{
 				Path:         "/",
 				HTTPMatchKey: ssl + "1_0",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
 			},
 			{
-				Path:            "@rule1-route0",
-				ProxyPass:       "http://$test__route1_rule1$request_uri",
+				Path:            "/_ngf-internal-rule0-route0",
+				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule0-route1",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule0-route2",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
 			},
 			{
 				Path:         "/test/",
 				HTTPMatchKey: ssl + "1_1",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule1-route0",
+				ProxyPass:       "http://$test__route1_rule1$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
 			},
 			{
 				Path:            "/path-only/",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:            "= /path-only",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:            "/backend-tls-policy/",
@@ -789,6 +985,8 @@ func TestCreateServers(t *testing.T) {
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path:            "= /backend-tls-policy",
@@ -798,6 +996,8 @@ func TestCreateServers(t *testing.T) {
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path: "/redirect-implicit-port/",
@@ -805,6 +1005,8 @@ func TestCreateServers(t *testing.T) {
 					Code: 302,
 					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path: "= /redirect-implicit-port",
@@ -812,6 +1014,8 @@ func TestCreateServers(t *testing.T) {
 					Code: 302,
 					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path: "/redirect-explicit-port/",
@@ -819,6 +1023,8 @@ func TestCreateServers(t *testing.T) {
 					Code: 302,
 					Body: "$scheme://bar.example.com:8080$request_uri",
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path: "= /redirect-explicit-port",
@@ -826,87 +1032,121 @@ func TestCreateServers(t *testing.T) {
 					Code: 302,
 					Body: "$scheme://bar.example.com:8080$request_uri",
 				},
-			},
-			{
-				Path: "@rule6-route0",
-				Return: &http.Return{
-					Body: "$scheme://foo.example.com:8080$request_uri",
-					Code: 302,
-				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path:         "/redirect-with-headers/",
 				HTTPMatchKey: ssl + "1_6",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
 			},
 			{
 				Path:         "= /redirect-with-headers",
 				HTTPMatchKey: ssl + "1_6",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path: "/_ngf-internal-rule6-route0",
+				Return: &http.Return{
+					Body: "$scheme://foo.example.com:8080$request_uri",
+					Code: 302,
+				},
+				Type:     http.InternalLocationType,
+				Includes: internalIncludes,
 			},
 			{
 				Path:            "/rewrite/",
 				Rewrites:        []string{"^ /replacement break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:            "= /rewrite",
 				Rewrites:        []string{"^ /replacement break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
-			},
-			{
-				Path:            "@rule8-route0",
-				Rewrites:        []string{"^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
-				ProxyPass:       "http://test_foo_80",
-				ProxySetHeaders: rewriteProxySetHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:         "/rewrite-with-headers/",
 				HTTPMatchKey: ssl + "1_8",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
 			},
 			{
 				Path:         "= /rewrite-with-headers",
 				HTTPMatchKey: ssl + "1_8",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule8-route0",
+				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
+				ProxyPass:       "http://test_foo_80",
+				ProxySetHeaders: rewriteProxySetHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
 			},
 			{
 				Path: "/invalid-filter/",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path: "= /invalid-filter",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
-			},
-			{
-				Path: "@rule10-route0",
-				Return: &http.Return{
-					Code: http.StatusInternalServerError,
-				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
 				HTTPMatchKey: ssl + "1_10",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
 			},
 			{
 				Path:         "= /invalid-filter-with-headers",
 				HTTPMatchKey: ssl + "1_10",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path: "/_ngf-internal-rule10-route0",
+				Return: &http.Return{
+					Code: http.StatusInternalServerError,
+				},
+				Type:     http.InternalLocationType,
+				Includes: internalIncludes,
 			},
 			{
 				Path:            "= /exact",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
-			},
-			{
-				Path:            "@rule12-route0",
-				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:         "= /test",
 				HTTPMatchKey: ssl + "1_12",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule12-route0",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
 			},
 			{
 				Path:      "/proxy-set-headers/",
@@ -943,6 +1183,8 @@ func TestCreateServers(t *testing.T) {
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path:      "= /proxy-set-headers",
@@ -979,12 +1221,16 @@ func TestCreateServers(t *testing.T) {
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
+				Type:     http.ExternalLocationType,
+				Includes: externalIncludes,
 			},
 			{
 				Path:            "= /grpc/method",
 				ProxyPass:       "grpc://test_foo_80",
 				GRPC:            true,
 				ProxySetHeaders: grpcBaseHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
 				Path:      "= /grpc-with-backend-tls-policy/method",
@@ -995,26 +1241,29 @@ func TestCreateServers(t *testing.T) {
 				},
 				GRPC:            true,
 				ProxySetHeaders: grpcBaseHeaders,
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
-				Path:            "= /addition-path-only-match",
+				Path:            "= /include-path-only-match",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
-				Includes: []string{
-					includesFolder + "/path-only-match-addition.conf",
-				},
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
 			},
 			{
-				Path:            "@rule17-route0",
-				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: httpBaseHeaders,
-				Includes: []string{
-					includesFolder + "/match-addition.conf",
-				},
-			},
-			{
-				Path:         "= /addition-header-match",
+				Path:         "= /include-header-match",
 				HTTPMatchKey: ssl + "1_17",
+				Type:         http.RedirectLocationType,
+				Includes:     externalIncludes,
+			},
+			{
+				Path:            "/_ngf-internal-rule17-route0",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Rewrites:        []string{"^ $request_uri break"},
+				Type:            http.InternalLocationType,
+				Includes:        internalIncludes,
 			},
 		}
 	}
@@ -1024,21 +1273,18 @@ func TestCreateServers(t *testing.T) {
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
-			Port:          8080,
+			Listen:        "8080",
 		},
 		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
-			Port:       8080,
+			Listen:     "8080",
 			GRPC:       true,
-			Includes: []string{
-				includesFolder + "/server-addition-1.conf",
-				includesFolder + "/server-addition-2.conf",
-			},
 		},
 		{
 			IsDefaultSSL: true,
-			Port:         8443,
+			Listen:       getSocketNameHTTPS(8443),
+			IsSocket:     true,
 		},
 		{
 			ServerName: "cafe.example.com",
@@ -1047,18 +1293,29 @@ func TestCreateServers(t *testing.T) {
 				CertificateKey: expectedPEMPath,
 			},
 			Locations: getExpectedLocations(true),
-			Port:      8443,
+			Listen:    getSocketNameHTTPS(8443),
+			IsSocket:  true,
 			GRPC:      true,
-			Includes: []string{
-				includesFolder + "/server-addition-1.conf",
-				includesFolder + "/server-addition-3.conf",
-			},
 		},
 	}
 
 	g := NewWithT(t)
 
-	result, httpMatchPair := createServers(httpServers, sslServers)
+	fakeGenerator := &policiesfakes.FakeGenerator{}
+	fakeGenerator.GenerateForLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "include-1.conf",
+			Content: []byte("include-1"),
+		},
+	})
+	fakeGenerator.GenerateForInternalLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "internal-include-1.conf",
+			Content: []byte("include-1"),
+		},
+	})
+
+	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers, fakeGenerator)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1067,7 +1324,7 @@ func TestCreateServers(t *testing.T) {
 func modifyMatchPairs(matchPairs httpMatchPairs) httpMatchPairs {
 	modified := make(httpMatchPairs)
 	for k, v := range matchPairs {
-		modifiedKey := "SSL" + k
+		modifiedKey := "SSL_" + k
 		modified[modifiedKey] = v
 	}
 
@@ -1143,11 +1400,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				createDefaultRootLocation(),
 			},
@@ -1181,11 +1440,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				createDefaultRootLocation(),
 			},
@@ -1229,11 +1490,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_baz_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				createDefaultRootLocation(),
 			},
@@ -1256,18 +1519,23 @@ func TestCreateServersConflicts(t *testing.T) {
 			expectedServers := []http.Server{
 				{
 					IsDefaultHTTP: true,
-					Port:          8080,
+					Listen:        "8080",
 				},
 				{
 					ServerName: "cafe.example.com",
 					Locations:  test.expLocs,
-					Port:       8080,
+					Listen:     "8080",
 				},
 			}
 
 			g := NewWithT(t)
 
-			result, _ := createServers(httpServers, []dataplane.VirtualServer{})
+			result, _ := createServers(
+				httpServers,
+				[]dataplane.VirtualServer{},
+				[]dataplane.Layer4VirtualServer{},
+				&policiesfakes.FakeGenerator{},
+			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
@@ -1352,11 +1620,13 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path: "/",
@@ -1375,17 +1645,20 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/grpc",
 					ProxyPass:       "grpc://test_foo_80",
 					GRPC:            true,
 					ProxySetHeaders: grpcBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path: "/",
@@ -1403,16 +1676,19 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 				{
 					Path:            "/",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: httpBaseHeaders,
+					Type:            http.ExternalLocationType,
 				},
 			},
 		},
@@ -1437,7 +1713,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			locs, httpMatchPair, grpc := createLocations(&dataplane.VirtualServer{
 				PathRules: test.pathRules,
 				Port:      80,
-			}, 1)
+			}, "1", &policiesfakes.FakeGenerator{})
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
 			g.Expect(grpc).To(Equal(test.grpc))
@@ -1601,7 +1877,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^ /full-path break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^ /full-path break",
 			},
 			msg: "full path",
 		},
@@ -1614,7 +1891,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original(.*)$ /prefix-path$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(.*)$ /prefix-path$1 break",
 			},
 			msg: "prefix path no trailing slashes",
 		},
@@ -1627,7 +1905,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original(?:/(.*))?$ /$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
 			},
 			msg: "prefix path empty string",
 		},
@@ -1640,7 +1919,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original(?:/(.*))?$ /$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
 			},
 			msg: "prefix path /",
 		},
@@ -1653,7 +1933,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original(?:/(.*))?$ /trailing/$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /trailing/$1 break",
 			},
 			msg: "prefix path replacement with trailing /",
 		},
@@ -1666,7 +1947,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original/(.*)$ /prefix-path/$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original/(.*)$ /prefix-path/$1 break",
 			},
 			msg: "prefix path original with trailing /",
 		},
@@ -1679,7 +1961,8 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				Rewrite: "^/original/(.*)$ /trailing/$1 break",
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original/(.*)$ /trailing/$1 break",
 			},
 			msg: "prefix path both with trailing slashes",
 		},
@@ -2027,12 +2310,24 @@ func TestCreateProxyPass(t *testing.T) {
 func TestCreateMatchLocation(t *testing.T) {
 	g := NewWithT(t)
 
-	expected := http.Location{
+	expectedNoGRPC := http.Location{
 		Path: "/path",
+		Type: http.InternalLocationType,
 	}
 
-	result := createMatchLocation("/path")
-	g.Expect(result).To(Equal(expected))
+	grpc := false
+	result := createMatchLocation("/path", grpc)
+	g.Expect(result).To(Equal(expectedNoGRPC))
+
+	expectedWithGRPC := http.Location{
+		Path:     "/path",
+		Type:     http.InternalLocationType,
+		Rewrites: []string{"^ $request_uri break"},
+	}
+
+	grpc = true
+	result = createMatchLocation("/path", grpc)
+	g.Expect(result).To(Equal(expectedWithGRPC))
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
@@ -2346,37 +2641,46 @@ func TestGenerateResponseHeaders(t *testing.T) {
 	}
 }
 
-func TestCreateIncludes(t *testing.T) {
+func TestCreateIncludesFromPolicyGenerateResult(t *testing.T) {
 	tests := []struct {
-		name      string
-		additions []dataplane.Addition
-		includes  []string
+		name     string
+		files    []policies.File
+		includes []http.Include
 	}{
 		{
-			name:      "no additions",
-			additions: nil,
-			includes:  nil,
+			name:     "no files",
+			files:    nil,
+			includes: nil,
 		},
 		{
 			name: "additions",
-			additions: []dataplane.Addition{
+			files: []policies.File{
 				{
-					Bytes:      []byte("one"),
-					Identifier: "one",
+					Content: []byte("one"),
+					Name:    "one.conf",
 				},
 				{
-					Bytes:      []byte("two"),
-					Identifier: "two",
+					Content: []byte("two"),
+					Name:    "two.conf",
 				},
 				{
-					Bytes:      []byte("three"),
-					Identifier: "three",
+					Content: []byte("three"),
+					Name:    "three.conf",
 				},
 			},
-			includes: []string{
-				includesFolder + "/one.conf",
-				includesFolder + "/two.conf",
-				includesFolder + "/three.conf",
+			includes: []http.Include{
+				{
+					Content: []byte("one"),
+					Name:    includesFolder + "/one.conf",
+				},
+				{
+					Content: []byte("two"),
+					Name:    includesFolder + "/two.conf",
+				},
+				{
+					Content: []byte("three"),
+					Name:    includesFolder + "/three.conf",
+				},
 			},
 		},
 	}
@@ -2385,89 +2689,65 @@ func TestCreateIncludes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			includes := createIncludes(test.additions)
+			includes := createIncludesFromPolicyGenerateResult(test.files)
 			g.Expect(includes).To(Equal(test.includes))
 		})
 	}
 }
 
-func TestCreateAdditionFileResults(t *testing.T) {
-	conf := dataplane.Configuration{
-		HTTPServers: []dataplane.VirtualServer{
-			{
-				Additions: []dataplane.Addition{
-					{
-						Identifier: "include-1",
-						Bytes:      []byte("include-1"),
-					},
-					{
-						Identifier: "include-2",
-						Bytes:      []byte("include-2"),
-					},
+func TestCreateIncludeFileResults(t *testing.T) {
+	servers := []http.Server{
+		{
+			Includes: []http.Include{
+				{
+					Name:    "include-1.conf",
+					Content: []byte("include-1"),
 				},
-				PathRules: []dataplane.PathRule{
-					{
-						MatchRules: []dataplane.MatchRule{
-							{
-								Additions: []dataplane.Addition{
-									{
-										Identifier: "include-3",
-										Bytes:      []byte("include-3"),
-									},
-									{
-										Identifier: "include-4",
-										Bytes:      []byte("include-4"),
-									},
-								},
-							},
+				{
+					Name:    "include-2.conf",
+					Content: []byte("include-2"),
+				},
+			},
+			Locations: []http.Location{
+				{
+					Includes: []http.Include{
+						{
+							Name:    "include-3.conf",
+							Content: []byte("include-3"),
+						},
+						{
+							Name:    "include-4.conf",
+							Content: []byte("include-4"),
 						},
 					},
 				},
 			},
-			{
-				Additions: []dataplane.Addition{
-					{
-						Identifier: "include-1", // dupe
-						Bytes:      []byte("include-1"),
-					},
-					{
-						Identifier: "include-2", // dupe
-						Bytes:      []byte("include-2"),
-					},
+		},
+		{
+			Includes: []http.Include{
+				{
+					Name:    "include-1.conf", // dupe
+					Content: []byte("include-1"),
+				},
+				{
+					Name:    "include-2.conf", // dupe
+					Content: []byte("include-2"),
 				},
 			},
-		},
-		SSLServers: []dataplane.VirtualServer{
-			{
-				Additions: []dataplane.Addition{
-					{
-						Identifier: "include-1", // dupe
-						Bytes:      []byte("include-1"),
-					},
-					{
-						Identifier: "include-2", // dupe
-						Bytes:      []byte("include-2"),
-					},
-				},
-				PathRules: []dataplane.PathRule{
-					{
-						MatchRules: []dataplane.MatchRule{
-							{
-								Additions: []dataplane.Addition{
-									{
-										Identifier: "include-3",
-										Bytes:      []byte("include-3"), // dupe
-									},
-									{
-										Identifier: "include-5",
-										Bytes:      []byte("include-5"), // dupe
-									},
-									{
-										Identifier: "include-6",
-										Bytes:      []byte("include-6"),
-									},
-								},
-							},
+			Locations: []http.Location{
+				{
+					Includes: []http.Include{
+						{
+							Name:    "include-3.conf", // dupe
+							Content: []byte("include-3"),
+						},
+						{
+							Name:    "include-4.conf", // dupe
+							Content: []byte("include-4"),
+						},
+						{
+							Name:    "include-5.conf",
+							Content: []byte("include-5"),
 						},
 					},
 				},
@@ -2475,32 +2755,28 @@ func TestCreateAdditionFileResults(t *testing.T) {
 		},
 	}
 
-	results := createAdditionFileResults(conf)
+	results := createIncludeFileResults(servers)
 
 	expResults := []executeResult{
 		{
-			dest: includesFolder + "/" + "include-1.conf",
+			dest: "include-1.conf",
 			data: []byte("include-1"),
 		},
 		{
-			dest: includesFolder + "/" + "include-2.conf",
+			dest: "include-2.conf",
 			data: []byte("include-2"),
 		},
 		{
-			dest: includesFolder + "/" + "include-3.conf",
+			dest: "include-3.conf",
 			data: []byte("include-3"),
 		},
 		{
-			dest: includesFolder + "/" + "include-4.conf",
+			dest: "include-4.conf",
 			data: []byte("include-4"),
 		},
 		{
-			dest: includesFolder + "/" + "include-5.conf",
+			dest: "include-5.conf",
 			data: []byte("include-5"),
-		},
-		{
-			dest: includesFolder + "/" + "include-6.conf",
-			data: []byte("include-6"),
 		},
 	}
 
@@ -2509,9 +2785,34 @@ func TestCreateAdditionFileResults(t *testing.T) {
 	g.Expect(results).To(ConsistOf(expResults))
 }
 
-func TestAdditionFilename(t *testing.T) {
-	g := NewWithT(t)
+func TestGetIPFamily(t *testing.T) {
+	test := []struct {
+		msg            string
+		baseHTTPConfig dataplane.BaseHTTPConfig
+		expected       shared.IPFamily
+	}{
+		{
+			msg:            "ipv4",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv4},
+			expected:       shared.IPFamily{IPv4: true, IPv6: false},
+		},
+		{
+			msg:            "ipv6",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.IPv6},
+			expected:       shared.IPFamily{IPv4: false, IPv6: true},
+		},
+		{
+			msg:            "dual",
+			baseHTTPConfig: dataplane.BaseHTTPConfig{IPFamily: dataplane.Dual},
+			expected:       shared.IPFamily{IPv4: true, IPv6: true},
+		},
+	}
 
-	name := createAdditionFileName(dataplane.Addition{Identifier: "my-addition"})
-	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
+	for _, tc := range test {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getIPFamily(tc.baseHTTPConfig)
+			g.Expect(result).To(Equal(tc.expected))
+		})
+	}
 }

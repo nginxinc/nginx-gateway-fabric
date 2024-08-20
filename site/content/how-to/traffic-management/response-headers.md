@@ -1,9 +1,12 @@
 ---
-title: "HTTP Response Headers"
-description: "Learn how to modify the response headers of your application using NGINX Gateway Fabric."
-weight: 700
+title: "HTTP response headers"
+weight: 500
 toc: true
 ---
+
+Learn how to modify the response headers of your application using NGINX Gateway Fabric.
+
+## Overview
 
 [HTTP Header Modifiers](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-header-modifiers) can be used to add, modify or remove headers during the request-response lifecycle. The [ResponseHeaderModifier](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/#http-response-header-modifier) is used to alter headers in a response to the client.
 
@@ -11,12 +14,10 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 We'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
 
-
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP
-  address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -99,7 +100,7 @@ This HTTPRoute has a few important properties:
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
 
-### Send Traffic to the Headers Application
+### Send traffic to the Headers application
 
 We will use `curl` with the `-i` flag to access the application and include the response headers in the output:
 
@@ -131,7 +132,7 @@ In the output above, you can see that the headers application adds the following
 
 In the next section we will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute.
 
-### Update the HTTPRoute to Modify the Response Headers
+### Update the HTTPRoute to modify the Response headers
 
 Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
 
@@ -176,7 +177,7 @@ Notice that this HTTPRoute has a `ResponseHeaderModifier` filter defined for the
 - Removes `X-Header-Remove` header.
 
 
-### Send Traffic to the Modified Headers Application
+### Send traffic to the modified Headers application
 
 We will send a curl request to the modified `headers` application and verify the response headers are modified.
 

@@ -8,8 +8,6 @@ import (
 // Set during go build.
 var (
 	version string
-	commit  string
-	date    string
 
 	// telemetryReportPeriod is the period at which telemetry reports are sent.
 	telemetryReportPeriod string

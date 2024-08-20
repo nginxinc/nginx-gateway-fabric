@@ -18,8 +18,6 @@ builds:
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
       - -X main.telemetryReportPeriod=24h
       - -X main.telemetryEndpoint={{.Env.TELEMETRY_ENDPOINT}}
       - -X main.telemetryEndpointInsecure={{.Env.TELEMETRY_ENDPOINT_INSECURE}}
@@ -64,10 +62,3 @@ milestones:
 
 snapshot:
   name_template: "edge"
-
-release:
-  extra_files:
-    - glob: ./deploy/manifests/nginx-gateway.yaml
-    - glob: ./deploy/manifests/nginx-plus-gateway.yaml
-    - glob: ./deploy/manifests/nginx-gateway-experimental.yaml
-    - glob: ./deploy/manifests/nginx-plus-gateway-experimental.yaml

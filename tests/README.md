@@ -159,19 +159,7 @@ make install-ngf-local-no-build
 Or, to install NGF with NGINX Plus enabled:
 
 ```makefile
-make install-ngf-no-build-with-plus
-```
-
-> Note: If choosing this option, the following step _must_ be completed manually _before_ you build the image:
-
-```makefile
-make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
-```
-
-Or, if you are building the NGINX Plus image:
-
-```makefile
-make update-ngf-manifest-with-plus PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
+make install-ngf-local-no-build-with-plus
 ```
 
 #### Option 3 - Install NGINX Gateway Fabric from edge to configured kind cluster
@@ -257,8 +245,6 @@ Directory structure is as follows:
 - `results`: contains the results files for the NFR tests
 - `scripts`: contain scripts used to set up the environment and run the tests
 - `suite`: contains the test files
-
-> Note: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
 
 ### Logging in tests
 
@@ -372,7 +358,7 @@ Finally, run
 make stop-longevity-test
 ```
 
-This will tear down the test and collect results into a file, where you can add the PNGs of the dashboard.
+This will tear down the test and collect results into a file, where you can add the PNGs of the dashboard. The results collection creates multiple files that you will need to manually combine as needed (logs file, traffic output file).
 
 ### Common test amendments
 

@@ -32,6 +32,10 @@ const (
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1.RouteConditionReason = "InvalidListener"
 
+	// RouteReasonHostnameConflict is used with the "Accepted" condition when a route has the exact same hostname
+	// as another route.
+	RouteReasonHostnameConflict v1.RouteConditionReason = "HostnameConflict"
+
 	// RouteReasonGatewayNotProgrammed is used when the associated Gateway is not programmed.
 	// Used with Accepted (false).
 	RouteReasonGatewayNotProgrammed v1.RouteConditionReason = "GatewayNotProgrammed"
@@ -39,6 +43,11 @@ const (
 	// RouteReasonUnsupportedConfiguration is used when the associated Gateway does not support the Route.
 	// Used with Accepted (false).
 	RouteReasonUnsupportedConfiguration v1.RouteConditionReason = "UnsupportedConfiguration"
+
+	// RouteReasonInvalidIPFamily is used when the Service associated with the Route is not configured with
+	// the same IP family as the NGINX server.
+	// Used with ResolvedRefs (false).
+	RouteReasonInvalidIPFamily v1.RouteConditionReason = "InvalidServiceIPFamily"
 
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
@@ -85,6 +94,10 @@ const (
 	// PolicyMessageTelemetryNotEnabled is a message used with the PolicyReasonNginxProxyConfigNotSet reason
 	// when telemetry is not enabled in the NginxProxy resource.
 	PolicyMessageTelemetryNotEnabled = "Telemetry is not enabled in the NginxProxy resource"
+
+	// PolicyReasonTargetConflict is used with the "PolicyAccepted" condition when a Route that it targets
+	// has an overlapping hostname:port/path combination with another Route.
+	PolicyReasonTargetConflict v1alpha2.PolicyConditionReason = "TargetConflict"
 
 	// GatewayIgnoredReason is used with v1.RouteConditionAccepted when the route references a Gateway that is ignored
 	// by NGF.
@@ -175,6 +188,17 @@ func NewRouteInvalidListener() conditions.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidListener),
 		Message: "Listener is invalid for this parent ref",
+	}
+}
+
+// NewRouteHostnameConflict returns a Condition that indicates that the Route is not accepted because of a
+// conflicting hostname on the same port.
+func NewRouteHostnameConflict() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonHostnameConflict),
+		Message: "Hostname(s) conflict with another route of the same kind on the same port",
 	}
 }
 
@@ -272,6 +296,17 @@ func NewRouteGatewayNotProgrammed(msg string) conditions.Condition {
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonGatewayNotProgrammed),
+		Message: msg,
+	}
+}
+
+// NewRouteInvalidIPFamily returns a Condition that indicates that the Service associated with the Route
+// is not configured with the same IP family as the NGINX server.
+func NewRouteInvalidIPFamily(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonInvalidIPFamily),
 		Message: msg,
 	}
 }
@@ -398,6 +433,26 @@ func NewListenerProtocolConflict(msg string) []conditions.Condition {
 			Type:    string(v1.ListenerConditionConflicted),
 			Status:  metav1.ConditionTrue,
 			Reason:  string(v1.ListenerReasonProtocolConflict),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
+// NewListenerHostnameConflict returns Conditions that indicate multiple Listeners are specified with the same
+// Listener port, but are HTTPS and TLS and have overlapping hostnames.
+func NewListenerHostnameConflict(msg string) []conditions.Condition {
+	return []conditions.Condition{
+		{
+			Type:    string(v1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1.ListenerReasonHostnameConflict),
+			Message: msg,
+		},
+		{
+			Type:    string(v1.ListenerConditionConflicted),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1.ListenerReasonHostnameConflict),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -653,6 +708,17 @@ func NewPolicyTargetNotFound(msg string) conditions.Condition {
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1alpha2.PolicyReasonTargetNotFound),
+		Message: msg,
+	}
+}
+
+// NewPolicyNotAcceptedTargetConflict returns a Condition that indicates that the Policy is not accepted
+// because the target resource has a conflict with another resource when attempting to apply this policy.
+func NewPolicyNotAcceptedTargetConflict(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(PolicyReasonTargetConflict),
 		Message: msg,
 	}
 }

@@ -73,6 +73,22 @@ func fromHTTPRoute(namespace string) fromResource {
 	}
 }
 
+func fromGRPCRoute(namespace string) fromResource {
+	return fromResource{
+		group:     v1.GroupName,
+		kind:      kinds.GRPCRoute,
+		namespace: namespace,
+	}
+}
+
+func fromTLSRoute(namespace string) fromResource {
+	return fromResource{
+		group:     v1.GroupName,
+		kind:      kinds.TLSRoute,
+		namespace: namespace,
+	}
+}
+
 // newReferenceGrantResolver creates a new referenceGrantResolver.
 func newReferenceGrantResolver(refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant) *referenceGrantResolver {
 	allowed := make(map[allowedReference]struct{})
@@ -136,4 +152,12 @@ func (r *referenceGrantResolver) refAllowed(to toResource, from fromResource) bo
 	}
 
 	return false
+}
+
+// refAllowedFrom returns a closure function that takes a toResource parameter
+// and checks if a reference from the specified fromResource to the given toResource is allowed.
+func (r *referenceGrantResolver) refAllowedFrom(from fromResource) func(to toResource) bool {
+	return func(to toResource) bool {
+		return r.refAllowed(to, from)
+	}
 }

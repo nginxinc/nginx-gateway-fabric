@@ -25,7 +25,7 @@ func CreateResultsDir(testName, version string) (string, error) {
 
 // CreateResultsFile creates and returns the results file for a test.
 func CreateResultsFile(filename string) (*os.File, error) {
-	outFile, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o777)
+	outFile, err := os.OpenFile(filename, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func CreateResultsFile(filename string) (*os.File, error) {
 
 // CreateResultsFilename returns the name of the results file.
 func CreateResultsFilename(ext, base string, plusEnabled bool) string {
-	name := fmt.Sprintf("%s.%s", base, ext)
+	name := fmt.Sprintf("%s-oss.%s", base, ext)
 	if plusEnabled {
 		name = fmt.Sprintf("%s-plus.%s", base, ext)
 	}
@@ -49,10 +49,13 @@ func WriteSystemInfoToFile(file *os.File, ci ClusterInfo, plus bool) error {
 	if ci.IsGKE {
 		clusterType = "GKE"
 	}
+
+	commit, date, dirty := GetBuildInfo()
+
+	//nolint:lll
 	text := fmt.Sprintf(
-		//nolint:lll
-		"# Results\n\n## Test environment\n\nNGINX Plus: %v\n\n%s Cluster:\n\n- Node count: %d\n- k8s version: %s\n- vCPUs per node: %d\n- RAM per node: %s\n- Max pods per node: %d\n",
-		plus, clusterType, ci.NodeCount, ci.K8sVersion, ci.CPUCountPerNode, ci.MemoryPerNode, ci.MaxPodsPerNode,
+		"# Results\n\n## Test environment\n\nNGINX Plus: %v\n\nNGINX Gateway Fabric:\n\n- Commit: %s\n- Date: %s\n- Dirty: %v\n\n%s Cluster:\n\n- Node count: %d\n- k8s version: %s\n- vCPUs per node: %d\n- RAM per node: %s\n- Max pods per node: %d\n",
+		plus, commit, date, dirty, clusterType, ci.NodeCount, ci.K8sVersion, ci.CPUCountPerNode, ci.MemoryPerNode, ci.MaxPodsPerNode,
 	)
 	if _, err := fmt.Fprint(file, text); err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -124,11 +125,13 @@ func createStaticModeCommand() *cobra.Command {
 			atom := zap.NewAtomicLevel()
 
 			logger := ctlrZap.New(ctlrZap.Level(atom))
+			commit, date, dirty := getBuildInfo()
 			logger.Info(
 				"Starting NGINX Gateway Fabric in static mode",
 				"version", version,
 				"commit", commit,
 				"date", date,
+				"dirty", dirty,
 			)
 			log.SetLogger(logger)
 
@@ -410,11 +413,13 @@ func createProvisionerModeCommand() *cobra.Command {
 		Hidden: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger := ctlrZap.New()
+			commit, date, dirty := getBuildInfo()
 			logger.Info(
 				"Starting NGINX Gateway Fabric Provisioner",
 				"version", version,
 				"commit", commit,
 				"date", date,
+				"dirty", dirty,
 			)
 
 			return provisioner.StartManager(provisioner.Config{
@@ -494,4 +499,27 @@ func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
 	)
 
 	return flagKeys, flagValues
+}
+
+func getBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
+	commitHash = "unknown"
+	commitTime = "unknown"
+	dirtyBuild = "unknown"
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	for _, kv := range info.Settings {
+		switch kv.Key {
+		case "vcs.revision":
+			commitHash = kv.Value
+		case "vcs.time":
+			commitTime = kv.Value
+		case "vcs.modified":
+			dirtyBuild = kv.Value
+		}
+	}
+
+	return
 }

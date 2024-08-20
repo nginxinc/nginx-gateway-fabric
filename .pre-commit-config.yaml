@@ -15,6 +15,9 @@ repos:
       - id: check-case-conflict
       - id: check-vcs-permalinks
       - id: check-json
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
       - id: pretty-format-json
         args: [--autofix, --no-sort-keys, --no-ensure-ascii]
       - id: mixed-line-ending
@@ -77,6 +80,12 @@ repos:
           - --chart-search-root=charts
           - --template-files=_templates.gotmpl
           - --template-files=README.md.gotmpl
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt-src
+        args: [-w, -s, -i, "4"]
 
 ci:
   skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]

@@ -1,21 +1,32 @@
-CI=false
+CI ?= false
 CLUSTER_NAME ?= kind
 CONFORMANCE_PREFIX = conformance-test-runner## Prefix for the conformance test runner image
 CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
 GINKGO_FLAGS =
 GINKGO_LABEL =
+GITHUB_OUTPUT =
 GW_API_VERSION ?= $(shell sed -n 's/.*ref=v\(.*\)/\1/p' ../config/crd/gateway-api/standard/kustomization.yaml)## Supported Gateway API version from current NGF
 GW_API_PREV_VERSION ?= 1.1.0## Supported Gateway API version from previous NGF release
 GW_SERVICE_TYPE = NodePort## Service type to use for the gateway
 GW_SVC_GKE_INTERNAL = false
-NGF_VERSION ?= $(shell git describe --tags $(shell git rev-list --tags --max-count=1))## NGF version to be tested (defaults to latest tag)
+NGF_VERSION ?= edge## NGF version to be tested
 PULL_POLICY = Never## Pull policy for the images
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
-SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
+SUPPORTED_EXTENDED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification
+STANDARD_CONFORMANCE_PROFILES = GATEWAY-HTTP,GATEWAY-GRPC
+EXPERIMENTAL_CONFORMANCE_PROFILES = GATEWAY-TLS
+CONFORMANCE_PROFILES = $(STANDARD_CONFORMANCE_PROFILES) # by default we use the standard conformance profiles. If experimental is enabled we override this and add the experimental profiles.
+SKIP_TESTS =
+
+# Check if ENABLE_EXPERIMENTAL is true
+ifeq ($(ENABLE_EXPERIMENTAL),true)
+    # If true, add the experimental conformance profiles
+    CONFORMANCE_PROFILES = $(EXPERIMENTAL_CONFORMANCE_PROFILES),$(STANDARD_CONFORMANCE_PROFILES)
+endif
 
 ifneq ($(GINKGO_LABEL),)
-    override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
+	override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
 endif
 
 .PHONY: update-go-modules
@@ -33,11 +44,11 @@ run-conformance-tests: ## Run conformance tests
 	kubectl apply -f conformance/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
-		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
+		--overrides='{ "spec": { "serviceAccountName": "conformance" }	}' \
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
-						        --supported-features=$(SUPPORTED_FEATURES) --version=$(NGF_VERSION) \
+						        --supported-features=$(SUPPORTED_EXTENDED_FEATURES) --version=$(NGF_VERSION) --skip-tests=$(SKIP_TESTS) --conformance-profiles=$(CONFORMANCE_PROFILES) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
-	bash scripts/check-pod-exit-code.sh
+	./scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
 	grpc_core_result=`yq '.profiles[0].core.result' conformance-profile.yaml`; \
@@ -52,7 +63,7 @@ run-conformance-tests: ## Run conformance tests
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
 	kubectl delete pod conformance
-	kubectl delete -f tests/conformance-rbac.yaml
+	kubectl delete -f conformance/conformance-rbac.yaml
 
 .PHONY: build
 build: generate-static-deployment
@@ -65,8 +76,8 @@ reset-go-modules: ## Reset the go modules changes
 
 # Check if PLUS_ENABLED is true
 ifeq ($(PLUS_ENABLED),true)
-    # If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
-    NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
+	# If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
+	NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
 endif
 
 .PHONY: setup-gcp-and-run-tests
@@ -77,27 +88,27 @@ setup-gcp-and-run-nfr-tests: create-gke-router create-and-setup-vm nfr-test ## C
 
 .PHONY: create-gke-cluster
 create-gke-cluster: ## Create a GKE cluster
-	bash scripts/create-gke-cluster.sh $(CI)
+	./scripts/create-gke-cluster.sh $(CI)
 
 .PHONY: create-and-setup-vm
 create-and-setup-vm: ## Create and setup a GCP VM for tests
-	bash scripts/create-and-setup-gcp-vm.sh
+	./scripts/create-and-setup-gcp-vm.sh
 
 .PHONY: create-gke-router
 create-gke-router: ## Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
-	bash scripts/create-gke-router.sh
+	./scripts/create-gke-router.sh
 
 .PHONY: sync-files-to-vm
 sync-files-to-vm: ## Syncs your local NGF files with the NGF repo on the VM
-	bash scripts/sync-files-to-vm.sh
+	./scripts/sync-files-to-vm.sh
 
 .PHONY: run-tests-on-vm
 run-tests-on-vm: ## Run the functional tests on a GCP VM
-	bash scripts/run-tests-gcp-vm.sh
+	./scripts/run-tests-gcp-vm.sh
 
 .PHONY: nfr-test
 nfr-test: ## Run the NFR tests on a GCP VM
-	NFR=true bash scripts/run-tests-gcp-vm.sh
+	NFR=true CI=$(CI) ./scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
 start-longevity-test: export START_LONGEVITY=true
@@ -107,10 +118,11 @@ start-longevity-test: nfr-test ## Start the longevity test to run for 4 days in 
 stop-longevity-test: export STOP_LONGEVITY=true
 stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
+
 .PHONY: .vm-nfr-test
 .vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v \
-	    --label-filter "nfr" $(GINKGO_FLAGS) ./suite --  --gateway-api-version=$(GW_API_VERSION) \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v --buildvcs --force-newlines $(GITHUB_OUTPUT) \
+		--label-filter "nfr" $(GINKGO_FLAGS) --timeout 5h ./suite --  --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
@@ -118,7 +130,7 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 
 .PHONY: test
 test: ## Runs the functional tests on your default k8s cluster
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v --buildvcs --force-newlines $(GITHUB_OUTPUT) \
 		--label-filter "functional" $(GINKGO_FLAGS) ./suite -- \
 		--gateway-api-version=$(GW_API_VERSION) --gateway-api-prev-version=$(GW_API_PREV_VERSION) \
 		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
@@ -135,19 +147,19 @@ cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP res
 
 .PHONY: cleanup-router
 cleanup-router: ## Delete the GKE router
-	bash scripts/cleanup-router.sh
+	./scripts/cleanup-router.sh
 
 .PHONY: cleanup-vm
 cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
-	bash scripts/cleanup-vm.sh
+	./scripts/cleanup-vm.sh
 
 .PHONY: delete-gke-cluster
 delete-gke-cluster: ## Delete the GKE cluster
-	bash scripts/delete-gke-cluster.sh
+	./scripts/delete-gke-cluster.sh
 
 .PHONY: add-local-ip-to-cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
-	bash scripts/add-local-ip-auth-networks.sh
+	./scripts/add-local-ip-auth-networks.sh
 
 HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
 
@@ -158,7 +170,7 @@ deploy-updated-provisioner: ## Update provisioner manifest and deploy to the con
 
 .PHONY: generate-static-deployment
 generate-static-deployment:
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false --set nginxGateway.productTelemetry.enable=false -n nginx-gateway -s templates/deployment.yaml --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) --set nginx.plus=$(PLUS_ENABLED) > $(SELF_DIR)config/tests/static-deployment.yaml
+	helm template nginx-gateway $(CHART_DIR) --set nameOverride=nginx-gateway --set metrics.enable=false --set nginxGateway.productTelemetry.enable=false -n nginx-gateway -s templates/deployment.yaml --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) --set nginx.plus=$(PLUS_ENABLED) > $(SELF_DIR)config/tests/static-deployment.yaml
 
 # this target is used to install the gateway-api CRDs from the main branch (only used in the nightly CI job)
 # it overrides the target in the main Makefile when the GW_API_VERSION is set to main

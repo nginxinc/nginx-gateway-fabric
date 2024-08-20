@@ -1,12 +1,10 @@
 # variables that should not be overridden by the user
 VERSION = edge
-GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
-DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-MANIFEST_DIR = $(CURDIR)/deploy/manifests
 CHART_DIR = $(SELF_DIR)charts/nginx-gateway-fabric
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
+KIND_CONFIG_FILE = $(SELF_DIR)config/cluster/kind-cluster.yaml
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
 PLUS_ENABLED ?= false
@@ -21,7 +19,7 @@ ENABLE_EXPERIMENTAL ?= false
 NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
-GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
+GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
@@ -37,8 +35,6 @@ TARGET ?= local## The target of the build. Possible values: local and container
 OUT_DIR ?= build/out## The folder where the binary will be stored
 GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
-override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
-override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
 override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) --build-arg BUILD_AGENT=$(BUILD_AGENT)
 
 .DEFAULT_GOAL := help
@@ -47,10 +43,14 @@ ifneq (,$(findstring plus,$(MAKECMDGOALS)))
    PLUS_ENABLED = true
 endif
 
+ifeq ($(CI),true)
+	GITHUB_OUTPUT := --github-output
+endif
+
 .PHONY: help
 help: Makefile ## Display this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@grep -hE '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n	make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "	 \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "	 \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build-prod-images
 build-prod-images: build-prod-ngf-image build-prod-nginx-image ## Build the NGF and nginx docker images for production
@@ -125,15 +125,7 @@ uninstall-gateway-crds: ## Uninstall Gateway API CRDs
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginx.plus=true --set nginx.image.repository=$(NGINX_PLUS_PREFIX) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-plus-gateway.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginxGateway.gwAPIExperimentalFeatures.enable=true -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway-experimental.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginxGateway.gwAPIExperimentalFeatures.enable=true --set nginx.plus=true --set nginx.image.repository=$(NGINX_PLUS_PREFIX) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-plus-gateway-experimental.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false --set nginxGateway.productTelemetry.enable=false -n nginx-gateway -s templates/deployment.yaml > config/tests/static-deployment.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway --api-versions security.openshift.io/v1/SecurityContextConstraints -s templates/scc.yaml > $(strip $(MANIFEST_DIR))/scc.yaml
+	./scripts/generate-manifests.sh
 
 generate-api-docs: ## Generate API docs
 	go run github.com/ahmetb/gen-crd-api-reference-docs -config site/config/api/config.json -template-dir site/config/api -out-file site/content/reference/api.md -api-dir "github.com/nginxinc/nginx-gateway-fabric/apis"
@@ -160,7 +152,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <$(SELF_DIR)tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
-	kind create cluster --image $(KIND_IMAGE)
+	kind create cluster --image $(KIND_IMAGE) --config $(KIND_CONFIG_FILE)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
@@ -193,8 +185,8 @@ lint: check-golangci-lint ## Run golangci-lint against code
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
 	# We have to run the tests in the cmd package using `go test` because of a bug with the CLI library cobra. See https://github.com/spf13/cobra/issues/2104.
-	go test ./cmd/... -race -shuffle=on -coverprofile=cmd-coverage.out -covermode=atomic
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace --covermode=atomic --coverprofile=coverage.out -r internal
+	go test -buildvcs ./cmd/... -race -shuffle=on -coverprofile=cmd-coverage.out -covermode=atomic
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace --covermode=atomic --coverprofile=coverage.out --force-newlines $(GITHUB_OUTPUT) -p -v -r internal
 	go tool cover -html=coverage.out -o cover.html
 	go tool cover -html=cmd-coverage.out -o cmd-cover.html
 

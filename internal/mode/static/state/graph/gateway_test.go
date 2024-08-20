@@ -250,6 +250,15 @@ func TestBuildGateway(t *testing.T) {
 	createTCPListener := func(name, hostname string, port int) v1.Listener {
 		return createListener(name, hostname, port, v1.TCPProtocolType, nil)
 	}
+	createTLSListener := func(name, hostname string, port int) v1.Listener {
+		return createListener(
+			name,
+			hostname,
+			port,
+			v1.TLSProtocolType,
+			&v1.GatewayTLSConfig{Mode: helpers.GetPointer(v1.TLSModePassthrough)},
+		)
+	}
 	createHTTPSListener := func(name, hostname string, port int, tls *v1.GatewayTLSConfig) v1.Listener {
 		return createListener(name, hostname, port, v1.HTTPSProtocolType, tls)
 	}
@@ -258,12 +267,13 @@ func TestBuildGateway(t *testing.T) {
 	foo80Listener1 := createHTTPListener("foo-80-1", "foo.example.com", 80)
 	foo8080Listener := createHTTPListener("foo-8080", "foo.example.com", 8080)
 	foo8081Listener := createHTTPListener("foo-8081", "foo.example.com", 8081)
-	foo443Listener := createHTTPListener("foo-443", "foo.example.com", 443)
+	foo443HTTPListener := createHTTPListener("foo-443-http", "foo.example.com", 443)
 
 	// foo https listeners
 	foo80HTTPSListener := createHTTPSListener("foo-80-https", "foo.example.com", 80, gatewayTLSConfigSameNs)
 	foo443HTTPSListener1 := createHTTPSListener("foo-443-https-1", "foo.example.com", 443, gatewayTLSConfigSameNs)
 	foo8443HTTPSListener := createHTTPSListener("foo-8443-https", "foo.example.com", 8443, gatewayTLSConfigSameNs)
+	splat443HTTPSListener := createHTTPSListener("splat-443-https", "*.example.com", 443, gatewayTLSConfigSameNs)
 
 	// bar http listener
 	bar80Listener := createHTTPListener("bar-80", "bar.example.com", 80)
@@ -279,6 +289,9 @@ func TestBuildGateway(t *testing.T) {
 		443,
 		gatewayTLSConfigDiffNs,
 	)
+
+	// tls listeners
+	foo443TLSListener := createTLSListener("foo-443-tls", "foo.example.com", 443)
 
 	// invalid listeners
 	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
@@ -315,6 +328,9 @@ func TestBuildGateway(t *testing.T) {
 
 		conflict443PortMsg = "Multiple listeners for the same port 443 specify incompatible protocols; " +
 			"ensure only one protocol per port"
+
+		conflict443HostnameMsg = "HTTPS and TLS listeners for the same port 443 specify overlapping hostnames; " +
+			"ensure no overlapping hostnames for HTTPS and TLS listeners for the same port"
 	)
 
 	type gatewayCfg struct {
@@ -336,7 +352,7 @@ func TestBuildGateway(t *testing.T) {
 		}
 		return lastCreatedGateway
 	}
-	getLastCreatedGetaway := func() *v1.Gateway {
+	getLastCreatedGateway := func() *v1.Gateway {
 		return lastCreatedGateway
 	}
 
@@ -345,6 +361,11 @@ func TestBuildGateway(t *testing.T) {
 	}
 	invalidGC := &GatewayClass{
 		Valid: false,
+	}
+
+	supportedKindsForListeners := []v1.RouteGroupKind{
+		{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+		{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 	}
 
 	tests := []struct {
@@ -358,27 +379,25 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{foo80Listener1, foo8080Listener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8080",
-						Source:     foo8080Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8080",
+						Source:         foo8080Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -391,7 +410,7 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:           "foo-443-https-1",
@@ -399,10 +418,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-8443-https",
@@ -410,10 +428,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -424,7 +441,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{listenerAllowedRoutes}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:                      "listener-with-allowed-routes",
@@ -433,6 +450,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable:                true,
 						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
 						Routes:                    map[RouteKey]*L7Route{},
+						L4Routes:                  map[L4RouteKey]*L4Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: kinds.HTTPRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
@@ -470,7 +488,7 @@ func TestBuildGateway(t *testing.T) {
 				},
 			},
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:           "listener-cross-ns-secret",
@@ -478,10 +496,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -492,7 +509,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{crossNamespaceSecretListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:       "listener-cross-ns-secret",
@@ -502,10 +519,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerRefNotPermitted(
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -516,7 +532,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{listenerInvalidSelector}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:       "listener-with-invalid-selector",
@@ -526,7 +542,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`invalid label selector: "invalid" is not a valid label selector operator`,
 						),
-						Routes: map[RouteKey]*L7Route{},
+						Routes:   map[RouteKey]*L7Route{},
+						L4Routes: map[L4RouteKey]*L4Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: kinds.HTTPRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
@@ -540,7 +557,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{invalidProtocolListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:       "invalid-protocol",
@@ -548,12 +565,10 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Attachable: false,
 						Conditions: staticConds.NewListenerUnsupportedProtocol(
-							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
+							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS", "TLS"`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:   map[RouteKey]*L7Route{},
+						L4Routes: map[L4RouteKey]*L4Route{},
 					},
 				},
 				Valid: true,
@@ -572,7 +587,7 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:       "invalid-port",
@@ -582,10 +597,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:       "invalid-https-port",
@@ -595,10 +609,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 65536: port must be between 1-65535`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:       "invalid-protected-port",
@@ -608,10 +621,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
-						Routes: map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 					},
 				},
 				Valid: true,
@@ -624,27 +636,25 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
-						Name:       "invalid-hostname",
-						Source:     invalidHostnameListener,
-						Valid:      false,
-						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "invalid-hostname",
+						Source:         invalidHostnameListener,
+						Valid:          false,
+						Conditions:     staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "invalid-https-hostname",
-						Source:     invalidHTTPSHostnameListener,
-						Valid:      false,
-						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "invalid-https-hostname",
+						Source:         invalidHTTPSHostnameListener,
+						Valid:          false,
+						Conditions:     staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -655,7 +665,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{invalidTLSConfigListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
 						Name:       "invalid-tls-config",
@@ -663,12 +673,11 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
+						L4Routes:   map[L4RouteKey]*L4Route{},
 						Conditions: staticConds.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -692,37 +701,34 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8080",
-						Source:     foo8080Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8080",
+						Source:         foo8080Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-8081",
-						Source:     foo8081Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-8081",
+						Source:         foo8081Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-443-https-1",
@@ -730,10 +736,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-8443-https",
@@ -741,20 +746,18 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "bar-80",
-						Source:     bar80Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "bar-80",
+						Source:         bar80Listener,
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-443-https",
@@ -762,10 +765,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-8443-https",
@@ -773,10 +775,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -789,7 +790,7 @@ func TestBuildGateway(t *testing.T) {
 					listeners: []v1.Listener{
 						foo80Listener1,
 						bar80Listener,
-						foo443Listener,
+						foo443HTTPListener,
 						foo80HTTPSListener,
 						foo443HTTPSListener1,
 						bar443HTTPSListener,
@@ -798,40 +799,37 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Listeners: []*Listener{
 					{
-						Name:       "foo-80-1",
-						Source:     foo80Listener1,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-80-1",
+						Source:         foo80Listener1,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "bar-80",
-						Source:     bar80Listener,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "bar-80",
+						Source:         bar80Listener,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
-						Name:       "foo-443",
-						Source:     foo443Listener,
-						Valid:      false,
-						Attachable: true,
-						Routes:     map[RouteKey]*L7Route{},
-						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						Name:           "foo-443-http",
+						Source:         foo443HTTPListener,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-80-https",
@@ -839,11 +837,10 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          false,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "foo-443-https-1",
@@ -851,11 +848,10 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          false,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 					{
 						Name:           "bar-443-https",
@@ -863,11 +859,10 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          false,
 						Attachable:     true,
 						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: kinds.HTTPRoute},
-						},
+						SupportedKinds: supportedKindsForListeners,
 					},
 				},
 				Valid: true,
@@ -883,7 +878,7 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
+				Source: getLastCreatedGateway(),
 				Valid:  false,
 				Conditions: staticConds.NewGatewayUnsupportedValue("spec." +
 					"addresses: Forbidden: addresses are not supported",
@@ -902,7 +897,7 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: invalidGC,
 			expected: &Gateway{
-				Source:     getLastCreatedGetaway(),
+				Source:     getLastCreatedGateway(),
 				Valid:      false,
 				Conditions: staticConds.NewGatewayInvalid("GatewayClass is invalid"),
 			},
@@ -914,11 +909,116 @@ func TestBuildGateway(t *testing.T) {
 			),
 			gatewayClass: nil,
 			expected: &Gateway{
-				Source:     getLastCreatedGetaway(),
+				Source:     getLastCreatedGateway(),
 				Valid:      false,
 				Conditions: staticConds.NewGatewayInvalid("GatewayClass doesn't exist"),
 			},
 			name: "nil gatewayclass",
+		},
+		{
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1.Listener{foo443TLSListener, foo443HTTPListener}},
+			),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGateway(),
+				Valid:  true,
+				Listeners: []*Listener{
+					{
+						Name:       "foo-443-tls",
+						Source:     foo443TLSListener,
+						Valid:      false,
+						Attachable: true,
+						Routes:     map[RouteKey]*L7Route{},
+						L4Routes:   map[L4RouteKey]*L4Route{},
+						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: kinds.TLSRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+						},
+					},
+					{
+						Name:           "foo-443-http",
+						Source:         foo443HTTPListener,
+						Valid:          false,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
+						SupportedKinds: supportedKindsForListeners,
+					},
+				},
+			},
+			name: "http listener and tls listener port conflicting",
+		},
+		{
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1.Listener{foo443TLSListener, splat443HTTPSListener}},
+			),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGateway(),
+				Valid:  true,
+				Listeners: []*Listener{
+					{
+						Name:       "foo-443-tls",
+						Source:     foo443TLSListener,
+						Valid:      false,
+						Attachable: true,
+						Routes:     map[RouteKey]*L7Route{},
+						L4Routes:   map[L4RouteKey]*L4Route{},
+						Conditions: staticConds.NewListenerHostnameConflict(conflict443HostnameMsg),
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: kinds.TLSRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+						},
+					},
+					{
+						Name:           "splat-443-https",
+						Source:         splat443HTTPSListener,
+						Valid:          false,
+						Attachable:     true,
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						Conditions:     staticConds.NewListenerHostnameConflict(conflict443HostnameMsg),
+						SupportedKinds: supportedKindsForListeners,
+					},
+				},
+			},
+			name: "https listener and tls listener with overlapping hostnames",
+		},
+		{
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1.Listener{foo443TLSListener, bar443HTTPSListener}},
+			),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGateway(),
+				Valid:  true,
+				Listeners: []*Listener{
+					{
+						Name:       "foo-443-tls",
+						Source:     foo443TLSListener,
+						Valid:      true,
+						Attachable: true,
+						Routes:     map[RouteKey]*L7Route{},
+						L4Routes:   map[L4RouteKey]*L4Route{},
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: kinds.TLSRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+						},
+					},
+					{
+						Name:           "bar-443-https",
+						Source:         bar443HTTPSListener,
+						Valid:          true,
+						Attachable:     true,
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						Routes:         map[RouteKey]*L7Route{},
+						L4Routes:       map[L4RouteKey]*L4Route{},
+						SupportedKinds: supportedKindsForListeners,
+					},
+				},
+			},
+			name: "https listener and tls listener with non overlapping hostnames",
 		},
 	}
 

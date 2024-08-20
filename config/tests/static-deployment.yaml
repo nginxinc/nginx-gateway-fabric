@@ -58,6 +58,8 @@ spec:
           initialDelaySeconds: 3
           periodSeconds: 1
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           allowPrivilegeEscalation: false
           capabilities:
             add:
@@ -70,6 +72,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-stream-conf
+          mountPath: /etc/nginx/stream-conf.d
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -87,6 +91,8 @@ spec:
         - containerPort: 443
           name: https
         securityContext:
+          seccompProfile:
+            type: RuntimeDefault
           capabilities:
             add:
             - NET_BIND_SERVICE
@@ -98,6 +104,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-stream-conf
+          mountPath: /etc/nginx/stream-conf.d
         - name: module-includes
           mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
@@ -116,6 +124,8 @@ spec:
         runAsNonRoot: true
       volumes:
       - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-stream-conf
         emptyDir: {}
       - name: module-includes
         emptyDir: {}

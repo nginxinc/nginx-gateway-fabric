@@ -1,5 +1,5 @@
 ---
-title: "Client Settings Policy"
+title: "Client Settings Policy API"
 weight: 800
 toc: true
 docs: "DOCS-000"
@@ -28,16 +28,12 @@ Settings applied to an HTTPRoute or GRPCRoute take precedence over settings appl
 
 This guide will show you how to use the `ClientSettingsPolicy` API to configure the client max body size for your applications.
 
-{{< important >}}
-The `ClientSettingsPolicy` API does not work with [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
-{{< /important >}}
-
 For all the possible configuration options for `ClientSettingsPolicy`, see the [API reference]({{< relref "reference/api.md" >}}).
 
 ## Setup
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
   GW_IP=XXX.YYY.ZZZ.III
@@ -147,7 +143,6 @@ Events:                      <none>
 ```
 
 Next, test that the policy is configured by sending a POST request to the coffee and tea applications exceeding the client's max body size of 50 bytes.
-
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST --data "this payload is greater than fifty bytes by four bytes"
@@ -279,7 +274,7 @@ spec:
 EOF
 ```
 
-## Further Reading
+## Further reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
 - [API reference]({{< relref "reference/api.md" >}}): all configuration fields for the `ClientSettingsPolicy` API.

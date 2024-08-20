@@ -1,14 +1,15 @@
 ---
 title: "Installation with Helm"
-description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric in a Kubernetes cluster with Helm."
 weight: 100
 toc: true
 docs: "DOCS-1430"
 ---
 
-{{<custom-styles>}}
+## Overview
 
-## Prerequisites
+Learn how to install, upgrade, and uninstall NGINX Gateway Fabric in a Kubernetes cluster using Helm.
+
+## Before you begin
 
 To complete this guide, you'll need to install:
 
@@ -27,15 +28,19 @@ To complete this guide, you'll need to install:
 
 ### Install from the OCI registry
 
-To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
+{{<tabs name="install-helm">}}
 
-##### For NGINX
+{{%tab name="NGINX"%}}
+
+To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
 ```shell
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
 ```
 
-##### For NGINX Plus
+{{% /tab %}}
+
+{{%tab name="NGINX Plus"%}}
 
 {{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
@@ -59,6 +64,10 @@ You can also use the certificate and key from the MyF5 portal and the Docker reg
    "tags": ["edge"]
    }
 ```
+
+{{% /tab %}}
+
+{{</tabs>}}
 
 To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
@@ -114,6 +123,14 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 ```
 
 {{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+
+#### Examples
+
+You can find several examples of configuration options of the `values.yaml` file in the [helm examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/examples/helm) directory.
+
+### Access NGINX Gateway Fabric
+
+{{<include "installation/expose-nginx-gateway-fabric.md" >}}
 
 ## Upgrade NGINX Gateway Fabric
 
@@ -274,9 +291,3 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 ## Additional configuration
 
 For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.3.0/charts/nginx-gateway-fabric/README.md#configuration).
-
-## Next steps
-
-### Expose NGINX Gateway Fabric
-
-{{<include "installation/next-step-expose-fabric.md">}}

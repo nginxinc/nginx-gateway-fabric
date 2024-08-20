@@ -1,10 +1,13 @@
 {{ define "packages" }}
 ---
-title: "API Reference"
-description: "NGINX Gateway API Reference"
+title: "API reference"
 weight: 100
 toc: false
 ---
+
+## Overview
+
+NGINX Gateway API Reference
 
 {{ with .packages}}
 <p>Packages:</p>

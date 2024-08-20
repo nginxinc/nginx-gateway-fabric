@@ -16,7 +16,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -25,6 +25,7 @@ type ClusterState struct {
 	GatewayClasses     map[types.NamespacedName]*gatewayv1.GatewayClass
 	Gateways           map[types.NamespacedName]*gatewayv1.Gateway
 	HTTPRoutes         map[types.NamespacedName]*gatewayv1.HTTPRoute
+	TLSRoutes          map[types.NamespacedName]*v1alpha2.TLSRoute
 	Services           map[types.NamespacedName]*v1.Service
 	Namespaces         map[types.NamespacedName]*v1.Namespace
 	ReferenceGrants    map[types.NamespacedName]*v1beta1.ReferenceGrant
@@ -53,6 +54,8 @@ type Graph struct {
 	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
 	// Routes hold Route resources.
 	Routes map[RouteKey]*L7Route
+	// L4Routes hold L4Route resources.
+	L4Routes map[L4RouteKey]*L4Route
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.
 	// It is different from the other maps, because it includes entries for Secrets that do not exist
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
@@ -194,10 +197,6 @@ func BuildGraph(
 			NginxProxyValid:  npCfg.Valid,
 			TelemetryEnabled: spec.Telemetry != nil && spec.Telemetry.Exporter != nil,
 		}
-
-		if spec.Telemetry != nil {
-			globalSettings.TracingSpanAttributes = spec.Telemetry.SpanAttributes
-		}
 	}
 
 	secretResolver := newSecretResolver(state.Secrets)
@@ -224,12 +223,20 @@ func BuildGraph(
 		npCfg,
 	)
 
-	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
+	l4routes := buildL4RoutesForGateways(
+		state.TLSRoutes,
+		processedGws.GetAllNsNames(),
+		state.Services,
+		npCfg,
+		refGrantResolver,
+	)
+
+	bindRoutesToListeners(routes, l4routes, gw, state.Namespaces)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies, npCfg)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServices := buildReferencedServices(routes)
+	referencedServices := buildReferencedServices(routes, l4routes)
 
 	// policies must be processed last because they rely on the state of the other resources in the graph
 	processedPolicies := processPolicies(
@@ -244,6 +251,7 @@ func BuildGraph(
 		GatewayClass:               gc,
 		Gateway:                    gw,
 		Routes:                     routes,
+		L4Routes:                   l4routes,
 		IgnoredGatewayClasses:      processedGwClasses.Ignored,
 		IgnoredGateways:            processedGws.Ignored,
 		ReferencedSecrets:          secretResolver.getResolvedSecrets(),

@@ -1,29 +1,42 @@
 package http
 
+import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+
+const InternalRoutePathPrefix = "/_ngf-internal"
+
 // Server holds all configuration for an HTTP server.
 type Server struct {
 	SSL           *SSL
 	ServerName    string
+	Listen        string
 	Locations     []Location
-	Includes      []string
-	Port          int32
+	Includes      []Include
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
+	IsSocket      bool
 }
+
+type LocationType string
+
+const (
+	InternalLocationType LocationType = "internal"
+	ExternalLocationType LocationType = "external"
+	RedirectLocationType LocationType = "redirect"
+)
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
 	Path            string
 	ProxyPass       string
 	HTTPMatchKey    string
-	HTTPMatchVar    string
+	Type            LocationType
 	ProxySetHeaders []Header
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
 	ResponseHeaders ResponseHeaders
 	Rewrites        []string
-	Includes        []string
+	Includes        []Include
 	GRPC            bool
 }
 
@@ -88,21 +101,21 @@ type SplitClientDistribution struct {
 	Value   string
 }
 
-// Map defines an NGINX map.
-type Map struct {
-	Source     string
-	Variable   string
-	Parameters []MapParameter
-}
-
-// Parameter defines a Value and Result pair in a Map.
-type MapParameter struct {
-	Value  string
-	Result string
-}
-
 // ProxySSLVerify holds the proxied HTTPS server verification configuration.
 type ProxySSLVerify struct {
 	TrustedCertificate string
 	Name               string
+}
+
+// ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
+type ServerConfig struct {
+	Servers  []Server
+	IPFamily shared.IPFamily
+	Plus     bool
+}
+
+// Include defines a file that's included via the include directive.
+type Include struct {
+	Name    string
+	Content []byte
 }

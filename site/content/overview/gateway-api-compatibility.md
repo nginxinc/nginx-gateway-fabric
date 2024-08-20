@@ -1,26 +1,27 @@
 ---
 title: "Gateway API Compatibility"
-description: "Learn which Gateway API resources NGINX Gateway Fabric supports and the extent of that support."
 weight: 200
 toc: true
 docs: "DOCS-1412"
 ---
 
+Learn which Gateway API resources NGINX Gateway Fabric supports and to which level.
+
 ## Summary
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                              | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
-| ------------------------------------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
-| [GatewayClass](#gatewayclass)         | Supported           | Not supported          | Supported                             | v1          |
-| [Gateway](#gateway)                   | Supported           | Partially supported    | Not supported                         | v1          |
-| [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
-| [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
-| [GRPCRoute](#grpcroute)               | Supported           | Partially supported    | Not supported                         | v1          |
-| [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
-| [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
-| [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
-| [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha3    |
-| [Custom policies](#custom-policies)   | N/A                 | N/A                    | Supported                             | N/A         |
+| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+|---------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
+| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Supported                             | v1          |
+| [Gateway](#gateway)                   | Supported          | Partially supported    | Not supported                         | v1          |
+| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          |
+| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     |
+| [GRPCRoute](#grpcroute)               | Supported          | Partially supported    | Not supported                         | v1          |
+| [TLSRoute](#tlsroute)                 | Supported          | Not supported          | Not supported                         | v1alpha2    |
+| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
+| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha3    |
+| [Custom policies](#custom-policies)   | N/A                | N/A                    | Supported                             | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -122,6 +123,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `Accepted/False/UnsupportedProtocol`
       - `Accepted/False/InvalidCertificateRef`
       - `Accepted/False/ProtocolConflict`
+      - `Accpeted/False/HostnameConflict`
       - `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       - `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NGINX Gateway Fabric only supports a single Gateway.
       - `Programmed/True/Programmed`
@@ -130,6 +132,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/InvalidCertificateRef`
       - `ResolvedRefs/False/InvalidRouteKinds`
       - `Conflicted/True/ProtocolConflict`
+      - `Conflicted/True/HostnameConflict`
       - `Conflicted/False/NoConflicts`
 
 ---
@@ -179,6 +182,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/RefNotPermitted`
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef with an unsupported value.
+      - `ResolvedRefs/False/InvalidIPFamily`: Custom reason for when one of the HTTPRoute rules has a backendRef that has an invalid IPFamily.
       - `PartiallyInvalid/True/UnsupportedValue`
 
 ---
@@ -253,9 +257,37 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| TLSRoute | Not supported      | Not supported          | Not supported                         | N/A         |
+|----------|--------------------|------------------------|---------------------------------------|-------------|
+| TLSRoute | Supported          | Not supported          | Not supported                         | v1alpha2    |
 {{< /bootstrap-table >}}
+
+**Fields**:
+
+- `spec`
+  - `parentRefs`: Partially supported. Port not supported.
+  - `hostnames`: Supported.
+  - `rules`
+    - `backendRefs`: Partially supported. Only one backend ref allowed.
+      - `weight`: Not supported.
+- `status`
+  - `parents`
+    - `parentRef`: Supported.
+    - `controllerName`: Supported.
+    - `conditions`: Supported (Condition/Status/Reason):
+      - `Accepted/True/Accepted`
+      - `Accepted/False/NoMatchingListenerHostname`
+      - `Accepted/False/NoMatchingParent`
+      - `Accepted/False/NotAllowedByListeners`
+      - `Accepted/False/UnsupportedValue`: Custom reason for when the TLSRoute includes an invalid or unsupported value.
+      - `Accepted/False/InvalidListener`: Custom reason for when the TLSRoute references an invalid listener.
+      - `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. TLSRoute can be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
+      - `Accepted/False/HostnameConflict`: Custom reason for when the TLSRoute has a hostname that conflicts with another TLSRoute on the same port.
+      - `ResolvedRefs/True/ResolvedRefs`
+      - `ResolvedRefs/False/InvalidKind`
+      - `ResolvedRefs/False/RefNotPermitted`
+      - `ResolvedRefs/False/BackendNotFound`
+      - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the TLSRoute rules has a backendRef with an unsupported value.
+      - `PartiallyInvalid/True/UnsupportedValue`
 
 ---
 

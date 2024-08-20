@@ -32,6 +32,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -50,12 +51,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -74,6 +75,7 @@ func init() {
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
 	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(gatewayv1alpha3.Install(scheme))
+	utilruntime.Must(gatewayv1alpha2.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
@@ -238,7 +240,6 @@ func StartManager(cfg config.Config) error {
 		usageSecret:                   usageSecret,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
-		policyConfigGenerator:         policyManager,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -293,17 +294,15 @@ func StartManager(cfg config.Config) error {
 func createPolicyManager(
 	mustExtractGVK kinds.MustExtractGVK,
 	validator validation.GenericValidator,
-) *policies.Manager {
+) *policies.CompositeValidator {
 	cfgs := []policies.ManagerConfig{
 		{
 			GVK:       mustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
 			Validator: clientsettings.NewValidator(validator),
-			Generator: clientsettings.Generate,
 		},
 		{
 			GVK:       mustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
 			Validator: observability.NewValidator(validator),
-			Generator: observability.Generate,
 		},
 	}
 
@@ -318,7 +317,7 @@ func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecke
 		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
 		// might get terminated half-way.
-		LeaderElection:          true,
+		LeaderElection:          cfg.LeaderElection.Enabled,
 		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
 		LeaderElectionID:        cfg.LeaderElection.LockName,
 		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
@@ -363,6 +362,7 @@ func registerControllers(
 	controlConfigNSName types.NamespacedName,
 ) error {
 	type ctlrCfg struct {
+		name       string
 		objectType ngftypes.ObjectType
 		options    []controller.Option
 	}
@@ -409,12 +409,14 @@ func registerControllers(
 		},
 		{
 			objectType: &apiv1.Service{},
+			name:       "user-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 			},
 		},
 		{
 			objectType: &apiv1.Service{},
+			name:       "ngf-service", // unique controller names are needed and we have multiple Service ctlrs
 			options: func() []controller.Option {
 				svcNSName := types.NamespacedName{
 					Namespace: cfg.GatewayPodConfig.Namespace,
@@ -498,6 +500,12 @@ func registerControllers(
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
 			},
+			{
+				objectType: &gatewayv1alpha2.TLSRoute{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
 		}
 		controllerRegCfgs = append(controllerRegCfgs, gwExpFeatures...)
 	}
@@ -522,9 +530,15 @@ func registerControllers(
 	}
 
 	for _, regCfg := range controllerRegCfgs {
+		name := regCfg.objectType.GetObjectKind().GroupVersionKind().Kind
+		if regCfg.name != "" {
+			name = regCfg.name
+		}
+
 		if err := controller.Register(
 			ctx,
 			regCfg.objectType,
+			name,
 			mgr,
 			eventCh,
 			regCfg.options...,
@@ -553,9 +567,6 @@ func createTelemetryJob(
 
 		options := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(cfg.ProductTelemetryConfig.Endpoint),
-			otlptracegrpc.WithHeaders(map[string]string{
-				"X-F5-OTEL": "GRPC",
-			}),
 		}
 		if cfg.ProductTelemetryConfig.EndpointInsecure {
 			options = append(options, otlptracegrpc.WithInsecure())
@@ -672,6 +683,7 @@ func prepareFirstEventBatchPreparerArgs(
 			objectLists,
 			&gatewayv1alpha3.BackendTLSPolicyList{},
 			&apiv1.ConfigMapList{},
+			&gatewayv1alpha2.TLSRouteList{},
 		)
 	}
 

@@ -4,7 +4,7 @@ package validation
 
 import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 )
 
 // Validators include validators for API resources from the perspective of a data-plane.

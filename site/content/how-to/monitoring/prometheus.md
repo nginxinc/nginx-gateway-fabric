@@ -1,15 +1,13 @@
 ---
-title: "Prometheus Metrics"
-description: "This document describes how to monitor NGINX Gateway Fabric using Prometheus and Grafana. It explains installation and configuration, as well as what metrics are available."
+title: "Prometheus metrics"
 weight: 100
 toc: true
 docs: "DOCS-1418"
 ---
 
-{{<custom-styles>}}
+This document describes how to monitor NGINX Gateway Fabric using Prometheus and Grafana. It explains installation and configuration, as well as what metrics are available.
 
 ## Overview
-
 
 NGINX Gateway Fabric metrics are displayed in [Prometheus](https://prometheus.io/) format. These metrics are served through a metrics server orchestrated by the controller-runtime package on HTTP port `9113`. When installed, Prometheus automatically scrapes this port and collects metrics. [Grafana](https://grafana.com/) can be used for rich visualization of these metrics.
 
@@ -98,17 +96,17 @@ Provided by the [controller-runtime](https://github.com/kubernetes-sigs/controll
 - Go runtime metrics such as the number of Go routines, garbage collection duration, and Go version.
 - Controller-specific metrics, including reconciliation errors per controller, length of the reconcile queue, and reconciliation latency.
 
-## How to change the default metrics configuration
+## Change the default metrics configuration
 
 You can configure monitoring metrics for NGINX Gateway Fabric using Helm or Manifests.
 
 ### Using Helm
 
-If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](/charts/nginx-gateway-fabric/README.md).
+If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.3.0/charts/nginx-gateway-fabric/README.md).
 
 ### Using Kubernetes manifests
 
-For setups using Kubernetes manifests, change the metrics configuration by editing the [NGINX Gateway manifest](/deploy/manifests/nginx-gateway.yaml).
+For setups using Kubernetes manifests, change the metrics configuration by editing the NGINX Gateway Fabric manifest that you want to deploy. You can find some examples in the [deploy](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.3.0/deploy) directory.
 
 #### Disabling metrics
 

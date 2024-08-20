@@ -4,23 +4,29 @@
 
 NGINX Plus: true
 
+NGINX Gateway Fabric:
+
+- Commit: 3c029b1417c1f89f2a29aeef07f47078640e28b2
+- Date: 2024-08-15T00:04:25Z
+- Dirty: false
+
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.4-gke.1043004
+- k8s version: v1.29.6-gke.1326000
 - vCPUs per node: 16
 - RAM per node: 65855012Ki
 - Max pods per node: 110
-- Zone: us-east1-b
+- Zone: us-west1-b
 - Instance Type: n2d-standard-16
 
 ## Test: Send http /coffee traffic
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.992s, 59.99s, 1.631ms
-Latencies     [min, mean, 50, 90, 95, 99, max]  908.3µs, 1.36ms, 1.329ms, 1.511ms, 1.57ms, 1.795ms, 14.259ms
-Bytes In      [total, mean]                     955989, 159.33
+Duration      [total, attack, wait]             59.992s, 59.991s, 994.033µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  618.031µs, 867.451µs, 853.111µs, 978.461µs, 1.029ms, 1.281ms, 3.592ms
+Bytes In      [total, mean]                     960000, 160.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -33,9 +39,9 @@ Error Set:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.992s, 59.99s, 1.671ms
-Latencies     [min, mean, 50, 90, 95, 99, max]  968.82µs, 1.388ms, 1.338ms, 1.558ms, 1.632ms, 1.973ms, 14.346ms
-Bytes In      [total, mean]                     912000, 152.00
+Duration      [total, attack, wait]             59.992s, 59.991s, 1.001ms
+Latencies     [min, mean, 50, 90, 95, 99, max]  699.522µs, 977.274µs, 952.901µs, 1.125ms, 1.185ms, 1.338ms, 7.794ms
+Bytes In      [total, mean]                     918000, 153.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  

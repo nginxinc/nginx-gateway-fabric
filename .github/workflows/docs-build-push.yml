@@ -1,0 +1,57 @@
+name: Build and deploy docs
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+        - preview
+        - dev
+        - staging
+        - prod
+  pull_request:
+    branches:
+    - "*"
+    paths:
+    - "site/**"
+
+concurrency:
+  group: ${{ github.ref_name }}-docs-push
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  vars:
+    runs-on: ubuntu-22.04
+    outputs:
+      azure_creds: ${{ steps.vars.outputs.defined }}
+    steps:
+    - name: Check if variable is set
+      id: vars
+      env:
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_DOCS }}
+      if: "${{ env.AZURE_CREDENTIALS != '' }}"
+      run: echo "defined=true" >> $GITHUB_OUTPUT
+
+  call-docs-build-push:
+    needs: [vars]
+    if: ${{ github.event.repository.fork == false && needs.vars.outputs.azure_creds == 'true' }}
+    uses: nginxinc/docs-actions/.github/workflows/docs-build-push.yml@03a9a3808fcb77cd0c19d7fa5d59b25565dd1d6d # v1.0.2
+    permissions:
+      pull-requests: write # needed to write preview url comment to PR
+      contents: read
+    with:
+      production_url_path: "/nginx-gateway-fabric"
+      preview_url_path: "/previews/nginx-gateway-fabric"
+      docs_source_path: "public/nginx-gateway-fabric"
+      docs_build_path: "./site"
+      doc_type: "hugo"
+      environment: ${{ inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_DOCS }}
+      AZURE_KEY_VAULT: ${{ secrets.AZURE_KEY_VAULT_DOCS }}

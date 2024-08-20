@@ -27,6 +27,7 @@ import (
 )
 
 func TestRegister(t *testing.T) {
+	t.Parallel()
 	type fakes struct {
 		mgr     *controllerfakes.FakeManager
 		indexer *controllerfakes.FakeFieldIndexer
@@ -120,7 +121,9 @@ func TestRegister(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {
@@ -136,6 +139,7 @@ func TestRegister(t *testing.T) {
 				return controller.Register(
 					context.Background(),
 					test.objectType,
+					test.msg, // unique controller name for each loop iteration
 					test.fakes.mgr,
 					eventCh,
 					controller.WithNamespacedNameFilter(nsNameFilter),

@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -29,14 +30,18 @@ type Configuration struct {
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
 	SSLServers []VirtualServer
-	// Upstreams holds all unique Upstreams.
+	// TLSPassthroughServers hold all TLSPassthroughServers
+	TLSPassthroughServers []Layer4VirtualServer
+	// Upstreams holds all unique http Upstreams.
 	Upstreams []Upstream
+	// StreamUpstreams holds all unique stream Upstreams
+	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
-	// Telemetry holds the Otel configuration.
-	Telemetry Telemetry
 	// BaseHTTPConfig holds the configuration options at the http context.
 	BaseHTTPConfig BaseHTTPConfig
+	// Telemetry holds the Otel configuration.
+	Telemetry Telemetry
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -68,20 +73,24 @@ type VirtualServer struct {
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
-	// Additions is a list of config additions for the server.
-	Additions []Addition
+	// Policies is a list of Policies that apply to the server.
+	Policies []policies.Policy
 	// Port is the port of the server.
 	Port int32
 	// IsDefault indicates whether the server is the default server.
 	IsDefault bool
 }
 
-// Addition holds additional configuration.
-type Addition struct {
-	// Identifier is a unique identifier for the addition.
-	Identifier string
-	// Bytes contains the additional configuration.
-	Bytes []byte
+// Layer4VirtualServer is a virtual server for Layer 4 traffic.
+type Layer4VirtualServer struct {
+	// Hostname is the hostname of the server.
+	Hostname string
+	// UpstreamName refers to the name of the upstream that is used.
+	UpstreamName string
+	// Port is the port of the server.
+	Port int32
+	// IsDefault refers to whether this server is created for the default listener hostname.
+	IsDefault bool
 }
 
 // Upstream is a pool of endpoints to be load balanced.
@@ -108,6 +117,8 @@ type PathRule struct {
 	PathType PathType
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
+	// Policies contains the list of policies that are applied to this PathRule.
+	Policies []policies.Policy
 	// GRPC indicates if this is a gRPC rule
 	GRPC bool
 }
@@ -214,8 +225,6 @@ type MatchRule struct {
 	Source *metav1.ObjectMeta
 	// Match holds the match for the rule.
 	Match Match
-	// Additions holds the config additions for the rule.
-	Additions []Addition
 	// BackendGroup is the group of Backends that the rule routes to.
 	BackendGroup BackendGroup
 }
@@ -270,7 +279,7 @@ type VerifyTLS struct {
 	RootCAPath   string
 }
 
-// Telemetry represents Otel configuration for the dataplane.
+// Telemetry represents global Otel configuration for the dataplane.
 type Telemetry struct {
 	// Endpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.
 	Endpoint string
@@ -280,6 +289,8 @@ type Telemetry struct {
 	Interval string
 	// Ratios is a list of tracing sampling ratios.
 	Ratios []Ratio
+	// SpanAttributes are global custom key/value attributes that are added to each span.
+	SpanAttributes []SpanAttribute
 	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
 	BatchSize int32
 	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
@@ -296,9 +307,23 @@ type SpanAttribute struct {
 
 // BaseHTTPConfig holds the configuration options at the http context.
 type BaseHTTPConfig struct {
+	// IPFamily specifies the IP family for all servers.
+	IPFamily IPFamilyType
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
+
+// IPFamilyType specifies the IP family to be used by NGINX.
+type IPFamilyType string
+
+const (
+	// Dual specifies that the server will use both IPv4 and IPv6.
+	Dual IPFamilyType = "dual"
+	// IPv4 specifies that the server will use only IPv4.
+	IPv4 IPFamilyType = "ipv4"
+	// IPv6 specifies that the server will use only IPv6.
+	IPv6 IPFamilyType = "ipv6"
+)
 
 // Ratio represents a tracing sampling ratio used in an nginx config with the otel_module.
 type Ratio struct {

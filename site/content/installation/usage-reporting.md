@@ -1,12 +1,13 @@
 ---
-title: "Enabling Usage Reporting for NGINX Plus"
-description: "This page outlines how to enable Usage Reporting for NGINX Gateway Fabric and how to view the usage data through the API."
+title: "Enable Usage Reporting for NGINX Plus"
 weight: 1000
 toc: true
 docs: "DOCS-000"
 ---
 
 ## Overview
+
+This document describes how to enable Usage Reporting for NGINX Gateway Fabric and how to view the usage data through the API.
 
 Usage Reporting connects to the NGINX Instance Manager and reports the number of Nodes and NGINX Gateway Fabric Pods in the cluster.
 

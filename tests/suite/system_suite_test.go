@@ -1,4 +1,6 @@
-package suite
+// This package needs to be named main to get build info
+// because of https://github.com/golang/go/issues/33976
+package main
 
 import (
 	"context"
@@ -21,7 +23,7 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctlr "sigs.k8s.io/controller-runtime"
@@ -73,8 +75,10 @@ var (
 	localChartPath    string
 	address           string
 	version           string
+	chartVersion      string
 	clusterInfo       framework.ClusterInfo
 	skipNFRTests      bool
+	logs              string
 )
 
 const (
@@ -173,6 +177,11 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
+	} else {
+		if version == "edge" {
+			chartVersion = "0.0.0-edge"
+			installCfg.ChartVersion = chartVersion
+		}
 	}
 
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
@@ -229,7 +238,7 @@ func teardown(relName string) {
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-			key := types.NamespacedName{Name: ngfNamespace}
+			key := k8sTypes.NamespacedName{Name: ngfNamespace}
 			if err := k8sClient.Get(ctx, key, &core.Namespace{}); err != nil && apierrors.IsNotFound(err) {
 				return true, nil
 			}
@@ -265,6 +274,7 @@ var _ = BeforeSuite(func() {
 		"longevity-teardown", // - running longevity teardown (deployment will already exist)
 		"telemetry",          // - running telemetry test (NGF will be deployed as part of the test)
 		"scale",              // - running scale test (this test will deploy its own version)
+		"reconfiguration",    // - running reconfiguration test (test will deploy its own instances)
 	}
 	for _, s := range skipSubstrings {
 		if strings.Contains(labelFilter, s) {
@@ -286,6 +296,11 @@ var _ = AfterSuite(func() {
 	if skipNFRTests {
 		Skip("")
 	}
+	events := framework.GetEvents(resourceManager, ngfNamespace)
+	AddReportEntry("Events", events, ReportEntryVisibilityNever)
+
+	logs = framework.GetLogs(resourceManager, ngfNamespace, releaseName)
+	AddReportEntry("Logs", logs, ReportEntryVisibilityNever)
 
 	labelFilter := GinkgoLabelFilter()
 	if !strings.Contains(labelFilter, "longevity-setup") {
@@ -303,5 +318,16 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "scale")
+		strings.Contains(labelFilter, "scale") ||
+		strings.Contains(labelFilter, "reconfiguration")
 }
+
+var _ = ReportAfterSuite("Print info on failure", func(report Report) {
+	if !report.SuiteSucceeded {
+		for _, specReport := range report.SpecReports {
+			for _, entry := range specReport.ReportEntries {
+				fmt.Println(entry.GetRawValue())
+			}
+		}
+	}
+})

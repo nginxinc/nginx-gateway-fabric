@@ -13,11 +13,7 @@ NGINX Gateway Fabric supports tracing using [OpenTelemetry](https://opentelemetr
 
 This guide explains how to enable tracing on HTTPRoutes using NGINX Gateway Fabric. It uses the OpenTelemetry Collector and Jaeger to process and collect the traces.
 
-{{< important >}}
-Tracing cannot be enabled for [HTTPRoute matches](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch) with `headers`, `params`, or `method` matchers defined. It will be added in a future release.
-{{< /important >}}
-
-## Install the Collectors
+## Install the collectors
 
 The first step is to install the collectors. NGINX Gateway Fabric will be configured to export to the OpenTelemetry Collector, which is configured to export to Jaeger. This model allows the visualization collector (Jaeger) to be swapped with something else, or to add more collectors without needing to reconfigure NGINX Gateway Fabric. It is also possible to configure NGINX Gateway Fabric to export directly to Jaeger.
 
@@ -162,7 +158,7 @@ If you already have NGINX Gateway Fabric installed, then you can create the `Ngi
 kubectl edit gatewayclasses.gateway.networking.k8s.io nginx
 ```
 
-Next, [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -333,7 +329,7 @@ Select a trace to view the attributes.
 
 The trace includes the attribute from the global NginxProxy resource as well as the attribute from the ObservabilityPolicy.
 
-## Further Reading
+## Further reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
 - [API reference]({{< relref "reference/api.md" >}}): all configuration fields for the policies mentioned in this guide

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,8 +15,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/observability"
+	policies "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -29,8 +29,7 @@ const (
 func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
-	resolver resolver.ServiceResolver,
-	generator policies.ConfigGenerator,
+	serviceResolver resolver.ServiceResolver,
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
@@ -41,27 +40,163 @@ func BuildConfiguration(
 		return Configuration{Version: configVersion}
 	}
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(g, generator)
+	baseHTTPConfig := buildBaseHTTPConfig(g)
+
+	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
+	httpServers, sslServers := buildServers(g)
+	passthroughServers := buildPassthroughServers(g)
+	streamUpstreams := buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
-	baseHTTPConfig := buildBaseHTTPConfig(g)
 
 	config := Configuration{
-		HTTPServers:    httpServers,
-		SSLServers:     sslServers,
-		Upstreams:      upstreams,
-		BackendGroups:  backendGroups,
-		SSLKeyPairs:    keyPairs,
-		Version:        configVersion,
-		CertBundles:    certBundles,
-		Telemetry:      telemetry,
-		BaseHTTPConfig: baseHTTPConfig,
+		HTTPServers:           httpServers,
+		SSLServers:            sslServers,
+		TLSPassthroughServers: passthroughServers,
+		Upstreams:             upstreams,
+		StreamUpstreams:       streamUpstreams,
+		BackendGroups:         backendGroups,
+		SSLKeyPairs:           keyPairs,
+		Version:               configVersion,
+		CertBundles:           certBundles,
+		Telemetry:             telemetry,
+		BaseHTTPConfig:        baseHTTPConfig,
 	}
 
 	return config
+}
+
+// buildPassthroughServers builds TLSPassthroughServers from TLSRoutes attaches to listeners.
+func buildPassthroughServers(g *graph.Graph) []Layer4VirtualServer {
+	passthroughServersMap := make(map[graph.L4RouteKey][]Layer4VirtualServer)
+	listenerPassthroughServers := make([]Layer4VirtualServer, 0)
+
+	passthroughServerCount := 0
+
+	for _, l := range g.Gateway.Listeners {
+		if !l.Valid || l.Source.Protocol != v1.TLSProtocolType {
+			continue
+		}
+		foundRouteMatchingListenerHostname := false
+		for key, r := range l.L4Routes {
+			if !r.Valid {
+				continue
+			}
+
+			var hostnames []string
+
+			for _, p := range r.ParentRefs {
+				if val, exist := p.Attachment.AcceptedHostnames[l.Name]; exist {
+					hostnames = val
+					break
+				}
+			}
+
+			if _, ok := passthroughServersMap[key]; !ok {
+				passthroughServersMap[key] = make([]Layer4VirtualServer, 0)
+			}
+
+			passthroughServerCount += len(hostnames)
+
+			for _, h := range hostnames {
+				if l.Source.Hostname != nil && h == string(*l.Source.Hostname) {
+					foundRouteMatchingListenerHostname = true
+				}
+				passthroughServersMap[key] = append(passthroughServersMap[key], Layer4VirtualServer{
+					Hostname:     h,
+					UpstreamName: r.Spec.BackendRef.ServicePortReference(),
+					Port:         int32(l.Source.Port),
+				})
+			}
+		}
+		if !foundRouteMatchingListenerHostname {
+			if l.Source.Hostname != nil {
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname:  string(*l.Source.Hostname),
+					IsDefault: true,
+					Port:      int32(l.Source.Port),
+				})
+			} else {
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname: "",
+					Port:     int32(l.Source.Port),
+				})
+			}
+		}
+	}
+	passthroughServers := make([]Layer4VirtualServer, 0, passthroughServerCount+len(listenerPassthroughServers))
+
+	for _, r := range passthroughServersMap {
+		passthroughServers = append(passthroughServers, r...)
+	}
+
+	passthroughServers = append(passthroughServers, listenerPassthroughServers...)
+
+	return passthroughServers
+}
+
+// buildStreamUpstreams builds all stream upstreams.
+func buildStreamUpstreams(
+	ctx context.Context,
+	listeners []*graph.Listener,
+	serviceResolver resolver.ServiceResolver,
+	ipFamily IPFamilyType,
+) []Upstream {
+	// There can be duplicate upstreams if multiple routes reference the same upstream.
+	// We use a map to deduplicate them.
+	uniqueUpstreams := make(map[string]Upstream)
+
+	for _, l := range listeners {
+		if !l.Valid || l.Source.Protocol != v1.TLSProtocolType {
+			continue
+		}
+
+		for _, route := range l.L4Routes {
+			if !route.Valid {
+				continue
+			}
+
+			br := route.Spec.BackendRef
+
+			if !br.Valid {
+				continue
+			}
+
+			upstreamName := br.ServicePortReference()
+
+			if _, exist := uniqueUpstreams[upstreamName]; exist {
+				continue
+			}
+
+			var errMsg string
+
+			allowedAddressType := getAllowedAddressType(ipFamily)
+
+			eps, err := serviceResolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
+			if err != nil {
+				errMsg = err.Error()
+			}
+
+			uniqueUpstreams[upstreamName] = Upstream{
+				Name:      upstreamName,
+				Endpoints: eps,
+				ErrorMsg:  errMsg,
+			}
+		}
+	}
+
+	if len(uniqueUpstreams) == 0 {
+		return nil
+	}
+
+	upstreams := make([]Upstream, 0, len(uniqueUpstreams))
+
+	for _, up := range uniqueUpstreams {
+		upstreams = append(upstreams, up)
+	}
+	return upstreams
 }
 
 // buildSSLKeyPairs builds the SSLKeyPairs from the Secrets. It will only include Secrets that are referenced by
@@ -204,21 +339,24 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	return verify
 }
 
-func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl []VirtualServer) {
+func buildServers(g *graph.Graph) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1.ProtocolType]portPathRules{
 		v1.HTTPProtocolType:  make(portPathRules),
 		v1.HTTPSProtocolType: make(portPathRules),
 	}
 
 	for _, l := range g.Gateway.Listeners {
+		if l.Source.Protocol == v1.TLSProtocolType {
+			continue
+		}
 		if l.Valid {
 			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
 			if rules == nil {
-				rules = newHostPathRules(generator)
+				rules = newHostPathRules()
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
-			rules.upsertListener(l, g.GlobalSettings)
+			rules.upsertListener(l)
 		}
 	}
 
@@ -227,14 +365,14 @@ func buildServers(g *graph.Graph, generator policies.ConfigGenerator) (http, ssl
 
 	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
 
-	additions := buildAdditions(g.Gateway.Policies, g.GlobalSettings, generator)
+	pols := buildPolicies(g.Gateway.Policies)
 
 	for i := range httpServers {
-		httpServers[i].Additions = additions
+		httpServers[i].Policies = pols
 	}
 
 	for i := range sslServers {
-		sslServers[i].Additions = additions
+		sslServers[i].Policies = pols
 	}
 
 	return httpServers, sslServers
@@ -264,7 +402,6 @@ type pathAndType struct {
 }
 
 type hostPathRules struct {
-	generator        policies.ConfigGenerator
 	rulesPerHost     map[string]map[pathAndType]PathRule
 	listenersForHost map[string]*graph.Listener
 	httpsListeners   []*graph.Listener
@@ -272,16 +409,15 @@ type hostPathRules struct {
 	listenersExist   bool
 }
 
-func newHostPathRules(generator policies.ConfigGenerator) *hostPathRules {
+func newHostPathRules() *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[pathAndType]PathRule),
 		listenersForHost: make(map[string]*graph.Listener),
 		httpsListeners:   make([]*graph.Listener, 0),
-		generator:        generator,
 	}
 }
 
-func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *policies.GlobalSettings) {
+func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
@@ -294,14 +430,13 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener, globalSettings *poli
 			continue
 		}
 
-		hpr.upsertRoute(r, l, globalSettings)
+		hpr.upsertRoute(r, l)
 	}
 }
 
 func (hpr *hostPathRules) upsertRoute(
 	route *graph.L7Route,
 	listener *graph.Listener,
-	globalSettings *policies.GlobalSettings,
 ) {
 	var hostnames []string
 	GRPC := route.RouteType == graph.RouteTypeGRPC
@@ -317,6 +452,7 @@ func (hpr *hostPathRules) upsertRoute(
 	for _, p := range route.ParentRefs {
 		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
 			hostnames = val
+			break
 		}
 	}
 
@@ -349,7 +485,7 @@ func (hpr *hostPathRules) upsertRoute(
 			}
 		}
 
-		additions := buildAdditions(route.Policies, globalSettings, hpr.generator)
+		pols := buildPolicies(route.Policies)
 
 		for _, h := range hostnames {
 			for _, m := range rule.Matches {
@@ -369,13 +505,13 @@ func (hpr *hostPathRules) upsertRoute(
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
 				hostRule.GRPC = GRPC
+				hostRule.Policies = append(hostRule.Policies, pols...)
 
 				hostRule.MatchRules = append(hostRule.MatchRules, MatchRule{
 					Source:       objectSrc,
 					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
-					Additions:    additions,
 				})
 
 				hpr.rulesPerHost[h][key] = hostRule
@@ -472,10 +608,14 @@ func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
 	resolver resolver.ServiceResolver,
+	ipFamily IPFamilyType,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
 	// We use a map to deduplicate them.
 	uniqueUpstreams := make(map[string]Upstream)
+
+	// We need to build endpoints based on the IPFamily of NGINX.
+	allowedAddressType := getAllowedAddressType(ipFamily)
 
 	for _, l := range listeners {
 		if !l.Valid {
@@ -503,7 +643,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
 						if err != nil {
 							errMsg = err.Error()
 						}
@@ -529,6 +669,19 @@ func buildUpstreams(
 		upstreams = append(upstreams, up)
 	}
 	return upstreams
+}
+
+func getAllowedAddressType(ipFamily IPFamilyType) []discoveryV1.AddressType {
+	switch ipFamily {
+	case IPv4:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4}
+	case IPv6:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv6}
+	case Dual:
+		return []discoveryV1.AddressType{discoveryV1.AddressTypeIPv4, discoveryV1.AddressTypeIPv6}
+	default:
+		return []discoveryV1.AddressType{}
+	}
 }
 
 func getListenerHostname(h *v1.Hostname) string {
@@ -633,6 +786,8 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 		tel.Interval = string(*telemetry.Exporter.Interval)
 	}
 
+	tel.SpanAttributes = setSpanAttributes(telemetry.SpanAttributes)
+
 	// FIXME(sberman): https://github.com/nginxinc/nginx-gateway-fabric/issues/2038
 	// Find a generic way to include relevant policy info at the http context so we don't need policy-specific
 	// logic in this function
@@ -640,7 +795,7 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	for _, pol := range g.NGFPolicies {
 		if obsPol, ok := pol.Source.(*ngfAPI.ObservabilityPolicy); ok {
 			if obsPol.Spec.Tracing != nil && obsPol.Spec.Tracing.Ratio != nil && *obsPol.Spec.Tracing.Ratio > 0 {
-				ratioName := observability.CreateRatioVarName(obsPol)
+				ratioName := CreateRatioVarName(*obsPol.Spec.Tracing.Ratio)
 				ratioMap[ratioName] = *obsPol.Spec.Tracing.Ratio
 			}
 		}
@@ -654,11 +809,31 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	return tel
 }
 
+func setSpanAttributes(spanAttributes []ngfAPI.SpanAttribute) []SpanAttribute {
+	spanAttrs := make([]SpanAttribute, 0, len(spanAttributes))
+	for _, spanAttr := range spanAttributes {
+		sa := SpanAttribute{
+			Key:   spanAttr.Key,
+			Value: spanAttr.Value,
+		}
+		spanAttrs = append(spanAttrs, sa)
+	}
+
+	return spanAttrs
+}
+
+// CreateRatioVarName builds a variable name for an ObservabilityPolicy to be used with
+// ratio-based trace sampling.
+func CreateRatioVarName(ratio int32) string {
+	return fmt.Sprintf("$otel_ratio_%d", ratio)
+}
+
 // buildBaseHTTPConfig generates the base http context config that should be applied to all servers.
 func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	baseConfig := BaseHTTPConfig{
 		// HTTP2 should be enabled by default
-		HTTP2: true,
+		HTTP2:    true,
+		IPFamily: Dual,
 	}
 	if g.NginxProxy == nil || !g.NginxProxy.Valid {
 		return baseConfig
@@ -668,35 +843,32 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		baseConfig.HTTP2 = false
 	}
 
+	if g.NginxProxy.Source.Spec.IPFamily != nil {
+		switch *g.NginxProxy.Source.Spec.IPFamily {
+		case ngfAPI.IPv4:
+			baseConfig.IPFamily = IPv4
+		case ngfAPI.IPv6:
+			baseConfig.IPFamily = IPv6
+		}
+	}
+
 	return baseConfig
 }
 
-func buildAdditions(
-	policies []*graph.Policy,
-	globalSettings *policies.GlobalSettings,
-	generator policies.ConfigGenerator,
-) []Addition {
-	if len(policies) == 0 {
+func buildPolicies(graphPolicies []*graph.Policy) []policies.Policy {
+	if len(graphPolicies) == 0 {
 		return nil
 	}
 
-	additions := make([]Addition, 0, len(policies))
+	finalPolicies := make([]policies.Policy, 0, len(graphPolicies))
 
-	for _, policy := range policies {
+	for _, policy := range graphPolicies {
 		if !policy.Valid {
 			continue
 		}
 
-		additions = append(additions, Addition{
-			Bytes: generator.Generate(policy.Source, globalSettings),
-			Identifier: fmt.Sprintf(
-				"%s_%s_%s",
-				policy.Source.GetObjectKind().GroupVersionKind().Kind,
-				policy.Source.GetNamespace(),
-				policy.Source.GetName(),
-			),
-		})
+		finalPolicies = append(finalPolicies, policy.Source)
 	}
 
-	return additions
+	return finalPolicies
 }

@@ -1,16 +1,19 @@
 ---
-title: "Command-line Reference Guide"
-description: "Learn about the commands available for the executable file of the NGINX Gateway Fabric container."
+title: "Command-line reference guide"
 weight: 100
 toc: true
 docs: "DOCS-1435"
 ---
 
-## Static Mode
+## Overview
+
+Learn about the commands available for the executable file of the NGINX Gateway Fabric container.
+
+## Static mode
 
 This command configures NGINX for a single NGINX Gateway Fabric resource.
 
-_Usage_:
+*Usage*:
 
 ```shell
   gateway static-mode [flags]

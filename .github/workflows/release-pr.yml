@@ -35,7 +35,7 @@ jobs:
 
       - name: Get Release Notes
         id: notes
-        uses: lucacome/draft-release@8a63d32c79a171ae6048e614a8988f0ac3ed56d4 # v1.1.0
+        uses: lucacome/draft-release@5d29432a46bff6c122cd4b07a1fb94e1bb158d34 # v1.1.1
         with:
           config-path: .github/release-notes.yml
           dry-run: true
@@ -47,7 +47,7 @@ jobs:
           echo "current_version=$(yq '.version' <charts/nginx-gateway-fabric/Chart.yaml)" >> $GITHUB_OUTPUT
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3.0.3
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
@@ -55,7 +55,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3.0.3
         with:
           find: "edge"
           replace: ${{ inputs.version }}
@@ -63,7 +63,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3.0.3
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
@@ -71,7 +71,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        uses: jacobtomlinson/gha-find-replace@099c88fbf2a7da26b083521a8bfa13e4f0886b97 # v3.0.3
         with:
           find: "Always"
           replace: "IfNotPresent"
@@ -95,6 +95,7 @@ jobs:
           commit-message: Release ${{ inputs.version }}
           title: Release ${{ inputs.version }}
           draft: true
+          delete-branch: true
           branch: docs/release-${{ inputs.version }}
           author: nginx-bot <integrations@nginx.com>
           committer: nginx-bot <integrations@nginx.com>

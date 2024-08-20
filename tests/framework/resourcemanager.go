@@ -115,6 +115,20 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 
 // ApplyFromFiles creates or updates Kubernetes resources defined within the provided YAML files.
 func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) error {
+	for _, file := range files {
+		data, err := rm.GetFileContents(file)
+		if err != nil {
+			return err
+		}
+
+		if err = rm.ApplyFromBuffer(data, namespace); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (rm *ResourceManager) ApplyFromBuffer(buffer *bytes.Buffer, namespace string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
 	defer cancel()
 
@@ -150,7 +164,7 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 		return nil
 	}
 
-	return rm.readAndHandleObjects(handlerFunc, files)
+	return rm.readAndHandleObject(handlerFunc, buffer)
 }
 
 // Delete deletes Kubernetes resources defined as Go objects.
@@ -213,36 +227,41 @@ func (rm *ResourceManager) DeleteFromFiles(files []string, namespace string) err
 		return nil
 	}
 
-	return rm.readAndHandleObjects(handlerFunc, files)
-}
-
-func (rm *ResourceManager) readAndHandleObjects(
-	handle func(unstructured.Unstructured) error,
-	files []string,
-) error {
 	for _, file := range files {
 		data, err := rm.GetFileContents(file)
 		if err != nil {
 			return err
 		}
 
-		decoder := yaml.NewYAMLOrJSONDecoder(data, 4096)
-		for {
-			obj := unstructured.Unstructured{}
-			if err := decoder.Decode(&obj); err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				return fmt.Errorf("error decoding resource: %w", err)
-			}
+		if err = rm.readAndHandleObject(handlerFunc, data); err != nil {
+			return err
+		}
+	}
 
-			if len(obj.Object) == 0 {
-				continue
-			}
+	return nil
+}
 
-			if err := handle(obj); err != nil {
-				return err
+func (rm *ResourceManager) readAndHandleObject(
+	handle func(unstructured.Unstructured) error,
+	data *bytes.Buffer,
+) error {
+	decoder := yaml.NewYAMLOrJSONDecoder(data, 4096)
+
+	for {
+		obj := unstructured.Unstructured{}
+		if err := decoder.Decode(&obj); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
 			}
+			return fmt.Errorf("error decoding resource: %w", err)
+		}
+
+		if len(obj.Object) == 0 {
+			continue
+		}
+
+		if err := handle(obj); err != nil {
+			return err
 		}
 	}
 
@@ -622,6 +641,23 @@ func (rm *ResourceManager) GetNGFDeployment(namespace, releaseName string) (*app
 	return &deployment, nil
 }
 
+// GetEvents returns all Events in the specified namespace.
+func (rm *ResourceManager) GetEvents(namespace string) (*core.EventList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var eventList core.EventList
+	if err := rm.K8sClient.List(
+		ctx,
+		&eventList,
+		client.InNamespace(namespace),
+	); err != nil {
+		return &core.EventList{}, fmt.Errorf("error getting list of Events: %w", err)
+	}
+
+	return &eventList, nil
+}
+
 // ScaleDeployment scales the Deployment to the specified number of replicas.
 func (rm *ResourceManager) ScaleDeployment(namespace, name string, replicas int32) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.UpdateTimeout)
@@ -741,6 +777,35 @@ func (rm *ResourceManager) WaitForPodsToBeReadyWithCount(ctx context.Context, na
 			}
 
 			return podsReady == count, nil
+		},
+	)
+}
+
+// WaitForGatewayObservedGeneration waits for the provided Gateway's ObservedGeneration to equal the expected value.
+func (rm *ResourceManager) WaitForGatewayObservedGeneration(
+	ctx context.Context,
+	namespace,
+	name string,
+	generation int,
+) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var gw v1.Gateway
+			key := types.NamespacedName{Namespace: namespace, Name: name}
+			if err := rm.K8sClient.Get(ctx, key, &gw); err != nil {
+				return false, err
+			}
+
+			for _, cond := range gw.Status.Conditions {
+				if cond.ObservedGeneration == int64(generation) {
+					return true, nil
+				}
+			}
+
+			return false, nil
 		},
 	)
 }

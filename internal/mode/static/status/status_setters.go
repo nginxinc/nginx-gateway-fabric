@@ -11,7 +11,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 )
 
 func newNginxGatewayStatusSetter(status ngfAPI.NginxGatewayStatus) frameworkStatus.Setter {
@@ -96,6 +96,27 @@ func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtlrName 
 		}
 
 		hr.Status = status
+
+		return true
+	}
+}
+
+func newTLSRouteStatusSetter(status v1alpha2.TLSRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
+	return func(object client.Object) (wasSet bool) {
+		tr := object.(*v1alpha2.TLSRoute)
+
+		// keep all the parent statuses that belong to other controllers
+		for _, os := range tr.Status.Parents {
+			if string(os.ControllerName) != gatewayCtlrName {
+				status.Parents = append(status.Parents, os)
+			}
+		}
+
+		if routeStatusEqual(gatewayCtlrName, tr.Status.Parents, status.Parents) {
+			return false
+		}
+
+		tr.Status = status
 
 		return true
 	}

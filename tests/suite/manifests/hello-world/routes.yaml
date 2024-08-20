@@ -28,6 +28,7 @@ spec:
     - path:
         type: Exact
         value: /world
+      method: GET # This results in an internal location, so we can verify that policy attachment works there
     backendRefs:
     - name: world
       port: 80

@@ -1,25 +1,27 @@
-package suite
+package main
 
 import (
+	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
@@ -105,89 +107,63 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ngfPodName = podNames[0]
 	})
 
-	createResponseChecker := func(url, address string) func() error {
-		return func() error {
-			status, _, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
-			if err != nil {
-				return fmt.Errorf("bad response: %w", err)
-			}
-
-			if status != 200 {
-				return fmt.Errorf("unexpected status code: %d", status)
-			}
-
-			return nil
-		}
+	type scaleTestResults struct {
+		Name                   string
+		EventsBuckets          []framework.Bucket
+		ReloadBuckets          []framework.Bucket
+		EventsAvgTime          int
+		EventsCount            int
+		NGFContainerRestarts   int
+		NGFErrors              int
+		NginxContainerRestarts int
+		NginxErrors            int
+		ReloadAvgTime          int
+		ReloadCount            int
+		ReloadErrsCount        int
 	}
 
-	createMetricExistChecker := func(query string, getTime func() time.Time, modifyTime func()) func() error {
-		return func() error {
-			queryWithTimestamp := fmt.Sprintf("%s @ %d", query, getTime().Unix())
+	const scaleResultTemplate = `
+## Test {{ .Name }}
 
-			result, err := promInstance.Query(queryWithTimestamp)
-			if err != nil {
-				return fmt.Errorf("failed to query Prometheus: %w", err)
-			}
+### Reloads
 
-			if result.String() == "" {
-				modifyTime()
-				return errors.New("empty result")
-			}
+- Total: {{ .ReloadCount }}
+- Total Errors: {{ .ReloadErrsCount }}
+- Average Time: {{ .ReloadAvgTime }}ms
+- Reload distribution:
+{{- range .ReloadBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
 
-			return nil
-		}
-	}
+### Event Batch Processing
 
-	createEndTimeFinder := func(query string, startTime time.Time, t *time.Time) func() error {
-		return func() error {
-			result, err := promInstance.QueryRange(query, v1.Range{
-				Start: startTime,
-				End:   *t,
-				Step:  queryRangeStep,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to query Prometheus: %w", err)
-			}
+- Total: {{ .EventsCount }}
+- Average Time: {{ .EventsAvgTime }}ms
+- Event Batch Processing distribution:
+{{- range .EventsBuckets }}
+	- {{ .Le }}ms: {{ .Val }}
+{{- end }}
 
-			if result.String() == "" {
-				*t = time.Now()
-				return errors.New("empty result")
-			}
+### Errors
 
-			return nil
-		}
-	}
+- NGF errors: {{ .NGFErrors }}
+- NGF container restarts: {{ .NGFContainerRestarts }}
+- NGINX errors: {{ .NginxErrors }}
+- NGINX container restarts: {{ .NginxContainerRestarts }}
 
-	getFirstValueOfVector := func(query string) float64 {
-		result, err := promInstance.Query(query)
-		Expect(err).ToNot(HaveOccurred())
+### Graphs and Logs
 
-		val, err := framework.GetFirstValueOfPrometheusVector(result)
-		Expect(err).ToNot(HaveOccurred())
+See [output directory](./{{ .Name }}) for more details.
+The logs are attached only if there are errors.
+`
 
-		return val
-	}
-
-	getBuckets := func(query string) []bucket {
-		result, err := promInstance.Query(query)
-		Expect(err).ToNot(HaveOccurred())
-
-		res, ok := result.(model.Vector)
-		Expect(ok).To(BeTrue())
-
-		buckets := make([]bucket, 0, len(res))
-
-		for _, sample := range res {
-			le := sample.Metric["le"]
-			val := float64(sample.Value)
-			bucket := bucket{
-				Le:  string(le),
-				Val: int(val),
-			}
-			buckets = append(buckets, bucket)
+	writeScaleResults := func(dest io.Writer, results scaleTestResults) error {
+		tmpl, err := template.New("results").Parse(scaleResultTemplate)
+		if err != nil {
+			return err
 		}
 
-		return buckets
+		return tmpl.Execute(dest, results)
 	}
 
 	checkLogErrors := func(
@@ -255,7 +231,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		for _, q := range queries {
 			Eventually(
-				createMetricExistChecker(
+				framework.CreateMetricExistChecker(
+					promInstance,
 					q,
 					getStartTime,
 					modifyStartTime,
@@ -277,10 +254,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		// the rate query may not return any data.
 		// To ensure it returns data, we increase the startTime.
 		Eventually(
-			createEndTimeFinder(
+			framework.CreateEndTimeFinder(
+				promInstance,
 				fmt.Sprintf(`rate(container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}[2m])`, ngfPodName),
 				startTime,
 				&endTime,
+				queryRangeStep,
 			),
 		).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 
@@ -295,7 +274,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		for _, q := range queries {
 			Eventually(
-				createMetricExistChecker(
+				framework.CreateMetricExistChecker(
+					promInstance,
 					q,
 					getEndTime,
 					noOpModifier,
@@ -308,7 +288,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		result, err := promInstance.QueryRange(
 			fmt.Sprintf(`container_memory_usage_bytes{pod="%s",container="nginx-gateway"}`, ngfPodName),
-			v1.Range{
+			promv1.Range{
 				Start: startTime,
 				End:   endTime,
 				Step:  queryRangeStep,
@@ -328,7 +308,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		result, err = promInstance.QueryRange(
 			fmt.Sprintf(`rate(container_cpu_usage_seconds_total{pod="%s",container="nginx-gateway"}[2m])`, ngfPodName),
-			v1.Range{
+			promv1.Range{
 				Start: startTime,
 				End:   endTime,
 				Step:  queryRangeStep,
@@ -346,82 +326,26 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		Expect(os.Remove(cpuCSV)).To(Succeed())
 
-		reloadCount := getFirstValueOfVector(
-			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %d`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		reloadCount, err := framework.GetReloadCountWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		reloadErrsCount := getFirstValueOfVector(
-			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		reloadErrsCount, err := framework.GetReloadErrsCountWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		reloadAvgTime := getFirstValueOfVector(
-			fmt.Sprintf(
-				`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
-					` / `+
-					`(nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %[2]d)`,
-				ngfPodName,
-				startTime.Unix(),
-			))
+		reloadAvgTime, err := framework.GetReloadAvgTimeWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		reloadBuckets := getBuckets(
-			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"} @ %d`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		reloadBuckets, err := framework.GetReloadBucketsWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		eventsCount := getFirstValueOfVector(
-			fmt.Sprintf(
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %d`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		eventsCount, err := framework.GetEventsCountWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		eventsAvgTime := getFirstValueOfVector(
-			fmt.Sprintf(
-				`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
-					` / `+
-					`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %[2]d)`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		eventsAvgTime, err := framework.GetEventsAvgTimeWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
-		eventsBuckets := getBuckets(
-			fmt.Sprintf(
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`+
-					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"} @ %d`,
-				ngfPodName,
-				startTime.Unix(),
-			),
-		)
+		eventsBuckets, err := framework.GetEventsBucketsWithStartTime(promInstance, ngfPodName, startTime)
+		Expect(err).ToNot(HaveOccurred())
 
 		// Check container logs for errors
 
@@ -505,7 +429,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 			startCheck := time.Now()
 
 			Eventually(
-				createResponseChecker(url, address),
+				framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
 			).WithTimeout(30 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 			ttr := time.Since(startCheck)
@@ -539,7 +463,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		}
 
 		Eventually(
-			createResponseChecker(url, address),
+			framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
 		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 		Expect(
@@ -552,7 +476,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		Expect(resourceManager.WaitForPodsToBeReady(ctx, namespace)).To(Succeed())
 
 		Eventually(
-			createResponseChecker(url, address),
+			framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
 		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	}
 
@@ -728,66 +652,389 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	})
 })
 
-type bucket struct {
-	Le  string
-	Val int
-}
+var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtime-scale"), func() {
+	// These tests assume 12 nodes exist, since that is what is created in the pipeline to handle scale tests.
+	// The number of NGF replicas is based on this number of nodes. If running with a different number of nodes,
+	// then the number of replicas should be updated to match.
 
-type scaleTestResults struct {
-	Name                   string
-	EventsBuckets          []bucket
-	ReloadBuckets          []bucket
-	EventsAvgTime          int
-	EventsCount            int
-	NGFContainerRestarts   int
-	NGFErrors              int
-	NginxContainerRestarts int
-	NginxErrors            int
-	ReloadAvgTime          int
-	ReloadCount            int
-	ReloadErrsCount        int
-}
-
-const scaleResultTemplate = `
-## Test {{ .Name }}
-
-### Reloads
-
-- Total: {{ .ReloadCount }}
-- Total Errors: {{ .ReloadErrsCount }}
-- Average Time: {{ .ReloadAvgTime }}ms
-- Reload distribution:
-{{- range .ReloadBuckets }}
-	- {{ .Le }}ms: {{ .Val }}
-{{- end }}
-
-### Event Batch Processing
-
-- Total: {{ .EventsCount }}
-- Average Time: {{ .EventsAvgTime }}ms
-- Event Batch Processing distribution:
-{{- range .EventsBuckets }}
-	- {{ .Le }}ms: {{ .Val }}
-{{- end }}
-
-### Errors
-
-- NGF errors: {{ .NGFErrors }}
-- NGF container restarts: {{ .NGFContainerRestarts }}
-- NGINX errors: {{ .NginxErrors }}
-- NGINX container restarts: {{ .NginxContainerRestarts }}
-
-### Graphs and Logs
-
-See [output directory](./{{ .Name }}) for more details.
-The logs are attached only if there are errors.
-`
-
-func writeScaleResults(dest io.Writer, results scaleTestResults) error {
-	tmpl, err := template.New("results").Parse(scaleResultTemplate)
-	if err != nil {
-		return err
+	type metricsResults struct {
+		metrics  *framework.Metrics
+		testName string
+		scheme   string
 	}
 
-	return tmpl.Execute(dest, results)
-}
+	var (
+		outFile           *os.File
+		resultsDir        string
+		ngfDeploymentName string
+		ns                core.Namespace
+		metricsCh         chan *metricsResults
+
+		files = []string{
+			"scale/zero-downtime/cafe.yaml",
+			"scale/zero-downtime/cafe-secret.yaml",
+			"scale/zero-downtime/gateway-1.yaml",
+			"scale/zero-downtime/cafe-routes.yaml",
+		}
+	)
+
+	type trafficCfg struct {
+		desc   string
+		port   string
+		target framework.Target
+	}
+
+	trafficConfigs := []trafficCfg{
+		{
+			desc: "Send http /coffee traffic",
+			port: "80",
+			target: framework.Target{
+				Method: "GET",
+				URL:    "http://cafe.example.com/coffee",
+			},
+		},
+		{
+			desc: "Send https /tea traffic",
+			port: "443",
+			target: framework.Target{
+				Method: "GET",
+				URL:    "https://cafe.example.com/tea",
+			},
+		},
+	}
+
+	formatTestFileNamePrefix := func(prefix, valuesFile string) string {
+		if strings.Contains(valuesFile, "affinity") {
+			prefix += "-affinity"
+		}
+		return prefix
+	}
+
+	sendTraffic := func(
+		cfg trafficCfg,
+		testFileNamePrefix string,
+		duration time.Duration,
+	) {
+		loadTestCfg := framework.LoadTestConfig{
+			Targets:     []framework.Target{cfg.target},
+			Rate:        100,
+			Duration:    duration,
+			Description: cfg.desc,
+			Proxy:       fmt.Sprintf("%s:%s", address, cfg.port),
+			ServerName:  "cafe.example.com",
+		}
+
+		results, metrics := framework.RunLoadTest(loadTestCfg)
+
+		scheme := strings.Split(cfg.target.URL, "://")[0]
+		metricsRes := metricsResults{
+			metrics:  &metrics,
+			testName: fmt.Sprintf("\n#### Test: %s\n\n```text\n", cfg.desc),
+			scheme:   scheme,
+		}
+
+		buf := new(bytes.Buffer)
+		encoder := framework.NewVegetaCSVEncoder(buf)
+		for _, res := range results {
+			res := res
+			Expect(encoder.Encode(&res)).To(Succeed())
+		}
+
+		csvName := framework.CreateResultsFilename("csv", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+		filename := filepath.Join(resultsDir, csvName)
+		csvFile, err := framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = fmt.Fprint(csvFile, buf.String())
+		Expect(err).ToNot(HaveOccurred())
+		csvFile.Close()
+
+		pngName := framework.CreateResultsFilename("png", fmt.Sprintf("%s-%s", testFileNamePrefix, scheme), *plusEnabled)
+		Expect(framework.GenerateRequestsPNG(resultsDir, csvName, pngName)).To(Succeed())
+
+		metricsCh <- &metricsRes
+	}
+
+	writeResults := func(testFileNamePrefix string, res *metricsResults) {
+		_, err := fmt.Fprint(outFile, res.testName)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(framework.WriteMetricsResults(outFile, res.metrics)).To(Succeed())
+
+		link := fmt.Sprintf("\n\n![%[1]v-oss.png](%[1]v-oss.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
+		if *plusEnabled {
+			link = fmt.Sprintf("\n\n![%[1]v-plus.png](%[1]v-plus.png)\n", fmt.Sprintf("%s-%s", testFileNamePrefix, res.scheme))
+		}
+
+		_, err = fmt.Fprintf(outFile, "```%s", link)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	BeforeAll(func() {
+		// Scale tests need a dedicated NGF instance
+		// Because they analyze the logs of NGF and NGINX, and they don't want to analyze the logs of other tests.
+		teardown(releaseName)
+
+		var err error
+		resultsDir, err = framework.CreateResultsDir("zero-downtime-scale", version)
+		Expect(err).ToNot(HaveOccurred())
+
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
+		outFile, err = framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
+	})
+
+	AfterAll(func() {
+		_, err := fmt.Fprintln(outFile)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(outFile.Close()).To(Succeed())
+
+		// restoring NGF shared among tests in the suite
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg)
+	})
+
+	BeforeEach(func() {
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "zero-downtime-scale",
+			},
+		}
+
+		metricsCh = make(chan *metricsResults, 2)
+	})
+
+	tests := []struct {
+		name        string
+		valuesFile  string
+		numReplicas int
+	}{
+		{
+			name:        "One NGF Pod runs per node",
+			valuesFile:  "manifests/scale/zero-downtime/values-affinity.yaml",
+			numReplicas: 12, // equals number of nodes
+		},
+		{
+			name:        "Multiple NGF Pods run per node",
+			valuesFile:  "manifests/scale/zero-downtime/values.yaml",
+			numReplicas: 24, // twice the number of nodes
+		},
+	}
+
+	for _, test := range tests {
+		When(test.name, func() {
+			BeforeAll(func() {
+				cfg := getDefaultSetupCfg()
+				cfg.nfr = true
+				setup(cfg, "--values", test.valuesFile)
+
+				deploy, err := resourceManager.GetNGFDeployment(ngfNamespace, releaseName)
+				Expect(err).ToNot(HaveOccurred())
+				ngfDeploymentName = deploy.GetName()
+
+				Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+				Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+
+				_, err = fmt.Fprintf(outFile, "\n## %s Test Results\n", test.name)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				teardown(releaseName)
+				Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
+			})
+
+			It("scales up gradually without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Up Gradually\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-up", test.valuesFile)
+
+				var wg sync.WaitGroup
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 5*time.Minute)
+					}(test)
+				}
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				// scale NGF up one at a time
+				for i := 2; i <= test.numReplicas; i++ {
+					Eventually(resourceManager.ScaleDeployment).
+						WithArguments(ngfNamespace, ngfDeploymentName, int32(i)).
+						WithTimeout(timeoutConfig.UpdateTimeout).
+						WithPolling(500 * time.Millisecond).
+						Should(Succeed())
+
+					gatewayFile := fmt.Sprintf("scale/zero-downtime/gateway-%d.yaml", i)
+					Expect(resourceManager.ApplyFromFiles([]string{gatewayFile}, ns.Name)).To(Succeed())
+
+					ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.UpdateTimeout)
+
+					Expect(resourceManager.WaitForPodsToBeReadyWithCount(ctx, ngfNamespace, i)).To(Succeed())
+					Expect(resourceManager.WaitForGatewayObservedGeneration(ctx, ns.Name, "gateway", i)).To(Succeed())
+
+					cancel()
+				}
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			It("scales down gradually without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Down Gradually\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("gradual-scale-down", test.valuesFile)
+
+				// this is the termination time per pod as defined in the values file
+				terminationTime := time.Duration(40) * time.Second
+				// total amount of time we send traffic
+				waitTime := time.Duration(test.numReplicas) * terminationTime
+
+				var wg sync.WaitGroup
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, waitTime)
+					}(test)
+				}
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				// scale NGF down one at a time
+				currentGen := test.numReplicas
+				for i := test.numReplicas - 1; i >= 1; i-- {
+					Eventually(resourceManager.ScaleDeployment).
+						WithArguments(ngfNamespace, ngfDeploymentName, int32(i)).
+						WithTimeout(timeoutConfig.UpdateTimeout).
+						WithPolling(500 * time.Millisecond).
+						Should(Succeed())
+
+					gatewayFile := fmt.Sprintf("scale/zero-downtime/gateway-%d.yaml", i)
+					Expect(resourceManager.ApplyFromFiles([]string{gatewayFile}, ns.Name)).To(Succeed())
+					currentGen++
+
+					ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.UpdateTimeout)
+
+					time.Sleep(terminationTime)
+					Expect(resourceManager.WaitForGatewayObservedGeneration(ctx, ns.Name, "gateway", currentGen)).To(Succeed())
+
+					cancel()
+				}
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			checkGatewayListeners := func(num int) {
+				Eventually(
+					func() error {
+						ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+						defer cancel()
+
+						var gw v1.Gateway
+						key := types.NamespacedName{Namespace: ns.Name, Name: "gateway"}
+						if err := resourceManager.K8sClient.Get(ctx, key, &gw); err != nil {
+							return err
+						}
+
+						if len(gw.Status.Listeners) != num {
+							return fmt.Errorf("gateway listeners not updated to %d entries", num)
+						}
+
+						return nil
+					},
+				).
+					WithTimeout(5 * time.Second).
+					WithPolling(100 * time.Millisecond).
+					Should(Succeed())
+			}
+
+			It("scales up abruptly without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Up Abruptly\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-up", test.valuesFile)
+
+				var wg sync.WaitGroup
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 2*time.Minute)
+					}(test)
+				}
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				Expect(resourceManager.ScaleDeployment(ngfNamespace, ngfDeploymentName, int32(test.numReplicas))).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles([]string{"scale/zero-downtime/gateway-2.yaml"}, ns.Name)).To(Succeed())
+				checkGatewayListeners(3)
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+
+			It("scales down abruptly without downtime", func() {
+				_, err := fmt.Fprint(outFile, "\n### Scale Down Abruptly\n")
+				Expect(err).ToNot(HaveOccurred())
+
+				testFileNamePrefix := formatTestFileNamePrefix("abrupt-scale-down", test.valuesFile)
+
+				var wg sync.WaitGroup
+				for _, test := range trafficConfigs {
+					wg.Add(1)
+					go func(cfg trafficCfg) {
+						defer GinkgoRecover()
+						defer wg.Done()
+
+						sendTraffic(cfg, testFileNamePrefix, 2*time.Minute)
+					}(test)
+				}
+
+				// allow traffic flow to start
+				time.Sleep(2 * time.Second)
+
+				Expect(resourceManager.ScaleDeployment(ngfNamespace, ngfDeploymentName, int32(1))).To(Succeed())
+				Expect(resourceManager.ApplyFromFiles([]string{"scale/zero-downtime/gateway-1.yaml"}, ns.Name)).To(Succeed())
+				checkGatewayListeners(2)
+
+				wg.Wait()
+				close(metricsCh)
+
+				for res := range metricsCh {
+					writeResults(testFileNamePrefix, res)
+				}
+			})
+		})
+	}
+})

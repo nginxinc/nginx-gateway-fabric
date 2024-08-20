@@ -1,9 +1,10 @@
 ---
-title: "Product Telemetry"
-description: "Learn how NGINX Gateway Fabric collects product telemetry to identify areas to focus development on improving."
+title: "Product telemetry"
 weight: 500
 toc: true
 ---
+
+Learn why, what and how NGINX Gateway Fabric collects telemetry.
 
 ## Overview
 
@@ -26,7 +27,7 @@ Telemetry data is collected once every 24 hours and sent to a service managed by
 - **Deployment Replica Count:** the count of NGINX Gateway Fabric Pods.
 - **Image Build Source:** whether the image was built by GitHub or locally (values are `gha`, `local`, or `unknown`). The source repository of the images is **not** collected.
 - **Deployment Flags:** a list of NGINX Gateway Fabric Deployment flags that are specified by a user. The actual values of non-boolean flags are **not** collected; we only record that they are either `true` or `false` for boolean flags and `default` or `user-defined` for the rest.
-- **Count of Resources:** the total count of resources related to NGINX Gateway Fabric. This includes `GatewayClasses`, `Gateways`, `HTTPRoutes`,`GRPCRoutes`, `Secrets`, `Services`, `BackendTLSPolicies`, `ClientSettingsPolicies`, `NginxProxies`, `ObservabilityPolicies`, and `Endpoints`. The data within these resources is **not** collected.
+- **Count of Resources:** the total count of resources related to NGINX Gateway Fabric. This includes `GatewayClasses`, `Gateways`, `HTTPRoutes`,`GRPCRoutes`, `TLSRoutes`, `Secrets`, `Services`, `BackendTLSPolicies`, `ClientSettingsPolicies`, `NginxProxies`, `ObservabilityPolicies`, and `Endpoints`. The data within these resources is **not** collected.
 
 This data is used to identify the following information:
 

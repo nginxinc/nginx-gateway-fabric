@@ -7,6 +7,9 @@ nginxGateway:
   # belong to its class - i.e. have the "gatewayClassName" field resource equal to the class.
   gatewayClassName: nginx
 
+  # -- Set of custom annotations for the NGINX Gateway Fabric pods.
+  podAnnotations: {}
+
   # -- Set of custom annotations for GatewayClass objects.
   gatewayClassAnnotations: {}
 
@@ -64,6 +67,9 @@ nginxGateway:
   # -- The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
+  # -- The resource requests and/or limits of the nginx-gateway container.
+  resources: {}
+
   # -- extraVolumeMounts are the additional volume mounts for the nginx-gateway container.
   extraVolumeMounts: []
 
@@ -86,6 +92,7 @@ nginx:
   config:
     {}
     # disableHTTP2: false
+    # ipFamily: dual
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
     paths-ignore:
       - design/**
       - deploy**
@@ -25,10 +27,13 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
       - name: Download agent
         run: curl -LJO https://github.com/whitesource/unified-agent-distribution/releases/latest/download/wss-unified-agent.jar
+
       - name: Verify JAR
         run: jarsigner -verify wss-unified-agent.jar
+
       - name: Scan and upload
         env:
           PRODUCT_NAME: nginx-gateway-fabric_${{ github.ref_name }}

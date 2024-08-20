@@ -1,0 +1,13 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: access-to-cafe-secret
+spec:
+  to:
+  - group: ""
+    kind: Secret
+    name: cafe-secret # if you omit this name, then Gateways in default ns can access all Secrets in the certificate ns
+  from:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    namespace: default

@@ -650,6 +650,17 @@ func TestValidateMatch(t *testing.T) {
 			name:           "wrong path type",
 		},
 		{
+			validator: createAllValidValidator(),
+			match: gatewayv1.HTTPRouteMatch{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
+					Value: helpers.GetPointer("/_ngf-internal-path"),
+				},
+			},
+			expectErrCount: 1,
+			name:           "bad path prefix",
+		},
+		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := createAllValidValidator()
 				validator.ValidatePathInMatchReturns(errors.New("invalid path value"))

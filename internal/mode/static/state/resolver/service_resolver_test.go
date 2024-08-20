@@ -150,6 +150,10 @@ var _ = Describe("ServiceResolver", func() {
 			"other-svc-port",
 			discoveryV1.AddressTypeIPv4,
 		)
+		dualAddressType = []discoveryV1.AddressType{
+			discoveryV1.AddressTypeIPv4,
+			discoveryV1.AddressTypeIPv6,
+		}
 	)
 
 	var (
@@ -196,9 +200,14 @@ var _ = Describe("ServiceResolver", func() {
 					Address: "12.0.0.1",
 					Port:    8080,
 				},
+				{
+					Address: "FE80:CD00:0:CDE:1257:0:211E:729C",
+					Port:    8080,
+					IPv6:    true,
+				},
 			}
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, dualAddressType)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(endpoints).To(ConsistOf(expectedEndpoints))
 		})
@@ -207,29 +216,29 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), slice1)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), slice2)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, dualAddressType)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if there are no endpoint slices for the service", func() {
 			// delete remaining endpoint slices
-			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceNoMatchingPortName)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort, dualAddressType)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("panics if the service NamespacedName is empty", func() {
 			resolve := func() {
-				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svcPort)
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svcPort, dualAddressType)
 			}
 			Expect(resolve).Should(Panic())
 		})
 		It("panics if the ServicePort is empty", func() {
 			resolve := func() {
-				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{})
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{}, dualAddressType)
 			}
 			Expect(resolve).Should(Panic())
 		})

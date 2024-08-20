@@ -1,0 +1,4 @@
+nginxGateway:
+  name: nginx-gateway
+service:
+  type: NodePort

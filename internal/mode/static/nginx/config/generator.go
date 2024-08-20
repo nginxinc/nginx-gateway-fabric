@@ -3,6 +3,9 @@ package config
 import (
 	"path/filepath"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -17,6 +20,9 @@ const (
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
 
+	// streamFolder is the folder where NGINX Stream configuration files are stored.
+	streamFolder = configFolder + "/stream-conf.d"
+
 	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
 	modulesIncludesFolder = configFolder + "/module-includes"
 
@@ -29,6 +35,9 @@ const (
 	// httpConfigFile is the path to the configuration file with HTTP configuration.
 	httpConfigFile = httpFolder + "/http.conf"
 
+	// streamConfigFile is the path to the configuration file with Stream configuration.
+	streamConfigFile = streamFolder + "/stream.conf"
+
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
 
@@ -40,7 +49,7 @@ const (
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder, streamFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -85,7 +94,12 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, g.generateHTTPConfig(conf)...)
+	policyGenerator := policies.NewCompositeGenerator(
+		clientsettings.NewGenerator(),
+		observability.NewGenerator(conf.Telemetry),
+	)
+
+	files = append(files, g.generateHTTPConfig(conf, policyGenerator)...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
@@ -127,10 +141,13 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
+func (g GeneratorImpl) generateHTTPConfig(
+	conf dataplane.Configuration,
+	generator policies.Generator,
+) []file.File {
 	fileBytes := make(map[string][]byte)
 
-	for _, execute := range g.getExecuteFuncs() {
+	for _, execute := range g.getExecuteFuncs(generator) {
 		results := execute(conf)
 		for _, res := range results {
 			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
@@ -138,9 +155,9 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 	}
 
 	files := make([]file.File, 0, len(fileBytes))
-	for filepath, bytes := range fileBytes {
+	for fp, bytes := range fileBytes {
 		files = append(files, file.File{
-			Path:    filepath,
+			Path:    fp,
 			Content: bytes,
 			Type:    file.TypeRegular,
 		})
@@ -149,14 +166,17 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 	return files
 }
 
-func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
+func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
 	return []executeFunc{
 		executeBaseHTTPConfig,
-		executeServers,
+		g.newExecuteServersFunc(generator),
 		g.executeUpstreams,
 		executeSplitClients,
 		executeMaps,
 		executeTelemetry,
+		g.executeStreamServers,
+		g.executeStreamUpstreams,
+		executeStreamMaps,
 	}
 }
 

@@ -1,10 +1,13 @@
 ---
-title: "HTTP Redirects and Rewrites"
-description: "Learn how to redirect or rewrite your HTTP traffic using NGINX Gateway Fabric."
+title: "HTTP redirects and rewrites"
 weight: 400
 toc: true
 docs: "DOCS-1424"
 ---
+
+Learn how to redirect or rewrite your HTTP traffic using NGINX Gateway Fabric.
+
+## Overview
 
 [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can be used to configure HTTP redirects or rewrites. Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. Rewrites modify components of a client request (such as hostname and/or path) before proxying it upstream.
 
@@ -14,10 +17,10 @@ To see an example of a redirect using scheme and port, see the [HTTPS Terminatio
 
 In this guide, we will be configuring a path URL rewrite.
 
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -84,7 +87,7 @@ NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/coffee       ClusterIP   10.96.189.37   <none>        80/TCP    40s
 ```
 
-## Configure a Path Rewrite
+## Configure a path rewrite
 
 To create the **cafe** gateway, copy and paste the following into your terminal:
 
@@ -153,7 +156,7 @@ spec:
 EOF
 ```
 
-## Send Traffic
+## Send traffic
 
 Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee application.
 
@@ -196,7 +199,7 @@ Server name: coffee-6b8b6d6486-7fc78
 URI: /prices
 ```
 
-## Further Reading
+## Further reading
 
 To learn more about redirects and rewrites using the Gateway API, see the following resource:
 

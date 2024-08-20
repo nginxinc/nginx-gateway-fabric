@@ -1,24 +1,26 @@
 ---
-title: "Routing to Applications Using HTTP Matching Conditions"
-description: "Learn how to deploy multiple applications and HTTPRoutes with request conditions such as paths, methods, headers, and query parameters"
+title: "Application routes using HTTP matching conditions"
 weight: 200
 toc: true
 docs: "DOCS-1422"
 ---
 
+Learn how to deploy multiple applications and HTTPRoutes with request conditions such as paths, methods, headers, and query parameters
+
+## Overview
+
 In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
 The following image shows the traffic flow that we will be creating with these rules.
 
-{{<img src="img/advanced-routing.png" alt="Traffic Flow Diagram">}}
+{{<img src="img/advanced-routing.png" alt="">}}
 
 The goal is to create a set of rules that will result in client requests being sent to specific backends based on the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be directed to the old application, while traffic for v2 needs to be directed towards the new application. We also have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea` and `coffee` applications share the same Gateway.
 
-## Prerequisites
+## Before you begin
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP
-  address and port of NGINX Gateway Fabric into shell variables:
+- Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -27,9 +29,9 @@ The goal is to create a set of rules that will result in client requests being s
 
 {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
 
-## Coffee Applications
+## Coffee applications
 
-### Deploy the Coffee Applications
+### Deploy the Coffee applications
 
 Begin by deploying the `coffee-v1` and `coffee-v2` applications:
 
@@ -37,7 +39,7 @@ Begin by deploying the `coffee-v1` and `coffee-v2` applications:
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/advanced-routing/coffee.yaml
 ```
 
-### Deploy the Gateway API Resources for the Coffee Applications
+### Deploy the Gateway API Resources for the Coffee applications
 
 The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the gateway:
 
@@ -111,7 +113,7 @@ This HTTPRoute has a few important properties:
 
   If you want both conditions to be required, you can define headers and queryParams in the same match object.
 
-### Send Traffic to Coffee
+### Send traffic to Coffee
 
 Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee applications.
 
@@ -147,17 +149,17 @@ Server address: 10.244.0.9:8080
 Server name: coffee-v2-68bd55f798-s9z5q
 ```
 
-## Tea Applications
+## Tea applications
 
 Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will have their own set of rules, but will still attach to the same gateway listener as the `coffee` apps.
 
-### Deploy the Tea Applications
+### Deploy the Tea applications
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/advanced-routing/tea.yaml
 ```
 
-### Deploy the HTTPRoute for the Tea Services
+### Deploy the HTTPRoute for the Tea services
 
 We are reusing the previous gateway for these applications, so all we need to create is the HTTPRoute.
 
@@ -199,7 +201,7 @@ The properties of this HTTPRoute include:
 - The first rule defines that a POST request to the `/tea` path is routed to the `tea-post` Service.
 - The second rule defines that a GET request to the `/tea` path is routed to the `tea` Service.
 
-### Send Traffic to Tea
+### Send traffic to Tea
 
 Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea applications.
 
@@ -234,7 +236,7 @@ This request should receive a response from the `tea-post` pod. Any other type o
 
 If you have any issues while sending traffic, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric service. Refer to the topic [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) for instructions on finding those values.
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric service. Refer to the [Installation]({{< relref "/installation/" >}}) guides for more information.
 
 - Check the status of the Gateway:
 
@@ -332,7 +334,7 @@ If you have any issues while sending traffic, try the following to debug your co
 
   Check for any error messages in the conditions.
 
-## Further Reading
+## Further reading
 
 To learn more about the Gateway API and the resources we created in this guide, check out the following Kubernetes documentation resources:
 

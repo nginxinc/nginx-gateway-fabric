@@ -293,3 +293,328 @@ func WritePrometheusMatrixToCSVFile(fileName string, value model.Value) error {
 
 	return nil
 }
+
+// Bucket represents a data point of a Histogram Bucket.
+type Bucket struct {
+	// Le is the interval Less than or Equal which represents the Bucket's bin. i.e. "500ms".
+	Le string
+	// Val is the value for how many instances fall in the Bucket.
+	Val int
+}
+
+// GetReloadCount gets the total number of nginx reloads.
+func GetReloadCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetReloadCountWithStartTime gets the total number of nginx reloads from a start time to the current time.
+func GetReloadCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetReloadErrsCountWithStartTime gets the total number of nginx reload errors from a start time to the current time.
+func GetReloadErrsCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetReloadAvgTime gets the average time in milliseconds for nginx to reload.
+func GetReloadAvgTime(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
+				` / `+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetReloadAvgTimeWithStartTime gets the average time in milliseconds for nginx to reload using a start time
+// to the current time to calculate.
+func GetReloadAvgTimeWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+				` / `+
+				`(nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %[2]d)`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetReloadBuckets gets the Buckets in millisecond intervals for nginx reloads.
+func GetReloadBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetReloadBucketsWithStartTime gets the Buckets in millisecond intervals for nginx reloads from a start time
+// to the current time.
+func GetReloadBucketsWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetEventsCount gets the NGF event batch processing count.
+func GetEventsCount(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetEventsCountWithStartTime gets the NGF event batch processing count from a start time to the current time.
+func GetEventsCountWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetEventsAvgTime gets the average time in milliseconds it takes for NGF to process a single event batch.
+func GetEventsAvgTime(promInstance PrometheusInstance, ngfPodName string) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
+				` / `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetEventsAvgTimeWithStartTime gets the average time in milliseconds it takes for NGF to process a single event
+// batch using a start time to the current time to calculate.
+func GetEventsAvgTimeWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) (float64, error) {
+	return getFirstValueOfVector(
+		fmt.Sprintf(
+			`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
+				` / `+
+				`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %[2]d)`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// GetEventsBuckets gets the Buckets in millisecond intervals for NGF event batch processing.
+func GetEventsBuckets(promInstance PrometheusInstance, ngfPodName string) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`,
+			ngfPodName,
+		),
+		promInstance,
+	)
+}
+
+// GetEventsBucketsWithStartTime gets the Buckets in millisecond intervals for NGF event batch processing from a start
+// time to the current time.
+func GetEventsBucketsWithStartTime(
+	promInstance PrometheusInstance,
+	ngfPodName string,
+	startTime time.Time,
+) ([]Bucket, error) {
+	return getBuckets(
+		fmt.Sprintf(
+			`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`+
+				` - `+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"} @ %d`,
+			ngfPodName,
+			startTime.Unix(),
+		),
+		promInstance,
+	)
+}
+
+// CreateMetricExistChecker returns a function that will query Prometheus at a specific timestamp
+// and adjust that timestamp if there is no result found.
+func CreateMetricExistChecker(
+	promInstance PrometheusInstance,
+	query string,
+	getTime func() time.Time,
+	modifyTime func(),
+) func() error {
+	return func() error {
+		queryWithTimestamp := fmt.Sprintf("%s @ %d", query, getTime().Unix())
+
+		result, err := promInstance.Query(queryWithTimestamp)
+		if err != nil {
+			return fmt.Errorf("failed to query Prometheus: %w", err)
+		}
+
+		if result.String() == "" {
+			modifyTime()
+			return errors.New("empty result")
+		}
+
+		return nil
+	}
+}
+
+// CreateEndTimeFinder returns a function that will range query Prometheus given a specific startTime and endTime
+// and adjust the endTime if there is no result found.
+func CreateEndTimeFinder(
+	promInstance PrometheusInstance,
+	query string,
+	startTime time.Time,
+	endTime *time.Time,
+	queryRangeStep time.Duration,
+) func() error {
+	return func() error {
+		result, err := promInstance.QueryRange(query, v1.Range{
+			Start: startTime,
+			End:   *endTime,
+			Step:  queryRangeStep,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to query Prometheus: %w", err)
+		}
+
+		if result.String() == "" {
+			*endTime = time.Now()
+			return errors.New("empty result")
+		}
+
+		return nil
+	}
+}
+
+// CreateResponseChecker returns a function that checks if there is a successful response from a url.
+func CreateResponseChecker(url, address string, requestTimeout time.Duration) func() error {
+	return func() error {
+		status, _, err := Get(url, address, requestTimeout)
+		if err != nil {
+			return fmt.Errorf("bad response: %w", err)
+		}
+
+		if status != 200 {
+			return fmt.Errorf("unexpected status code: %d", status)
+		}
+
+		return nil
+	}
+}
+
+func getFirstValueOfVector(query string, promInstance PrometheusInstance) (float64, error) {
+	result, err := promInstance.Query(query)
+	if err != nil {
+		return 0, err
+	}
+
+	val, err := GetFirstValueOfPrometheusVector(result)
+	if err != nil {
+		return 0, err
+	}
+
+	return val, nil
+}
+
+func getBuckets(query string, promInstance PrometheusInstance) ([]Bucket, error) {
+	result, err := promInstance.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	res, ok := result.(model.Vector)
+	if !ok {
+		return nil, errors.New("could not convert result to vector")
+	}
+
+	buckets := make([]Bucket, 0, len(res))
+
+	for _, sample := range res {
+		le := sample.Metric["le"]
+		val := float64(sample.Value)
+		bucket := Bucket{
+			Le:  string(le),
+			Val: int(val),
+		}
+		buckets = append(buckets, bucket)
+	}
+
+	return buckets, nil
+}

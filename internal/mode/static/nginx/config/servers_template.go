@@ -2,16 +2,26 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
-{{- range $s := . -}}
+{{ range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-    listen {{ $s.Port }} ssl default_server;
+        {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }} ssl default_server;
+        {{- end }}
+        {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
+    listen [::]:{{ $s.Listen }} ssl default_server;
+        {{- end }}
 
     ssl_reject_handshake on;
 }
     {{- else if $s.IsDefaultHTTP }}
 server {
-    listen {{ $s.Port }} default_server;
+        {{- if $.IPFamily.IPv4 }}
+    listen {{ $s.Listen }} default_server;
+        {{- end }}
+        {{- if $.IPFamily.IPv6 }}
+    listen [::]:{{ $s.Listen }} default_server;
+        {{- end }}
 
     default_type text/html;
     return 404;
@@ -19,7 +29,12 @@ server {
     {{- else }}
 server {
         {{- if $s.SSL }}
-    listen {{ $s.Port }} ssl;
+          {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }} ssl;
+          {{- end }}
+          {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
+    listen [::]:{{ $s.Listen }} ssl;
+          {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
 
@@ -27,19 +42,32 @@ server {
         return 421;
     }
         {{- else }}
-    listen {{ $s.Port }};
+          {{- if $.IPFamily.IPv4 }}
+    listen {{ $s.Listen }};
+          {{- end }}
+          {{- if $.IPFamily.IPv6 }}
+    listen [::]:{{ $s.Listen }};
+          {{- end }}
         {{- end }}
 
     server_name {{ $s.ServerName }};
 
-    {{- range $i := $s.Includes }}
-    include {{ $i }};
-    {{ end -}}
+        {{- if $.Plus }}
+    status_zone {{ $s.ServerName }};
+        {{- end }}
+
+        {{- range $i := $s.Includes }}
+    include {{ $i.Name }};
+        {{- end }}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
+        {{ if eq $l.Type "internal" -}}
+        internal;
+        {{ end }}
+
         {{- range $i := $l.Includes }}
-        include {{ $i }};
+        include {{ $i.Name }};
         {{- end -}}
 
         {{ range $r := $l.Rewrites }}
@@ -50,7 +78,7 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchKey }}
+        {{- if eq $l.Type "redirect" }}
         set $match_key {{ $l.HTTPMatchKey }};
         js_content httpmatches.redirect;
         {{- end }}
@@ -61,6 +89,7 @@ server {
         include /etc/nginx/grpc-error-pages.conf;
         {{- end }}
 
+        proxy_http_version 1.1;
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}
         {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
@@ -76,7 +105,6 @@ server {
             {{ range $h := $l.ResponseHeaders.Remove }}
         proxy_hide_header {{ $h }};
             {{- end }}
-        proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
         {{ $proxyOrGRPC }}_ssl_server_name on;
         {{ $proxyOrGRPC }}_ssl_verify on;
@@ -85,7 +113,7 @@ server {
             {{- end }}
         {{- end }}
     }
-        {{ end }}
+        {{- end }}
 
         {{- if $s.GRPC }}
         include /etc/nginx/grpc-error-locations.conf;

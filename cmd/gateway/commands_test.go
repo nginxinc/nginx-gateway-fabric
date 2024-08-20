@@ -56,6 +56,7 @@ This test cannot be run with ginkgo. Ginkgo reports the following error:
 * See https://github.com/spf13/cobra/issues/2104.
 */
 func TestRootCmd(t *testing.T) {
+	t.Parallel()
 	testCase := flagTestCase{
 		name:    "no flags",
 		args:    nil,
@@ -66,6 +67,7 @@ func TestRootCmd(t *testing.T) {
 }
 
 func TestCommonFlagsValidation(t *testing.T) {
+	t.Parallel()
 	tests := []flagTestCase{
 		{
 			name: "valid flags",
@@ -131,16 +133,20 @@ func TestCommonFlagsValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name+"_static_mode", func(t *testing.T) {
+			t.Parallel()
 			testFlag(t, createStaticModeCommand(), test)
 		})
 		t.Run(test.name+"_provisioner_mode", func(t *testing.T) {
+			t.Parallel()
 			testFlag(t, createProvisionerModeCommand(), test)
 		})
 	}
 }
 
 func TestStaticModeCmdFlagValidation(t *testing.T) {
+	t.Parallel()
 	tests := []flagTestCase{
 		{
 			name: "valid flags",
@@ -381,7 +387,9 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 	// common flags validation is tested separately
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			cmd := createStaticModeCommand()
 			testFlag(t, cmd, test)
 		})
@@ -389,6 +397,7 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 }
 
 func TestProvisionerModeCmdFlagValidation(t *testing.T) {
+	t.Parallel()
 	testCase := flagTestCase{
 		name: "valid flags",
 		args: []string{
@@ -419,6 +428,7 @@ This test cannot be run with ginkgo. Ginkgo reports the following error for the 
 * See https://github.com/spf13/cobra/issues/2104.
 */
 func TestSleepCmdFlagValidation(t *testing.T) {
+	t.Parallel()
 	tests := []flagTestCase{
 		{
 			name: "valid flags",
@@ -451,7 +461,9 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			cmd := createSleepCommand()
 			testFlag(t, cmd, test)
 		})
@@ -459,6 +471,7 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 }
 
 func TestParseFlags(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	flagSet := pflag.NewFlagSet("flagSet", 0)
@@ -581,4 +594,19 @@ func TestParseFlags(t *testing.T) {
 
 	g.Expect(flagKeys).Should(Equal(expectedKeys))
 	g.Expect(flagValues).Should(Equal(expectedValues))
+}
+
+func TestGetBuildInfo(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	commitHash, commitTime, dirtyBuild := getBuildInfo()
+
+	g.Expect(commitHash).To(Not(BeEmpty()))
+	g.Expect(commitTime).To(Not(BeEmpty()))
+	g.Expect(dirtyBuild).To(Not(BeEmpty()))
+
+	g.Expect(commitHash).To(Not(Equal("unknown")))
+	g.Expect(commitTime).To(Not(Equal("unknown")))
+	g.Expect(dirtyBuild).To(Not(Equal("unknown")))
 }

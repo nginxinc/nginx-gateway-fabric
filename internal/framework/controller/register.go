@@ -84,6 +84,7 @@ func defaultConfig() config {
 func Register(
 	ctx context.Context,
 	objectType ngftypes.ObjectType,
+	name string,
 	mgr manager.Manager,
 	eventCh chan<- interface{},
 	options ...Option,
@@ -114,7 +115,7 @@ func Register(
 		forOpts = append(forOpts, ctlrBuilder.OnlyMetadata)
 	}
 
-	builder := ctlr.NewControllerManagedBy(mgr).For(objectType, forOpts...)
+	builder := ctlr.NewControllerManagedBy(mgr).Named(name).For(objectType, forOpts...)
 
 	if cfg.k8sPredicate != nil {
 		builder = builder.WithEventFilter(cfg.k8sPredicate)
