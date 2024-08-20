@@ -436,6 +436,25 @@ To **resolve** this, you can do one of the following:
 
 - Adjust the IPFamily of your Service to match that of the NginxProxy configuration.
 
+##### Policy cannot be applied to target
+
+If you `describe` your Policy and see the following error:
+
+```text
+    Conditions:
+      Last Transition Time:  2024-08-20T14:48:53Z
+      Message:               Policy cannot be applied to target "default/route1" since another Route "default/route2" shares a hostname:port/path combination with this target
+      Observed Generation:   3
+      Reason:                TargetConflict
+      Status:                False
+      Type:                  Accepted
+```
+
+This means you are attempting to attach a Policy to a Route that has an overlapping hostname:port/path combination with another Route. To work around this, you can do one of the following:
+
+- Combine the Route rules for the overlapping path into a single Route.
+- If the Policy allows it, specify both Routes in the `targetRefs` list.
+
 ### Further reading
 
 You can view the [Kubernetes Troubleshooting Guide](https://kubernetes.io/docs/tasks/debug/debug-application/) for more debugging guidance.
