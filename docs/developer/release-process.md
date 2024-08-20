@@ -66,7 +66,7 @@ To create a new release, follow these steps:
     4. `GW_API_PREV_VERSION` in tests Makefile, if necessary.
     5. Any references in the docs to the previous release.
     6. Any installation instructions to ensure that the supported Gateway API and NGF versions are correct. Specifically, helm README.
-8. Run the [docs workflow](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/docs-build-push.yml) for the **release branch**.
+8. Run the [docs workflow](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/docs-build-push.yml) for **prod** on the **release branch**.
 9. Close the issue created in Step 1.
 10. Ensure that the [associated milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones) is closed.
 11. Verify that published artifacts in the release can be installed properly.
