@@ -358,7 +358,7 @@ Finally, run
 make stop-longevity-test
 ```
 
-This will tear down the test and collect results into a file, where you can add the PNGs of the dashboard.
+This will tear down the test and collect results into a file, where you can add the PNGs of the dashboard. The results collection creates multiple files that you will need to manually combine as needed (logs file, traffic output file).
 
 ### Common test amendments
 
