@@ -113,8 +113,8 @@ func StartManager(cfg config.Config) error {
 
 	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
 	protectedPorts := map[int32]string{
-		int32(cfg.MetricsConfig.Port): "MetricsPort",
-		int32(cfg.HealthConfig.Port):  "HealthPort",
+		int32(cfg.MetricsConfig.Port): "MetricsPort", //nolint:gosec // port will not overflow int32
+		int32(cfg.HealthConfig.Port):  "HealthPort",  //nolint:gosec // port will not overflow int32
 	}
 
 	mustExtractGVK := kinds.NewMustExtractGKV(scheme)

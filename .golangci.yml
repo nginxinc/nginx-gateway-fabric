@@ -53,11 +53,11 @@ linters:
   enable:
     - asasalint
     - asciicheck
+    - copyloopvar
     - dupword
     - errcheck
     - errname
     - errorlint
-    - exportloopref
     - fatcontext
     - ginkgolinter
     - gocheckcompilerdirectives

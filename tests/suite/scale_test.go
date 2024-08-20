@@ -736,7 +736,6 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 		buf := new(bytes.Buffer)
 		encoder := framework.NewVegetaCSVEncoder(buf)
 		for _, res := range results {
-			res := res
 			Expect(encoder.Encode(&res)).To(Succeed())
 		}
 
