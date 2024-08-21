@@ -52,8 +52,8 @@ nginxGateway:
 
   image:
     # -- The NGINX Gateway Fabric image to use
-    repository: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric
-    tag: sa.choudhary
+    repository: ghcr.io/nginxinc/nginx-gateway-fabric
+    tag: edge
     pullPolicy: Always
 
   securityContext:
@@ -81,8 +81,8 @@ nginxGateway:
 nginx:
   image:
     # -- The NGINX image to use.
-    repository: gcr.io/f5-gcs-7899-ptg-ingrss-ctlr/nginx-gateway-fabric/nginx
-    tag: sa.choudhary
+    repository: ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+    tag: edge
     pullPolicy: Always
 
   # -- Is NGINX Plus image being used
@@ -95,7 +95,8 @@ nginx:
     # ipFamily: dual
     # rewriteClientIP:
     #   mode: "ProxyProtocol"
-    #   trustedAddresses: ["0.0.0.0/0"]
+    #   # -- The trusted addresses field needs to be replaced with the load balancer's IP address.
+    #   trustedAddresses: []
     #   setIPRecursively: true
     # telemetry:
     #   exporter:

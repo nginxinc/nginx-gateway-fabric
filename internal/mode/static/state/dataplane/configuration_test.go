@@ -3655,6 +3655,28 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 				IPRecursive:  true,
 			},
 		},
+		{
+			msg: "rewrite IP settings configured with recursive set to false and multiple trusted addresses",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							RewriteClientIP: &ngfAPI.RewriteClientIP{
+								Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
+								TrustedAddresses: []ngfAPI.TrustedAddress{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
+								SetIPRecursively: helpers.GetPointer(false),
+							},
+						},
+					},
+				},
+			},
+			expRewriteIPSettings: RewriteClientIPSettings{
+				Mode:         RewriteIPModeXForwardedFor,
+				TrustedCIDRs: []string{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
+				IPRecursive:  false,
+			},
+		},
 	}
 
 	for _, tc := range tests {

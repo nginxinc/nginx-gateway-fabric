@@ -144,7 +144,7 @@ func TestExecuteServers(t *testing.T) {
 	}
 }
 
-func TestExecuteServerConfig(t *testing.T) {
+func TestExecuteServers_IPFamily(t *testing.T) {
 	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
@@ -263,11 +263,58 @@ func TestExecuteServerConfig(t *testing.T) {
 				"real_ip_recursive on;":                                    0,
 			},
 		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
+
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
+	}
+}
+
+func TestExecuteServers_RewriteClientIP(t *testing.T) {
+	tests := []struct {
+		msg                string
+		expectedHTTPConfig map[string]int
+		config             dataplane.Configuration
+	}{
 		{
 			msg: "http and ssl servers with rewrite client IP settings",
 			config: dataplane.Configuration{
-				HTTPServers: httpServers,
-				SSLServers:  sslServers,
+				HTTPServers: []dataplane.VirtualServer{
+					{
+						IsDefault: true,
+						Port:      8080,
+					},
+					{
+						Hostname: "example.com",
+						Port:     8080,
+					},
+				},
+				SSLServers: []dataplane.VirtualServer{
+					{
+						IsDefault: true,
+						Port:      8443,
+					},
+					{
+						Hostname: "example.com",
+						SSL: &dataplane.SSL{
+							KeyPairID: "test-keypair",
+						},
+						Port: 8443,
+					},
+				},
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.Dual,
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
@@ -279,7 +326,7 @@ func TestExecuteServerConfig(t *testing.T) {
 			},
 			expectedHTTPConfig: map[string]int{
 				"set_real_ip_from 0.0.0.0/0;":                              4,
-				"real_ip_header proxy-protocol;":                           4,
+				"real_ip_header proxy_protocol;":                           4,
 				"real_ip_recursive on;":                                    4,
 				"listen 8080 default_server proxy_protocol;":               1,
 				"listen 8080 proxy_protocol;":                              1,
@@ -939,6 +986,22 @@ func TestCreateServers(t *testing.T) {
 			Name:  "Connection",
 			Value: "$connection_upgrade",
 		},
+		{
+			Name:  "X-Real-IP",
+			Value: "$remote_addr",
+		},
+		{
+			Name:  "X-Forwarded-Proto",
+			Value: "$scheme",
+		},
+		{
+			Name:  "X-Forwarded-Host",
+			Value: "$host",
+		},
+		{
+			Name:  "X-Forwarded-Port",
+			Value: "$server_port",
+		},
 	}
 
 	externalIncludes := []http.Include{
@@ -1206,6 +1269,22 @@ func TestCreateServers(t *testing.T) {
 						Name:  "Connection",
 						Value: "$connection_upgrade",
 					},
+					{
+						Name:  "X-Real-IP",
+						Value: "$remote_addr",
+					},
+					{
+						Name:  "X-Forwarded-Proto",
+						Value: "$scheme",
+					},
+					{
+						Name:  "X-Forwarded-Host",
+						Value: "$host",
+					},
+					{
+						Name:  "X-Forwarded-Port",
+						Value: "$server_port",
+					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
 					Add: []http.Header{
@@ -1243,6 +1322,22 @@ func TestCreateServers(t *testing.T) {
 					{
 						Name:  "Connection",
 						Value: "$connection_upgrade",
+					},
+					{
+						Name:  "X-Real-IP",
+						Value: "$remote_addr",
+					},
+					{
+						Name:  "X-Forwarded-Proto",
+						Value: "$scheme",
+					},
+					{
+						Name:  "X-Forwarded-Host",
+						Value: "$host",
+					},
+					{
+						Name:  "X-Forwarded-Port",
+						Value: "$server_port",
 					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
@@ -2419,6 +2514,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Name:  "Connection",
 					Value: "$connection_upgrade",
 				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
+				},
 			},
 		},
 		{
@@ -2456,6 +2567,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "Connection",
 					Value: "$connection_upgrade",
+				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
 				},
 			},
 		},
@@ -2503,6 +2630,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "Authority",
 					Value: "$gw_api_compliant_host",
+				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
 				},
 			},
 		},

@@ -41,6 +41,22 @@ var httpBaseHeaders = []http.Header{
 		Name:  "Connection",
 		Value: "$connection_upgrade",
 	},
+	{
+		Name:  "X-Real-IP",
+		Value: "$remote_addr",
+	},
+	{
+		Name:  "X-Forwarded-Proto",
+		Value: "$scheme",
+	},
+	{
+		Name:  "X-Forwarded-Host",
+		Value: "$host",
+	},
+	{
+		Name:  "X-Forwarded-Port",
+		Value: "$server_port",
+	},
 }
 
 // grpcBaseHeaders contains the constant headers set in each gRPC server block.
@@ -56,6 +72,22 @@ var grpcBaseHeaders = []http.Header{
 	{
 		Name:  "Authority",
 		Value: "$gw_api_compliant_host",
+	},
+	{
+		Name:  "X-Real-IP",
+		Value: "$remote_addr",
+	},
+	{
+		Name:  "X-Forwarded-Proto",
+		Value: "$scheme",
+	},
+	{
+		Name:  "X-Forwarded-Host",
+		Value: "$host",
+	},
+	{
+		Name:  "X-Forwarded-Port",
+		Value: "$server_port",
 	},
 }
 
@@ -878,14 +910,9 @@ func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 
 // getRewriteClientIPSettings returns the configuration for the rewriting client IP settings.
 func getRewriteClientIPSettings(rewriteIP dataplane.RewriteClientIPSettings) http.RewriteClientIPSettings {
-	var proxyProtocol bool
-	if rewriteIP.Mode == dataplane.RewriteIPModeProxyProtocol {
-		proxyProtocol = true
-	}
-
 	return http.RewriteClientIPSettings{
 		Recursive:     rewriteIP.IPRecursive,
-		ProxyProtocol: proxyProtocol,
+		ProxyProtocol: rewriteIP.Mode == dataplane.RewriteIPModeProxyProtocol,
 		RealIPFrom:    rewriteIP.TrustedCIDRs,
 		RealIPHeader:  string(rewriteIP.Mode),
 	}

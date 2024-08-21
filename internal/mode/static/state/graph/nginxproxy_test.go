@@ -364,11 +364,11 @@ func TestValidateNginxProxy(t *testing.T) {
 
 func TestValidateRewriteClientIP(t *testing.T) {
 	tests := []struct {
-		np              *ngfAPI.NginxProxy
-		validator       *validationfakes.FakeGenericValidator
-		name            string
-		expErrSubstring string
-		expectErrCount  int
+		np             *ngfAPI.NginxProxy
+		validator      *validationfakes.FakeGenericValidator
+		name           string
+		errorString    string
+		expectErrCount int
 	}{
 		{
 			name:      "valid rewriteClientIP",
@@ -396,8 +396,10 @@ func TestValidateRewriteClientIP(t *testing.T) {
 					},
 				},
 			},
-			expectErrCount:  1,
-			expErrSubstring: "spec.rewriteClientIP.trustedAddresses",
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8:a0b:12f0::1: " +
+				"Invalid value: \"2001:db8:a0b:12f0::1\": spec.rewriteClientIP.trustedAddresses: " +
+				"Invalid value: \"2001:db8:a0b:12f0::1\": must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)",
 		},
 		{
 			name:      "invalid when mode is set and trustedAddresses is empty",
@@ -409,8 +411,8 @@ func TestValidateRewriteClientIP(t *testing.T) {
 					},
 				},
 			},
-			expectErrCount:  1,
-			expErrSubstring: "trustedAddresses field required when mode is set",
+			expectErrCount: 1,
+			errorString:    "spec.rewriteClientIP: Required value: trustedAddresses field required when mode is set",
 		},
 		{
 			name:      "invalid when trustedAddresses is greater in length than 16",
@@ -430,8 +432,8 @@ func TestValidateRewriteClientIP(t *testing.T) {
 					},
 				},
 			},
-			expectErrCount:  1,
-			expErrSubstring: "Too long: may not be longer than 16",
+			expectErrCount: 1,
+			errorString:    "spec.rewriteClientIP.trustedAddresses: Too long: may not be longer than 16",
 		},
 		{
 			name:      "invalid when mode is not proxyProtocol or XForwardedFor",
@@ -444,8 +446,24 @@ func TestValidateRewriteClientIP(t *testing.T) {
 					},
 				},
 			},
-			expectErrCount:  1,
-			expErrSubstring: "supported values: \"ProxyProtocol\", \"XForwardedFor\"",
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.mode: Unsupported value: \"invalid\": " +
+				"supported values: \"ProxyProtocol\", \"XForwardedFor\"",
+		},
+		{
+			name:      "invalid when mode is not proxyProtocol or XForwardedFor and trustedAddresses is empty",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeType("invalid")),
+					},
+				},
+			},
+			expectErrCount: 2,
+			errorString: "[spec.rewriteClientIP: Required value: trustedAddresses field " +
+				"required when mode is set, spec.rewriteClientIP.mode: " +
+				"Unsupported value: \"invalid\": supported values: \"ProxyProtocol\", \"XForwardedFor\"]",
 		},
 	}
 
@@ -456,7 +474,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 			allErrs := validateRewriteClientIP(test.np)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			if len(allErrs) > 0 {
-				g.Expect(allErrs.ToAggregate().Error()).To(ContainSubstring(test.expErrSubstring))
+				g.Expect(allErrs.ToAggregate().Error()).To(Equal(test.errorString))
 			}
 		})
 	}

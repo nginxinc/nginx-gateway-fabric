@@ -1071,7 +1071,10 @@ RewriteClientIPModeType
 <td>
 <em>(Optional)</em>
 <p>Mode defines how NGINX will rewrite the client&rsquo;s IP address.
-Possible modes: ProxyProtocol, XForwardedFor.</p>
+There are two possible modes:
+- ProxyProtocol: NGINX will rewrite the client&rsquo;s IP using the PROXY protocol header.
+- XForwardedFor: NGINX will rewrite the client&rsquo;s IP using the X-Forwarded-For header.
+Sets NGINX directive real_ip_header: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header</a></p>
 </td>
 </tr>
 <tr>
@@ -1083,10 +1086,15 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>SetIPRecursively configures whether recursive search is used for selecting client&rsquo;s
-address from the X-Forwarded-For header and used in conjunction with TrustedAddresses.
-If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of
-array to start of array and select the first untrusted IP.</p>
+<p>SetIPRecursively configures whether recursive search is used when selecting the client&rsquo;s address from.
+the X-Forwarded-For header. It is used in conjunction with TrustedAddresses.
+If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of array
+to start of array and select the first untrusted IP.
+For example, if X-Forwarded-For is [11.11.11.11, 22.22.22.22, 55.55.55.1],
+and TrustedAddresses is set to 55.55.55.<sup>1</sup>&frasl;<sub>0</sub>, NGINX will rewrite the client IP to 22.22.22.22.
+If disabled, NGINX will select the IP at the end of the array.
+In the previous example, 55.55.55.1 would be selected.
+Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive</a></p>
 </td>
 </tr>
 <tr>
@@ -1103,6 +1111,11 @@ array to start of array and select the first untrusted IP.</p>
 <p>TrustedAddresses specifies the addresses that are trusted to send correct client IP information.
 If a request comes from a trusted address, NGINX will rewrite the client IP information,
 and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
+If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
+Addresses must be provided as CIDR blocks: 10.0.0.0/32, 192.33.<sup>21</sup>&frasl;<sub>0</sub>.
+To trust all addresses (not recommended), set to 0.0.0.0/0.
+If no addresses are provided, NGINX will not rewrite the client IP information.
+Sets NGINX directive set_real_ip_from: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from">https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from</a>
 This field is required if mode is set.</p>
 </td>
 </tr>

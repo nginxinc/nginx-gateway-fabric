@@ -144,8 +144,10 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 		if rewriteClientIP.Mode != nil {
 			mode := *rewriteClientIP.Mode
 			if len(rewriteClientIP.TrustedAddresses) == 0 {
-				allErrs = append(allErrs,
-					field.Required(rewriteClientIPPath, "trustedAddresses field required when mode is set"))
+				allErrs = append(
+					allErrs,
+					field.Required(rewriteClientIPPath, "trustedAddresses field required when mode is set"),
+				)
 			}
 
 			switch mode {
@@ -156,7 +158,8 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 					field.NotSupported(
 						rewriteClientIPPath.Child("mode"),
 						mode,
-						[]string{string(ngfAPI.RewriteClientIPModeProxyProtocol), string(ngfAPI.RewriteClientIPModeXForwardedFor)}),
+						[]string{string(ngfAPI.RewriteClientIPModeProxyProtocol), string(ngfAPI.RewriteClientIPModeXForwardedFor)},
+					),
 				)
 			}
 		}
@@ -164,7 +167,8 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 		if len(rewriteClientIP.TrustedAddresses) > 16 {
 			allErrs = append(
 				allErrs,
-				field.TooLongMaxLength(trustedAddressesPath, rewriteClientIP.TrustedAddresses, 16))
+				field.TooLongMaxLength(trustedAddressesPath, rewriteClientIP.TrustedAddresses, 16),
+			)
 		}
 
 		for _, addr := range rewriteClientIP.TrustedAddresses {

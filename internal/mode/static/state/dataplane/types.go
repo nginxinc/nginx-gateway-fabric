@@ -330,7 +330,7 @@ type RewriteIPModeType string
 
 const (
 	// RewriteIPModeProxyProtocol specifies that client IP will be rewrritten using the Proxy-Protocol header.
-	RewriteIPModeProxyProtocol RewriteIPModeType = "proxy-protocol"
+	RewriteIPModeProxyProtocol RewriteIPModeType = "proxy_protocol"
 	// RewriteIPModeXForwardedFor specifies that client IP will be rewrritten using the X-Forwarded-For header.
 	RewriteIPModeXForwardedFor RewriteIPModeType = "X-Forwarded-For"
 )
