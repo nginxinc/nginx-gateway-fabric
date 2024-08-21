@@ -138,7 +138,7 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 			"drain",
 			kindNodeName,
 			"--ignore-daemonsets",
-			"--delete-local-data",
+			"--delete-emptydir-data",
 		).CombinedOutput()
 
 		Expect(err).ToNot(HaveOccurred(), string(output))
