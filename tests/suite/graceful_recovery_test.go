@@ -133,17 +133,18 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 
 	if drain {
-		_, err := exec.Command(
+		output, err := exec.Command(
 			"kubectl",
 			"drain",
 			kindNodeName,
 			"--ignore-daemonsets",
 			"--delete-local-data",
 		).CombinedOutput()
-		Expect(err).ToNot(HaveOccurred())
 
-		_, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), string(output))
+
+		output, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), string(output))
 	}
 
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
