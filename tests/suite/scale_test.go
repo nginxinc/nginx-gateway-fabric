@@ -50,13 +50,16 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ngfPodName            string
 		promInstance          framework.PrometheusInstance
 		promPortForwardStopCh = make(chan struct{})
+
+		upstreamServerCount int32
 	)
 
 	const (
-		httpListenerCount   = 64
-		httpsListenerCount  = 64
-		httpRouteCount      = 1000
-		upstreamServerCount = 648
+		httpListenerCount       = 64
+		httpsListenerCount      = 64
+		httpRouteCount          = 1000
+		ossUpstreamServerCount  = 648
+		plusUpstreamServerCount = 556
 	)
 
 	BeforeAll(func() {
@@ -84,6 +87,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		if !clusterInfo.IsGKE {
 			Expect(promInstance.PortForward(k8sConfig, promPortForwardStopCh)).To(Succeed())
+		}
+
+		if *plusEnabled {
+			upstreamServerCount = plusUpstreamServerCount
+		} else {
+			upstreamServerCount = ossUpstreamServerCount
 		}
 	})
 
@@ -562,21 +571,37 @@ The logs are attached only if there are errors.
 			},
 		)
 	})
+	if upstreamServerCount == ossUpstreamServerCount {
+		It(fmt.Sprintf("scales upstream servers to %d", ossUpstreamServerCount), func() {
+			const testName = "TestScale_UpstreamServers"
 
-	It(fmt.Sprintf("scales upstream servers to %d", upstreamServerCount), func() {
-		const testName = "TestScale_UpstreamServers"
+			testResultsDir := filepath.Join(resultsDir, testName)
+			Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
 
-		testResultsDir := filepath.Join(resultsDir, testName)
-		Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
+			runTestWithMetricsAndLogs(
+				testName,
+				testResultsDir,
+				func() {
+					runScaleUpstreams()
+				},
+			)
+		})
+	} else {
+		It(fmt.Sprintf("scales upstream servers to %d", plusUpstreamServerCount), func() {
+			const testName = "TestScale_UpstreamServers"
 
-		runTestWithMetricsAndLogs(
-			testName,
-			testResultsDir,
-			func() {
-				runScaleUpstreams()
-			},
-		)
-	})
+			testResultsDir := filepath.Join(resultsDir, testName)
+			Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
+
+			runTestWithMetricsAndLogs(
+				testName,
+				testResultsDir,
+				func() {
+					runScaleUpstreams()
+				},
+			)
+		})
+	}
 
 	It("scales HTTP matches", func() {
 		const testName = "TestScale_HTTPMatches"
