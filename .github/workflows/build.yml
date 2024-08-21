@@ -82,7 +82,7 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: auth
-        uses: google-github-actions/auth@f112390a2df9932162083945e46d439060d66ec2 # v2.1.4
+        uses: google-github-actions/auth@62cf5bd3e4211a0a0b51f2c6d6a37129d828611d # v2.1.5
         with:
           token_format: access_token
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
@@ -162,7 +162,7 @@ jobs:
 
       - name: Scan SBOM
         id: scan
-        uses: anchore/scan-action@bc9adf64917dd9444d6cf4dd68620c34ca3a5f69 # v4.1.1
+        uses: anchore/scan-action@64a33b277ea7a1215a3c142735a1091341939ff5 # v4.1.2
         with:
           sbom: "sbom-${{ inputs.image }}.json"
           only-fixed: true
