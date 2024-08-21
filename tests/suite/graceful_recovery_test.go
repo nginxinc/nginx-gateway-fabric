@@ -82,7 +82,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("graceful-recovery"), 
 			func() error {
 				return checkForWorkingTraffic(teaURL, coffeeURL)
 			}).
-			WithTimeout(timeoutConfig.RequestTimeout * 2).
+			WithTimeout(timeoutConfig.TestForTrafficTimeout).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 	})
@@ -287,6 +287,7 @@ func checkForFailingTraffic(teaURL, coffeeURL string) error {
 
 func expectRequestToSucceed(appURL, address string, responseBodyMessage string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
+
 	if status != http.StatusOK {
 		return errors.New("http status was not 200")
 	}
@@ -320,7 +321,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -330,7 +331,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForFailingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -341,7 +342,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
