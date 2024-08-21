@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"github.com/go-kit/log"
-	"github.com/nginxinc/nginx-plus-go-client/client"
 	prometheusClient "github.com/nginxinc/nginx-prometheus-exporter/client"
 	nginxCollector "github.com/nginxinc/nginx-prometheus-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,7 +25,7 @@ func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) 
 
 // NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket.
 func NewNginxPlusMetricsCollector(
-	plusClient *client.NginxClient,
+	plusClient runtime.NginxPlusClient,
 	constLabels map[string]string,
 	logger log.Logger,
 ) (prometheus.Collector, error) {

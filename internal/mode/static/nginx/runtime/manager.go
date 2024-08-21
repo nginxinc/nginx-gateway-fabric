@@ -36,7 +36,7 @@ var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
 //counterfeiter:generate . nginxPlusClient
 
-type nginxPlusClient interface {
+type NginxPlusClient interface {
 	UpdateHTTPServers(
 		upstream string,
 		servers []ngxclient.UpstreamServer,
@@ -79,13 +79,13 @@ type ManagerImpl struct {
 	processHandler   ProcessHandler
 	metricsCollector MetricsCollector
 	verifyClient     nginxConfigVerifier
-	ngxPlusClient    nginxPlusClient
+	ngxPlusClient    NginxPlusClient
 	logger           logr.Logger
 }
 
 // NewManagerImpl creates a new ManagerImpl.
 func NewManagerImpl(
-	ngxPlusClient nginxPlusClient,
+	ngxPlusClient NginxPlusClient,
 	collector MetricsCollector,
 	logger logr.Logger,
 	processHandler ProcessHandler,

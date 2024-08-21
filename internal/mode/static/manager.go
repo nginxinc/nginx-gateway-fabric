@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -159,7 +158,7 @@ func StartManager(cfg config.Config) error {
 		handlerCollector    handlerMetricsCollector     = collectors.NewControllerNoopCollector()
 	)
 
-	var ngxPlusClient *ngxclient.NginxClient
+	var ngxPlusClient ngxruntime.NginxPlusClient
 	var usageSecret *usage.Secret
 
 	if cfg.Plus {
