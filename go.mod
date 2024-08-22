@@ -11,7 +11,7 @@ require (
 	github.com/nginxinc/nginx-plus-go-client v1.3.0
 	github.com/nginxinc/nginx-prometheus-exporter v1.3.0
 	github.com/nginxinc/telemetry-exporter v0.1.1
-	github.com/onsi/ginkgo/v2 v2.20.0
+	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.34.1
 	github.com/prometheus/client_golang v1.20.0
 	github.com/prometheus/common v0.55.0
