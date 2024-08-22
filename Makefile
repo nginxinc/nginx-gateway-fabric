@@ -16,7 +16,6 @@ TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug le
 TELEMETRY_ENDPOINT_INSECURE = false
 
 ENABLE_EXPERIMENTAL ?= false
-NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
@@ -24,7 +23,20 @@ GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
 # tools versions
-GOLANGCI_LINT_VERSION := $(shell awk '/repo:.*golangci-lint/{getline; if ($$1 == "rev:") {sub(/^v/, "", $$2); print $$2}}' $(SELF_DIR).pre-commit-config.yaml)
+# renovate: datasource=go depName=golangci/golangci-lint
+GOLANGCI_LINT_VERSION = v1.60.2
+# renovate: datasource=docker depName=kindest/node
+KIND_K8S_VERSION = v1.31.0
+# renovate: datasource=go depName=norwoodj/helm-docs
+HELM_DOCS_VERSION = v1.14.2
+# renovate: datasource=go depName=ahmetb/gen-crd-api-reference-docs
+GEN_CRD_API_REFERENCE_DOCS_VERSION = v0.3.0
+# renovate: datasource=go depName=sigs.k8s.io/controller-tools
+CONTROLLER_TOOLS_VERSION = v0.16.1
+# renovate: datasource=docker depName=node
+NODE_VERSION = 20
+# renovate: datasource=docker depName=quay.io/helmpack/chart-testing
+CHART_TESTING_VERSION = v3.11.0
 
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
@@ -108,7 +120,7 @@ generate: ## Run go generate
 
 .PHONY: generate-crds
 generate-crds: ## Generate CRDs and Go types using kubebuilder
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
 	kubectl kustomize config/crd >deploy/crds.yaml
 
 .PHONY: install-crds
@@ -128,11 +140,11 @@ generate-manifests: ## Generate manifests using Helm.
 	./scripts/generate-manifests.sh
 
 generate-api-docs: ## Generate API docs
-	go run github.com/ahmetb/gen-crd-api-reference-docs -config site/config/api/config.json -template-dir site/config/api -out-file site/content/reference/api.md -api-dir "github.com/nginxinc/nginx-gateway-fabric/apis"
+	go run github.com/ahmetb/gen-crd-api-reference-docs@$(GEN_CRD_API_REFERENCE_DOCS_VERSION) -config site/config/api/config.json -template-dir site/config/api -out-file site/content/reference/api.md -api-dir "github.com/nginxinc/nginx-gateway-fabric/apis"
 
 .PHONY: generate-helm-docs
 generate-helm-docs: ## Generate the Helm chart documentation
-	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric jnorwood/helm-docs:latest --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
+	go run github.com/norwoodj/helm-docs/cmd/helm-docs@$(HELM_DOCS_VERSION) --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
 
 .PHONY: generate-all
 generate-all: generate generate-crds generate-manifests generate-api-docs generate-helm-docs ## Generate all the necessary files
@@ -151,8 +163,8 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <$(SELF_DIR)tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
-	kind create cluster --image $(KIND_IMAGE) --config $(KIND_CONFIG_FILE)
+	@kind version || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with kind. Follow the docs to install it https://kind.sigs.k8s.io/docs/user/quick-start/\n"; exit $$code)
+	kind create cluster --image kindest/node:$(KIND_K8S_VERSION) --config $(KIND_CONFIG_FILE)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
@@ -173,14 +185,9 @@ njs-fmt: ## Run prettier against the njs httpmatches module
 vet: ## Run go vet against code
 	go vet ./...
 
-.PHONY: check-golangci-lint
-check-golangci-lint:
-	@golangci-lint --version || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with golangci-lint. Follow the docs to install it https://golangci-lint.run/welcome/install/\n"; exit $$code)
-	@golangci-lint --version | grep -q $(GOLANGCI_LINT_VERSION) || (printf "\033[0;33mWarning\033[0m: your golangci-lint version is different from the one specified in .pre-commit-config.yaml. The recommended version is $(GOLANGCI_LINT_VERSION)\n")
-
 .PHONY: lint
-lint: check-golangci-lint ## Run golangci-lint against code
-	golangci-lint run --fix
+lint: ## Run golangci-lint against code
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --fix
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
@@ -199,7 +206,7 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
-	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric quay.io/helmpack/chart-testing:latest ct lint --config .ct.yaml
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric quay.io/helmpack/chart-testing:$(CHART_TESTING_VERSION) ct lint --config .ct.yaml
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster.

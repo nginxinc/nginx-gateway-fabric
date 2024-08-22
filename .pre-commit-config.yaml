@@ -90,3 +90,4 @@ repos:
 ci:
   skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]
   autofix_prs: false
+  autoupdate_schedule: quarterly # We use renovate for more frequent updates and there's no way to disable autoupdate
