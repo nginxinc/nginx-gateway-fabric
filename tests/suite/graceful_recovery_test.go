@@ -82,7 +82,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("graceful-recovery"), 
 			func() error {
 				return checkForWorkingTraffic(teaURL, coffeeURL)
 			}).
-			WithTimeout(timeoutConfig.RequestTimeout * 2).
+			WithTimeout(timeoutConfig.TestForTrafficTimeout).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 	})
@@ -133,17 +133,18 @@ func runRestartNodeTest(teaURL, coffeeURL string, files []string, ns *core.Names
 	}
 
 	if drain {
-		_, err := exec.Command(
+		output, err := exec.Command(
 			"kubectl",
 			"drain",
 			kindNodeName,
 			"--ignore-daemonsets",
-			"--delete-local-data",
+			"--delete-emptydir-data",
 		).CombinedOutput()
-		Expect(err).ToNot(HaveOccurred())
 
-		_, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), string(output))
+
+		output, err = exec.Command("kubectl", "delete", "node", kindNodeName).CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), string(output))
 	}
 
 	_, err = exec.Command("docker", "restart", containerName).CombinedOutput()
@@ -287,6 +288,7 @@ func checkForFailingTraffic(teaURL, coffeeURL string) error {
 
 func expectRequestToSucceed(appURL, address string, responseBodyMessage string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
+
 	if status != http.StatusOK {
 		return errors.New("http status was not 200")
 	}
@@ -320,7 +322,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -330,7 +332,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForFailingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 
@@ -341,7 +343,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
-		WithTimeout(timeoutConfig.RequestTimeout * 2).
+		WithTimeout(timeoutConfig.TestForTrafficTimeout).
 		WithPolling(500 * time.Millisecond).
 		Should(Succeed())
 

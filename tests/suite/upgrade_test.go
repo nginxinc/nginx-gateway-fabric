@@ -162,7 +162,6 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				buf := new(bytes.Buffer)
 				encoder := framework.NewVegetaCSVEncoder(buf)
 				for _, res := range results {
-					res := res
 					Expect(encoder.Encode(&res)).To(Succeed())
 				}
 

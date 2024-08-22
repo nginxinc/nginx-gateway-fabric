@@ -239,7 +239,7 @@ func TestBuildGateway(t *testing.T) {
 		return v1.Listener{
 			Name:     v1.SectionName(name),
 			Hostname: (*v1.Hostname)(helpers.GetPointer(hostname)),
-			Port:     v1.PortNumber(port),
+			Port:     v1.PortNumber(port), //nolint:gosec // port number will not overflow int32
 			Protocol: protocol,
 			TLS:      tls,
 		}

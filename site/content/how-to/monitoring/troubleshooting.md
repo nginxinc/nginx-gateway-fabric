@@ -452,7 +452,7 @@ If you `describe` your Policy and see the following error:
 
 This means you are attempting to attach a Policy to a Route that has an overlapping hostname:port/path combination with another Route. To work around this, you can do one of the following:
 
-- Combine the Route rules for the overlapping path into a single route.
+- Combine the Route rules for the overlapping path into a single Route.
 - If the Policy allows it, specify both Routes in the `targetRefs` list.
 
 ### Further reading
