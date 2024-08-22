@@ -282,6 +282,11 @@ func StartManager(cfg config.Config) error {
 	}
 
 	cfg.Logger.Info("Starting manager")
+	go func() {
+		<-ctx.Done()
+		cfg.Logger.Info("Shutting down")
+	}()
+
 	return mgr.Start(ctx)
 }
 
@@ -306,7 +311,7 @@ func createPolicyManager(
 func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
-		Logger:  cfg.Logger,
+		Logger:  cfg.Logger.V(1),
 		Metrics: getMetricsOptions(cfg.MetricsConfig),
 		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
