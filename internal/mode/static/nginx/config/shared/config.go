@@ -19,3 +19,11 @@ type IPFamily struct {
 	IPv4 bool
 	IPv6 bool
 }
+
+// RewriteClientIP holds the configuration for the rewrite client IP settings.
+type RewriteClientIPSettings struct {
+	RealIPHeader  string
+	RealIPFrom    []string
+	Recursive     bool
+	ProxyProtocol bool
+}

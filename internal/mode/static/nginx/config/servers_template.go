@@ -15,13 +15,17 @@ server {
     listen [::]:{{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
     ssl_reject_handshake on;
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    	{{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
+	set_real_ip_from unix:;
+  	    {{- else if (not $s.IsSocket)}}
+		    {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
-        {{- end}}
-        {{- if $.RewriteClientIP.RealIPHeader}}
+            {{- end}}
+	    {{ end }}
+        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if $.RewriteClientIP.Recursive }}
+        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
     real_ip_recursive on;
         {{ end }}
 }
@@ -33,13 +37,17 @@ server {
         {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Listen }} default_server{{ $proxyProtocol }};
         {{- end }}
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+        {{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
+	set_real_ip_from unix:;
+  	    {{- else if (not $s.IsSocket)}}
+		    {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
-        {{- end}}
-        {{- if $.RewriteClientIP.RealIPHeader}}
+            {{- end}}
+	    {{ end }}
+        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if $.RewriteClientIP.Recursive }}
+        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
     real_ip_recursive on;
         {{ end }}
     default_type text/html;
@@ -79,13 +87,17 @@ server {
     include {{ $i.Name }};
         {{- end }}
 
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    {{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
+	set_real_ip_from unix:;
+  	{{- else if (not $s.IsSocket)}}
+		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
         {{- end}}
-        {{- if $.RewriteClientIP.RealIPHeader}}
+	{{ end }}
+        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if $.RewriteClientIP.Recursive }}
+        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
     real_ip_recursive on;
         {{ end }}
 

@@ -26,7 +26,8 @@ type UpstreamServer struct {
 
 // ServerConfig holds configuration for a stream server and IP family to be used by NGINX.
 type ServerConfig struct {
-	Servers  []Server
-	IPFamily shared.IPFamily
-	Plus     bool
+	Servers         []Server
+	RewriteClientIP shared.RewriteClientIPSettings
+	IPFamily        shared.IPFamily
+	Plus            bool
 }

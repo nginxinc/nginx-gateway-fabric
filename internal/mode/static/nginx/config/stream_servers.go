@@ -15,9 +15,10 @@ func (g GeneratorImpl) executeStreamServers(conf dataplane.Configuration) []exec
 	streamServers := createStreamServers(conf)
 
 	streamServerConfig := stream.ServerConfig{
-		Servers:  streamServers,
-		IPFamily: getIPFamily(conf.BaseHTTPConfig),
-		Plus:     g.plus,
+		Servers:         streamServers,
+		IPFamily:        getIPFamily(conf.BaseHTTPConfig),
+		Plus:            g.plus,
+		RewriteClientIP: getRewriteClientIPSettings(conf.BaseHTTPConfig.RewriteClientIPSettings),
 	}
 
 	streamServerResult := executeResult{

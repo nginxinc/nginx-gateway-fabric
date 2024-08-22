@@ -284,37 +284,40 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 }
 
 func TestExecuteServers_RewriteClientIP(t *testing.T) {
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname: "example.com",
+			Port:     8080,
+		},
+	}
+
+	sslServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 8443,
+		},
+	}
 	tests := []struct {
 		msg                string
 		expectedHTTPConfig map[string]int
 		config             dataplane.Configuration
 	}{
 		{
-			msg: "http and ssl servers with rewrite client IP settings",
+			msg: "rewrite client IP settings configured with proxy protocol",
 			config: dataplane.Configuration{
-				HTTPServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8080,
-					},
-					{
-						Hostname: "example.com",
-						Port:     8080,
-					},
-				},
-				SSLServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8443,
-					},
-					{
-						Hostname: "example.com",
-						SSL: &dataplane.SSL{
-							KeyPairID: "test-keypair",
-						},
-						Port: 8443,
-					},
-				},
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.Dual,
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
@@ -328,6 +331,7 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				"set_real_ip_from 0.0.0.0/0;":                              4,
 				"real_ip_header proxy_protocol;":                           4,
 				"real_ip_recursive on;":                                    4,
+				"proxy_protocol on;":                                       0,
 				"listen 8080 default_server proxy_protocol;":               1,
 				"listen 8080 proxy_protocol;":                              1,
 				"listen 8443 ssl default_server proxy_protocol;":           1,
@@ -340,6 +344,39 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				"listen [::]:8080 proxy_protocol;":                         1,
 				"listen [::]:8443 ssl default_server proxy_protocol;":      1,
 				"listen [::]:8443 ssl proxy_protocol;":                     1,
+			},
+		},
+		{
+			msg: "rewrite client IP settings configured with x-forwarded-for",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
+						Mode:         dataplane.RewriteIPModeXForwardedFor,
+						TrustedCIDRs: []string{"0.0.0.0/0"},
+						IPRecursive:  true,
+					},
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"set_real_ip_from 0.0.0.0/0;":                              4,
+				"real_ip_header X-Forwarded-For;":                          4,
+				"real_ip_recursive on;":                                    4,
+				"proxy_protocol on;":                                       0,
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
 			},
 		},
 	}

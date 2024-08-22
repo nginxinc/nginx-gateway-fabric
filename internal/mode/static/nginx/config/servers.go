@@ -909,8 +909,8 @@ func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 }
 
 // getRewriteClientIPSettings returns the configuration for the rewriting client IP settings.
-func getRewriteClientIPSettings(rewriteIP dataplane.RewriteClientIPSettings) http.RewriteClientIPSettings {
-	return http.RewriteClientIPSettings{
+func getRewriteClientIPSettings(rewriteIP dataplane.RewriteClientIPSettings) shared.RewriteClientIPSettings {
+	return shared.RewriteClientIPSettings{
 		Recursive:     rewriteIP.IPRecursive,
 		ProxyProtocol: rewriteIP.Mode == dataplane.RewriteIPModeProxyProtocol,
 		RealIPFrom:    rewriteIP.TrustedCIDRs,
