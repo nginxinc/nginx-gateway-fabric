@@ -26,7 +26,7 @@ GKE Cluster:
 
 - Total: 3
 - Total Errors: 0
-- Average Time: 125ms
+- Average Time: 127ms
 - Reload distribution:
 	- 500ms: 3
 	- 1000ms: 3
@@ -37,15 +37,15 @@ GKE Cluster:
 
 ### Event Batch Processing
 
-- Total: 204
-- Average Time: 11ms
+- Total: 237
+- Average Time: 9ms
 - Event Batch Processing distribution:
-	- 500ms: 204
-	- 1000ms: 204
-	- 5000ms: 204
-	- 10000ms: 204
-	- 30000ms: 204
-	- +Infms: 204
+	- 500ms: 237
+	- 1000ms: 237
+	- 5000ms: 237
+	- 10000ms: 237
+	- 30000ms: 237
+	- +Infms: 237
 
 ### Errors
 
