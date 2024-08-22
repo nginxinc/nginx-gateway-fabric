@@ -571,37 +571,24 @@ The logs are attached only if there are errors.
 			},
 		)
 	})
-	if upstreamServerCount == ossUpstreamServerCount {
-		It(fmt.Sprintf("scales upstream servers to %d", ossUpstreamServerCount), func() {
-			const testName = "TestScale_UpstreamServers"
 
-			testResultsDir := filepath.Join(resultsDir, testName)
-			Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
+	It(fmt.Sprintf("scales upstream servers to %d for OSS and %d for Plus",
+		ossUpstreamServerCount,
+		plusUpstreamServerCount,
+	), func() {
+		const testName = "TestScale_UpstreamServers"
 
-			runTestWithMetricsAndLogs(
-				testName,
-				testResultsDir,
-				func() {
-					runScaleUpstreams()
-				},
-			)
-		})
-	} else {
-		It(fmt.Sprintf("scales upstream servers to %d", plusUpstreamServerCount), func() {
-			const testName = "TestScale_UpstreamServers"
+		testResultsDir := filepath.Join(resultsDir, testName)
+		Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
 
-			testResultsDir := filepath.Join(resultsDir, testName)
-			Expect(os.MkdirAll(testResultsDir, 0o755)).To(Succeed())
-
-			runTestWithMetricsAndLogs(
-				testName,
-				testResultsDir,
-				func() {
-					runScaleUpstreams()
-				},
-			)
-		})
-	}
+		runTestWithMetricsAndLogs(
+			testName,
+			testResultsDir,
+			func() {
+				runScaleUpstreams()
+			},
+		)
+	})
 
 	It("scales HTTP matches", func() {
 		const testName = "TestScale_HTTPMatches"
