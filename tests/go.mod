@@ -6,7 +6,7 @@ require (
 	github.com/nginxinc/nginx-gateway-fabric v0.0.0
 	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.34.1
-	github.com/prometheus/client_golang v1.20.0
+	github.com/prometheus/client_golang v1.20.1
 	github.com/prometheus/common v0.55.0
 	github.com/tsenart/vegeta/v12 v12.12.0
 	k8s.io/api v0.31.0
