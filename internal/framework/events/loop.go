@@ -69,11 +69,11 @@ func (el *EventLoop) Start(ctx context.Context) error {
 			el.currentBatchID++
 			batchLogger := el.logger.WithName("eventHandler").WithValues("batchID", el.currentBatchID)
 
-			batchLogger.Info("Handling events from the batch", "total", len(batch))
+			batchLogger.V(1).Info("Handling events from the batch", "total", len(batch))
 
 			el.handler.HandleEventBatch(ctx, batchLogger, batch)
 
-			batchLogger.Info("Finished handling the batch")
+			batchLogger.V(1).Info("Finished handling the batch")
 			handlingDone <- struct{}{}
 		}(el.currentBatch)
 	}
@@ -120,7 +120,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 			// Add the event to the current batch.
 			el.nextBatch = append(el.nextBatch, e)
 
-			el.logger.Info(
+			el.logger.V(1).Info(
 				"added an event to the next batch",
 				"type", fmt.Sprintf("%T", e),
 				"total", len(el.nextBatch),

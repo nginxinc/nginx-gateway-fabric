@@ -41,7 +41,7 @@ repos:
           - javascript
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.60.2
+    rev: v1.60.3
     hooks:
       - id: golangci-lint-full
         name: golangci-lint-root
@@ -90,3 +90,4 @@ repos:
 ci:
   skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]
   autofix_prs: false
+  autoupdate_schedule: quarterly # We use renovate for more frequent updates and there's no way to disable autoupdate

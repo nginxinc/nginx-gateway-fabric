@@ -86,11 +86,11 @@ jobs:
 
       - name: Install cloud-provider-kind
         run: |
-          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.3.0/cloud-provider-kind_0.3.0_linux_amd64.tar.gz
-          tar -xvf cloud-provider-kind_0.3.0_linux_amd64.tar.gz
+          CLOUD_PROVIDER_KIND_VERSION=v0.3.0 # renovate: datasource=github-tags depName=kubernetes-sigs/cloud-provider-kind
+          go install sigs.k8s.io/cloud-provider-kind@${CLOUD_PROVIDER_KIND_VERSION}
 
       - name: Run cloud-provider-kind
-        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+        run: $(go env GOPATH)/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
 
       - name: Deploy Kubernetes
         id: k8s
@@ -130,11 +130,11 @@ jobs:
 
       - name: Install cloud-provider-kind
         run: |
-          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.3.0/cloud-provider-kind_0.3.0_linux_amd64.tar.gz
-          tar -xvf cloud-provider-kind_0.3.0_linux_amd64.tar.gz
+          CLOUD_PROVIDER_KIND_VERSION=v0.3.0 # renovate: datasource=github-tags depName=kubernetes-sigs/cloud-provider-kind
+          go install sigs.k8s.io/cloud-provider-kind@${CLOUD_PROVIDER_KIND_VERSION}
 
       - name: Run cloud-provider-kind
-        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+        run: $(go env GOPATH)/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
 
       - name: Deploy Kubernetes
         id: k8s
