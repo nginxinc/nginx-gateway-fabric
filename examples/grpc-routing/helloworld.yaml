@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       - name: grpc-infra-backend-v1
-        image: ghcr.io/nginxinc/kic-test-grpc-server:0.2.1
+        image: ghcr.io/nginxinc/kic-test-grpc-server:0.2.2
         env:
         - name: POD_NAME
           valueFrom:
