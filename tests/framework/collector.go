@@ -11,7 +11,7 @@ const (
 	CollectorNamespace        = "collector"
 	collectorChartReleaseName = "otel-collector"
 	//nolint:lll
-	// renovate: datasource=helm depName=open-telemetry/opentelemetry-collector registryUrl=https://open-telemetry.github.io/opentelemetry-helm-charts
+	// renovate: datasource=helm depName=opentelemetry-collector registryUrl=https://open-telemetry.github.io/opentelemetry-helm-charts
 	collectorChartVersion = "0.73.1"
 )
 
