@@ -8,7 +8,7 @@ js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
-         {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+        {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
     listen {{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
         {{- end }}
         {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}

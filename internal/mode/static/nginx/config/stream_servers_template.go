@@ -7,7 +7,7 @@ const streamServersTemplateText = `
 server {
 	{{- if and ($.IPFamily.IPv4) (not $s.IsSocket) }}
     listen {{ $s.Listen }};
-	{{- else if and ($.IPFamily.IPv4) ( $s.IsSocket)}}
+	{{- else if $s.IsSocket }}
 	listen {{ $s.Listen }}{{ $proxyProtocol }};
 	{{- end }}
 	{{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
