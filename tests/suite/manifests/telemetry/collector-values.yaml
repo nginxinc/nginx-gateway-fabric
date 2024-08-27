@@ -1,14 +1,13 @@
 mode: deployment
 replicaCount: 1
+image:
+  repository: otel/opentelemetry-collector-k8s
 config:
   exporters:
     debug:
       verbosity: detailed
-    logging: {}
   extensions:
     health_check: {}
-    memory_ballast:
-      size_in_percentage: 40
   processors:
     batch: {}
     memory_limiter:
@@ -29,3 +28,7 @@ config:
         - debug
         receivers:
         - otlp
+resources:
+  limits:
+    cpu: 250m
+    memory: 512Mi
