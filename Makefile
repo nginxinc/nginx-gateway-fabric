@@ -193,7 +193,7 @@ lint: ## Run golangci-lint against code
 unit-test: ## Run unit tests for the go code
 	# We have to run the tests in the cmd package using `go test` because of a bug with the CLI library cobra. See https://github.com/spf13/cobra/issues/2104.
 	go test -buildvcs ./cmd/... -race -shuffle=on -coverprofile=cmd-coverage.out -covermode=atomic
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace --covermode=atomic --coverprofile=coverage.out --force-newlines $(GITHUB_OUTPUT) -p -v -r internal
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --fail-fast --trace --covermode=atomic --coverprofile=coverage.out --force-newlines $(GITHUB_OUTPUT) -p -v -r internal
 	go tool cover -html=coverage.out -o cover.html
 	go tool cover -html=cmd-coverage.out -o cmd-cover.html
 
