@@ -58,7 +58,7 @@ jobs:
         with:
           base-image: ${{ needs.variables.outputs.nginx_version }}
           image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${{ needs.variables.outputs.ngf_tag }}
-          platforms: "linux/arm64, linux/amd64"
+          platforms: "linux/arm64,linux/amd64"
 
       - id: needs
         run: echo "needs-updating=${{ steps.update.outputs.needs-updating }}" >> $GITHUB_OUTPUT
@@ -70,7 +70,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       image: nginx
-      platforms: "linux/arm64, linux/amd64"
+      platforms: "linux/arm64,linux/amd64"
       tag: ${{ needs.variables.outputs.ngf_tag }}
     permissions:
       contents: read # for docker/build-push-action to read repo content
