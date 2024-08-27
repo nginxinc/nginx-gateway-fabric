@@ -3,8 +3,11 @@ title: "API reference"
 weight: 100
 toc: false
 ---
+
 ## Overview
+
 NGINX Gateway API Reference
+
 <p>Packages:</p>
 <ul>
 <li>
@@ -25,6 +28,8 @@ Resource Types:
 <a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>
 </li><li>
 <a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>
+</li><li>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilter">SnippetsFilter</a>
 </li></ul>
 <h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientSettingsPolicy" title="Permanent link">¶</a>
@@ -453,6 +458,99 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.SnippetsFilter">SnippetsFilter
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilter" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>SnippetsFilter is an Direct Attached Policy. It allows inserting NGINX configuration into the
+generated NGINX config for HTTPRoute, GRPCRoute and TLSRoute resources.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>SnippetsFilter</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilterSpec">
+SnippetsFilterSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the SnippetsFilter.</p>
+<br/>
+<br/>
+<table class="table table-bordered table-striped">
+<tr>
+<td>
+<code>snippets</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Snippet">
+[]Snippet
+</a>
+</em>
+</td>
+<td>
+<p>Snippets is a list of NGINX configuration snippets.
+There can only be one snippet per context.
+Allowed contexts: http, http.server, http.server.location, stream, stream.server.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilterStatus">
+SnippetsFilterStatus
+</a>
+</em>
+</td>
+<td>
+<p>Status defines the state of the SnippetsFilter.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.ClientBody">ClientBody
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientBody" title="Permanent link">¶</a>
 </h3>
@@ -793,6 +891,43 @@ ControllerLogLevel
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxContext">NginxContext
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxContext" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Snippet">Snippet</a>)
+</p>
+<p>
+<p>NginxContext represents the NGINX configuration context.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;http&#34;</p></td>
+<td><p>NginxContextHTTP is the http context of the NGINX configuration.</p>
+</td>
+</tr><tr><td><p>&#34;http.server&#34;</p></td>
+<td><p>NginxContextHTTPServer is the server context of the NGINX configuration.</p>
+</td>
+</tr><tr><td><p>&#34;http.server.location&#34;</p></td>
+<td><p>NginxContextHTTPServerLocation is the location context of the NGINX configuration.</p>
+</td>
+</tr><tr><td><p>&#34;main&#34;</p></td>
+<td><p>NginxContextMain is the main context of the NGINX configuration.</p>
+</td>
+</tr><tr><td><p>&#34;stream&#34;</p></td>
+<td><p>NginxContextStream is the stream context of the NGINX configuration.</p>
+</td>
+</tr><tr><td><p>&#34;stream.server&#34;</p></td>
+<td><p>NginxContextStreamServer is the server context of the NGINX configuration.</p>
+</td>
+</tr></tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason
 (<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewayConditionReason" title="Permanent link">¶</a>
 </h3>
@@ -1025,6 +1160,168 @@ Support: HTTPRoute, GRPCRoute.</p>
 or gigabytes (g).
 Examples: 1024, 8k, 1m.</p>
 </p>
+<h3 id="gateway.nginx.org/v1alpha1.Snippet">Snippet
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Snippet" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilterSpec">SnippetsFilterSpec</a>)
+</p>
+<p>
+<p>Snippet represents an NGINX configuration snippet.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>context</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.NginxContext">
+NginxContext
+</a>
+</em>
+</td>
+<td>
+<p>Context is the NGINX context to insert the snippet into.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Value is the NGINX configuration snippet.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.SnippetsFilterConditionReason">SnippetsFilterConditionReason
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilterConditionReason" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>SnippetsFilterConditionReason is a reason for a SnippetsFilter condition type.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;Accepted&#34;</p></td>
+<td><p>SnippetsFilterConditionReasonAccepted is used with the Accepted condition type when
+the condition is true.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.SnippetsFilterConditionType">SnippetsFilterConditionType
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilterConditionType" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>SnippetsFilterConditionType is a type of condition associated with SnippetsFilter.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;Accepted&#34;</p></td>
+<td><p>SnippetsFilterConditionTypeAccepted indicates that the SnippetsFilter is accepted.</p>
+<p>Possible reasons for this condition to be True:</p>
+<ul>
+<li>Accepted</li>
+</ul>
+<p>Possible reasons for this condition to be False:</p>
+<ul>
+<li>Invalid.</li>
+</ul>
+</td>
+</tr><tr><td><p>&#34;Invalid&#34;</p></td>
+<td><p>SnippetsFilterConditionTypeInvalid is used with the Accepted condition type when
+SnippetsFilter is invalid.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.SnippetsFilterSpec">SnippetsFilterSpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilterSpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilter">SnippetsFilter</a>)
+</p>
+<p>
+<p>SnippetsFilterSpec defines the desired state of the SnippetsFilter.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>snippets</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Snippet">
+[]Snippet
+</a>
+</em>
+</td>
+<td>
+<p>Snippets is a list of NGINX configuration snippets.
+There can only be one snippet per context.
+Allowed contexts: http, http.server, http.server.location, stream, stream.server.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.SnippetsFilterStatus">SnippetsFilterStatus
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilterStatus" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilter">SnippetsFilter</a>)
+</p>
+<p>
+<p>SnippetsFilterStatus defines the state of SnippetsFilter.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>conditions</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#condition-v1-meta">
+[]Kubernetes meta/v1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions describes the state of the SnippetsFilter.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.SpanAttribute">SpanAttribute
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SpanAttribute" title="Permanent link">¶</a>
 </h3>
