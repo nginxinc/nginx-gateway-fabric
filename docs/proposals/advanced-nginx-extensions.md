@@ -445,6 +445,23 @@ one `http` snippet with multiple `http` snippets scattered around in the spec.
 
 NGF will not validate the values of snippets. See the next section.
 
+When a SnippetsFilter is specified in a routing rule and one of the following is true:
+
+- the SnippetsFilter does not exist
+- the SnippetsFilter referenced is invalid
+- the same SnippetsFilter is referenced multiple times
+
+the filter MUST NOT be skipped. Instead, requests that would have been processed by that filter MUST receive a 500 HTTP error code response.
+In addition, the `ResolvedRefs` condition should be set to `False` with one of the following reasons:
+
+- `FilterNotFound`
+- `InvalidFilter`
+
+These reasons are not defined in the Gateway API library, so they will need to be added and documented.
+In addition, the `Accepted` route condition should be set to `True`.
+
+Refer to [HTTPRouteFilter API](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) for more implementation details.
+
 #### NGINX Values
 
 An invalid snippet can break NGINX config. When this happens, NGINX will continue to use the last valid configuration.
