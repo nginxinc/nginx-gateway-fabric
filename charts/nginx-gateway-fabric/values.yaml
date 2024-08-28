@@ -94,7 +94,7 @@ nginx:
     # disableHTTP2: false
     # ipFamily: dual
     # rewriteClientIP:
-    #   mode: "ProxyProtocol"
+    #   mode: "XForwadedFor"
     #   # -- The trusted addresses field needs to be replaced with the load balancer's IP address.
     #   trustedAddresses: []
     #   setIPRecursively: true

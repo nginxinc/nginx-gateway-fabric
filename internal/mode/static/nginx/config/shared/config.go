@@ -23,7 +23,11 @@ type IPFamily struct {
 // RewriteClientIP holds the configuration for the rewrite client IP settings.
 type RewriteClientIPSettings struct {
 	RealIPHeader  string
+	ProxyProtocol string
 	RealIPFrom    []string
 	Recursive     bool
-	ProxyProtocol bool
 }
+
+const (
+	ProxyProtocolDirective = " proxy_protocol"
+)

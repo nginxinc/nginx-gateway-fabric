@@ -3,8 +3,11 @@ title: "API reference"
 weight: 100
 toc: false
 ---
+
 ## Overview
+
 NGINX Gateway API Reference
+
 <p>Packages:</p>
 <ul>
 <li>
@@ -1139,7 +1142,7 @@ This field is required if mode is set.</p>
 </tr>
 </thead>
 <tbody><tr><td><p>&#34;ProxyProtocol&#34;</p></td>
-<td><p>RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and,
+<td><p>RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and
 set the client&rsquo;s IP address to the IP address in the PROXY protocol header.
 Sets the proxy_protocol parameter to the listen directive on all servers, and sets real_ip_header
 to proxy_protocol: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header</a>.</p>

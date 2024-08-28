@@ -2,54 +2,44 @@ package config
 
 const serversTemplateText = `
 js_preload_object matches from /etc/nginx/conf.d/matches.json;
-{{ $proxyProtocol := "" }}
-{{ if $.RewriteClientIP.ProxyProtocol }}{{ $proxyProtocol = " proxy_protocol" }}{{ end }}
 
 {{- range $s := .Servers -}}
     {{ if $s.IsDefaultSSL -}}
 server {
         {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
-    listen {{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
+    listen {{ $s.Listen }} ssl default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
         {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
-    listen [::]:{{ $s.Listen }} ssl default_server{{ $proxyProtocol }};
+    listen [::]:{{ $s.Listen }} ssl default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
     ssl_reject_handshake on;
-    	{{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
-	set_real_ip_from unix:;
-  	    {{- else if (not $s.IsSocket)}}
-		    {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
-            {{- end}}
-	    {{ end }}
-        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
+        {{- end}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
+        {{- if $.RewriteClientIP.Recursive}}
     real_ip_recursive on;
-        {{ end }}
+        {{- end }}
 }
     {{- else if $s.IsDefaultHTTP }}
 server {
         {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Listen }} default_server{{ $proxyProtocol }};
+    listen {{ $s.Listen }} default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
         {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Listen }} default_server{{ $proxyProtocol }};
+    listen [::]:{{ $s.Listen }} default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
-        {{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
-	set_real_ip_from unix:;
-  	    {{- else if (not $s.IsSocket)}}
-		    {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
-            {{- end}}
-	    {{ end }}
-        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
+        {{- end}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
+        {{- if $.RewriteClientIP.Recursive}}
     real_ip_recursive on;
-        {{ end }}
+        {{- end }}
     default_type text/html;
     return 404;
 }
@@ -57,10 +47,10 @@ server {
 server {
         {{- if $s.SSL }}
           {{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
-    listen {{ $s.Listen }} ssl{{ $proxyProtocol }};
+    listen {{ $s.Listen }} ssl{{ $.RewriteClientIP.ProxyProtocol }};
           {{- end }}
           {{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
-    listen [::]:{{ $s.Listen }} ssl{{ $proxyProtocol }};
+    listen [::]:{{ $s.Listen }} ssl{{ $.RewriteClientIP.ProxyProtocol }};
           {{- end }}
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
@@ -70,10 +60,10 @@ server {
     }
         {{- else }}
           {{- if $.IPFamily.IPv4 }}
-    listen {{ $s.Listen }}{{ $proxyProtocol }};
+    listen {{ $s.Listen }}{{ $.RewriteClientIP.ProxyProtocol }};
           {{- end }}
           {{- if $.IPFamily.IPv6 }}
-    listen [::]:{{ $s.Listen }}{{ $proxyProtocol }};
+    listen [::]:{{ $s.Listen }}{{ $.RewriteClientIP.ProxyProtocol }};
           {{- end }}
         {{- end }}
 
@@ -87,19 +77,15 @@ server {
     include {{ $i.Name }};
         {{- end }}
 
-    {{- if and ($.RewriteClientIP.ProxyProtocol) ($s.IsSocket)}}
-	set_real_ip_from unix:;
-  	{{- else if (not $s.IsSocket)}}
 		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
         {{- end}}
-	{{ end }}
-        {{- if and ($.RewriteClientIP.RealIPHeader) (not $s.IsSocket)}}
+        {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
         {{- end}}
-        {{- if and ($.RewriteClientIP.Recursive) (not $s.IsSocket)}}
+        {{- if $.RewriteClientIP.Recursive}}
     real_ip_recursive on;
-        {{ end }}
+        {{- end }}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {

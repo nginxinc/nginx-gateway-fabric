@@ -5,6 +5,7 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -15,10 +16,9 @@ func (g GeneratorImpl) executeStreamServers(conf dataplane.Configuration) []exec
 	streamServers := createStreamServers(conf)
 
 	streamServerConfig := stream.ServerConfig{
-		Servers:         streamServers,
-		IPFamily:        getIPFamily(conf.BaseHTTPConfig),
-		Plus:            g.plus,
-		RewriteClientIP: getRewriteClientIPSettings(conf.BaseHTTPConfig.RewriteClientIPSettings),
+		Servers:  streamServers,
+		IPFamily: getIPFamily(conf.BaseHTTPConfig),
+		Plus:     g.plus,
 	}
 
 	streamServerResult := executeResult{
@@ -37,6 +37,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	}
 
 	streamServers := make([]stream.Server, 0, len(conf.TLSPassthroughServers)*2)
+	var streamServer stream.Server
 	portSet := make(map[int32]struct{})
 	upstreams := make(map[string]dataplane.Upstream)
 
@@ -47,12 +48,17 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	for _, server := range conf.TLSPassthroughServers {
 		if u, ok := upstreams[server.UpstreamName]; ok && server.UpstreamName != "" {
 			if server.Hostname != "" && len(u.Endpoints) > 0 {
-				streamServers = append(streamServers, stream.Server{
+				streamServer = stream.Server{
 					Listen:     getSocketNameTLS(server.Port, server.Hostname),
 					StatusZone: server.Hostname,
 					ProxyPass:  server.UpstreamName,
 					IsSocket:   true,
-				})
+				}
+				streamServer.RewriteClientIP = getRewriteClientIPSettingsForStream(
+					conf.BaseHTTPConfig.RewriteClientIPSettings,
+					streamServer.IsSocket,
+				)
+				streamServers = append(streamServers, streamServer)
 			}
 		}
 
@@ -61,13 +67,34 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		}
 
 		portSet[server.Port] = struct{}{}
-		streamServers = append(streamServers, stream.Server{
+
+		streamServer = stream.Server{
 			Listen:     fmt.Sprint(server.Port),
 			StatusZone: server.Hostname,
 			Pass:       getTLSPassthroughVarName(server.Port),
 			SSLPreread: true,
-		})
+		}
+		streamServer.RewriteClientIP = getRewriteClientIPSettingsForStream(
+			conf.BaseHTTPConfig.RewriteClientIPSettings,
+			streamServer.IsSocket,
+		)
+		streamServers = append(streamServers, streamServer)
 	}
 
 	return streamServers
+}
+
+func getRewriteClientIPSettingsForStream(
+	rewriteConfig dataplane.RewriteClientIPSettings,
+	isSocket bool,
+) shared.RewriteClientIPSettings {
+	proxyEnabled := rewriteConfig.Mode == dataplane.RewriteIPModeProxyProtocol
+	if isSocket && proxyEnabled {
+		return shared.RewriteClientIPSettings{
+			ProxyProtocol: shared.ProxyProtocolDirective,
+			RealIPFrom:    rewriteConfig.TrustedCIDRs,
+		}
+	}
+
+	return shared.RewriteClientIPSettings{}
 }

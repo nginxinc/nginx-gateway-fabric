@@ -369,9 +369,10 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 			expectedStreamConfig: map[string]int{
 				"listen 8443;":      1,
 				"listen [::]:8443;": 1,
-				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;": 1,
-				"set_real_ip_from 1.1.1.1/32;":                           0,
-				"real_ip_recursive on;":                                  0,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;":                1,
+				"set_real_ip_from 1.1.1.1/32;":                                          0,
+				"real_ip_recursive on;":                                                 0,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock proxy_protocol;": 0,
 			},
 		},
 	}

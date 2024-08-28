@@ -1,24 +1,20 @@
 package config
 
 const streamServersTemplateText = `
-{{ $proxyProtocol := "" }}
-{{ if $.RewriteClientIP.ProxyProtocol }}{{ $proxyProtocol = " proxy_protocol" }}{{ end }}
 {{- range $s := .Servers }}
 server {
 	{{- if and ($.IPFamily.IPv4) (not $s.IsSocket) }}
     listen {{ $s.Listen }};
 	{{- else if $s.IsSocket }}
-	listen {{ $s.Listen }}{{ $proxyProtocol }};
+	listen {{ $s.Listen }}{{ $s.RewriteClientIP.ProxyProtocol }};
 	{{- end }}
 	{{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
     listen [::]:{{ $s.Listen }};
 	{{- end }}
 
-	{{- if and ($s.IsSocket) ($.RewriteClientIP.ProxyProtocol) }}
-		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+    {{- range $cidr := $s.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
-        {{- end}}
-	{{- end }}
+    {{- end}}
 	{{- if $.Plus }}
     status_zone {{ $s.StatusZone }};
     {{- end }}

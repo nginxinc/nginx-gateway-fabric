@@ -98,7 +98,7 @@ func (g GeneratorImpl) newExecuteServersFunc(generator policies.Generator) execu
 }
 
 func (g GeneratorImpl) executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
-	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers, conf.TLSPassthroughServers, generator)
+	servers, httpMatchPairs := createServers(conf, generator)
 
 	serverConfig := http.ServerConfig{
 		Servers:         servers,
@@ -172,28 +172,23 @@ func createIncludeFileResults(servers []http.Server) []executeResult {
 	return results
 }
 
-func createServers(
-	httpServers,
-	sslServers []dataplane.VirtualServer,
-	tlsPassthroughServers []dataplane.Layer4VirtualServer,
-	generator policies.Generator,
-) ([]http.Server, httpMatchPairs) {
-	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
+func createServers(conf dataplane.Configuration, generator policies.Generator) ([]http.Server, httpMatchPairs) {
+	servers := make([]http.Server, 0, len(conf.HTTPServers)+len(conf.SSLServers))
 	finalMatchPairs := make(httpMatchPairs)
 	sharedTLSPorts := make(map[int32]struct{})
 
-	for _, passthroughServer := range tlsPassthroughServers {
+	for _, passthroughServer := range conf.TLSPassthroughServers {
 		sharedTLSPorts[passthroughServer.Port] = struct{}{}
 	}
 
-	for idx, s := range httpServers {
+	for idx, s := range conf.HTTPServers {
 		serverID := fmt.Sprintf("%d", idx)
 		httpServer, matchPairs := createServer(s, serverID, generator)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
-	for idx, s := range sslServers {
+	for idx, s := range conf.SSLServers {
 		serverID := fmt.Sprintf("SSL_%d", idx)
 
 		sslServer, matchPairs := createSSLServer(s, serverID, generator)
@@ -909,11 +904,16 @@ func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 }
 
 // getRewriteClientIPSettings returns the configuration for the rewriting client IP settings.
-func getRewriteClientIPSettings(rewriteIP dataplane.RewriteClientIPSettings) shared.RewriteClientIPSettings {
+func getRewriteClientIPSettings(rewriteIPConfig dataplane.RewriteClientIPSettings) shared.RewriteClientIPSettings {
+	var proxyProtocol string
+	if rewriteIPConfig.Mode == dataplane.RewriteIPModeProxyProtocol {
+		proxyProtocol = shared.ProxyProtocolDirective
+	}
+
 	return shared.RewriteClientIPSettings{
-		Recursive:     rewriteIP.IPRecursive,
-		ProxyProtocol: rewriteIP.Mode == dataplane.RewriteIPModeProxyProtocol,
-		RealIPFrom:    rewriteIP.TrustedCIDRs,
-		RealIPHeader:  string(rewriteIP.Mode),
+		RealIPHeader:  string(rewriteIPConfig.Mode),
+		RealIPFrom:    rewriteIPConfig.TrustedCIDRs,
+		Recursive:     rewriteIPConfig.IPRecursive,
+		ProxyProtocol: proxyProtocol,
 	}
 }

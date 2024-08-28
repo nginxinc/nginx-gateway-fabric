@@ -332,6 +332,7 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				"real_ip_header proxy_protocol;":                           4,
 				"real_ip_recursive on;":                                    4,
 				"proxy_protocol on;":                                       0,
+				"set_real_ip_from unix:;":                                  0,
 				"listen 8080 default_server proxy_protocol;":               1,
 				"listen 8080 proxy_protocol;":                              1,
 				"listen 8443 ssl default_server proxy_protocol;":           1,
@@ -914,44 +915,44 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	httpServers := []dataplane.VirtualServer{
-		{
-			IsDefault: true,
-			Port:      8080,
-		},
-		{
-			Hostname:  "cafe.example.com",
-			PathRules: cafePathRules,
-			Port:      8080,
-			Policies: []policies.Policy{
-				&policiesfakes.FakePolicy{},
-				&policiesfakes.FakePolicy{},
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8080,
+			},
+			{
+				Hostname:  "cafe.example.com",
+				PathRules: cafePathRules,
+				Port:      8080,
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
+					&policiesfakes.FakePolicy{},
+				},
 			},
 		},
-	}
-
-	sslServers := []dataplane.VirtualServer{
-		{
-			IsDefault: true,
-			Port:      8443,
-		},
-		{
-			Hostname:  "cafe.example.com",
-			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
-			PathRules: cafePathRules,
-			Port:      8443,
-			Policies: []policies.Policy{
-				&policiesfakes.FakePolicy{},
-				&policiesfakes.FakePolicy{},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8443,
+			},
+			{
+				Hostname:  "cafe.example.com",
+				SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
+				PathRules: cafePathRules,
+				Port:      8443,
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
+					&policiesfakes.FakePolicy{},
+				},
 			},
 		},
-	}
-
-	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
-		{
-			Hostname:     "app.example.com",
-			Port:         8443,
-			UpstreamName: "sup",
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
+			{
+				Hostname:     "app.example.com",
+				Port:         8443,
+				UpstreamName: "sup",
+			},
 		},
 	}
 
@@ -1481,7 +1482,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	})
 
-	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers, fakeGenerator)
+	result, httpMatchPair := createServers(conf, fakeGenerator)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1696,12 +1697,7 @@ func TestCreateServersConflicts(t *testing.T) {
 
 			g := NewWithT(t)
 
-			result, _ := createServers(
-				httpServers,
-				[]dataplane.VirtualServer{},
-				[]dataplane.Layer4VirtualServer{},
-				&policiesfakes.FakeGenerator{},
-			)
+			result, _ := createServers(dataplane.Configuration{HTTPServers: httpServers}, &policiesfakes.FakeGenerator{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
