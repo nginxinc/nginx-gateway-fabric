@@ -7,7 +7,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.2
-	github.com/prometheus/common v0.56.0
+	github.com/prometheus/common v0.57.0
 	github.com/tsenart/vegeta/v12 v12.12.0
 	k8s.io/api v0.31.0
 	k8s.io/apiextensions-apiserver v0.31.0
