@@ -11,7 +11,7 @@ require (
 	github.com/nginxinc/nginx-prometheus-exporter v1.3.0
 	github.com/nginxinc/telemetry-exporter v0.1.1
 	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.56.0
 	github.com/spf13/cobra v1.8.1
