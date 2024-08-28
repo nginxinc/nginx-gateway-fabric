@@ -460,6 +460,8 @@ In addition, the `ResolvedRefs` condition should be set to `False` with one of t
 These reasons are not defined in the Gateway API library, so they will need to be added and documented.
 In addition, the `Accepted` route condition should be set to `True`.
 
+Refer to [HTTPRouteFilter API](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) for more implementation details.
+
 #### NGINX Values
 
 An invalid snippet can break NGINX config. When this happens, NGINX will continue to use the last valid configuration.
