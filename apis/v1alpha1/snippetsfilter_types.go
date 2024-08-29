@@ -10,10 +10,9 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=nginx-gateway-fabric,shortName=snippetsfilter
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-// +kubebuilder:metadata:labels="gateway.networking.k8s.io/policy=direct"
 
-// SnippetsFilter is an Direct Attached Policy. It allows inserting NGINX configuration into the
-// generated NGINX config for HTTPRoute, GRPCRoute and TLSRoute resources.
+// SnippetsFilter is a filter that allows inserting NGINX configuration into the
+// generated NGINX config for HTTPRoute and GRPCRoute resources.
 type SnippetsFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -29,7 +28,7 @@ type SnippetsFilter struct {
 type SnippetsFilterSpec struct {
 	// Snippets is a list of NGINX configuration snippets.
 	// There can only be one snippet per context.
-	// Allowed contexts: http, http.server, http.server.location, stream, stream.server.
+	// Allowed contexts: http, http.server, http.server.location.
 	Snippets []Snippet `json:"snippets"`
 }
 
@@ -81,13 +80,10 @@ const (
 
 // NginxContext represents the NGINX configuration context.
 //
-// +kubebuilder:validation:Enum=main;http;http;server;http.server;location;stream;stream.server
+// +kubebuilder:validation:Enum=http;http;server;http.server;location;
 type NginxContext string
 
 const (
-	// NginxContextMain is the main context of the NGINX configuration.
-	NginxContextMain NginxContext = "main"
-
 	// NginxContextHTTP is the http context of the NGINX configuration.
 	NginxContextHTTP NginxContext = "http"
 
@@ -96,10 +92,4 @@ const (
 
 	// NginxContextHTTPServerLocation is the location context of the NGINX configuration.
 	NginxContextHTTPServerLocation NginxContext = "http.server.location"
-
-	// NginxContextStream is the stream context of the NGINX configuration.
-	NginxContextStream NginxContext = "stream"
-
-	// NginxContextStreamServer is the server context of the NGINX configuration.
-	NginxContextStreamServer NginxContext = "stream.server"
 )

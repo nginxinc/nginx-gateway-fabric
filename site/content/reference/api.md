@@ -462,8 +462,8 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.SnippetsFilter" title="Permanent link">¶</a>
 </h3>
 <p>
-<p>SnippetsFilter is an Direct Attached Policy. It allows inserting NGINX configuration into the
-generated NGINX config for HTTPRoute, GRPCRoute and TLSRoute resources.</p>
+<p>SnippetsFilter is a filter that allows inserting NGINX configuration into the
+generated NGINX config for HTTPRoute and GRPCRoute resources.</p>
 </p>
 <table class="table table-bordered table-striped">
 <thead>
@@ -530,7 +530,7 @@ SnippetsFilterSpec
 <td>
 <p>Snippets is a list of NGINX configuration snippets.
 There can only be one snippet per context.
-Allowed contexts: http, http.server, http.server.location, stream, stream.server.</p>
+Allowed contexts: http, http.server, http.server.location.</p>
 </td>
 </tr>
 </table>
@@ -917,15 +917,6 @@ ControllerLogLevel
 </tr><tr><td><p>&#34;http.server.location&#34;</p></td>
 <td><p>NginxContextHTTPServerLocation is the location context of the NGINX configuration.</p>
 </td>
-</tr><tr><td><p>&#34;main&#34;</p></td>
-<td><p>NginxContextMain is the main context of the NGINX configuration.</p>
-</td>
-</tr><tr><td><p>&#34;stream&#34;</p></td>
-<td><p>NginxContextStream is the stream context of the NGINX configuration.</p>
-</td>
-</tr><tr><td><p>&#34;stream.server&#34;</p></td>
-<td><p>NginxContextStreamServer is the server context of the NGINX configuration.</p>
-</td>
 </tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason
@@ -1283,7 +1274,7 @@ SnippetsFilter is invalid.</p>
 <td>
 <p>Snippets is a list of NGINX configuration snippets.
 There can only be one snippet per context.
-Allowed contexts: http, http.server, http.server.location, stream, stream.server.</p>
+Allowed contexts: http, http.server, http.server.location.</p>
 </td>
 </tr>
 </tbody>

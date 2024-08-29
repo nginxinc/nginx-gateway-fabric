@@ -4,8 +4,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  labels:
-    gateway.networking.k8s.io/policy: direct
   name: snippetsfilters.gateway.nginx.org
 spec:
   group: gateway.nginx.org
@@ -28,8 +26,8 @@ spec:
       schema:
         openAPIV3Schema:
           description: |-
-            SnippetsFilter is an Direct Attached Policy. It allows inserting NGINX configuration into the
-            generated NGINX config for HTTPRoute, GRPCRoute and TLSRoute resources.
+            SnippetsFilter is a filter that allows inserting NGINX configuration into the
+            generated NGINX config for HTTPRoute and GRPCRoute resources.
           properties:
             apiVersion:
               description: |-
@@ -55,7 +53,7 @@ spec:
                   description: |-
                     Snippets is a list of NGINX configuration snippets.
                     There can only be one snippet per context.
-                    Allowed contexts: http, http.server, http.server.location, stream, stream.server.
+                    Allowed contexts: http, http.server, http.server.location.
                   items:
                     description: Snippet represents an NGINX configuration snippet.
                     properties:
@@ -64,14 +62,11 @@ spec:
                           Context is the NGINX context to insert the snippet
                           into.
                         enum:
-                          - main
                           - http
                           - http
                           - server
                           - http.server
                           - location
-                          - stream
-                          - stream.server
                         type: string
                       value:
                         description: Value is the NGINX configuration snippet.
