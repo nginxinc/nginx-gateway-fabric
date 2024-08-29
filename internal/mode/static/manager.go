@@ -113,8 +113,8 @@ func StartManager(cfg config.Config) error {
 
 	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
 	protectedPorts := map[int32]string{
-		int32(cfg.MetricsConfig.Port): "MetricsPort",
-		int32(cfg.HealthConfig.Port):  "HealthPort",
+		int32(cfg.MetricsConfig.Port): "MetricsPort", //nolint:gosec // port will not overflow int32
+		int32(cfg.HealthConfig.Port):  "HealthPort",  //nolint:gosec // port will not overflow int32
 	}
 
 	mustExtractGVK := kinds.NewMustExtractGKV(scheme)
@@ -287,6 +287,11 @@ func StartManager(cfg config.Config) error {
 	}
 
 	cfg.Logger.Info("Starting manager")
+	go func() {
+		<-ctx.Done()
+		cfg.Logger.Info("Shutting down")
+	}()
+
 	return mgr.Start(ctx)
 }
 
@@ -311,7 +316,7 @@ func createPolicyManager(
 func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
-		Logger:  cfg.Logger,
+		Logger:  cfg.Logger.V(1),
 		Metrics: getMetricsOptions(cfg.MetricsConfig),
 		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations

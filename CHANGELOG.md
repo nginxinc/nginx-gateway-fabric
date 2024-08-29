@@ -4,6 +4,53 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.4.0
+
+_August 20, 2024_
+
+FEATURES:
+
+- Support IPv6. [2190](https://github.com/nginxinc/nginx-gateway-fabric/pull/2190)
+- Add support for TLS Passthrough using TLSRoutes. [2356](https://github.com/nginxinc/nginx-gateway-fabric/pull/2356)
+- Support cross-namespace routing with TLSRoutes. [2379](https://github.com/nginxinc/nginx-gateway-fabric/pull/2379)
+- Added server_zone metrics for NGINX Plus users. [2360](https://github.com/nginxinc/nginx-gateway-fabric/pull/2360)
+
+BUG FIXES:
+
+- Fixed issue where NGF Pod cannot recover if NGINX master process fails without cleaning up. [2131](https://github.com/nginxinc/nginx-gateway-fabric/pull/2131)
+- Leader election couldn't be disabled. [2307](https://github.com/nginxinc/nginx-gateway-fabric/pull/2307)
+- Disallow routes from attaching to listeners if not present in allowed routes. [2314](https://github.com/nginxinc/nginx-gateway-fabric/pull/2314)
+- Honor ReferenceGrants that allow GRPCRoutes to reference Services in different namespaces. [2337](https://github.com/nginxinc/nginx-gateway-fabric/pull/2337)
+- Fixed an issue that prevented ClientSettingsPolicies and ObservabilityPolicies from working when attached to an HTTPRoute where matching conditions were defined. [2318](https://github.com/nginxinc/nginx-gateway-fabric/pull/2318)
+- Replace TODO route condition with an Accepted/False condition. [2228](https://github.com/nginxinc/nginx-gateway-fabric/pull/2228)
+
+DOCUMENTATION:
+
+- Enhanced the troubleshooting guide with more details and scenarios. [2141](https://github.com/nginxinc/nginx-gateway-fabric/pull/2141)
+- Update kubectl exec syntax to remove deprecation warning. [2218](https://github.com/nginxinc/nginx-gateway-fabric/pull/2218). Thanks [aknot242](https://github.com/aknot242).
+- Add info on setting up host network access. [2263](https://github.com/nginxinc/nginx-gateway-fabric/pull/2263). Thanks [fardarter](https://github.com/fardarter).
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.4.0
+- Add capability to set resource requests and limits on nginx-gateway deployment. [2216](https://github.com/nginxinc/nginx-gateway-fabric/pull/2216). Thanks to [anwbtom](https://github.com/anwbtom).
+- Add capability to configure custom annotations for the nginx-gateway-fabric pod(s). [2250](https://github.com/nginxinc/nginx-gateway-fabric/pull/2250). Thanks to [Robsta86](https://github.com/Robsta86).
+- Add helm chart examples. [2292](https://github.com/nginxinc/nginx-gateway-fabric/pull/2292)
+- Add seccompProfile. [2323](https://github.com/nginxinc/nginx-gateway-fabric/pull/2323)
+
+COMPATIBILITY:
+
+- Gateway API version: `1.1.0`
+- NGINX version: `1.27.1`
+- NGINX Plus version: `R32`
+- Kubernetes version: `1.25+`
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.4.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.4.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.4.0`
+
 ## Release 1.3.0
 
 _June 11, 2024_
@@ -63,7 +110,7 @@ KNOWN ISSUES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `1.1.0`. This release is not compatible with v1.0.0 of the Gateway API. See the UPGRADE section above for instructions on how to upgrade.
+- Gateway API version: `1.1.0`. This release is not compatible with v1.0.0 of the Gateway API. See the UPGRADE section above for instructions on how to upgrade.
 - NGINX version: `1.27.0`
 - NGINX Plus version: `R32`
 - Kubernetes version: `1.25+`
@@ -116,7 +163,7 @@ KNOWN ISSUES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `1.0.0`
+- Gateway API version: `1.0.0`
 - NGINX version: `1.25.4`
 - NGINX Plus version: `R31`
 - Kubernetes version: `1.23+`
@@ -165,7 +212,7 @@ UPGRADE:
 
 COMPATIBILITY:
 
-- The Gateway API version: `1.0.0`
+- Gateway API version: `1.0.0`
 - NGINX version: `1.25.3`
 - Kubernetes version: `1.23+`
 
@@ -206,7 +253,7 @@ DOCUMENTATION:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.8.1`
+- Gateway API version: `0.8.1`
 - NGINX version: `1.25.2`
 - Kubernetes version: `1.23+`
 
@@ -239,7 +286,7 @@ DOCUMENTATION:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.8.0`
+- Gateway API version: `0.8.0`
 - NGINX version: `1.25.2`
 - Kubernetes version: `1.23+`
 
@@ -268,7 +315,7 @@ BUG FIXES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.7.1`
+- Gateway API version: `0.7.1`
 - NGINX version: `1.25.x` \*
 - Kubernetes version: `1.21+`
 
@@ -327,7 +374,7 @@ DEPENDENCIES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.7.1`
+- Gateway API version: `0.7.1`
 - NGINX version: `1.25.x` \*
 - Kubernetes version: `1.21+`
 
@@ -373,7 +420,7 @@ DEPENDENCIES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.6.2`
+- Gateway API version: `0.6.2`
 - NGINX version: `1.23.x` \*
 - Kubernetes version: `1.21+`
 
@@ -411,7 +458,7 @@ DEPENDENCIES:
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.5.1`
+- Gateway API version: `0.5.1`
 - NGINX version: `1.21.x` \*
 - Kubernetes version: `1.21+`
 
@@ -448,7 +495,7 @@ the [README](https://github.com/nginxinc/nginx-gateway-fabric) to learn how.
 
 COMPATIBILITY:
 
-- The Gateway API version: `0.5.0`
+- Gateway API version: `0.5.0`
 - NGINX version: `1.21.3`
 - Kubernetes version: `1.19+`
 

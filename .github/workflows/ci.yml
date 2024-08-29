@@ -58,9 +58,10 @@ jobs:
       - name: Output Variables
         id: vars
         run: |
+          K8S_KIND_VERSION=v1.31.0 # renovate: datasource=docker depName=kindest/node
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "min_k8s_version=v1.25.16" >> $GITHUB_OUTPUT
-          echo "k8s_latest=$(grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[:]' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "k8s_latest=${K8S_KIND_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
@@ -159,7 +160,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@ab9d16d4b419c9d1a02df5213fa0ebe965ca5a57 # v0.17.1
+        uses: anchore/sbom-action/download-syft@61119d458adab75f756bc0b9e4bde25725f86a7a # v0.17.2
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
@@ -169,7 +170,7 @@ jobs:
       - name: Build binary
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
-          version: latest
+          version: v2.2.0 # renovate: datasource=github-tags depName=goreleaser/goreleaser
           args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

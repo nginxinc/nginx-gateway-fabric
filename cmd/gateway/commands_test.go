@@ -133,7 +133,6 @@ func TestCommonFlagsValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name+"_static_mode", func(t *testing.T) {
 			t.Parallel()
 			testFlag(t, createStaticModeCommand(), test)
@@ -387,7 +386,6 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 	// common flags validation is tested separately
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			cmd := createStaticModeCommand()
@@ -461,7 +459,6 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			cmd := createSleepCommand()

@@ -32,6 +32,9 @@ type TimeoutConfig struct {
 
 	// GetStatusTimeout represents the maximum time for NGF to update the status of a resource.
 	GetStatusTimeout time.Duration
+
+	// TestForTrafficTimeout represents the maximum time for NGF to test for passing or failing traffic.
+	TestForTrafficTimeout time.Duration
 }
 
 // DefaultTimeoutConfig populates a TimeoutConfig with the default values.
@@ -47,5 +50,6 @@ func DefaultTimeoutConfig() TimeoutConfig {
 		ContainerRestartTimeout: 10 * time.Second,
 		GetLeaderLeaseTimeout:   60 * time.Second,
 		GetStatusTimeout:        60 * time.Second,
+		TestForTrafficTimeout:   60 * time.Second,
 	}
 }

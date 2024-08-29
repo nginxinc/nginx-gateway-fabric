@@ -426,7 +426,7 @@ If you `describe` your HTTPRoute and see the following error:
 The Service associated with your HTTPRoute is configured with a IP Family different than the one specified in the NginxProxy configuration.
 To **resolve** this, you can do one of the following:
 
-- Update the NginxProxy configuration with the proper [`ipFamily`](({{< relref "reference/api.md" >}})) field. You can edit the NginxProxy configuration using `kubectl edit`. For example:
+- Update the NginxProxy configuration with the proper [`ipFamily`]({{< relref "reference/api.md" >}}) field. You can edit the NginxProxy configuration using `kubectl edit`. For example:
 
   ```shell
   kubectl edit -n nginx-gateway nginxproxies.gateway.nginx.org ngf-proxy-config
@@ -452,7 +452,7 @@ If you `describe` your Policy and see the following error:
 
 This means you are attempting to attach a Policy to a Route that has an overlapping hostname:port/path combination with another Route. To work around this, you can do one of the following:
 
-- Combine the Route rules for the overlapping path into a single route.
+- Combine the Route rules for the overlapping path into a single Route.
 - If the Policy allows it, specify both Routes in the `targetRefs` list.
 
 ### Further reading

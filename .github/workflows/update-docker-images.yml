@@ -52,13 +52,20 @@ jobs:
     outputs:
       needs-updating: ${{ steps.needs.outputs.needs-updating }}
     steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check if update available for nginx image
         id: update
         uses: lucacome/docker-image-update-checker@f50d56412b948cfdbb842c5419372681e0db3df1 # v1.2.1
         with:
           base-image: ${{ needs.variables.outputs.nginx_version }}
           image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${{ needs.variables.outputs.ngf_tag }}
-          platforms: "linux/arm64, linux/amd64"
+          platforms: "linux/arm64,linux/amd64"
 
       - id: needs
         run: echo "needs-updating=${{ steps.update.outputs.needs-updating }}" >> $GITHUB_OUTPUT
@@ -70,7 +77,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       image: nginx
-      platforms: "linux/arm64, linux/amd64"
+      platforms: "linux/arm64,linux/amd64"
       tag: ${{ needs.variables.outputs.ngf_tag }}
     permissions:
       contents: read # for docker/build-push-action to read repo content

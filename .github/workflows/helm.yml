@@ -86,11 +86,11 @@ jobs:
 
       - name: Install cloud-provider-kind
         run: |
-          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.3.0/cloud-provider-kind_0.3.0_linux_amd64.tar.gz
-          tar -xvf cloud-provider-kind_0.3.0_linux_amd64.tar.gz
+          CLOUD_PROVIDER_KIND_VERSION=v0.3.0 # renovate: datasource=github-tags depName=kubernetes-sigs/cloud-provider-kind
+          go install sigs.k8s.io/cloud-provider-kind@${CLOUD_PROVIDER_KIND_VERSION}
 
       - name: Run cloud-provider-kind
-        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+        run: $(go env GOPATH)/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
 
       - name: Deploy Kubernetes
         id: k8s
@@ -100,7 +100,7 @@ jobs:
           kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
 
       - name: Set up Python
-        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.1
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
         with:
           python-version: "3.x"
           check-latest: true
@@ -130,11 +130,11 @@ jobs:
 
       - name: Install cloud-provider-kind
         run: |
-          curl -fsSL -O https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v0.3.0/cloud-provider-kind_0.3.0_linux_amd64.tar.gz
-          tar -xvf cloud-provider-kind_0.3.0_linux_amd64.tar.gz
+          CLOUD_PROVIDER_KIND_VERSION=v0.3.0 # renovate: datasource=github-tags depName=kubernetes-sigs/cloud-provider-kind
+          go install sigs.k8s.io/cloud-provider-kind@${CLOUD_PROVIDER_KIND_VERSION}
 
       - name: Run cloud-provider-kind
-        run: ./cloud-provider-kind & > cloud-provider-kind.log 2>&1
+        run: $(go env GOPATH)/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
 
       - name: Deploy Kubernetes
         id: k8s
@@ -149,7 +149,7 @@ jobs:
           kubectl create secret docker-registry nginx-plus-registry-secret --docker-server=private-registry.nginx.com --docker-username=${{ secrets.JWT_PLUS_REGISTRY }} --docker-password=none -n nginx-gateway
 
       - name: Set up Python
-        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.1
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
         with:
           python-version: "3.x"
           check-latest: true
