@@ -1,0 +1,17 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxGateway
+metadata:
+  annotations:
+    meta.helm.sh/release-name: ngf-test
+    meta.helm.sh/release-namespace: nginx-gateway
+  name: ngf-test-config
+  namespace: nginx-gateway
+  labels:
+    helm.sh/chart: nginx-gateway-fabric-1.4.0
+    app.kubernetes.io/name: nginx-gateway-fabric
+    app.kubernetes.io/instance: ngf-test
+    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  logging:
+    level: info
