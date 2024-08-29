@@ -35,6 +35,8 @@ repos:
     rev: v3.3.3
     hooks:
       - id: prettier
+        types:
+          - javascript
 
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.60.3
