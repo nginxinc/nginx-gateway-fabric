@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -146,8 +146,10 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
 	}
 
+	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
+
 	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
+	if _, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout); err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
@@ -156,8 +158,9 @@ func StartManager(cfg config.Config) error {
 		handlerCollector    handlerMetricsCollector     = collectors.NewControllerNoopCollector()
 	)
 
-	var ngxPlusClient *ngxclient.NginxClient
+	var ngxPlusClient ngxruntime.NginxPlusClient
 	var usageSecret *usage.Secret
+
 	if cfg.Plus {
 		ngxPlusClient, err = ngxruntime.CreatePlusClient()
 		if err != nil {
@@ -223,6 +226,8 @@ func StartManager(cfg config.Config) error {
 			ngxPlusClient,
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
+			processHandler,
+			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
 		),
 		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,
