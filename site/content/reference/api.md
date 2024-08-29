@@ -3,11 +3,8 @@ title: "API reference"
 weight: 100
 toc: false
 ---
-
 ## Overview
-
 NGINX Gateway API Reference
-
 <p>Packages:</p>
 <ul>
 <li>
@@ -1089,12 +1086,12 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>SetIPRecursively configures whether recursive search is used when selecting the client&rsquo;s address from.
+<p>SetIPRecursively configures whether recursive search is used when selecting the client&rsquo;s address from
 the X-Forwarded-For header. It is used in conjunction with TrustedAddresses.
 If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of array
 to start of array and select the first untrusted IP.
 For example, if X-Forwarded-For is [11.11.11.11, 22.22.22.22, 55.55.55.1],
-and TrustedAddresses is set to 55.55.55.<sup>1</sup>&frasl;<sub>0</sub>, NGINX will rewrite the client IP to 22.22.22.22.
+and TrustedAddresses is set to 55.55.55.1, NGINX will rewrite the client IP to 22.22.22.22.
 If disabled, NGINX will select the IP at the end of the array.
 In the previous example, 55.55.55.1 would be selected.
 Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive</a></p>
@@ -1115,7 +1112,7 @@ Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/
 If a request comes from a trusted address, NGINX will rewrite the client IP information,
 and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-Addresses must be provided as CIDR blocks: 10.0.0.0/32, 192.33.<sup>21</sup>&frasl;<sub>0</sub>.
+Addresses must be provided as CIDR blocks or IP address: 10.0.0.0, 192.33.<sup>21</sup>&frasl;<sub>24</sub>, fe80::<sup>1</sup>&frasl;<sub>128</sub>.
 To trust all addresses (not recommended), set to 0.0.0.0/0.
 If no addresses are provided, NGINX will not rewrite the client IP information.
 Sets NGINX directive set_real_ip_from: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from">https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from</a>
@@ -1502,8 +1499,8 @@ Examples of invalid names: some-$value, quoted-&ldquo;value&rdquo;-name, unescap
 <a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP</a>)
 </p>
 <p>
-<p>TrustedAddress is a string value representing a CIDR block.
-Examples: 0.0.0.0/0</p>
+<p>TrustedAddress is a string value representing a CIDR block or an IP address.
+Examples: 10.0.0.<sup>2</sup>&frasl;<sub>32</sub>, 10.0.0.1, fe80::<sup>1</sup>&frasl;<sub>128</sub>, ::<sup>1</sup>&frasl;<sub>24</sub>.</p>
 </p>
 <hr/>
 <p><em>

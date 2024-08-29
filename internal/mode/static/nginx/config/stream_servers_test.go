@@ -337,9 +337,9 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 			config: dataplane.Configuration{
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
-						Mode:         dataplane.RewriteIPModeProxyProtocol,
-						TrustedCIDRs: []string{"1.1.1.1/32"},
-						IPRecursive:  true,
+						Mode:             dataplane.RewriteIPModeProxyProtocol,
+						TrustedAddresses: []string{"10.1.1.22/32", "::1/128", "3.4.5.6"},
+						IPRecursive:      false,
 					},
 				},
 				TLSPassthroughServers: passThroughServers,
@@ -349,7 +349,9 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 				"listen 8443;":      1,
 				"listen [::]:8443;": 1,
 				"listen unix:/var/run/nginx/cafe.example.com-8443.sock proxy_protocol;": 1,
-				"set_real_ip_from 1.1.1.1/32;":                                          1,
+				"set_real_ip_from 10.1.1.22/32;":                                        1,
+				"set_real_ip_from ::1/128;":                                             1,
+				"set_real_ip_from 3.4.5.6;":                                             1,
 				"real_ip_recursive on;":                                                 0,
 			},
 		},
@@ -358,9 +360,9 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 			config: dataplane.Configuration{
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
-						Mode:         dataplane.RewriteIPModeXForwardedFor,
-						TrustedCIDRs: []string{"1.1.1.1/32"},
-						IPRecursive:  true,
+						Mode:             dataplane.RewriteIPModeXForwardedFor,
+						TrustedAddresses: []string{"1.1.1.1/32"},
+						IPRecursive:      true,
 					},
 				},
 				TLSPassthroughServers: passThroughServers,
@@ -369,10 +371,7 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 			expectedStreamConfig: map[string]int{
 				"listen 8443;":      1,
 				"listen [::]:8443;": 1,
-				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;":                1,
-				"set_real_ip_from 1.1.1.1/32;":                                          0,
-				"real_ip_recursive on;":                                                 0,
-				"listen unix:/var/run/nginx/cafe.example.com-8443.sock proxy_protocol;": 0,
+				"listen unix:/var/run/nginx/cafe.example.com-8443.sock;": 1,
 			},
 		},
 	}

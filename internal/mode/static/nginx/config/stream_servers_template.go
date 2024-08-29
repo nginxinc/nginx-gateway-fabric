@@ -3,10 +3,8 @@ package config
 const streamServersTemplateText = `
 {{- range $s := .Servers }}
 server {
-	{{- if and ($.IPFamily.IPv4) (not $s.IsSocket) }}
-    listen {{ $s.Listen }};
-	{{- else if $s.IsSocket }}
-	listen {{ $s.Listen }}{{ $s.RewriteClientIP.ProxyProtocol }};
+	{{- if or ($.IPFamily.IPv4) ($s.IsSocket) }}
+    listen {{ $s.Listen }}{{ $s.RewriteClientIP.ProxyProtocol }};
 	{{- end }}
 	{{- if and ($.IPFamily.IPv6) (not $s.IsSocket) }}
     listen [::]:{{ $s.Listen }};

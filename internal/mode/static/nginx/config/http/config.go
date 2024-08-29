@@ -2,7 +2,10 @@ package http
 
 import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 
-const InternalRoutePathPrefix = "/_ngf-internal"
+const (
+	InternalRoutePathPrefix = "/_ngf-internal"
+	HTTPSScheme             = "https"
+)
 
 // Server holds all configuration for an HTTP server.
 type Server struct {

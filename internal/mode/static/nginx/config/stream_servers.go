@@ -37,7 +37,6 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	}
 
 	streamServers := make([]stream.Server, 0, len(conf.TLSPassthroughServers)*2)
-	var streamServer stream.Server
 	portSet := make(map[int32]struct{})
 	upstreams := make(map[string]dataplane.Upstream)
 
@@ -48,15 +47,15 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	for _, server := range conf.TLSPassthroughServers {
 		if u, ok := upstreams[server.UpstreamName]; ok && server.UpstreamName != "" {
 			if server.Hostname != "" && len(u.Endpoints) > 0 {
-				streamServer = stream.Server{
+				streamServer := stream.Server{
 					Listen:     getSocketNameTLS(server.Port, server.Hostname),
 					StatusZone: server.Hostname,
 					ProxyPass:  server.UpstreamName,
 					IsSocket:   true,
 				}
+				// set rewriteClientIP settings as this is a socket stream server
 				streamServer.RewriteClientIP = getRewriteClientIPSettingsForStream(
 					conf.BaseHTTPConfig.RewriteClientIPSettings,
-					streamServer.IsSocket,
 				)
 				streamServers = append(streamServers, streamServer)
 			}
@@ -68,31 +67,25 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 
 		portSet[server.Port] = struct{}{}
 
-		streamServer = stream.Server{
+		streamServer := stream.Server{
 			Listen:     fmt.Sprint(server.Port),
 			StatusZone: server.Hostname,
 			Pass:       getTLSPassthroughVarName(server.Port),
 			SSLPreread: true,
 		}
-		streamServer.RewriteClientIP = getRewriteClientIPSettingsForStream(
-			conf.BaseHTTPConfig.RewriteClientIPSettings,
-			streamServer.IsSocket,
-		)
 		streamServers = append(streamServers, streamServer)
 	}
-
 	return streamServers
 }
 
 func getRewriteClientIPSettingsForStream(
 	rewriteConfig dataplane.RewriteClientIPSettings,
-	isSocket bool,
 ) shared.RewriteClientIPSettings {
 	proxyEnabled := rewriteConfig.Mode == dataplane.RewriteIPModeProxyProtocol
-	if isSocket && proxyEnabled {
+	if proxyEnabled {
 		return shared.RewriteClientIPSettings{
 			ProxyProtocol: shared.ProxyProtocolDirective,
-			RealIPFrom:    rewriteConfig.TrustedCIDRs,
+			RealIPFrom:    rewriteConfig.TrustedAddresses,
 		}
 	}
 

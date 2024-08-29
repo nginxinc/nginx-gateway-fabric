@@ -2,6 +2,7 @@ package graph
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -268,7 +269,7 @@ func TestValidateNginxProxy(t *testing.T) {
 					IPFamily: helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual),
 					RewriteClientIP: &ngfAPI.RewriteClientIP{
 						SetIPRecursively: helpers.GetPointer(true),
-						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "1.1.1.1"},
 						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
 					},
 				},
@@ -377,7 +378,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				Spec: ngfAPI.NginxProxySpec{
 					RewriteClientIP: &ngfAPI.RewriteClientIP{
 						SetIPRecursively: helpers.GetPointer(true),
-						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "10.56.32.11/32"},
 						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
 					},
 				},
@@ -391,15 +392,30 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				Spec: ngfAPI.NginxProxySpec{
 					RewriteClientIP: &ngfAPI.RewriteClientIP{
 						SetIPRecursively: helpers.GetPointer(true),
-						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1"},
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8::/129", "10.0.0.1"},
 						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
 					},
 				},
 			},
 			expectErrCount: 1,
-			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8:a0b:12f0::1: " +
-				"Invalid value: \"2001:db8:a0b:12f0::1\": spec.rewriteClientIP.trustedAddresses: " +
-				"Invalid value: \"2001:db8:a0b:12f0::1\": must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)",
+			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8::/129: " +
+				"Invalid value: \"2001:db8::/129\": must be a valid IP address or CIDR range",
+		},
+		{
+			name:      "invalid IP and CIDR in trustedAddresses",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8::1/48", "256.100.50.25"},
+						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.trustedAddresses.256.100.50.25: " +
+				"Invalid value: \"256.100.50.25\": must be a valid IP address or CIDR range",
 		},
 		{
 			name:      "invalid when mode is set and trustedAddresses is empty",
@@ -442,7 +458,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				Spec: ngfAPI.NginxProxySpec{
 					RewriteClientIP: &ngfAPI.RewriteClientIP{
 						Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeType("invalid")),
-						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "0.0.0.0/0"},
+						TrustedAddresses: []ngfAPI.TrustedAddress{"2001:db8:a0b:12f0::1/32", "10.0.0.1/32"},
 					},
 				},
 			},
@@ -474,6 +490,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 			allErrs := validateRewriteClientIP(test.np)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			if len(allErrs) > 0 {
+				fmt.Println(allErrs.ToAggregate().Error())
 				g.Expect(allErrs.ToAggregate().Error()).To(Equal(test.errorString))
 			}
 		})

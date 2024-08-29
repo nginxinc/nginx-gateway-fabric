@@ -54,7 +54,7 @@ type NginxProxySpec struct {
 	// +optional
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
 	// RewriteClientIP defines configuration for rewriting the client IP to the original client's IP.
-	// +kubebuilder:validation:XValidation:message="if mode is set, trustedAddresses is a required field",rule="!(has(self.mode) && !has(self.trustedAddresses))"
+	// +kubebuilder:validation:XValidation:message="if mode is set, trustedAddresses is a required field",rule="!(has(self.mode) && (!has(self.trustedAddresses) || size(self.trustedAddresses) == 0))"
 	//
 	// +optional
 	//nolint:lll
@@ -132,12 +132,12 @@ type RewriteClientIP struct {
 	// +optional
 	Mode *RewriteClientIPModeType `json:"mode,omitempty"`
 
-	// SetIPRecursively configures whether recursive search is used when selecting the client's address from.
+	// SetIPRecursively configures whether recursive search is used when selecting the client's address from
 	// the X-Forwarded-For header. It is used in conjunction with TrustedAddresses.
 	// If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of array
 	// to start of array and select the first untrusted IP.
 	// For example, if X-Forwarded-For is [11.11.11.11, 22.22.22.22, 55.55.55.1],
-	// and TrustedAddresses is set to 55.55.55.1/0, NGINX will rewrite the client IP to 22.22.22.22.
+	// and TrustedAddresses is set to 55.55.55.1, NGINX will rewrite the client IP to 22.22.22.22.
 	// If disabled, NGINX will select the IP at the end of the array.
 	// In the previous example, 55.55.55.1 would be selected.
 	// Sets NGINX directive real_ip_recursive: https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive
@@ -149,7 +149,7 @@ type RewriteClientIP struct {
 	// If a request comes from a trusted address, NGINX will rewrite the client IP information,
 	// and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 	// If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-	// Addresses must be provided as CIDR blocks: 10.0.0.0/32, 192.33.21/0.
+	// Addresses must be provided as CIDR blocks or IP address: 10.0.0.0, 192.33.21/24, fe80::1/128.
 	// To trust all addresses (not recommended), set to 0.0.0.0/0.
 	// If no addresses are provided, NGINX will not rewrite the client IP information.
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
@@ -179,8 +179,8 @@ const (
 	RewriteClientIPModeXForwardedFor RewriteClientIPModeType = "XForwardedFor"
 )
 
-// TrustedAddress is a string value representing a CIDR block.
-// Examples: 0.0.0.0/0
+// TrustedAddress is a string value representing a CIDR block or an IP address.
+// Examples: 10.0.0.2/32, 10.0.0.1, fe80::1/128, ::1/24.
 //
 // +kubebuilder:validation:Pattern=`^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)$`
 //

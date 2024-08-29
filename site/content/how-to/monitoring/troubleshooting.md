@@ -83,56 +83,56 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 
 1. Container Logs
 
-    To see logs for the control plane container:
+   To see logs for the control plane container:
 
-    ```shell
-    kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway
-    ```
+   ```shell
+   kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway
+   ```
 
-    To see logs for the data plane container:
+   To see logs for the data plane container:
 
-    ```shell
-    kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx
-    ```
+   ```shell
+   kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx
+   ```
 
 1. Error Logs
 
-    For the _nginx-gateway_ container, you can `grep` the logs for the word `error`:
+   For the _nginx-gateway_ container, you can `grep` the logs for the word `error`:
 
-    ```shell
-    kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway | grep error
-    ```
+   ```shell
+   kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway | grep error
+   ```
 
-    For example, an error message when telemetry is not enabled for NGINX Plus installations:
+   For example, an error message when telemetry is not enabled for NGINX Plus installations:
 
-    ```text
-    kubectl logs -n nginx-gateway nginx-gateway-nginx-gateway-fabric-77f8746996-j6z6v | grep error
-    Defaulted container "nginx-gateway" out of: nginx-gateway, nginx
-    {"level":"error","ts":"2024-06-13T18:22:16Z","logger":"usageReporter","msg":"Usage reporting must be enabled when using NGINX Plus; redeploy with usage reporting enabled","error":"usage reporting not enabled","stacktrace":"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static.createUsageWarningJob.func1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/manager.go:616\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:226\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:227\nk8s.io/apimachinery/pkg/util/wait.JitterUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:204\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables.(*CronJob).Start\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables/cronjob.go:53\nsigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1\n\tsigs.k8s.io/controller-runtime@v0.18.4/pkg/manager/runnable_group.go:226"}
-    ```
+   ```text
+   kubectl logs -n nginx-gateway nginx-gateway-nginx-gateway-fabric-77f8746996-j6z6v | grep error
+   Defaulted container "nginx-gateway" out of: nginx-gateway, nginx
+   {"level":"error","ts":"2024-06-13T18:22:16Z","logger":"usageReporter","msg":"Usage reporting must be enabled when using NGINX Plus; redeploy with usage reporting enabled","error":"usage reporting not enabled","stacktrace":"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static.createUsageWarningJob.func1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/manager.go:616\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:226\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:227\nk8s.io/apimachinery/pkg/util/wait.JitterUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:204\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables.(*CronJob).Start\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables/cronjob.go:53\nsigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1\n\tsigs.k8s.io/controller-runtime@v0.18.4/pkg/manager/runnable_group.go:226"}
+   ```
 
-    For the _nginx_ container you can `grep` for various [error](https://nginx.org/en/docs/ngx_core_module.html#error_log) logs. For example, to search for all logs logged at the `emerg` level:
+   For the _nginx_ container you can `grep` for various [error](https://nginx.org/en/docs/ngx_core_module.html#error_log) logs. For example, to search for all logs logged at the `emerg` level:
 
-    ```shell
-    kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx | grep emerg
-    ```
+   ```shell
+   kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx | grep emerg
+   ```
 
-    For example, if a variable is too long, NGINX may display such an error message:
+   For example, if a variable is too long, NGINX may display such an error message:
 
-    ```text
-    kubectl logs -n nginx-gateway ngf-nginx-gateway-fabric-bb8598998-jwk2m -c nginx | grep emerg
-    2024/06/13 20:04:17 [emerg] 27#27: too long parameter, probably missing terminating """ character in /etc/nginx/conf.d/http.conf:78
-    ```
+   ```text
+   kubectl logs -n nginx-gateway ngf-nginx-gateway-fabric-bb8598998-jwk2m -c nginx | grep emerg
+   2024/06/13 20:04:17 [emerg] 27#27: too long parameter, probably missing terminating """ character in /etc/nginx/conf.d/http.conf:78
+   ```
 
 1. Access Logs
 
-    NGINX access logs record all requests processed by the NGINX server. These logs provide detailed information about each request, which can be useful for troubleshooting and analyzing web traffic.
-    Access logs can be viewed with the above method of using `kubectl logs`, or by viewing the access log file directly. To do that, get shell access to your NGINX container using these [steps](#get-shell-access-to-nginx-container). The access logs are located in the file `/var/log/nginx/access.log` in the NGINX container.
+   NGINX access logs record all requests processed by the NGINX server. These logs provide detailed information about each request, which can be useful for troubleshooting and analyzing web traffic.
+   Access logs can be viewed with the above method of using `kubectl logs`, or by viewing the access log file directly. To do that, get shell access to your NGINX container using these [steps](#get-shell-access-to-nginx-container). The access logs are located in the file `/var/log/nginx/access.log` in the NGINX container.
 
 1. Modify Log Levels
 
-    To modify log levels for the control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
-    To check error logs, modify the log level to `error` to view error logs. Similarly, change the log level to `debug` and `grep` for the word `debug` to view debug logs.
+   To modify log levels for the control plane in NGINX Gateway Fabric, edit the `NginxGateway` configuration. This can be done either before or after deploying NGINX Gateway Fabric. Refer to this [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/configuration/control-plane-configuration) to do so.
+   To check error logs, modify the log level to `error` to view error logs. Similarly, change the log level to `debug` and `grep` for the word `debug` to view debug logs.
 
 #### Understanding the generated NGINX configuration
 
@@ -167,18 +167,18 @@ metadata:
   name: coffee
 spec:
   parentRefs:
-  - name: gateway
-    sectionName: http
+    - name: gateway
+      sectionName: http
   hostnames:
-  - "cafe.example.com"
+    - "cafe.example.com"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /coffee
-    backendRefs:
-    - name: coffee
-      port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /coffee
+      backendRefs:
+        - name: coffee
+          port: 80
 ```
 
 The modified `nginx.conf`:
@@ -231,7 +231,7 @@ upstream default_coffee_80 {
 Key information to note is:
 
 1. A new `server` block is created with the hostname of the HTTPRoute. When a request is sent to this hostname, it will be handled by this `server` block.
-2. Within the `server` block, three new `location` blocks are added for *coffee*, each with distinct prefix and exact paths. Requests directed to the *coffee* application with a path prefix `/coffee/hello` will be managed by the first location block, while those with an exact path `/coffee` will be handled by the second location block. Any other requests not recognized by the server block for this hostname will default to the third location block, returning a 404 Not Found status.
+2. Within the `server` block, three new `location` blocks are added for _coffee_, each with distinct prefix and exact paths. Requests directed to the _coffee_ application with a path prefix `/coffee/hello` will be managed by the first location block, while those with an exact path `/coffee` will be handled by the second location block. Any other requests not recognized by the server block for this hostname will default to the third location block, returning a 404 Not Found status.
 3. Each `location` block has headers and directives that configure the NGINX proxy to forward requests to the `/coffee` path correctly, preserving important client information and ensuring compatibility with the upstream server.
 4. The `upstream` block in the given NGINX configuration defines a group of backend servers and configures how NGINX should load balance requests among them.
 
@@ -294,19 +294,19 @@ Verify that the port number (for example, `8080`) matches the port number you ha
 ### Common errors
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Problem Area                 | Symptom                                | Troubleshooting Method                                                                                              | Common Cause                                                                                                                            |
+| Problem Area | Symptom | Troubleshooting Method | Common Cause |
 |------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| Startup                      | NGINX Gateway Fabric fails to start.   | Check logs for _nginx_ and _nginx-gateway_ containers.                                                               | Readiness probe failed.                                                                                                                 |
-| Resources not configured     | Status missing on resources.           | Check referenced resources.                                                                                         | Referenced resources do not belong to NGINX Gateway Fabric.                                                                             |
-| NGINX errors                 | Reload failures on NGINX               | Fix permissions for control plane.                                                                                  | Security context not configured.                                                                                                        |
-| Usage reporting              | Errors logs related to usage reporting | Enable usage reporting. Refer to [Usage Reporting]({{< relref "installation/usage-reporting.md" >}})                | Usage reporting disabled.                                                                                                               |
-| Client Settings              | Request entity too large error         | Adjust client settings. Refer to [Client Settings Policy]({{< relref "../traffic-management/client-settings.md" >}})   | Payload is greater than the [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size) value.|
+| Startup | NGINX Gateway Fabric fails to start. | Check logs for _nginx_ and _nginx-gateway_ containers. | Readiness probe failed. |
+| Resources not configured | Status missing on resources. | Check referenced resources. | Referenced resources do not belong to NGINX Gateway Fabric. |
+| NGINX errors | Reload failures on NGINX | Fix permissions for control plane. | Security context not configured. |
+| Usage reporting | Errors logs related to usage reporting | Enable usage reporting. Refer to [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) | Usage reporting disabled. |
+| Client Settings | Request entity too large error | Adjust client settings. Refer to [Client Settings Policy]({{< relref "../traffic-management/client-settings.md" >}}) | Payload is greater than the [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size) value.|
 {{< /bootstrap-table >}}
 
 ##### NGINX fails to reload
 
 NGINX reload errors can occur for various reasons, including syntax errors in configuration files, permission issues, and more. To determine if NGINX has failed to reload, check logs for your _nginx-gateway_ and _nginx_ containers.
-You will see the following error in the _nginx-gateway_  logs: `failed to reload NGINX:`, followed by the reason for the failure. Similarly, error logs in _nginx_ container start with `emerg`. For example, `2024/06/12 14:25:11 [emerg] 12345#0: open() "/var/run/nginx.pid" failed (13: Permission denied)` shows a critical error, such as a permission problem preventing NGINX from accessing necessary files.
+You will see the following error in the _nginx-gateway_ logs: `failed to reload NGINX:`, followed by the reason for the failure. Similarly, error logs in _nginx_ container start with `emerg`. For example, `2024/06/12 14:25:11 [emerg] 12345#0: open() "/var/run/nginx.pid" failed (13: Permission denied)` shows a critical error, such as a permission problem preventing NGINX from accessing necessary files.
 
 To debug why your reload has failed, start with verifying the syntax of your configuration files by opening a shell in the NGINX container following these [steps](#get-shell-access-to-nginx-container) and running `nginx -T`. If there are errors in your configuration file, the reload will fail and specify the reason for it.
 
@@ -459,13 +459,13 @@ This means you are attempting to attach a Policy to a Route that has an overlapp
 
 If you check your _nginx_ container logs and see the following error:
 
-  ```text
-    2024/07/25 00:50:45 [error] 211#211: *22 broken header: "GET /coffee HTTP/1.1" while reading PROXY protocol, client: 127.0.0.1, server: 0.0.0.0:80
-  ```
+```text
+  2024/07/25 00:50:45 [error] 211#211: *22 broken header: "GET /coffee HTTP/1.1" while reading PROXY protocol, client: 127.0.0.1, server: 0.0.0.0:80
+```
 
 It indicates that `proxy_protocol` is enabled for the gateway listeners, but the request sent to the application endpoint does not contain proxy information. To **resolve** this, you can do one of the following:
 
-- Update field [`rewriteClientIP.mode`](({{< relref "reference/api.md" >}})) to `ProxyProtocol` in the NginxProxy configuration.
+- Disable field [`rewriteClientIP.mode`](({{< relref "reference/api.md" >}})) in the NginxProxy configuration.
 
 - Send valid proxy information with requests being handled by your application.
 

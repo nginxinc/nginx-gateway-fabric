@@ -320,7 +320,7 @@ type RewriteClientIPSettings struct {
 	// Mode specifies the mode for rewriting the client IP.
 	Mode RewriteIPModeType
 	// TrustedCIDRs specifies the CIDRs that are trusted to provide the client IP.
-	TrustedCIDRs []string
+	TrustedAddresses []string
 	// IPRecursive specifies whether a recursive search is used when selecting the client IP.
 	IPRecursive bool
 }

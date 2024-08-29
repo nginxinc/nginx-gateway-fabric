@@ -172,8 +172,17 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 		}
 
 		for _, addr := range rewriteClientIP.TrustedAddresses {
-			if err := k8svalidation.IsValidCIDR(trustedAddressesPath, string(addr)); err != nil {
-				allErrs = append(allErrs, field.Invalid(trustedAddressesPath.Child(string(addr)), addr, err.ToAggregate().Error()))
+			cidrError := k8svalidation.IsValidCIDR(trustedAddressesPath, string(addr))
+			ipError := k8svalidation.IsValidIP(trustedAddressesPath, string(addr))
+
+			if cidrError != nil && ipError != nil {
+				allErrs = append(
+					allErrs,
+					field.Invalid(trustedAddressesPath.Child(string(addr)),
+						addr,
+						"must be a valid IP address or CIDR range",
+					),
+				)
 			}
 		}
 	}

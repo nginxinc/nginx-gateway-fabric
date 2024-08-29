@@ -13,7 +13,7 @@ server {
     listen [::]:{{ $s.Listen }} ssl default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
     ssl_reject_handshake on;
-		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
         {{- end}}
         {{- if $.RewriteClientIP.RealIPHeader}}
@@ -77,7 +77,7 @@ server {
     include {{ $i.Name }};
         {{- end }}
 
-		{{- range $cidr := $.RewriteClientIP.RealIPFrom }}
+        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $cidr }};
         {{- end}}
         {{- if $.RewriteClientIP.RealIPHeader}}

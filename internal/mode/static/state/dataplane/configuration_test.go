@@ -2213,9 +2213,9 @@ func TestBuildConfiguration(t *testing.T) {
 					HTTP2:    true,
 					IPFamily: Dual,
 					RewriteClientIPSettings: RewriteClientIPSettings{
-						IPRecursive:  true,
-						TrustedCIDRs: []string{"0.0.0.0/0"},
-						Mode:         RewriteIPModeProxyProtocol,
+						IPRecursive:      true,
+						TrustedAddresses: []string{"0.0.0.0/0"},
+						Mode:             RewriteIPModeProxyProtocol,
 					},
 				}
 				return conf
@@ -3628,9 +3628,9 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 				},
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
-				Mode:         RewriteIPModeProxyProtocol,
-				TrustedCIDRs: []string{"0.0.0.0/0"},
-				IPRecursive:  true,
+				Mode:             RewriteIPModeProxyProtocol,
+				TrustedAddresses: []string{"0.0.0.0/0"},
+				IPRecursive:      true,
 			},
 		},
 		{
@@ -3650,9 +3650,9 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 				},
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
-				Mode:         RewriteIPModeXForwardedFor,
-				TrustedCIDRs: []string{"0.0.0.0/0"},
-				IPRecursive:  true,
+				Mode:             RewriteIPModeXForwardedFor,
+				TrustedAddresses: []string{"0.0.0.0/0"},
+				IPRecursive:      true,
 			},
 		},
 		{
@@ -3672,9 +3672,9 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 				},
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
-				Mode:         RewriteIPModeXForwardedFor,
-				TrustedCIDRs: []string{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
-				IPRecursive:  false,
+				Mode:             RewriteIPModeXForwardedFor,
+				TrustedAddresses: []string{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
+				IPRecursive:      false,
 			},
 		},
 	}

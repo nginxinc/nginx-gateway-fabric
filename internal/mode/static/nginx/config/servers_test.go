@@ -321,18 +321,15 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.Dual,
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
-						Mode:         dataplane.RewriteIPModeProxyProtocol,
-						TrustedCIDRs: []string{"0.0.0.0/0"},
-						IPRecursive:  true,
+						Mode:             dataplane.RewriteIPModeProxyProtocol,
+						TrustedAddresses: []string{"10.56.73.51/32"},
+						IPRecursive:      false,
 					},
 				},
 			},
 			expectedHTTPConfig: map[string]int{
-				"set_real_ip_from 0.0.0.0/0;":                              4,
+				"set_real_ip_from 10.56.73.51/32;":                         4,
 				"real_ip_header proxy_protocol;":                           4,
-				"real_ip_recursive on;":                                    4,
-				"proxy_protocol on;":                                       0,
-				"set_real_ip_from unix:;":                                  0,
 				"listen 8080 default_server proxy_protocol;":               1,
 				"listen 8080 proxy_protocol;":                              1,
 				"listen 8443 ssl default_server proxy_protocol;":           1,
@@ -355,17 +352,18 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				BaseHTTPConfig: dataplane.BaseHTTPConfig{
 					IPFamily: dataplane.Dual,
 					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
-						Mode:         dataplane.RewriteIPModeXForwardedFor,
-						TrustedCIDRs: []string{"0.0.0.0/0"},
-						IPRecursive:  true,
+						Mode:             dataplane.RewriteIPModeXForwardedFor,
+						TrustedAddresses: []string{"10.1.1.3/32", "2.2.2.2", "2001:db8::/32"},
+						IPRecursive:      true,
 					},
 				},
 			},
 			expectedHTTPConfig: map[string]int{
-				"set_real_ip_from 0.0.0.0/0;":                              4,
+				"set_real_ip_from 10.1.1.3/32;":                            4,
+				"set_real_ip_from 2.2.2.2;":                                4,
+				"set_real_ip_from 2001:db8::/32;":                          4,
 				"real_ip_header X-Forwarded-For;":                          4,
 				"real_ip_recursive on;":                                    4,
-				"proxy_protocol on;":                                       0,
 				"listen 8080 default_server;":                              1,
 				"listen 8080;":                                             1,
 				"listen 8443 ssl default_server;":                          1,
@@ -2671,6 +2669,48 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "X-Forwarded-Proto",
 					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
+				},
+			},
+		},
+		{
+			msg: "request redirect filter with https scheme",
+			filters: &dataplane.HTTPFilters{
+				RequestRedirect: &dataplane.HTTPRequestRedirectFilter{
+					Scheme: helpers.GetPointer("https"),
+				},
+			},
+			expectedHeaders: []http.Header{
+				{
+					Name:  "Host",
+					Value: "$gw_api_compliant_host",
+				},
+				{
+					Name:  "X-Forwarded-For",
+					Value: "$proxy_add_x_forwarded_for",
+				},
+				{
+					Name:  "Upgrade",
+					Value: "$http_upgrade",
+				},
+				{
+					Name:  "Connection",
+					Value: "$connection_upgrade",
+				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "https",
 				},
 				{
 					Name:  "X-Forwarded-Host",
