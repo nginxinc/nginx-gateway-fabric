@@ -34,7 +34,7 @@ type (
 
 var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
-//counterfeiter:generate . nginxPlusClient
+//counterfeiter:generate . NginxPlusClient
 
 type NginxPlusClient interface {
 	UpdateHTTPServers(

@@ -1,7 +1,10 @@
 package collectors
 
 import (
+	"fmt"
+
 	"github.com/go-kit/log"
+	"github.com/nginxinc/nginx-plus-go-client/client"
 	prometheusClient "github.com/nginxinc/nginx-prometheus-exporter/client"
 	nginxCollector "github.com/nginxinc/nginx-prometheus-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,8 +32,12 @@ func NewNginxPlusMetricsCollector(
 	constLabels map[string]string,
 	logger log.Logger,
 ) (prometheus.Collector, error) {
+	nc, ok := plusClient.(*client.NginxClient)
+	if !ok {
+		panic(fmt.Sprintf("expected *client.NginxClient, got %T", plusClient))
+	}
 	collector := nginxCollector.NewNginxPlusCollector(
-		plusClient,
+		nc,
 		metrics.Namespace,
 		nginxCollector.VariableLabelNames{},
 		constLabels,

@@ -4,6 +4,7 @@ package runtimefakes
 import (
 	"sync"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-plus-go-client/client"
 )
 
@@ -199,3 +200,5 @@ func (fake *FakeNginxPlusClient) recordInvocation(key string, args []interface{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
+
+var _ runtime.NginxPlusClient = new(FakeNginxPlusClient)
