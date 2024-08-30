@@ -15,6 +15,7 @@ This Enhancement Proposal introduces the `UpstreamSettingsPolicy` API that allow
 ## Non-Goals
 
 - Provide implementation details for implementing the upstream settings policy.
+- Define an API for upstream settings for TLSRoute or other layer 4 routes.
 
 ## Introduction
 
@@ -68,10 +69,14 @@ type UpstreamSettingsSpec struct {
     // ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share
     // the upstream configuration between nginx worker processes. The more servers that an upstream has,
     // the larger memory zone is required.
+    // Default: OSS: 512k, Plus: 1m.
+    // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone
+    //
     // +optional
     ZoneSize *Size `json:"zoneSize,omitempty"`
 
     // KeepAlive defines the keep-alive settings.
+    //
     // +optional
     KeepAlive *UpstreamKeepAlive `json:"keepAlive,omitempty"`
 }
@@ -81,20 +86,28 @@ type UpstreamKeepAlive struct {
     // Connections sets the maximum number of idle keepalive connections to upstream servers that are preserved
     // in the cache of each nginx worker process. When this number is exceeded, the least recently used
     // connections are closed.
+    // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive
+    //
     // +optional
     Connections *int32 `json"connections,omitempty"`
 
     // Requests sets the maximum number of requests that can be served through one keep-alive connection.
     // After the maximum number of requests are made, the connection is closed.
+    // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_requests
+    //
     // +optional
     Requests *int32 `json:"requests,omitempty"`
 
     // Time defines the maximum time during which requests can be processed through one keep-alive connection.
     // After this time is reached, the connection is closed following the subsequent request processing.
+    // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time
+    //
     // +optional
     Time *Duration `json:"time,omitempty"`
 
     // Timeout defines the keep-alive timeout for upstreams.
+    // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_timeout
+    //
     // +optional
     Timeout *Duration `json:"timeout,omitempty"`
 }
@@ -109,6 +122,8 @@ type Duration string
 // Examples: 1024, 8k, 1m.
 type Size string
 ```
+
+### Global zone size setting
 
 Since this Policy only applies to `http` upstreams, there's no way to set the zone size for `stream` upstreams. For now, we can introduce a global `zoneSize` variable in the `NginxProxy` resource that will set the zone size for all upstreams. Then this Policy would override that global setting on upstreams that it attaches to.
 
@@ -133,7 +148,7 @@ According to the [Direct Policy Attachment GEP](https://gateway-api.sigs.k8s.io/
 
 The `Accepted` Condition must be populated on the `UpstreamSettingsPolicy` CRD using the reasons defined in the [PolicyCondition API](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go). If these reasons are not sufficient, we can add implementation-specific reasons.
 
-The Condition stanza may need to be namespaced using the `controllerName` if more than one controller could reconcile the Policy.
+The Condition stanza must be namespaced using the `controllerName` since more than one controller could reconcile the Policy.
 
 In the [Direct Policy Attachment GEP](https://gateway-api.sigs.k8s.io/geps/gep-2648/), the `PolicyAncestorStatus` applies to Direct Policies.
 [`PolicyAncestorStatus`](https://github.com/kubernetes-sigs/gateway-api/blob/f1758d1bc233d78a3e1e6cfba34336526655d03d/apis/v1alpha2/policy_types.go#L156) contains a list of ancestor resources that are associated with the policy, and the status of the policy for each ancestor.
@@ -145,7 +160,7 @@ The [Direct Policy Attachment GEP](https://gateway-api.sigs.k8s.io/geps/gep-2648
 
 This solution gives the object owners some knowledge that their object is affected by a policy but minimizes status updates by limiting them to when the affected object starts or stops being affected by a policy.
 
-The first step is adding the `gateway.networking.k8s.io/PolicyAffected: true` label to the affected Service. We also must set this Condition on all Routes that reference a Service affected by an `UpstreamSettingsPolicy`.
+The first step is adding the `gateway.nginx.org/UpstreamSettingsPolicyAffected: true` label to the affected Service. We also must set this Condition on all Routes that reference a Service affected by an `UpstreamSettingsPolicy`.
 Below is an example of what this Condition may look like:
 
 ```yaml
