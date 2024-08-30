@@ -34,7 +34,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 	})
 
 	getNginxGateway := func(nsname types.NamespacedName) (ngfAPI.NginxGateway, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetStatusTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
 		defer cancel()
 
 		var nginxGateway ngfAPI.NginxGateway
@@ -48,8 +48,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 	verifyAndReturnNginxGateway := func(nsname types.NamespacedName) ngfAPI.NginxGateway {
 		nginxGateway, err := getNginxGateway(nsname)
-		Expect(nginxGateway).ToNot(BeNil())
 		Expect(err).ToNot(HaveOccurred())
+		Expect(nginxGateway).ToNot(BeNil())
 
 		Expect(nginxGateway.Status.Conditions).To(HaveLen(1))
 		condition := nginxGateway.Status.Conditions[0]
