@@ -148,6 +148,8 @@ According to the [Direct Policy Attachment GEP](https://gateway-api.sigs.k8s.io/
 
 The `Accepted` Condition must be populated on the `UpstreamSettingsPolicy` CRD using the reasons defined in the [PolicyCondition API](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go). If these reasons are not sufficient, we can add implementation-specific reasons.
 
+If the Policy is attached to a Service that is applied to a TLSRoute, it will not be Accepted.
+
 The Condition stanza must be namespaced using the `controllerName` since more than one controller could reconcile the Policy.
 
 In the [Direct Policy Attachment GEP](https://gateway-api.sigs.k8s.io/geps/gep-2648/), the `PolicyAncestorStatus` applies to Direct Policies.
@@ -216,6 +218,11 @@ RBAC via the Kubernetes API server will ensure that only authorized users can up
 
 - Add support for more [upstream-related directives](nginx-extensions.md#upstream-settings).
 - Add a `StreamUpstreamSettingsPolicy` that configures upstream settings for stream servers (TLSRoute, TCPRoute).
+
+## Alternatives
+
+- Single policy that contains `http` and `stream` fields for both types of upstreams. It was decided that this isn't as good of a user experience versus just having separate policies with a more targeted purpose.
+- Single policy with all top level fields, where some would only be applied depending on the type of upstream, and have conditions that say which fields were ignored. This was rejected for similar reasoning.
 
 ## References
 
