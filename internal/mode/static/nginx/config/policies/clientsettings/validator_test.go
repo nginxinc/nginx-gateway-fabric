@@ -53,6 +53,7 @@ func createModifiedPolicy(mod policyModFunc) *ngfAPI.ClientSettingsPolicy {
 }
 
 func TestValidator_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		policy        *ngfAPI.ClientSettingsPolicy
@@ -133,6 +134,7 @@ func TestValidator_Validate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			conds := v.Validate(test.policy, nil)
@@ -142,6 +144,7 @@ func TestValidator_Validate(t *testing.T) {
 }
 
 func TestValidator_ValidatePanics(t *testing.T) {
+	t.Parallel()
 	v := clientsettings.NewValidator(nil)
 
 	validate := func() {
@@ -154,6 +157,7 @@ func TestValidator_ValidatePanics(t *testing.T) {
 }
 
 func TestValidator_Conflicts(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		polA      *ngfAPI.ClientSettingsPolicy
 		polB      *ngfAPI.ClientSettingsPolicy
@@ -256,6 +260,7 @@ func TestValidator_Conflicts(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(v.Conflicts(test.polA, test.polB)).To(Equal(test.conflicts))
@@ -264,6 +269,7 @@ func TestValidator_Conflicts(t *testing.T) {
 }
 
 func TestValidator_ConflictsPanics(t *testing.T) {
+	t.Parallel()
 	v := clientsettings.NewValidator(nil)
 
 	conflicts := func() {
