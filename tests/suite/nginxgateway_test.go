@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -60,6 +61,24 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		return nginxGateway
 	}
 
+	getNGFPodName := func() (string, error) {
+		podNames, err := framework.GetReadyNGFPodNames(
+			k8sClient,
+			ngfNamespace,
+			releaseName,
+			timeoutConfig.GetTimeout,
+		)
+		if err != nil {
+			return "", err
+		}
+
+		if len(podNames) != 1 {
+			return "", fmt.Errorf("expected 1 pod name, got %d", len(podNames))
+		}
+
+		return podNames[0], nil
+	}
+
 	When("testing NGF on startup", func() {
 		BeforeEach(func() {
 			teardown(releaseName)
@@ -76,15 +95,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 			It("creates one, uses its values, and the status is accepted and true", func() {
 				setup(getDefaultSetupCfg())
 
-				podNames, err := framework.GetReadyNGFPodNames(
-					k8sClient,
-					ngfNamespace,
-					releaseName,
-					timeoutConfig.GetTimeout,
-				)
+				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(podNames).To(HaveLen(1))
-				ngfPodName = podNames[0]
 
 				_ = verifyAndReturnNginxGateway(nginxGatewayNsname)
 
@@ -107,15 +119,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 				setup(getDefaultSetupCfg())
 
-				podNames, err := framework.GetReadyNGFPodNames(
-					k8sClient,
-					ngfNamespace,
-					releaseName,
-					timeoutConfig.GetTimeout,
-				)
+				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(podNames).To(HaveLen(1))
-				ngfPodName = podNames[0]
 
 				nginxGateway := verifyAndReturnNginxGateway(nginxGatewayNsname)
 				Expect(nginxGateway.Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
@@ -143,15 +148,9 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 			setup(getDefaultSetupCfg())
 
-			podNames, err := framework.GetReadyNGFPodNames(
-				k8sClient,
-				ngfNamespace,
-				releaseName,
-				timeoutConfig.GetTimeout,
-			)
+			var err error
+			ngfPodName, err = getNGFPodName()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(podNames).To(HaveLen(1))
-			ngfPodName = podNames[0]
 		})
 
 		When("NginxGateway is updated", func() {
