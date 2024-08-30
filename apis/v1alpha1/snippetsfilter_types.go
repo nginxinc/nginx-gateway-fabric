@@ -41,6 +41,13 @@ type Snippet struct {
 	Value string `json:"value"`
 }
 
+// SnippetsFilterList contains a list of Snippets.
+type SnippetsFilterList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Snippet `json:"items"`
+}
+
 // SnippetsFilterStatus defines the state of SnippetsFilter.
 type SnippetsFilterStatus struct {
 	// Conditions describes the state of the SnippetsFilter.
@@ -80,7 +87,7 @@ const (
 
 // NginxContext represents the NGINX configuration context.
 //
-// +kubebuilder:validation:Enum=http;http;server;http.server;location;
+// +kubebuilder:validation:Enum=http;http.server;http.server.location;
 type NginxContext string
 
 const (
