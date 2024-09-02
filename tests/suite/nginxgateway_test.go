@@ -8,9 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
@@ -80,8 +78,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 	}
 
 	When("testing NGF on startup", func() {
-		When("no NginxGateway resource exists", func() {
-			It("creates one, uses its values, and the status is accepted and true", func() {
+		When("log level is set to debug", func() {
+			It("outputs debug logs and the status is accepted and true", func() {
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -96,24 +94,13 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 			})
 		})
 
-		When("an NginxGateway resource already exists", func() {
-			It("uses its values and the status is accepted and true", func() {
+		When("default log level is used", func() {
+			It("only outputs info logs and the status is accepted and true", func() {
 				teardown(releaseName)
 
-				ns := &core.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
-				}
-				Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
-
-				Expect(resourceManager.ApplyFromFiles([]string{"nginxgateway/nginx-gateway-crd.yaml"}, namespace)).
-					To(Succeed())
-				// need to wait until files are applied, no current function because this is a crd file
-				time.Sleep(2 * time.Second)
-				Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
-
-				setup(getDefaultSetupCfg())
+				cfg := getDefaultSetupCfg()
+				cfg.infoLogLevel = true
+				setup(cfg)
 
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
@@ -133,17 +120,6 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 	When("testing on an existing NGF instance", Ordered, func() {
 		BeforeAll(func() {
-			teardown(releaseName)
-
-			ns := &core.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-				},
-			}
-			Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
-
-			setup(getDefaultSetupCfg())
-
 			var err error
 			ngfPodName, err = getNGFPodName()
 			Expect(err).ToNot(HaveOccurred())
@@ -152,6 +128,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		When("NginxGateway is updated", func() {
 			It("captures the change, the status is accepted and true,"+
 				" and the observed generation is incremented", func() {
+				// previous test has left the log level at info, this test will change the log level to debug
+
 				var observedGeneration int64
 
 				nginxGateway := verifyAndReturnNginxGateway(nginxGatewayNsname)
@@ -162,7 +140,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(logs).To(ContainSubstring("\"level\":\"debug\""))
+				Expect(logs).ToNot(ContainSubstring("\"level\":\"debug\""))
 
 				Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 				// need to wait until files are applied, no current function because this is a nginx-gateway crd
@@ -177,7 +155,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(logs).To(ContainSubstring(
-					"\"current\":\"info\",\"msg\":\"Log level changed\",\"prev\":\"debug\"",
+					"\"current\":\"debug\",\"msg\":\"Log level changed\",\"prev\":\"info\"",
 				))
 			})
 		})

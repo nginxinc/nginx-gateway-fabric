@@ -96,8 +96,10 @@ type setupConfig struct {
 	gwAPIVersion string
 	deploy       bool
 	nfr          bool
+	infoLogLevel bool
 }
 
+//nolint:gocyclo
 func setup(cfg setupConfig, extraInstallArgs ...string) {
 	log.SetLogger(GinkgoLogr)
 
@@ -187,8 +189,13 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
-	Expect(err).ToNot(HaveOccurred(), string(output))
+	if cfg.infoLogLevel {
+		output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
+		Expect(err).ToNot(HaveOccurred(), string(output))
+	} else {
+		output, err = framework.InstallNGFDebugLevel(installCfg, extraInstallArgs...)
+		Expect(err).ToNot(HaveOccurred(), string(output))
+	}
 
 	podNames, err := framework.GetReadyNGFPodNames(
 		k8sClient,

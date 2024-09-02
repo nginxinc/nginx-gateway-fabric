@@ -14,4 +14,4 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   logging:
-    level: info
+    level: debug
