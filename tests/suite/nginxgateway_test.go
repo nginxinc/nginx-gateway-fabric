@@ -80,21 +80,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 	}
 
 	When("testing NGF on startup", func() {
-		BeforeEach(func() {
-			teardown(releaseName)
-
-			ns := &core.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-				},
-			}
-			Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
-		})
-
 		When("no NginxGateway resource exists", func() {
 			It("creates one, uses its values, and the status is accepted and true", func() {
-				setup(getDefaultSetupCfg())
-
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -111,6 +98,15 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 		When("an NginxGateway resource already exists", func() {
 			It("uses its values and the status is accepted and true", func() {
+				teardown(releaseName)
+
+				ns := &core.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+					},
+				}
+				Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+
 				Expect(resourceManager.ApplyFromFiles([]string{"nginxgateway/nginx-gateway-crd.yaml"}, namespace)).
 					To(Succeed())
 				// need to wait until files are applied, no current function because this is a crd file
