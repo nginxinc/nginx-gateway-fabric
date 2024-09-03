@@ -92,6 +92,7 @@ type NginxContext string
 
 const (
 	// NginxContextHTTP is the http context of the NGINX configuration.
+	// https://nginx.org/en/docs/http/ngx_http_core_module.html#http
 	NginxContextHTTP NginxContext = "http"
 
 	// NginxContextHTTPServer is the server context of the NGINX configuration.
