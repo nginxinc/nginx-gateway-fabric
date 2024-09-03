@@ -234,16 +234,16 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				events, err := resourceManager.GetEvents(namespace)
 				Expect(err).ToNot(HaveOccurred())
 
-				var eventFound bool
+				var foundNginxGatewayDeletionEvent bool
 				for _, item := range events.Items {
 					if item.Message == "NginxGateway configuration was deleted; using defaults" &&
 						item.Type == "Warning" &&
 						item.Reason == "ResourceDeleted" {
-						eventFound = true
+						foundNginxGatewayDeletionEvent = true
 						break
 					}
 				}
-				Expect(eventFound).To(BeTrue())
+				Expect(foundNginxGatewayDeletionEvent).To(BeTrue())
 			})
 		})
 	})
