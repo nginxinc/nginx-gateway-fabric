@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.2
-	github.com/prometheus/common v0.57.0
+	github.com/prometheus/common v0.58.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	go.opentelemetry.io/otel v1.29.0
