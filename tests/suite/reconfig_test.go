@@ -627,7 +627,6 @@ const reconfigResultTemplate = `
 {{- range .EventsBuckets }}
 	- {{ .Le }}ms: {{ .Val }}
 {{- end }}
-
 `
 
 func writeReconfigResults(dest io.Writer, results reconfigTestResults) error {
