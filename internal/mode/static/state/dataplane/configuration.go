@@ -863,8 +863,9 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		}
 
 		if len(g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses) > 0 {
-			trustedAddresses := convertTrustedAddresses(g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses)
-			baseConfig.RewriteClientIPSettings.TrustedAddresses = trustedAddresses
+			baseConfig.RewriteClientIPSettings.TrustedAddresses = convertTrustedAddresses(
+				g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses,
+			)
 		}
 
 		if g.NginxProxy.Source.Spec.RewriteClientIP.SetIPRecursively != nil {

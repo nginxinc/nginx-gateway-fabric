@@ -2723,6 +2723,11 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				},
 			},
 		},
+		{
+			msg:             "no filter set",
+			expectedHeaders: httpBaseHeaders,
+			GRPC:            false,
+		},
 	}
 
 	for _, tc := range tests {
