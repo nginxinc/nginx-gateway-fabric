@@ -28,12 +28,6 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		}
 	)
 
-	AfterAll(func() {
-		// cleanup and restore NGF instance
-		teardown(releaseName)
-		setup(getDefaultSetupCfg())
-	})
-
 	getNginxGateway := func(nsname types.NamespacedName) (ngfAPI.NginxGateway, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
 		defer cancel()
@@ -98,6 +92,18 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 		return podNames[0], nil
 	}
+
+	AfterAll(func() {
+		// re-apply NginxGateway crd to restore NGF instance for following functional tests
+		Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
+
+		Eventually(
+			func() bool {
+				return verifyNginxGateway(nginxGatewayNsname, int64(1)) != nil
+			}).WithTimeout(timeoutConfig.UpdateTimeout).
+			WithPolling(500 * time.Millisecond).
+			Should(BeTrue())
+	})
 
 	When("testing NGF on startup", func() {
 		When("log level is set to debug", func() {
