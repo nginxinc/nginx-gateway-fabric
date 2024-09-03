@@ -917,6 +917,9 @@ ControllerLogLevel
 <td><p>NginxContextHTTPServerLocation is the location context of the NGINX configuration.
 <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#location">https://nginx.org/en/docs/http/ngx_http_core_module.html#location</a></p>
 </td>
+</tr><tr><td><p>&#34;main&#34;</p></td>
+<td><p>NginxContextMain is the main context of the NGINX configuration.</p>
+</td>
 </tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason

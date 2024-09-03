@@ -61,6 +61,7 @@ spec:
                       description: Context is the NGINX context to insert the snippet
                         into.
                       enum:
+                      - main
                       - http
                       - http.server
                       - http.server.location

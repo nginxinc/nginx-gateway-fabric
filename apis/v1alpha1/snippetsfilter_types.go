@@ -25,7 +25,7 @@ type SnippetsFilter struct {
 }
 
 // +kubebuilder:object:root=true
-//
+
 // SnippetsFilterList contains a list of SnippetFilters.
 type SnippetsFilterList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -89,10 +89,13 @@ const (
 
 // NginxContext represents the NGINX configuration context.
 //
-// +kubebuilder:validation:Enum=http;http.server;http.server.location
+// +kubebuilder:validation:Enum=main;http;http.server;http.server.location
 type NginxContext string
 
 const (
+	// NginxContextMain is the main context of the NGINX configuration.
+	NginxContextMain NginxContext = "main"
+
 	// NginxContextHTTP is the http context of the NGINX configuration.
 	// https://nginx.org/en/docs/http/ngx_http_core_module.html#http
 	NginxContextHTTP NginxContext = "http"
