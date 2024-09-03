@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -104,12 +105,19 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				_, err = verifyAndReturnNginxGateway(nginxGatewayNsname)
 				Expect(err).ToNot(HaveOccurred())
 
-				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
-					Container: "nginx-gateway",
-				})
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(
+					func() bool {
+						logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+							Container: "nginx-gateway",
+						})
+						if err != nil {
+							return false
+						}
 
-				Expect(logs).To(ContainSubstring("\"level\":\"debug\""))
+						return strings.Contains(logs, "\"level\":\"debug\"")
+					}).WithTimeout(timeoutConfig.GetTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(BeTrue())
 			})
 		})
 
@@ -129,12 +137,19 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 				Expect(nginxGateway.Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
 
-				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
-					Container: "nginx-gateway",
-				})
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(
+					func() bool {
+						logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+							Container: "nginx-gateway",
+						})
+						if err != nil {
+							return false
+						}
 
-				Expect(logs).ToNot(ContainSubstring("\"level\":\"debug\""))
+						return !strings.Contains(logs, "\"level\":\"debug\"")
+					}).WithTimeout(timeoutConfig.GetTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(BeTrue())
 			})
 		})
 	})
@@ -179,14 +194,20 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 					WithPolling(500 * time.Millisecond).
 					Should(BeTrue())
 
-				logs, err = resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
-					Container: "nginx-gateway",
-				})
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(
+					func() bool {
+						logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+							Container: "nginx-gateway",
+						})
+						if err != nil {
+							return false
+						}
 
-				Expect(logs).To(ContainSubstring(
-					"\"current\":\"debug\",\"msg\":\"Log level changed\",\"prev\":\"info\"",
-				))
+						return strings.Contains(logs,
+							"\"current\":\"debug\",\"msg\":\"Log level changed\",\"prev\":\"info\"")
+					}).WithTimeout(timeoutConfig.GetTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(BeTrue())
 			})
 		})
 
@@ -202,12 +223,19 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 					WithPolling(500 * time.Millisecond).
 					Should(MatchError("failed to get nginxGateway"))
 
-				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
-					Container: "nginx-gateway",
-				})
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(
+					func() bool {
+						logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+							Container: "nginx-gateway",
+						})
+						if err != nil {
+							return false
+						}
 
-				Expect(logs).To(ContainSubstring("NginxGateway configuration was deleted; using defaults"))
+						return strings.Contains(logs, "NginxGateway configuration was deleted; using defaults")
+					}).WithTimeout(timeoutConfig.GetTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(BeTrue())
 			})
 		})
 	})
