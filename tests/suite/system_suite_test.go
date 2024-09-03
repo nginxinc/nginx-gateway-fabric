@@ -99,7 +99,6 @@ type setupConfig struct {
 	infoLogLevel bool
 }
 
-//nolint:gocyclo
 func setup(cfg setupConfig, extraInstallArgs ...string) {
 	log.SetLogger(GinkgoLogr)
 
@@ -161,6 +160,31 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		return
 	}
 
+	installCfg := setupNGF(cfg, extraInstallArgs...)
+
+	podNames, err := framework.GetReadyNGFPodNames(
+		k8sClient,
+		installCfg.Namespace,
+		installCfg.ReleaseName,
+		timeoutConfig.CreateTimeout,
+	)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(BeEmpty())
+
+	if *serviceType != "LoadBalancer" {
+		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
+		portForwardStopCh = make(chan struct{})
+		err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], ports, portForwardStopCh)
+		address = "127.0.0.1"
+		portFwdPort = ngfHTTPForwardedPort
+		portFwdHTTPSPort = ngfHTTPSForwardedPort
+	} else {
+		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
+	}
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func setupNGF(cfg setupConfig, extraInstallArgs ...string) framework.InstallationConfig {
 	installCfg := framework.InstallationConfig{
 		ReleaseName:     cfg.releaseName,
 		Namespace:       ngfNamespace,
@@ -197,26 +221,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		Expect(err).ToNot(HaveOccurred(), string(output))
 	}
 
-	podNames, err := framework.GetReadyNGFPodNames(
-		k8sClient,
-		installCfg.Namespace,
-		installCfg.ReleaseName,
-		timeoutConfig.CreateTimeout,
-	)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeEmpty())
-
-	if *serviceType != "LoadBalancer" {
-		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
-		portForwardStopCh = make(chan struct{})
-		err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], ports, portForwardStopCh)
-		address = "127.0.0.1"
-		portFwdPort = ngfHTTPForwardedPort
-		portFwdHTTPSPort = ngfHTTPSForwardedPort
-	} else {
-		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
-	}
-	Expect(err).ToNot(HaveOccurred())
+	return installCfg
 }
 
 func teardown(relName string) {
