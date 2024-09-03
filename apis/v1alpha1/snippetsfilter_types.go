@@ -24,6 +24,15 @@ type SnippetsFilter struct {
 	Status SnippetsFilterStatus `json:"status,omitempty"`
 }
 
+// +kubebuilder:object:root=true
+//
+// SnippetsFilterList contains a list of SnippetFilters.
+type SnippetsFilterList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []SnippetsFilter `json:"items"`
+}
+
 // SnippetsFilterSpec defines the desired state of the SnippetsFilter.
 type SnippetsFilterSpec struct {
 	// Snippets is a list of NGINX configuration snippets.
@@ -39,13 +48,6 @@ type Snippet struct {
 
 	// Value is the NGINX configuration snippet.
 	Value string `json:"value"`
-}
-
-// SnippetsFilterList contains a list of SnippetFilters.
-type SnippetsFilterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Snippet `json:"items"`
 }
 
 // SnippetsFilterStatus defines the state of SnippetsFilter.
