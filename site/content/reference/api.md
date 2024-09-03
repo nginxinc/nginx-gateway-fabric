@@ -906,13 +906,16 @@ ControllerLogLevel
 </tr>
 </thead>
 <tbody><tr><td><p>&#34;http&#34;</p></td>
-<td><p>NginxContextHTTP is the http context of the NGINX configuration.</p>
+<td><p>NginxContextHTTP is the http context of the NGINX configuration.
+<a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#http">https://nginx.org/en/docs/http/ngx_http_core_module.html#http</a></p>
 </td>
 </tr><tr><td><p>&#34;http.server&#34;</p></td>
-<td><p>NginxContextHTTPServer is the server context of the NGINX configuration.</p>
+<td><p>NginxContextHTTPServer is the server context of the NGINX configuration.
+<a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#server">https://nginx.org/en/docs/http/ngx_http_core_module.html#server</a></p>
 </td>
 </tr><tr><td><p>&#34;http.server.location&#34;</p></td>
-<td><p>NginxContextHTTPServerLocation is the location context of the NGINX configuration.</p>
+<td><p>NginxContextHTTPServerLocation is the location context of the NGINX configuration.
+<a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#location">https://nginx.org/en/docs/http/ngx_http_core_module.html#location</a></p>
 </td>
 </tr></tbody>
 </table>

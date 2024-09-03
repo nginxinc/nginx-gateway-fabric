@@ -87,7 +87,7 @@ const (
 
 // NginxContext represents the NGINX configuration context.
 //
-// +kubebuilder:validation:Enum=http;http.server;http.server.location;
+// +kubebuilder:validation:Enum=http;http.server;http.server.location
 type NginxContext string
 
 const (
