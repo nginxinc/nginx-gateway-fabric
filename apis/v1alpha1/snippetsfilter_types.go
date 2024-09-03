@@ -41,7 +41,7 @@ type Snippet struct {
 	Value string `json:"value"`
 }
 
-// SnippetsFilterList contains a list of Snippets.
+// SnippetsFilterList contains a list of SnippetFilters.
 type SnippetsFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
