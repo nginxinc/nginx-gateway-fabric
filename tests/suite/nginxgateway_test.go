@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -39,24 +40,41 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		var nginxGateway ngfAPI.NginxGateway
 
 		if err := k8sClient.Get(ctx, nsname, &nginxGateway); err != nil {
-			return nginxGateway, err
+			return nginxGateway, errors.New("failed to get nginxGateway")
 		}
 
 		return nginxGateway, nil
 	}
 
-	verifyAndReturnNginxGateway := func(nsname types.NamespacedName) ngfAPI.NginxGateway {
+	verifyAndReturnNginxGateway := func(nsname types.NamespacedName) (ngfAPI.NginxGateway, error) {
 		nginxGateway, err := getNginxGateway(nsname)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(nginxGateway).ToNot(BeNil())
+		if err != nil {
+			return nginxGateway, err
+		}
 
-		Expect(nginxGateway.Status.Conditions).To(HaveLen(1))
+		if nginxGateway.Status.Conditions == nil {
+			return nginxGateway, errors.New("nginxGateway is has no conditions")
+		}
+
+		if len(nginxGateway.Status.Conditions) != 1 {
+			return nginxGateway,
+				fmt.Errorf("expected nginxGateway to have only one condition, instead has %d conditions",
+					len(nginxGateway.Status.Conditions))
+		}
+
 		condition := nginxGateway.Status.Conditions[0]
 
-		Expect(condition.Type).To(Equal("Valid"))
-		Expect(condition.Reason).To(Equal("Valid"))
+		if condition.Type != "Valid" {
+			return nginxGateway, fmt.Errorf("expected nginxGateway condition type to be Valid,"+
+				" instead has type %s", condition.Type)
+		}
 
-		return nginxGateway
+		if condition.Reason != "Valid" {
+			return nginxGateway, fmt.Errorf("expected nginxGateway reason to be Valid,"+
+				" instead is %s", condition.Reason)
+		}
+
+		return nginxGateway, nil
 	}
 
 	getNGFPodName := func() (string, error) {
@@ -83,7 +101,8 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				_ = verifyAndReturnNginxGateway(nginxGatewayNsname)
+				_, err = verifyAndReturnNginxGateway(nginxGatewayNsname)
+				Expect(err).ToNot(HaveOccurred())
 
 				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 					Container: "nginx-gateway",
@@ -105,7 +124,9 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				nginxGateway := verifyAndReturnNginxGateway(nginxGatewayNsname)
+				nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
+				Expect(err).ToNot(HaveOccurred())
+
 				Expect(nginxGateway.Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
 
 				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
@@ -132,7 +153,9 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 				var observedGeneration int64
 
-				nginxGateway := verifyAndReturnNginxGateway(nginxGatewayNsname)
+				nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
+				Expect(err).ToNot(HaveOccurred())
+
 				observedGeneration = nginxGateway.Status.Conditions[0].ObservedGeneration
 
 				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
@@ -143,11 +166,18 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				Expect(logs).ToNot(ContainSubstring("\"level\":\"debug\""))
 
 				Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
-				// need to wait until files are applied, no current function because this is a nginx-gateway crd
-				time.Sleep(2 * time.Second)
 
-				nginxGateway = verifyAndReturnNginxGateway(nginxGatewayNsname)
-				Expect(nginxGateway.Status.Conditions[0].ObservedGeneration).To(Equal(observedGeneration + 1))
+				Eventually(
+					func() bool {
+						nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
+						if err != nil {
+							return false
+						}
+
+						return nginxGateway.Status.Conditions[0].ObservedGeneration == observedGeneration+1
+					}).WithTimeout(timeoutConfig.UpdateTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(BeTrue())
 
 				logs, err = resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 					Container: "nginx-gateway",
@@ -163,12 +193,16 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		When("NginxGateway is deleted", func() {
 			It("captures the deletion and default values are used", func() {
 				Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
-				time.Sleep(2 * time.Second) // need to wait until deletion is fully processed
 
-				_, err := getNginxGateway(nginxGatewayNsname)
-				Expect(err).Should(HaveOccurred())
+				Eventually(
+					func() error {
+						_, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
+						return err
+					}).WithTimeout(timeoutConfig.DeleteTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(MatchError("failed to get nginxGateway"))
 
-				logs, err = resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
+				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 					Container: "nginx-gateway",
 				})
 				Expect(err).ToNot(HaveOccurred())
