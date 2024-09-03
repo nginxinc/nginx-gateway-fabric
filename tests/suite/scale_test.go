@@ -187,7 +187,7 @@ The logs are attached only if there are errors.
 		Expect(err).ToNot(HaveOccurred())
 
 		logLines := strings.Split(logs, "\n")
-		errors := 0
+		var errors []string
 
 	outer:
 		for _, line := range logLines {
@@ -198,22 +198,24 @@ The logs are attached only if there are errors.
 			}
 			for _, substr := range substrings {
 				if strings.Contains(line, substr) {
-					errors++
+					errors = append(errors, line)
 					continue outer
 				}
 			}
 		}
 
-		// attach full logs
-		if errors > 0 {
+		// attach error logs
+		if len(errors) > 0 {
 			f, err := os.Create(fileName)
 			Expect(err).ToNot(HaveOccurred())
 			defer f.Close()
 
-			_, err = io.WriteString(f, logs)
-			Expect(err).ToNot(HaveOccurred())
+			for _, e := range errors {
+				_, err = io.WriteString(f, fmt.Sprintf("%s\n", e))
+				Expect(err).ToNot(HaveOccurred())
+			}
 		}
-		return errors
+		return len(errors)
 	}
 
 	runTestWithMetricsAndLogs := func(testName, testResultsDir string, test func()) {
@@ -797,7 +799,7 @@ var _ = Describe("Zero downtime scale test", Ordered, Label("nfr", "zero-downtim
 	})
 
 	AfterAll(func() {
-		_, err := fmt.Fprintln(outFile)
+		_, err := fmt.Fprint(outFile)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(outFile.Close()).To(Succeed())
 
