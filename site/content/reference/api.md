@@ -1112,8 +1112,8 @@ Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/
 If a request comes from a trusted address, NGINX will rewrite the client IP information,
 and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-Addresses must be provided as CIDR blocks or IP address: 10.0.0.0, 192.33.<sup>21</sup>&frasl;<sub>24</sub>, fe80::<sup>1</sup>&frasl;<sub>128</sub>.
-To trust all addresses (not recommended), set to 0.0.0.0/0.
+Addresses must be provided as CIDR blocks or IP addresses: 10.0.0.0, 192.33.<sup>21</sup>&frasl;<sub>24</sub>, fe80::<sup>1</sup>&frasl;<sub>128</sub>.
+To trust all addresses (not recommended for production), set to 0.0.0.0/0.
 If no addresses are provided, NGINX will not rewrite the client IP information.
 Sets NGINX directive set_real_ip_from: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from">https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from</a>
 This field is required if mode is set.</p>
@@ -1141,7 +1141,7 @@ This field is required if mode is set.</p>
 <tbody><tr><td><p>&#34;ProxyProtocol&#34;</p></td>
 <td><p>RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and
 set the client&rsquo;s IP address to the IP address in the PROXY protocol header.
-Sets the proxy_protocol parameter to the listen directive on all servers, and sets real_ip_header
+Sets the proxy_protocol parameter on the listen directive of all servers and sets real_ip_header
 to proxy_protocol: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header</a>.</p>
 </td>
 </tr><tr><td><p>&#34;XForwardedFor&#34;</p></td>

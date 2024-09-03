@@ -465,7 +465,7 @@ If you check your _nginx_ container logs and see the following error:
 
 It indicates that `proxy_protocol` is enabled for the gateway listeners, but the request sent to the application endpoint does not contain proxy information. To **resolve** this, you can do one of the following:
 
-- Disable field [`rewriteClientIP.mode`](({{< relref "reference/api.md" >}})) in the NginxProxy configuration.
+- Unassign the field [`rewriteClientIP.mode`](({{< relref "reference/api.md" >}})) in the NginxProxy configuration.
 
 - Send valid proxy information with requests being handled by your application.
 

@@ -342,6 +342,7 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 				"listen [::]:8080 proxy_protocol;":                         1,
 				"listen [::]:8443 ssl default_server proxy_protocol;":      1,
 				"listen [::]:8443 ssl proxy_protocol;":                     1,
+				"real_ip_recursive on;":                                    0,
 			},
 		},
 		{

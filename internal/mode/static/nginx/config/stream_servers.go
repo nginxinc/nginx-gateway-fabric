@@ -67,6 +67,7 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 
 		portSet[server.Port] = struct{}{}
 
+		// we do not evaluate rewriteClientIP settings for non-socket stream servers
 		streamServer := stream.Server{
 			Listen:     fmt.Sprint(server.Port),
 			StatusZone: server.Hostname,
