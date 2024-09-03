@@ -105,7 +105,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).To(Succeed())
 
 				Eventually(
 					func() bool {
@@ -134,7 +134,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).To(Succeed())
 
 				Eventually(
 					func() bool {
@@ -165,7 +165,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				" and the observed generation is incremented", func() {
 				// previous test has left the log level at info, this test will change the log level to debug
 
-				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).To(Succeed())
 
 				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 					Container: "nginx-gateway",
