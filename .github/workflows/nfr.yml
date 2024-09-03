@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       test_label:
-        description: NFR test to run. Choose between performance, upgrade, scale, or all
+        description: NFR test to run. Choose between specific test or all tests
         required: true
         default: all
         type: choice
-        options: [performance, upgrade, scale, all]
+        options: [performance, upgrade, scale, zero-downtime-scale, reconfiguration, all]
       version:
         description: Version of NGF under test
         required: true
