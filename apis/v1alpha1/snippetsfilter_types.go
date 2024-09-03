@@ -95,6 +95,7 @@ const (
 	NginxContextHTTP NginxContext = "http"
 
 	// NginxContextHTTPServer is the server context of the NGINX configuration.
+	// https://nginx.org/en/docs/http/ngx_http_core_module.html#server
 	NginxContextHTTPServer NginxContext = "http.server"
 
 	// NginxContextHTTPServerLocation is the location context of the NGINX configuration.
