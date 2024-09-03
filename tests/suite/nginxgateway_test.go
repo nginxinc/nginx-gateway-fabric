@@ -126,7 +126,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				teardown(releaseName)
 
 				cfg := getDefaultSetupCfg()
-				cfg.infoLogLevel = true
+				cfg.debugLogLevel = false
 				setup(cfg)
 
 				ngfPodName, err := getNGFPodName()

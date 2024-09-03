@@ -56,31 +56,6 @@ func UninstallGatewayAPI(apiVersion string) ([]byte, error) {
 	return nil, nil
 }
 
-// InstallNGFDebugLevel installs NGF with debug log level.
-func InstallNGFDebugLevel(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
-	args := []string{
-		"install",
-		"--debug",
-		cfg.ReleaseName,
-		cfg.ChartPath,
-		"--create-namespace",
-		"--namespace", cfg.Namespace,
-		"--wait",
-		"--set", "nginxGateway.productTelemetry.enable=false",
-		"--set", "nginxGateway.config.logging.level=debug",
-	}
-	if cfg.ChartVersion != "" {
-		args = append(args, "--version", cfg.ChartVersion)
-	}
-
-	args = append(args, setImageArgs(cfg)...)
-	fullArgs := append(args, extraArgs...)
-
-	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
-
-	return exec.Command("helm", fullArgs...).CombinedOutput()
-}
-
 // InstallNGF installs NGF.
 func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	args := []string{

@@ -91,12 +91,12 @@ const (
 )
 
 type setupConfig struct {
-	releaseName  string
-	chartPath    string
-	gwAPIVersion string
-	deploy       bool
-	nfr          bool
-	infoLogLevel bool
+	releaseName   string
+	chartPath     string
+	gwAPIVersion  string
+	deploy        bool
+	nfr           bool
+	debugLogLevel bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -213,13 +213,15 @@ func setupNGF(cfg setupConfig, extraInstallArgs ...string) framework.Installatio
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	if cfg.infoLogLevel {
-		output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
-		Expect(err).ToNot(HaveOccurred(), string(output))
-	} else {
-		output, err = framework.InstallNGFDebugLevel(installCfg, extraInstallArgs...)
-		Expect(err).ToNot(HaveOccurred(), string(output))
+	if cfg.debugLogLevel {
+		extraInstallArgs = append(
+			extraInstallArgs,
+			"--set", "nginxGateway.config.logging.level=debug",
+		)
 	}
+
+	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
+	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	return installCfg
 }
@@ -267,10 +269,11 @@ func getDefaultSetupCfg() setupConfig {
 	localChartPath = filepath.Join(basepath, "charts/nginx-gateway-fabric")
 
 	return setupConfig{
-		releaseName:  releaseName,
-		chartPath:    localChartPath,
-		gwAPIVersion: *gatewayAPIVersion,
-		deploy:       true,
+		releaseName:   releaseName,
+		chartPath:     localChartPath,
+		gwAPIVersion:  *gatewayAPIVersion,
+		deploy:        true,
+		debugLogLevel: true,
 	}
 }
 
