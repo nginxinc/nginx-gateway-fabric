@@ -47,35 +47,38 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		return nginxGateway, nil
 	}
 
-	verifyAndReturnNginxGateway := func(nsname types.NamespacedName) (ngfAPI.NginxGateway, error) {
+	verifyNginxGateway := func(nsname types.NamespacedName, expObservedGen int64) error {
 		nginxGateway, err := getNginxGateway(nsname)
 		if err != nil {
-			return nginxGateway, err
+			return err
 		}
 
 		if nginxGateway.Status.Conditions == nil {
-			return nginxGateway, errors.New("nginxGateway is has no conditions")
+			return errors.New("nginxGateway is has no conditions")
 		}
 
 		if len(nginxGateway.Status.Conditions) != 1 {
-			return nginxGateway,
-				fmt.Errorf("expected nginxGateway to have only one condition, instead has %d conditions",
-					len(nginxGateway.Status.Conditions))
+			return fmt.Errorf("expected nginxGateway to have only one condition, instead has %d conditions",
+				len(nginxGateway.Status.Conditions))
 		}
 
 		condition := nginxGateway.Status.Conditions[0]
 
 		if condition.Type != "Valid" {
-			return nginxGateway, fmt.Errorf("expected nginxGateway condition type to be Valid,"+
-				" instead has type %s", condition.Type)
+			return fmt.Errorf("expected nginxGateway condition type to be Valid, instead has type %s",
+				condition.Type)
 		}
 
 		if condition.Reason != "Valid" {
-			return nginxGateway, fmt.Errorf("expected nginxGateway reason to be Valid,"+
-				" instead is %s", condition.Reason)
+			return fmt.Errorf("expected nginxGateway reason to be Valid, instead is %s", condition.Reason)
 		}
 
-		return nginxGateway, nil
+		if condition.ObservedGeneration != expObservedGen {
+			return fmt.Errorf("expected nginxGateway observed generation to be %d, instead is %d",
+				expObservedGen, condition.ObservedGeneration)
+		}
+
+		return nil
 	}
 
 	getNGFPodName := func() (string, error) {
@@ -102,8 +105,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				_, err = verifyAndReturnNginxGateway(nginxGatewayNsname)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
 
 				Eventually(
 					func() bool {
@@ -132,10 +134,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				ngfPodName, err := getNGFPodName()
 				Expect(err).ToNot(HaveOccurred())
 
-				nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(nginxGateway.Status.Conditions[0].ObservedGeneration).To(Equal(int64(1)))
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
 
 				Eventually(
 					func() bool {
@@ -166,12 +165,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 				" and the observed generation is incremented", func() {
 				// previous test has left the log level at info, this test will change the log level to debug
 
-				var observedGeneration int64
-
-				nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
-				Expect(err).ToNot(HaveOccurred())
-
-				observedGeneration = nginxGateway.Status.Conditions[0].ObservedGeneration
+				Expect(verifyNginxGateway(nginxGatewayNsname, int64(1))).ToNot(HaveOccurred())
 
 				logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 					Container: "nginx-gateway",
@@ -184,12 +178,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 				Eventually(
 					func() bool {
-						nginxGateway, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
-						if err != nil {
-							return false
-						}
-
-						return nginxGateway.Status.Conditions[0].ObservedGeneration == observedGeneration+1
+						return verifyNginxGateway(nginxGatewayNsname, int64(2)) != nil
 					}).WithTimeout(timeoutConfig.UpdateTimeout).
 					WithPolling(500 * time.Millisecond).
 					Should(BeTrue())
@@ -217,8 +206,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 				Eventually(
 					func() error {
-						_, err := verifyAndReturnNginxGateway(nginxGatewayNsname)
-						return err
+						return verifyNginxGateway(nginxGatewayNsname, int64(0))
 					}).WithTimeout(timeoutConfig.DeleteTimeout).
 					WithPolling(500 * time.Millisecond).
 					Should(MatchError("failed to get nginxGateway"))
