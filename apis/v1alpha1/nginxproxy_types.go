@@ -149,7 +149,7 @@ type RewriteClientIP struct {
 	// If a request comes from a trusted address, NGINX will rewrite the client IP information,
 	// and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 	// If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-	// Addresses must be provided as CIDR blocks or IP address: 10.0.0.0, 192.33.21/24, fe80::1/128.
+	// Addresses must be provided as CIDR blocks or IP addresses: 10.0.0.0, 192.33.21/24, fe80::1/128.
 	// To trust all addresses (not recommended), set to 0.0.0.0/0.
 	// If no addresses are provided, NGINX will not rewrite the client IP information.
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
