@@ -53,7 +53,7 @@ spec:
                 description: |-
                   Snippets is a list of NGINX configuration snippets.
                   There can only be one snippet per context.
-                  Allowed contexts: http, http.server, http.server.location.
+                  Allowed contexts: main, http, http.server, http.server.location.
                 items:
                   description: Snippet represents an NGINX configuration snippet.
                   properties:

@@ -37,7 +37,7 @@ type SnippetsFilterList struct {
 type SnippetsFilterSpec struct {
 	// Snippets is a list of NGINX configuration snippets.
 	// There can only be one snippet per context.
-	// Allowed contexts: http, http.server, http.server.location.
+	// Allowed contexts: main, http, http.server, http.server.location.
 	Snippets []Snippet `json:"snippets"`
 }
 
@@ -49,6 +49,28 @@ type Snippet struct {
 	// Value is the NGINX configuration snippet.
 	Value string `json:"value"`
 }
+
+// NginxContext represents the NGINX configuration context.
+//
+// +kubebuilder:validation:Enum=main;http;http.server;http.server.location
+type NginxContext string
+
+const (
+	// NginxContextMain is the main context of the NGINX configuration.
+	NginxContextMain NginxContext = "main"
+
+	// NginxContextHTTP is the http context of the NGINX configuration.
+	// https://nginx.org/en/docs/http/ngx_http_core_module.html#http
+	NginxContextHTTP NginxContext = "http"
+
+	// NginxContextHTTPServer is the server context of the NGINX configuration.
+	// https://nginx.org/en/docs/http/ngx_http_core_module.html#server
+	NginxContextHTTPServer NginxContext = "http.server"
+
+	// NginxContextHTTPServerLocation is the location context of the NGINX configuration.
+	// https://nginx.org/en/docs/http/ngx_http_core_module.html#location
+	NginxContextHTTPServerLocation NginxContext = "http.server.location"
+)
 
 // SnippetsFilterStatus defines the state of SnippetsFilter.
 type SnippetsFilterStatus struct {
@@ -85,26 +107,4 @@ const (
 	// SnippetsFilterConditionTypeInvalid is used with the Accepted condition type when
 	// SnippetsFilter is invalid.
 	SnippetsFilterConditionTypeInvalid SnippetsFilterConditionType = "Invalid"
-)
-
-// NginxContext represents the NGINX configuration context.
-//
-// +kubebuilder:validation:Enum=main;http;http.server;http.server.location
-type NginxContext string
-
-const (
-	// NginxContextMain is the main context of the NGINX configuration.
-	NginxContextMain NginxContext = "main"
-
-	// NginxContextHTTP is the http context of the NGINX configuration.
-	// https://nginx.org/en/docs/http/ngx_http_core_module.html#http
-	NginxContextHTTP NginxContext = "http"
-
-	// NginxContextHTTPServer is the server context of the NGINX configuration.
-	// https://nginx.org/en/docs/http/ngx_http_core_module.html#server
-	NginxContextHTTPServer NginxContext = "http.server"
-
-	// NginxContextHTTPServerLocation is the location context of the NGINX configuration.
-	// https://nginx.org/en/docs/http/ngx_http_core_module.html#location
-	NginxContextHTTPServerLocation NginxContext = "http.server.location"
 )

@@ -527,7 +527,7 @@ SnippetsFilterSpec
 <td>
 <p>Snippets is a list of NGINX configuration snippets.
 There can only be one snippet per context.
-Allowed contexts: http, http.server, http.server.location.</p>
+Allowed contexts: main, http, http.server, http.server.location.</p>
 </td>
 </tr>
 </table>
@@ -1277,7 +1277,7 @@ SnippetsFilter is invalid.</p>
 <td>
 <p>Snippets is a list of NGINX configuration snippets.
 There can only be one snippet per context.
-Allowed contexts: http, http.server, http.server.location.</p>
+Allowed contexts: main, http, http.server, http.server.location.</p>
 </td>
 </tr>
 </tbody>
