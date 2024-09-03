@@ -60,7 +60,7 @@ type UpstreamSettingsPolicy struct {
     Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
 }
 
-type UpstreamSettingsSpec struct {
+type UpstreamSettingsPolicySpec struct {
     // TargetRefs identifies API object(s) to apply the policy to.
     // Objects must be in the same namespace as the policy.
     // Support: Service
@@ -83,7 +83,7 @@ type UpstreamSettingsSpec struct {
 
 // UpstreamKeepAlive defines the keep-alive settings for upstreams.
 type UpstreamKeepAlive struct {
-    // Connections sets the maximum number of idle keepalive connections to upstream servers that are preserved
+    // Connections sets the maximum number of idle keep-alive connections to upstream servers that are preserved
     // in the cache of each nginx worker process. When this number is exceeded, the least recently used
     // connections are closed.
     // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive
