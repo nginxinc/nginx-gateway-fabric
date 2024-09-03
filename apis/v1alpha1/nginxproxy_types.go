@@ -169,7 +169,7 @@ type RewriteClientIPModeType string
 const (
 	// RewriteClientIPModeProxyProtocol configures NGINX to accept PROXY protocol and
 	// set the client's IP address to the IP address in the PROXY protocol header.
-	// Sets the proxy_protocol parameter to the listen directive on all servers, and sets real_ip_header
+	// Sets the proxy_protocol parameter on the listen directive of all servers and sets real_ip_header
 	// to proxy_protocol: https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_header.
 	RewriteClientIPModeProxyProtocol RewriteClientIPModeType = "ProxyProtocol"
 
