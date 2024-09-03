@@ -2198,7 +2198,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Spec: ngfAPI.NginxProxySpec{
 							RewriteClientIP: &ngfAPI.RewriteClientIP{
 								SetIPRecursively: helpers.GetPointer(true),
-								TrustedAddresses: []ngfAPI.TrustedAddress{"0.0.0.0/0"},
+								TrustedAddresses: []ngfAPI.TrustedAddress{"1.1.1.1/32"},
 								Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
 							},
 						},
@@ -2214,7 +2214,7 @@ func TestBuildConfiguration(t *testing.T) {
 					IPFamily: Dual,
 					RewriteClientIPSettings: RewriteClientIPSettings{
 						IPRecursive:      true,
-						TrustedAddresses: []string{"0.0.0.0/0"},
+						TrustedAddresses: []string{"1.1.1.1/32"},
 						Mode:             RewriteIPModeProxyProtocol,
 					},
 				}
@@ -3620,7 +3620,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 						Spec: ngfAPI.NginxProxySpec{
 							RewriteClientIP: &ngfAPI.RewriteClientIP{
 								Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
-								TrustedAddresses: []ngfAPI.TrustedAddress{"0.0.0.0/0"},
+								TrustedAddresses: []ngfAPI.TrustedAddress{"10.9.9.4"},
 								SetIPRecursively: helpers.GetPointer(true),
 							},
 						},
@@ -3629,7 +3629,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
 				Mode:             RewriteIPModeProxyProtocol,
-				TrustedAddresses: []string{"0.0.0.0/0"},
+				TrustedAddresses: []string{"10.9.9.4"},
 				IPRecursive:      true,
 			},
 		},
@@ -3642,7 +3642,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 						Spec: ngfAPI.NginxProxySpec{
 							RewriteClientIP: &ngfAPI.RewriteClientIP{
 								Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
-								TrustedAddresses: []ngfAPI.TrustedAddress{"0.0.0.0/0"},
+								TrustedAddresses: []ngfAPI.TrustedAddress{"76.89.90.11"},
 								SetIPRecursively: helpers.GetPointer(true),
 							},
 						},
@@ -3651,7 +3651,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
 				Mode:             RewriteIPModeXForwardedFor,
-				TrustedAddresses: []string{"0.0.0.0/0"},
+				TrustedAddresses: []string{"76.89.90.11"},
 				IPRecursive:      true,
 			},
 		},
@@ -3664,7 +3664,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 						Spec: ngfAPI.NginxProxySpec{
 							RewriteClientIP: &ngfAPI.RewriteClientIP{
 								Mode:             helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
-								TrustedAddresses: []ngfAPI.TrustedAddress{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
+								TrustedAddresses: []ngfAPI.TrustedAddress{"5.5.5.5", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
 								SetIPRecursively: helpers.GetPointer(false),
 							},
 						},
@@ -3673,7 +3673,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 			},
 			expRewriteIPSettings: RewriteClientIPSettings{
 				Mode:             RewriteIPModeXForwardedFor,
-				TrustedAddresses: []string{"0.0.0.0/0", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
+				TrustedAddresses: []string{"5.5.5.5", "1.1.1.1/32", "2.2.2.2/32", "3.3.3.3/24"},
 				IPRecursive:      false,
 			},
 		},

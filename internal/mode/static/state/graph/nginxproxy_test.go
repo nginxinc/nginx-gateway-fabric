@@ -402,7 +402,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				"Invalid value: \"2001:db8::/129\": must be a valid IP address or CIDR range",
 		},
 		{
-			name:      "invalid IP and CIDR in trustedAddresses",
+			name:      "invalid IP and valid CIDR in trustedAddresses",
 			validator: createInvalidValidator(),
 			np: &ngfAPI.NginxProxy{
 				Spec: ngfAPI.NginxProxySpec{
