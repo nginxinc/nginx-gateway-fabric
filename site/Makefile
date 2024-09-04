@@ -36,7 +36,7 @@ else
 endif
 endif
 
-.PHONY: docs docs-draft docs-local clean hugo-get hugo-tidy lint-markdown link-check
+.PHONY: docs watch drafts clean hugo-get hugo-tidy hugo-update lint-markdown link-check
 
 docs:
 	${HUGO}
