@@ -91,11 +91,12 @@ const (
 )
 
 type setupConfig struct {
-	releaseName  string
-	chartPath    string
-	gwAPIVersion string
-	deploy       bool
-	nfr          bool
+	releaseName   string
+	chartPath     string
+	gwAPIVersion  string
+	deploy        bool
+	nfr           bool
+	debugLogLevel bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -159,6 +160,31 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		return
 	}
 
+	installCfg := createNGFInstallConfig(cfg, extraInstallArgs...)
+
+	podNames, err := framework.GetReadyNGFPodNames(
+		k8sClient,
+		installCfg.Namespace,
+		installCfg.ReleaseName,
+		timeoutConfig.CreateTimeout,
+	)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(BeEmpty())
+
+	if *serviceType != "LoadBalancer" {
+		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
+		portForwardStopCh = make(chan struct{})
+		err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], ports, portForwardStopCh)
+		address = "127.0.0.1"
+		portFwdPort = ngfHTTPForwardedPort
+		portFwdHTTPSPort = ngfHTTPSForwardedPort
+	} else {
+		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
+	}
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framework.InstallationConfig {
 	installCfg := framework.InstallationConfig{
 		ReleaseName:     cfg.releaseName,
 		Namespace:       ngfNamespace,
@@ -187,29 +213,17 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
+	if cfg.debugLogLevel {
+		extraInstallArgs = append(
+			extraInstallArgs,
+			"--set", "nginxGateway.config.logging.level=debug",
+		)
+	}
+
 	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	podNames, err := framework.GetReadyNGFPodNames(
-		k8sClient,
-		installCfg.Namespace,
-		installCfg.ReleaseName,
-		timeoutConfig.CreateTimeout,
-	)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeEmpty())
-
-	if *serviceType != "LoadBalancer" {
-		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
-		portForwardStopCh = make(chan struct{})
-		err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], ports, portForwardStopCh)
-		address = "127.0.0.1"
-		portFwdPort = ngfHTTPForwardedPort
-		portFwdHTTPSPort = ngfHTTPSForwardedPort
-	} else {
-		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
-	}
-	Expect(err).ToNot(HaveOccurred())
+	return installCfg
 }
 
 func teardown(relName string) {
@@ -255,10 +269,11 @@ func getDefaultSetupCfg() setupConfig {
 	localChartPath = filepath.Join(basepath, "charts/nginx-gateway-fabric")
 
 	return setupConfig{
-		releaseName:  releaseName,
-		chartPath:    localChartPath,
-		gwAPIVersion: *gatewayAPIVersion,
-		deploy:       true,
+		releaseName:   releaseName,
+		chartPath:     localChartPath,
+		gwAPIVersion:  *gatewayAPIVersion,
+		deploy:        true,
+		debugLogLevel: true,
 	}
 }
 
