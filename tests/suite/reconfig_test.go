@@ -24,7 +24,7 @@ import (
 )
 
 // Cluster node size must be greater than or equal to 4 for test to perform correctly.
-var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("reconfiguration", "nfr"), func() {
+var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("nfr", "reconfiguration"), func() {
 	const (
 		// used for cleaning up resources
 		maxResourceCount = 150
@@ -627,7 +627,6 @@ const reconfigResultTemplate = `
 {{- range .EventsBuckets }}
 	- {{ .Le }}ms: {{ .Val }}
 {{- end }}
-
 `
 
 func writeReconfigResults(dest io.Writer, results reconfigTestResults) error {

@@ -13,6 +13,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
 	maxSize := helpers.GetPointer[ngfAPI.Size]("10m")
 	bodyTimeout := helpers.GetPointer[ngfAPI.Duration]("600ms")
 	keepaliveRequests := helpers.GetPointer[int32](900)
@@ -149,9 +150,9 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	g := NewWithT(t)
-
-	checkResults := func(resFiles policies.GenerateResultFiles, expStrings []string) {
+	checkResults := func(t *testing.T, resFiles policies.GenerateResultFiles, expStrings []string) {
+		t.Helper()
+		g := NewWithT(t)
 		g.Expect(resFiles).To(HaveLen(1))
 
 		for _, str := range expStrings {
@@ -160,22 +161,24 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(_ *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			generator := clientsettings.NewGenerator()
 
 			resFiles := generator.GenerateForServer([]policies.Policy{test.policy}, http.Server{})
-			checkResults(resFiles, test.expStrings)
+			checkResults(t, resFiles, test.expStrings)
 
 			resFiles = generator.GenerateForLocation([]policies.Policy{test.policy}, http.Location{})
-			checkResults(resFiles, test.expStrings)
+			checkResults(t, resFiles, test.expStrings)
 
 			resFiles = generator.GenerateForInternalLocation([]policies.Policy{test.policy})
-			checkResults(resFiles, test.expStrings)
+			checkResults(t, resFiles, test.expStrings)
 		})
 	}
 }
 
 func TestGenerateNoPolicies(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	generator := clientsettings.NewGenerator()
