@@ -52,15 +52,19 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		}
 
 		if len(nginxGateway.Status.Conditions) != 1 {
-			return fmt.Errorf("expected nginxGateway to have only one condition, instead has %d conditions",
-				len(nginxGateway.Status.Conditions))
+			return fmt.Errorf(
+				"expected nginxGateway to have only one condition, instead has %d conditions",
+				len(nginxGateway.Status.Conditions),
+			)
 		}
 
 		condition := nginxGateway.Status.Conditions[0]
 
 		if condition.Type != "Valid" {
-			return fmt.Errorf("expected nginxGateway condition type to be Valid, instead has type %s",
-				condition.Type)
+			return fmt.Errorf(
+				"expected nginxGateway condition type to be Valid, instead has type %s",
+				condition.Type,
+			)
 		}
 
 		if condition.Reason != "Valid" {
@@ -68,8 +72,11 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		}
 
 		if condition.ObservedGeneration != expObservedGen {
-			return fmt.Errorf("expected nginxGateway observed generation to be %d, instead is %d",
-				expObservedGen, condition.ObservedGeneration)
+			return fmt.Errorf(
+				"expected nginxGateway observed generation to be %d, instead is %d",
+				expObservedGen,
+				condition.ObservedGeneration,
+			)
 		}
 
 		return nil

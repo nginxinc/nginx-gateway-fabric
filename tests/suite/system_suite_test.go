@@ -160,7 +160,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		return
 	}
 
-	installCfg := setupNGF(cfg, extraInstallArgs...)
+	installCfg := createNGFInstallConfig(cfg, extraInstallArgs...)
 
 	podNames, err := framework.GetReadyNGFPodNames(
 		k8sClient,
@@ -184,7 +184,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func setupNGF(cfg setupConfig, extraInstallArgs ...string) framework.InstallationConfig {
+func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framework.InstallationConfig {
 	installCfg := framework.InstallationConfig{
 		ReleaseName:     cfg.releaseName,
 		Namespace:       ngfNamespace,
