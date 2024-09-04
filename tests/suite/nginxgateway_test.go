@@ -243,8 +243,10 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 							return false
 						}
 
-						return strings.Contains(logs,
-							"\"current\":\"debug\",\"msg\":\"Log level changed\",\"prev\":\"info\"")
+						return strings.Contains(
+							logs,
+							"\"current\":\"debug\",\"msg\":\"Log level changed\",\"prev\":\"info\"",
+						)
 					}).WithTimeout(timeoutConfig.GetTimeout).
 					WithPolling(500 * time.Millisecond).
 					Should(BeTrue())
