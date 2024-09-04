@@ -10,8 +10,8 @@ server {
     listen [::]:{{ $s.Listen }};
 	{{- end }}
 
-    {{- range $cidr := $s.RewriteClientIP.RealIPFrom }}
-    set_real_ip_from {{ $cidr }};
+    {{- range $address := $s.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $address }};
     {{- end}}
 	{{- if $.Plus }}
     status_zone {{ $s.StatusZone }};

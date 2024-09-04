@@ -467,6 +467,76 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.Address">Address
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Address" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP</a>)
+</p>
+<p>
+<p>Address is a struct that specifies address type and value.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.AddressType">
+AddressType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type specifies the type of address.
+Default is &ldquo;cidr&rdquo; which specifies that the address is a CIDR block.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Value specifies the address value.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.AddressType">AddressType
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.AddressType" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.Address">Address</a>)
+</p>
+<p>
+<p>AddressType specifies the type of address.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;cidr&#34;</p></td>
+<td><p>AddressTypeCIDR specifies that the address is a CIDR block.
+kubebuilder:validation:Pattern=<code>(\/([0-9]?[0-9]?[0-8]))$</code></p>
+</td>
+</tr></tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.ClientBody">ClientBody
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientBody" title="Permanent link">¶</a>
 </h3>
@@ -1091,7 +1161,7 @@ the X-Forwarded-For header. It is used in conjunction with TrustedAddresses.
 If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of array
 to start of array and select the first untrusted IP.
 For example, if X-Forwarded-For is [11.11.11.11, 22.22.22.22, 55.55.55.1],
-and TrustedAddresses is set to 55.55.55.1, NGINX will rewrite the client IP to 22.22.22.22.
+and TrustedAddresses is set to 55.55.55.<sup>1</sup>&frasl;<sub>32</sub>, NGINX will rewrite the client IP to 22.22.22.22.
 If disabled, NGINX will select the IP at the end of the array.
 In the previous example, 55.55.55.1 would be selected.
 Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive">https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive</a></p>
@@ -1101,8 +1171,8 @@ Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/
 <td>
 <code>trustedAddresses</code><br/>
 <em>
-<a href="#gateway.nginx.org/v1alpha1.TrustedAddress">
-[]TrustedAddress
+<a href="#gateway.nginx.org/v1alpha1.Address">
+[]Address
 </a>
 </em>
 </td>
@@ -1112,7 +1182,7 @@ Sets NGINX directive real_ip_recursive: <a href="https://nginx.org/en/docs/http/
 If a request comes from a trusted address, NGINX will rewrite the client IP information,
 and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-Addresses must be provided as CIDR blocks or IP addresses: 10.0.0.0, 192.33.<sup>21</sup>&frasl;<sub>24</sub>, fe80::<sup>1</sup>&frasl;<sub>128</sub>.
+TrustedAddresses only supports CIDR blocks: 192.33.21.<sup>1</sup>&frasl;<sub>24</sub>, fe80::<sup>1</sup>&frasl;<sub>64</sub>.
 To trust all addresses (not recommended for production), set to 0.0.0.0/0.
 If no addresses are provided, NGINX will not rewrite the client IP information.
 Sets NGINX directive set_real_ip_from: <a href="https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from">https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from</a>
@@ -1491,17 +1561,6 @@ Examples of invalid names: some-$value, quoted-&ldquo;value&rdquo;-name, unescap
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha1.TrustedAddress">TrustedAddress
-(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.TrustedAddress" title="Permanent link">¶</a>
-</h3>
-<p>
-(<em>Appears on: </em>
-<a href="#gateway.nginx.org/v1alpha1.RewriteClientIP">RewriteClientIP</a>)
-</p>
-<p>
-<p>TrustedAddress is a string value representing a CIDR block or an IP address.
-Examples: 10.0.0.<sup>2</sup>&frasl;<sub>32</sub>, 10.0.0.1, fe80::<sup>1</sup>&frasl;<sub>128</sub>, ::<sup>1</sup>&frasl;<sub>24</sub>.</p>
-</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>

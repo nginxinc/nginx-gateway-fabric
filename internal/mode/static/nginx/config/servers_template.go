@@ -13,8 +13,8 @@ server {
     listen [::]:{{ $s.Listen }} ssl default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
     ssl_reject_handshake on;
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
-    set_real_ip_from {{ $cidr }};
+        {{- range $address := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $address }};
         {{- end}}
         {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
@@ -31,8 +31,8 @@ server {
         {{- if $.IPFamily.IPv6 }}
     listen [::]:{{ $s.Listen }} default_server{{ $.RewriteClientIP.ProxyProtocol }};
         {{- end }}
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
-    set_real_ip_from {{ $cidr }};
+        {{- range $address := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $address }};
         {{- end}}
         {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};
@@ -77,8 +77,8 @@ server {
     include {{ $i.Name }};
         {{- end }}
 
-        {{- range $cidr := $.RewriteClientIP.RealIPFrom }}
-    set_real_ip_from {{ $cidr }};
+        {{- range $address := $.RewriteClientIP.RealIPFrom }}
+    set_real_ip_from {{ $address }};
         {{- end}}
         {{- if $.RewriteClientIP.RealIPHeader}}
     real_ip_header {{ $.RewriteClientIP.RealIPHeader }};

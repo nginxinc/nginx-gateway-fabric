@@ -94,10 +94,15 @@ nginx:
     # disableHTTP2: false
     # ipFamily: dual
     # rewriteClientIP:
-    #   mode: "XForwardedFor"
-    #   # -- Set to the CIDR range or IP of the proxy that sits in front of NGINX Gateway Fabric.
-    #   trustedAddresses: []
-    #   setIPRecursively: true
+    #   mode: "ProxyProtocol"
+    #   # -- The trusted addresses field needs to be replaced with the load balancer's IP address and type.
+    #   trustedAddresses: [
+    #     {
+    #       # -- The IP address of the load balancer.
+    #       value: "",
+    #       type: "cidr",
+    #     }
+    #   ]
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

@@ -137,7 +137,7 @@ type RewriteClientIP struct {
 	// If enabled, NGINX will recurse on the values in X-Forwarded-Header from the end of array
 	// to start of array and select the first untrusted IP.
 	// For example, if X-Forwarded-For is [11.11.11.11, 22.22.22.22, 55.55.55.1],
-	// and TrustedAddresses is set to 55.55.55.1, NGINX will rewrite the client IP to 22.22.22.22.
+	// and TrustedAddresses is set to 55.55.55.1/32, NGINX will rewrite the client IP to 22.22.22.22.
 	// If disabled, NGINX will select the IP at the end of the array.
 	// In the previous example, 55.55.55.1 would be selected.
 	// Sets NGINX directive real_ip_recursive: https://nginx.org/en/docs/http/ngx_http_realip_module.html#real_ip_recursive
@@ -149,17 +149,17 @@ type RewriteClientIP struct {
 	// If a request comes from a trusted address, NGINX will rewrite the client IP information,
 	// and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 	// If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-	// Addresses must be provided as CIDR blocks or IP addresses: 10.0.0.0, 192.33.21/24, fe80::1/128.
+	// TrustedAddresses only supports CIDR blocks: 192.33.21.1/24, fe80::1/64.
 	// To trust all addresses (not recommended for production), set to 0.0.0.0/0.
 	// If no addresses are provided, NGINX will not rewrite the client IP information.
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
 	// This field is required if mode is set.
 	// +kubebuilder:validation:MaxItems=16
-	// +listType=set
+	// +listType=atomic
 	//
 	//
 	// +optional
-	TrustedAddresses []TrustedAddress `json:"trustedAddresses,omitempty"`
+	TrustedAddresses []Address `json:"trustedAddresses,omitempty"`
 }
 
 // RewriteClientIPModeType defines how NGINX Gateway Fabric will determine the client's original IP address.
@@ -179,10 +179,27 @@ const (
 	RewriteClientIPModeXForwardedFor RewriteClientIPModeType = "XForwardedFor"
 )
 
-// TrustedAddress is a string value representing a CIDR block or an IP address.
-// Examples: 10.0.0.2/32, 10.0.0.1, fe80::1/128, ::1/24.
-//
-// +kubebuilder:validation:Pattern=`^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)$`
-//
-//nolint:lll
-type TrustedAddress string
+// Address is a struct that specifies address type and value.
+type Address struct {
+	// Type specifies the type of address.
+	// Default is "cidr" which specifies that the address is a CIDR block.
+	//
+	// +optional
+	// +kubebuilder:default:=cidr
+	Type AddressType `json:"type,omitempty"`
+
+	// Value specifies the address value.
+	//
+	// +optional
+	Value string `json:"value,omitempty"`
+}
+
+// AddressType specifies the type of address.
+// +kubebuilder:validation:Enum=cidr
+type AddressType string
+
+const (
+	// AddressTypeCIDR specifies that the address is a CIDR block.
+	// kubebuilder:validation:Pattern=`(\/([0-9]?[0-9]?[0-8]))$`
+	AddressTypeCIDR AddressType = "cidr"
+)
