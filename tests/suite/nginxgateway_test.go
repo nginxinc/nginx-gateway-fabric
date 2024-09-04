@@ -35,7 +35,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 		var nginxGateway ngfAPI.NginxGateway
 
 		if err := k8sClient.Get(ctx, nsname, &nginxGateway); err != nil {
-			return nginxGateway, errors.New("failed to get nginxGateway")
+			return nginxGateway, fmt.Errorf("failed to get nginxGateway: %w", err)
 		}
 
 		return nginxGateway, nil
@@ -43,7 +43,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 
 	verifyNginxGatewayConditions := func(ng ngfAPI.NginxGateway) error {
 		if ng.Status.Conditions == nil {
-			return errors.New("nginxGateway is has no conditions")
+			return errors.New("nginxGateway has no conditions")
 		}
 
 		if len(ng.Status.Conditions) != 1 {
@@ -262,7 +262,7 @@ var _ = Describe("NginxGateway", Ordered, Label("functional", "nginxGateway"), f
 						return nil
 					}).WithTimeout(timeoutConfig.DeleteTimeout).
 					WithPolling(500 * time.Millisecond).
-					Should(MatchError("failed to get nginxGateway"))
+					Should(MatchError(ContainSubstring("failed to get nginxGateway")))
 
 				Eventually(
 					func() bool {
