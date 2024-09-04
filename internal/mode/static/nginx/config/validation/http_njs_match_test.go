@@ -5,6 +5,7 @@ import (
 )
 
 func TestValidatePathInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -28,6 +29,7 @@ func TestValidatePathInMatch(t *testing.T) {
 }
 
 func TestValidateHeaderNameInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -50,6 +52,7 @@ func TestValidateHeaderNameInMatch(t *testing.T) {
 }
 
 func TestValidateHeaderValueInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -70,6 +73,7 @@ func TestValidateHeaderValueInMatch(t *testing.T) {
 }
 
 func TestValidateQueryParamNameInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -85,6 +89,7 @@ func TestValidateQueryParamNameInMatch(t *testing.T) {
 }
 
 func TestValidateQueryParamValueInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(
@@ -100,6 +105,7 @@ func TestValidateQueryParamValueInMatch(t *testing.T) {
 }
 
 func TestValidateMethodInMatch(t *testing.T) {
+	t.Parallel()
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSupportedValuesValidator(
@@ -123,6 +129,7 @@ func TestValidateMethodInMatch(t *testing.T) {
 }
 
 func TestValidateCommonMatchPart(t *testing.T) {
+	t.Parallel()
 	testValidValuesForSimpleValidator(
 		t,
 		validateCommonNJSMatchPart,

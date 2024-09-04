@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       test_label:
-        description: NFR test to run. Choose between performance, upgrade, scale, or all
+        description: NFR test to run. Choose between a specific test or all tests
         required: true
         default: all
         type: choice
-        options: [performance, upgrade, scale, all]
+        options: [performance, upgrade, scale, zero-downtime-scale, reconfiguration, all]
       version:
         description: Version of NGF under test
         required: true
@@ -129,7 +129,7 @@ jobs:
           fi
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: results-${{ matrix.type }}
           path: tests/results/**/*-${{ matrix.type }}.*
@@ -160,7 +160,7 @@ jobs:
           merge-multiple: true
 
       - name: Open a PR with the results
-        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        uses: peter-evans/create-pull-request@4320041ed380b20e97d388d56a7fb4f9b8c20e79 # v7.0.0
         with:
           token: ${{ secrets.NGINX_PAT }}
           commit-message: NFR Test Results for NGF version ${{ needs.vars.outputs.version }}

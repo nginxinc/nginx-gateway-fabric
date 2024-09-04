@@ -79,6 +79,7 @@ func testInvalidValuesForSupportedValuesValidator[T configValue](
 }
 
 func TestValidateInSupportedValues(t *testing.T) {
+	t.Parallel()
 	supportedValues := map[string]struct{}{
 		"value1": {},
 		"value2": {},
@@ -105,6 +106,7 @@ func TestValidateInSupportedValues(t *testing.T) {
 }
 
 func TestValidateNoUnsupportedValues(t *testing.T) {
+	t.Parallel()
 	unsupportedValues := map[string]struct{}{
 		"badvalue1": {},
 		"badvalue2": {},
@@ -133,6 +135,7 @@ func TestValidateNoUnsupportedValues(t *testing.T) {
 }
 
 func TestGetSortedKeysAsString(t *testing.T) {
+	t.Parallel()
 	values := map[string]struct{}{
 		"value3": {},
 		"value1": {},
