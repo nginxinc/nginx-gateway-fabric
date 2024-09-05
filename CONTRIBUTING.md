@@ -17,7 +17,7 @@ considering contributing!
     - [Suggest an Enhancement](#suggest-an-enhancement)
     - [Issue lifecycle](#issue-lifecycle)
   - [Development Guide](#development-guide)
-- [Contributor License Agreement](#contributor-license-agreement)
+- [F5 Contributor License Agreement (CLA)](#f5-contributor-license-agreement-cla)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -99,8 +99,8 @@ Before beginning development, familiarize yourself with the following documents:
 - [Design Principles](/docs/developer/design-principles.md): An overview of the project's design principles.
 - [NGINX Gateway Fabric Documentation](/site/README.md): An explanation of the documentation tooling and conventions.
 
-## Contributor License Agreement
+## F5 Contributor License Agreement (CLA)
 
-Individuals or business entities who contribute to this project must sign the [F5® Contributor License Agreement](https://github.com/f5/.github/blob/main/CLA/cla-markdown.md).
-To sign it you need to follow the instructions provided by the CLA bot when you open a pull request.
-If you have not signed the CLA, the pull request will be blocked until you do so.
+F5 requires all external contributors to agree to the terms of the F5 CLA (available [here](https://github.com/f5/.github/blob/main/CLA/cla-markdown.md)) before any of their changes can be incorporated into an F5 Open Source repository.
+
+If you have not yet agreed to the F5 CLA terms and submit a PR to this repository, a bot will prompt you to view and agree to the F5 CLA. You will have to agree to the F5 CLA terms through a comment in the PR before any of your changes can be merged. Your agreement signature will be safely stored by F5 and no longer be required in future PRs.
