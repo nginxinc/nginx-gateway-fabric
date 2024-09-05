@@ -70,7 +70,7 @@ type UpstreamKeepAlive struct {
 	// Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	Connections *int32 `json:"connections,omitempty"`
 
 	// Requests sets the maximum number of requests that can be served through one keep-alive connection.

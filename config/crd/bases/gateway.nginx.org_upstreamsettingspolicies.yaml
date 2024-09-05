@@ -61,7 +61,7 @@ spec:
                       connections are closed.
                       Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive
                     format: int32
-                    minimum: 0
+                    minimum: 1
                     type: integer
                   requests:
                     description: |-
