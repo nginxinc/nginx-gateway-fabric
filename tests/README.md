@@ -28,10 +28,8 @@ This directory contains the tests for NGINX Gateway Fabric. The tests are divide
 - [System Testing](#system-testing)
   - [Logging in tests](#logging-in-tests)
   - [Step 1 - Run the tests](#step-1---run-the-tests)
-    - [1a - Run the functional tests locally](#1a---run-the-functional-tests-locally)
-    - [1b - Run the tests on a GKE cluster from a GCP VM](#1b---run-the-tests-on-a-gke-cluster-from-a-gcp-vm)
-    - [Functional Tests](#functional-tests)
-    - [NFR tests](#nfr-tests)
+    - [Run the functional tests locally](#run-the-functional-tests-locally)
+    - [Run the NFR tests on a GKE cluster from a GCP VM](#run-the-nfr-tests-on-a-gke-cluster-from-a-gcp-vm)
       - [Longevity testing](#longevity-testing)
   - [Common test amendments](#common-test-amendments)
   - [Step 2 - Cleanup](#step-2---cleanup)
@@ -47,7 +45,7 @@ This directory contains the tests for NGINX Gateway Fabric. The tests are divide
 - [yq](https://github.com/mikefarah/yq/#install)
 - Make.
 
-If running NFR tests, or running functional tests in GKE:
+If running NFR tests:
 
 - The [gcloud CLI](https://cloud.google.com/sdk/docs/install)
 - A GKE cluster (if `master-authorized-networks` is enabled, please set `ADD_VM_IP_AUTH_NETWORKS=true` in your vars.env file)
@@ -59,9 +57,7 @@ All the commands below are executed from the `tests` directory. You can see all 
 
 ### Step 1 - Create a Kubernetes cluster
 
-This can be done in a cloud provider of choice, or locally using `kind`.
-
-**Important**: NFR tests can only be run on a GKE cluster.
+**Important**: Functional/conformance tests can only be run on a `kind` cluster. NFR tests can only be run on a GKE cluster.
 
 To create a local `kind` cluster:
 
@@ -237,7 +233,7 @@ When running locally, the tests create a port-forward from your NGF Pod to local
 test framework. Traffic is sent over this port. If running on a GCP VM targeting a GKE cluster, the tests will create an
 internal LoadBalancer service which will receive the test traffic.
 
-**Important**: NFR tests can only be run on a GKE cluster.
+**Important**: Functional tests can only be run on a `kind` cluster. NFR tests can only be run on a GKE cluster.
 
 Directory structure is as follows:
 
@@ -252,7 +248,7 @@ To log in the tests, use the `GinkgoWriter` interface described here: https://on
 
 ### Step 1 - Run the tests
 
-#### 1a - Run the functional tests locally
+#### Run the functional tests locally
 
 ```makefile
 make test TAG=$(whoami)
@@ -273,9 +269,7 @@ To run the telemetry test:
 make test TAG=$(whoami) GINKGO_LABEL=telemetry
 ```
 
-#### 1b - Run the tests on a GKE cluster from a GCP VM
-
-This step only applies if you are running the NFR tests, or would like to run the functional tests on a GKE cluster from a GCP based VM.
+#### Run the NFR tests on a GKE cluster from a GCP VM
 
 Before running the below `make` commands, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
 required env vars. `GKE_SVC_ACCOUNT` needs to be the name of a service account that has Kubernetes admin permissions.
@@ -292,7 +286,7 @@ To just set up the VM with no router (this will not run the tests):
 make create-and-setup-vm
 ```
 
-Otherwise, you can set up the VM, router, and run the tests with a single command. See the options in the sections below.
+Otherwise, you can set up the VM, router, and run the tests with a single command. See the options below.
 
 By default, the tests run using the version of NGF that was `git cloned` during the setup. If you want to make
 incremental changes and copy your local changes to the VM to test, you can run
@@ -300,22 +294,6 @@ incremental changes and copy your local changes to the VM to test, you can run
 ```makefile
 make sync-files-to-vm
 ```
-
-#### Functional Tests
-
-To set up the GCP environment with the router and VM and then run the tests, run the following command:
-
-```makefile
-make setup-gcp-and-run-tests
-```
-
-To use an existing VM to run the tests, run the following
-
-```makefile
-make run-tests-on-vm
-```
-
-#### NFR tests
 
 To set up the GCP environment with the router and VM and then run the tests, run the following command:
 
@@ -374,7 +352,7 @@ or to pass a specific flag, e.g. run a specific test, use the GINKGO_FLAGS varia
 make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.focus "writes the system info to a results file"'
 ```
 
-> Note: if filtering on NFR tests (or functional tests on GKE), set the filter in the appropriate field in your `vars.env` file.
+> Note: if filtering on NFR tests, set the filter in the appropriate field in your `vars.env` file.
 
 If you are running the tests in GCP, add your required label/ flags to `scripts/var.env`.
 

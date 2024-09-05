@@ -91,9 +91,130 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 			}
 		})
 
+		Context("nginx config", func() {
+			var conf *framework.Payload
+
+			BeforeAll(func() {
+				podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(podNames).To(HaveLen(1))
+
+				ngfPodName := podNames[0]
+
+				conf, err = resourceManager.GetNginxConfig(ngfPodName, ngfNamespace)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			DescribeTable("is set properly for",
+				func(expCfgs []framework.ExpectedNginxField) {
+					for _, expCfg := range expCfgs {
+						failureMsg := fmt.Sprintf(
+							"directive '%s' with value '%s' not found in expected place",
+							expCfg.Key, expCfg.Value,
+						)
+						Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(BeTrue(), failureMsg)
+					}
+				},
+				Entry("gateway policy", []framework.ExpectedNginxField{
+					{
+						Key:                   "include",
+						Value:                 "gw-csp.conf",
+						ValueSubstringAllowed: true,
+						File:                  "http.conf",
+						Servers:               []string{"*.example.com", "cafe.example.com"},
+					},
+					{
+						Key:   "client_max_body_size",
+						Value: "1000",
+						File:  "gw-csp.conf",
+					},
+					{
+						Key:   "client_body_timeout",
+						Value: "30s",
+						File:  "gw-csp.conf",
+					},
+					{
+						Key:   "keepalive_requests",
+						Value: "100",
+						File:  "gw-csp.conf",
+					},
+					{
+						Key:   "keepalive_time",
+						Value: "5s",
+						File:  "gw-csp.conf",
+					},
+					{
+						Key:   "keepalive_timeout",
+						Value: "2s 1s",
+						File:  "gw-csp.conf",
+					},
+				}),
+				Entry("coffee route policy", []framework.ExpectedNginxField{
+					{
+						Key:                   "include",
+						Value:                 "coffee-route-csp.conf",
+						ValueSubstringAllowed: true,
+						File:                  "http.conf",
+						Servers:               []string{"cafe.example.com"},
+						Location:              "/coffee",
+					},
+					{
+						Key:   "client_max_body_size",
+						Value: "2000",
+						File:  "coffee-route-csp.conf",
+					},
+				}),
+				Entry("tea route policy", []framework.ExpectedNginxField{
+					{
+						Key:                   "include",
+						Value:                 "tea-route-csp.conf",
+						ValueSubstringAllowed: true,
+						File:                  "http.conf",
+						Servers:               []string{"cafe.example.com"},
+						Location:              "/tea",
+					},
+					{
+						Key:   "keepalive_requests",
+						Value: "200",
+						File:  "tea-route-csp.conf",
+					},
+				}),
+				Entry("soda route policy", []framework.ExpectedNginxField{
+					{
+						Key:                   "include",
+						Value:                 "soda-route-csp.conf",
+						ValueSubstringAllowed: true,
+						File:                  "http.conf",
+						Servers:               []string{"cafe.example.com"},
+						Location:              "/soda",
+					},
+					{
+						Key:   "client_max_body_size",
+						Value: "3000",
+						File:  "soda-route-csp.conf",
+					},
+				}),
+				Entry("grpc route policy", []framework.ExpectedNginxField{
+					{
+						Key:                   "include",
+						Value:                 "grpc-route-csp.conf",
+						ValueSubstringAllowed: true,
+						File:                  "http.conf",
+						Servers:               []string{"*.example.com"},
+						Location:              "/helloworld.Greeter/SayHello",
+					},
+					{
+						Key:   "client_max_body_size",
+						Value: "0",
+						File:  "grpc-route-csp.conf",
+					},
+				}),
+			)
+		})
+
 		// We only test that the client_max_body_size directive in this test is propagated correctly.
 		// This is because we can easily verify this directive by sending requests with different sized payloads.
-		DescribeTable("the settings are propagated to the nginx config",
+		DescribeTable("client_max_body_size requests work as expected",
 			func(uri string, byteLengthOfRequestBody, expStatus int) {
 				url := baseURL + uri
 
