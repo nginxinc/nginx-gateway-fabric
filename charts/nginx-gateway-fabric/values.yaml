@@ -95,10 +95,10 @@ nginx:
     # ipFamily: dual
     # rewriteClientIP:
     #   mode: "ProxyProtocol"
-    #   # -- The trusted addresses field needs to be replaced with the load balancer's IP address and type.
+    #   # -- The trusted addresses field needs to be replaced with the load balancer's address and type.
     #   trustedAddresses: [
     #     {
-    #       # -- The IP address of the load balancer.
+    #       # -- The CIDR block of the load balancer(s).
     #       value: "",
     #       type: "cidr",
     #     }
