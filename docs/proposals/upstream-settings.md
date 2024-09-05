@@ -89,7 +89,7 @@ type UpstreamKeepAlive struct {
     // Directive: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive
     //
     // +optional
-    Connections *int32 `json"connections,omitempty"`
+    Connections *int32 `json:"connections,omitempty"`
 
     // Requests sets the maximum number of requests that can be served through one keep-alive connection.
     // After the maximum number of requests are made, the connection is closed.
