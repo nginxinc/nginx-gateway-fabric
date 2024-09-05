@@ -517,6 +517,27 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				"required when mode is set, spec.rewriteClientIP.mode: " +
 				"Unsupported value: \"invalid\": supported values: \"ProxyProtocol\", \"XForwardedFor\"]",
 		},
+		{
+			name:      "invalid address type in trustedAddresses",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressType("invalid"),
+								Value: "2001:db8::/129",
+							},
+						},
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8::/129: " +
+				"Unsupported value: \"invalid\": supported values: \"cidr\"",
+		},
 	}
 
 	for _, test := range tests {

@@ -118,7 +118,9 @@ spec:
                       type: object
                     maxItems: 16
                     type: array
-                    x-kubernetes-list-type: atomic
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
                 x-kubernetes-validations:
                 - message: if mode is set, trustedAddresses is a required field
