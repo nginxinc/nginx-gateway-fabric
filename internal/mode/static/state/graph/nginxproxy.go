@@ -186,7 +186,7 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 			default:
 				allErrs = append(
 					allErrs,
-					field.NotSupported(trustedAddressesPath.Child(addr.Value),
+					field.NotSupported(trustedAddressesPath.Child("type"),
 						addr.Type,
 						[]string{string(ngfAPI.AddressTypeCIDR)},
 					),

@@ -155,9 +155,8 @@ type RewriteClientIP struct {
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
 	// This field is required if mode is set.
 	// +kubebuilder:validation:MaxItems=16
-	// 	+listType=map
+	// +listType=map
 	// +listMapKey=type
-	//
 	//
 	// +optional
 	TrustedAddresses []Address `json:"trustedAddresses,omitempty"`
@@ -201,6 +200,6 @@ type AddressType string
 
 const (
 	// AddressTypeCIDR specifies that the address is a CIDR block.
-	// kubebuilder:validation:Pattern=`^[\.a-zA-Z0-9::]*(\/([0-9]?[0-9]?[0-8]))$`
+	// kubebuilder:validation:Pattern=`^[\.a-zA-Z0-9:]*(\/([0-9]?[0-9]?[0-9]))$`
 	AddressTypeCIDR AddressType = "cidr"
 )

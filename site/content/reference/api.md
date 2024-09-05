@@ -533,7 +533,7 @@ string
 </thead>
 <tbody><tr><td><p>&#34;cidr&#34;</p></td>
 <td><p>AddressTypeCIDR specifies that the address is a CIDR block.
-kubebuilder:validation:Pattern=<code>^[\.a-zA-Z0-9::]*(\/([0-9]?[0-9]?[0-8]))$</code></p>
+kubebuilder:validation:Pattern=<code>^[\.a-zA-Z0-9:]*(\/([0-9]?[0-9]?[0-9]))$</code></p>
 </td>
 </tr></tbody>
 </table>

@@ -103,6 +103,7 @@ nginx:
     #       type: "cidr",
     #     }
     #   ]
+    #    setIPRecursively: true
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

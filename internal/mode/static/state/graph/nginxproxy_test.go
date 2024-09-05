@@ -535,7 +535,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				},
 			},
 			expectErrCount: 1,
-			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8::/129: " +
+			errorString: "spec.rewriteClientIP.trustedAddresses.type: " +
 				"Unsupported value: \"invalid\": supported values: \"cidr\"",
 		},
 	}
