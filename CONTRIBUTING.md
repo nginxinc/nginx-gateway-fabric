@@ -101,8 +101,6 @@ Before beginning development, familiarize yourself with the following documents:
 
 ## Contributor License Agreement
 
-Individuals or business entities who contribute to this project must have completed and submitted
-the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf) prior to their code submission being included
-in this project. To submit, print out the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf), fill
-in the required sections, sign, scan, and send executed CLA to kubernetes@nginx.com. Make sure to include your github
-handle in the CLA email.
+Individuals or business entities who contribute to this project must sign the [F5® Contributor License Agreement](https://github.com/f5/.github/blob/main/CLA/cla-markdown.md).
+To sign it you need to follow the instructions provided by the CLA bot when you open a pull request.
+If you have not signed the CLA, the pull request will be blocked until you do so.
