@@ -724,12 +724,23 @@ func NewPolicyNotAcceptedTargetConflict(msg string) conditions.Condition {
 }
 
 // NewPolicyNotAcceptedNginxProxyNotSet returns a Condition that indicates that the Policy is not accepted
-// because it relies in the NginxProxy configuration which is missing or invalid.
+// because it relies on the NginxProxy configuration which is missing or invalid.
 func NewPolicyNotAcceptedNginxProxyNotSet(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(PolicyReasonNginxProxyConfigNotSet),
+		Message: msg,
+	}
+}
+
+// NewSnippetsFilterInvalid returns a Condition that indicates that the SnippetsFilter is not accepted because it is
+// syntactically or semantically invalid.
+func NewSnippetsFilterInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(ngfAPI.SnippetsFilterConditionReasonInvalid),
 		Message: msg,
 	}
 }

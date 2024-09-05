@@ -34,15 +34,19 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 	)
 
 	tests := []struct {
-		name                string
-		gwNsName            *types.NamespacedName
 		expectedObjects     []client.Object
 		expectedObjectLists []client.ObjectList
-		experimentalEnabled bool
+		name                string
+		cfg                 config.Config
 	}{
 		{
-			name:     "gwNsName is nil",
-			gwNsName: nil,
+			name: "gwNsName is nil",
+			cfg: config.Config{
+				GatewayClassName:     gcName,
+				GatewayNsName:        nil,
+				ExperimentalFeatures: false,
+				SnippetsFilters:      false,
+			},
 			expectedObjects: []client.Object{
 				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
 			},
@@ -63,9 +67,14 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 		},
 		{
 			name: "gwNsName is not nil",
-			gwNsName: &types.NamespacedName{
-				Namespace: "test",
-				Name:      "my-gateway",
+			cfg: config.Config{
+				GatewayClassName: gcName,
+				GatewayNsName: &types.NamespacedName{
+					Namespace: "test",
+					Name:      "my-gateway",
+				},
+				ExperimentalFeatures: false,
+				SnippetsFilters:      false,
 			},
 			expectedObjects: []client.Object{
 				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
@@ -87,9 +96,14 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 		},
 		{
 			name: "gwNsName is not nil and experimental enabled",
-			gwNsName: &types.NamespacedName{
-				Namespace: "test",
-				Name:      "my-gateway",
+			cfg: config.Config{
+				GatewayClassName: gcName,
+				GatewayNsName: &types.NamespacedName{
+					Namespace: "test",
+					Name:      "my-gateway",
+				},
+				ExperimentalFeatures: true,
+				SnippetsFilters:      false,
 			},
 			expectedObjects: []client.Object{
 				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
@@ -111,7 +125,69 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&ngfAPI.ClientSettingsPolicyList{},
 				&ngfAPI.ObservabilityPolicyList{},
 			},
-			experimentalEnabled: true,
+		},
+		{
+			name: "gwNsName is not nil and snippets filters enabled",
+			cfg: config.Config{
+				GatewayClassName: gcName,
+				GatewayNsName: &types.NamespacedName{
+					Namespace: "test",
+					Name:      "my-gateway",
+				},
+				ExperimentalFeatures: false,
+				SnippetsFilters:      true,
+			},
+			expectedObjects: []client.Object{
+				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
+				&gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "my-gateway", Namespace: "test"}},
+			},
+			expectedObjectLists: []client.ObjectList{
+				&apiv1.ServiceList{},
+				&apiv1.SecretList{},
+				&apiv1.NamespaceList{},
+				&discoveryV1.EndpointSliceList{},
+				&gatewayv1.HTTPRouteList{},
+				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
+				partialObjectMetadataList,
+				&gatewayv1.GRPCRouteList{},
+				&ngfAPI.ClientSettingsPolicyList{},
+				&ngfAPI.ObservabilityPolicyList{},
+				&ngfAPI.SnippetsFilterList{},
+			},
+		},
+		{
+			name: "gwNsName is not nil, experimental and snippets filters enabled",
+			cfg: config.Config{
+				GatewayClassName: gcName,
+				GatewayNsName: &types.NamespacedName{
+					Namespace: "test",
+					Name:      "my-gateway",
+				},
+				ExperimentalFeatures: true,
+				SnippetsFilters:      true,
+			},
+			expectedObjects: []client.Object{
+				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
+				&gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "my-gateway", Namespace: "test"}},
+			},
+			expectedObjectLists: []client.ObjectList{
+				&apiv1.ServiceList{},
+				&apiv1.SecretList{},
+				&apiv1.NamespaceList{},
+				&apiv1.ConfigMapList{},
+				&discoveryV1.EndpointSliceList{},
+				&gatewayv1.HTTPRouteList{},
+				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
+				partialObjectMetadataList,
+				&gatewayv1alpha3.BackendTLSPolicyList{},
+				&gatewayv1alpha2.TLSRouteList{},
+				&gatewayv1.GRPCRouteList{},
+				&ngfAPI.ClientSettingsPolicyList{},
+				&ngfAPI.ObservabilityPolicyList{},
+				&ngfAPI.SnippetsFilterList{},
+			},
 		},
 	}
 
@@ -119,7 +195,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			objects, objectLists := prepareFirstEventBatchPreparerArgs(gcName, test.gwNsName, test.experimentalEnabled)
+			objects, objectLists := prepareFirstEventBatchPreparerArgs(test.cfg)
 
 			g.Expect(objects).To(ConsistOf(test.expectedObjects))
 			g.Expect(objectLists).To(ConsistOf(test.expectedObjectLists))

@@ -73,7 +73,11 @@ spec:
                   - context
                   - value
                   type: object
+                maxItems: 4
                 type: array
+                x-kubernetes-validations:
+                - message: Only one snippet allowed per context
+                  rule: self.all(s1, self.exists_one(s2, s1.context == s2.context))
             required:
             - snippets
             type: object
