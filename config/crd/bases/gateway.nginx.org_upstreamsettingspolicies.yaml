@@ -126,7 +126,7 @@ spec:
                 - message: 'TargetRefs Kind must be: Service'
                   rule: self.all(t, t.kind=='Service')
                 - message: TargetRefs Group must be core
-                  rule: self.exists(t, t.group=='') || self.exists(t, t.group==`core`)
+                  rule: self.exists(t, t.group=='') || self.exists(t, t.group=='core')
               zoneSize:
                 description: |-
                   ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share
