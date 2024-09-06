@@ -93,6 +93,17 @@ nginx:
     {}
     # disableHTTP2: false
     # ipFamily: dual
+    # rewriteClientIP:
+    #   mode: "ProxyProtocol"
+    #   # -- The trusted addresses field needs to be replaced with the load balancer's address and type.
+    #   trustedAddresses: [
+    #     {
+    #       # -- The CIDR block of the load balancer(s).
+    #       value: "",
+    #       type: "cidr",
+    #     }
+    #   ]
+    #   setIPRecursively: true
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

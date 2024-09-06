@@ -2180,6 +2180,53 @@ func TestBuildConfiguration(t *testing.T) {
 			}),
 			msg: "NginxProxy with IPv6 IPFamily and no routes",
 		},
+		{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, &graph.Listener{
+					Name:   "listener-80-1",
+					Source: listener80,
+					Valid:  true,
+					Routes: map[graph.RouteKey]*graph.L7Route{},
+				})
+				g.NginxProxy = &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							RewriteClientIP: &ngfAPI.RewriteClientIP{
+								SetIPRecursively: helpers.GetPointer(true),
+								TrustedAddresses: []ngfAPI.Address{
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "1.1.1.1/32",
+									},
+								},
+								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+							},
+						},
+					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				conf.BaseHTTPConfig = BaseHTTPConfig{
+					HTTP2:    true,
+					IPFamily: Dual,
+					RewriteClientIPSettings: RewriteClientIPSettings{
+						IPRecursive:      true,
+						TrustedAddresses: []string{"1.1.1.1/32"},
+						Mode:             RewriteIPModeProxyProtocol,
+					},
+				}
+				return conf
+			}),
+			msg: "NginxProxy with rewriteClientIP details set",
+		},
 	}
 
 	for _, test := range tests {
@@ -3551,4 +3598,124 @@ func TestBuildStreamUpstreams(t *testing.T) {
 	g := NewWithT(t)
 
 	g.Expect(streamUpstreams).To(ConsistOf(expectedStreamUpstreams))
+}
+
+func TestBuildRewriteIPSettings(t *testing.T) {
+	tests := []struct {
+		msg                  string
+		g                    *graph.Graph
+		expRewriteIPSettings RewriteClientIPSettings
+	}{
+		{
+			msg: "no rewrite IP settings configured",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid:  true,
+					Source: &ngfAPI.NginxProxy{},
+				},
+			},
+			expRewriteIPSettings: RewriteClientIPSettings{},
+		},
+		{
+			msg: "rewrite IP settings configured with proxyProtocol",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							RewriteClientIP: &ngfAPI.RewriteClientIP{
+								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+								TrustedAddresses: []ngfAPI.Address{
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "10.9.9.4/32",
+									},
+								},
+								SetIPRecursively: helpers.GetPointer(true),
+							},
+						},
+					},
+				},
+			},
+			expRewriteIPSettings: RewriteClientIPSettings{
+				Mode:             RewriteIPModeProxyProtocol,
+				TrustedAddresses: []string{"10.9.9.4/32"},
+				IPRecursive:      true,
+			},
+		},
+		{
+			msg: "rewrite IP settings configured with xForwardedFor",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							RewriteClientIP: &ngfAPI.RewriteClientIP{
+								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
+								TrustedAddresses: []ngfAPI.Address{
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "76.89.90.11/24",
+									},
+								},
+								SetIPRecursively: helpers.GetPointer(true),
+							},
+						},
+					},
+				},
+			},
+			expRewriteIPSettings: RewriteClientIPSettings{
+				Mode:             RewriteIPModeXForwardedFor,
+				TrustedAddresses: []string{"76.89.90.11/24"},
+				IPRecursive:      true,
+			},
+		},
+		{
+			msg: "rewrite IP settings configured with recursive set to false and multiple trusted addresses",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							RewriteClientIP: &ngfAPI.RewriteClientIP{
+								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
+								TrustedAddresses: []ngfAPI.Address{
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "5.5.5.5/12",
+									},
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "1.1.1.1/26",
+									},
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "2.2.2.2/32",
+									},
+									{
+										Type:  ngfAPI.AddressTypeCIDR,
+										Value: "3.3.3.3/24",
+									},
+								},
+								SetIPRecursively: helpers.GetPointer(false),
+							},
+						},
+					},
+				},
+			},
+			expRewriteIPSettings: RewriteClientIPSettings{
+				Mode:             RewriteIPModeXForwardedFor,
+				TrustedAddresses: []string{"5.5.5.5/12", "1.1.1.1/26", "2.2.2.2/32", "3.3.3.3/24"},
+				IPRecursive:      false,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			baseConfig := buildBaseHTTPConfig(tc.g)
+			g.Expect(baseConfig.RewriteClientIPSettings).To(Equal(tc.expRewriteIPSettings))
+		})
+	}
 }

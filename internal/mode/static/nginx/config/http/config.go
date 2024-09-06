@@ -2,7 +2,10 @@ package http
 
 import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 
-const InternalRoutePathPrefix = "/_ngf-internal"
+const (
+	InternalRoutePathPrefix = "/_ngf-internal"
+	HTTPSScheme             = "https"
+)
 
 // Server holds all configuration for an HTTP server.
 type Server struct {
@@ -109,9 +112,10 @@ type ProxySSLVerify struct {
 
 // ServerConfig holds configuration for an HTTP server and IP family to be used by NGINX.
 type ServerConfig struct {
-	Servers  []Server
-	IPFamily shared.IPFamily
-	Plus     bool
+	Servers         []Server
+	RewriteClientIP shared.RewriteClientIPSettings
+	IPFamily        shared.IPFamily
+	Plus            bool
 }
 
 // Include defines a file that's included via the include directive.

@@ -2,6 +2,7 @@ package graph
 
 import (
 	"k8s.io/apimachinery/pkg/types"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -124,6 +125,74 @@ func validateNginxProxy(
 		}
 	} else {
 		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)
+	}
+
+	allErrs = append(allErrs, validateRewriteClientIP(npCfg)...)
+
+	return allErrs
+}
+
+func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
+	var allErrs field.ErrorList
+	spec := field.NewPath("spec")
+
+	if npCfg.Spec.RewriteClientIP != nil {
+		rewriteClientIP := npCfg.Spec.RewriteClientIP
+		rewriteClientIPPath := spec.Child("rewriteClientIP")
+		trustedAddressesPath := rewriteClientIPPath.Child("trustedAddresses")
+
+		if rewriteClientIP.Mode != nil {
+			mode := *rewriteClientIP.Mode
+			if len(rewriteClientIP.TrustedAddresses) == 0 {
+				allErrs = append(
+					allErrs,
+					field.Required(rewriteClientIPPath, "trustedAddresses field required when mode is set"),
+				)
+			}
+
+			switch mode {
+			case ngfAPI.RewriteClientIPModeProxyProtocol, ngfAPI.RewriteClientIPModeXForwardedFor:
+			default:
+				allErrs = append(
+					allErrs,
+					field.NotSupported(
+						rewriteClientIPPath.Child("mode"),
+						mode,
+						[]string{string(ngfAPI.RewriteClientIPModeProxyProtocol), string(ngfAPI.RewriteClientIPModeXForwardedFor)},
+					),
+				)
+			}
+		}
+
+		if len(rewriteClientIP.TrustedAddresses) > 16 {
+			allErrs = append(
+				allErrs,
+				field.TooLongMaxLength(trustedAddressesPath, rewriteClientIP.TrustedAddresses, 16),
+			)
+		}
+
+		for _, addr := range rewriteClientIP.TrustedAddresses {
+			switch addr.Type {
+			case ngfAPI.AddressTypeCIDR:
+				if err := k8svalidation.IsValidCIDR(trustedAddressesPath, addr.Value); err != nil {
+					allErrs = append(
+						allErrs,
+						field.Invalid(trustedAddressesPath.Child(addr.Value),
+							addr,
+							err.ToAggregate().Error(),
+						),
+					)
+				}
+			default:
+				allErrs = append(
+					allErrs,
+					field.NotSupported(trustedAddressesPath.Child("type"),
+						addr.Type,
+						[]string{string(ngfAPI.AddressTypeCIDR)},
+					),
+				)
+			}
+		}
 	}
 
 	return allErrs

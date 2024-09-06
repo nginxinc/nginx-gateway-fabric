@@ -222,27 +222,27 @@ func TestGCReferencesAnyNginxProxy(t *testing.T) {
 	}
 }
 
+func createValidValidator() *validationfakes.FakeGenericValidator {
+	v := &validationfakes.FakeGenericValidator{}
+	v.ValidateEscapedStringNoVarExpansionReturns(nil)
+	v.ValidateEndpointReturns(nil)
+	v.ValidateServiceNameReturns(nil)
+	v.ValidateNginxDurationReturns(nil)
+
+	return v
+}
+
+func createInvalidValidator() *validationfakes.FakeGenericValidator {
+	v := &validationfakes.FakeGenericValidator{}
+	v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
+	v.ValidateEndpointReturns(errors.New("error"))
+	v.ValidateServiceNameReturns(errors.New("error"))
+	v.ValidateNginxDurationReturns(errors.New("error"))
+
+	return v
+}
+
 func TestValidateNginxProxy(t *testing.T) {
-	createValidValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(nil)
-		v.ValidateEndpointReturns(nil)
-		v.ValidateServiceNameReturns(nil)
-		v.ValidateNginxDurationReturns(nil)
-
-		return v
-	}
-
-	createInvalidValidator := func() *validationfakes.FakeGenericValidator {
-		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
-		v.ValidateEndpointReturns(errors.New("error"))
-		v.ValidateServiceNameReturns(errors.New("error"))
-		v.ValidateNginxDurationReturns(errors.New("error"))
-
-		return v
-	}
-
 	tests := []struct {
 		np              *ngfAPI.NginxProxy
 		validator       *validationfakes.FakeGenericValidator
@@ -266,6 +266,20 @@ func TestValidateNginxProxy(t *testing.T) {
 						},
 					},
 					IPFamily: helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual),
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "2001:db8:a0b:12f0::1/32",
+							},
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "1.1.1.1/24",
+							},
+						},
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
 				},
 			},
 			expectErrCount: 0,
@@ -352,6 +366,188 @@ func TestValidateNginxProxy(t *testing.T) {
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			if len(allErrs) > 0 {
 				g.Expect(allErrs.ToAggregate().Error()).To(ContainSubstring(test.expErrSubstring))
+			}
+		})
+	}
+}
+
+func TestValidateRewriteClientIP(t *testing.T) {
+	tests := []struct {
+		np             *ngfAPI.NginxProxy
+		validator      *validationfakes.FakeGenericValidator
+		name           string
+		errorString    string
+		expectErrCount int
+	}{
+		{
+			name:      "valid rewriteClientIP",
+			validator: createValidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "2001:db8:a0b:12f0::1/32",
+							},
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "10.56.32.11/32",
+							},
+						},
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 0,
+		},
+		{
+			name:      "invalid CIDR in trustedAddresses",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "2001:db8::/129",
+							},
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "10.0.0.1/32",
+							},
+						},
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.trustedAddresses.2001:db8::/129: " +
+				"Invalid value: v1alpha1.Address{Type:\"cidr\", Value:\"2001:db8::/129\"}: " +
+				"spec.rewriteClientIP.trustedAddresses: Invalid value: " +
+				"\"2001:db8::/129\": must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)",
+		},
+		{
+			name:      "invalid when mode is set and trustedAddresses is empty",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString:    "spec.rewriteClientIP: Required value: trustedAddresses field required when mode is set",
+		},
+		{
+			name:      "invalid when trustedAddresses is greater in length than 16",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+						TrustedAddresses: []ngfAPI.Address{
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+							{Type: ngfAPI.AddressTypeCIDR, Value: "2001:db8:a0b:12f0::1/32"},
+						},
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString:    "spec.rewriteClientIP.trustedAddresses: Too long: may not be longer than 16",
+		},
+		{
+			name:      "invalid when mode is not proxyProtocol or XForwardedFor",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeType("invalid")),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "2001:db8:a0b:12f0::1/32",
+							},
+							{
+								Type:  ngfAPI.AddressTypeCIDR,
+								Value: "10.0.0.1/32",
+							},
+						},
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.mode: Unsupported value: \"invalid\": " +
+				"supported values: \"ProxyProtocol\", \"XForwardedFor\"",
+		},
+		{
+			name:      "invalid when mode is not proxyProtocol or XForwardedFor and trustedAddresses is empty",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeType("invalid")),
+					},
+				},
+			},
+			expectErrCount: 2,
+			errorString: "[spec.rewriteClientIP: Required value: trustedAddresses field " +
+				"required when mode is set, spec.rewriteClientIP.mode: " +
+				"Unsupported value: \"invalid\": supported values: \"ProxyProtocol\", \"XForwardedFor\"]",
+		},
+		{
+			name:      "invalid address type in trustedAddresses",
+			validator: createInvalidValidator(),
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					RewriteClientIP: &ngfAPI.RewriteClientIP{
+						SetIPRecursively: helpers.GetPointer(true),
+						TrustedAddresses: []ngfAPI.Address{
+							{
+								Type:  ngfAPI.AddressType("invalid"),
+								Value: "2001:db8::/129",
+							},
+						},
+						Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
+					},
+				},
+			},
+			expectErrCount: 1,
+			errorString: "spec.rewriteClientIP.trustedAddresses.type: " +
+				"Unsupported value: \"invalid\": supported values: \"cidr\"",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			allErrs := validateRewriteClientIP(test.np)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			if len(allErrs) > 0 {
+				g.Expect(allErrs.ToAggregate().Error()).To(Equal(test.errorString))
 			}
 		})
 	}

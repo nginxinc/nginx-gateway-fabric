@@ -259,6 +259,124 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 				"listen [::]:8443 ssl default_server;":                     1,
 				"listen [::]:8443 ssl;":                                    1,
 				"status_zone":                                              0,
+				"real_ip_header proxy-protocol;":                           0,
+				"real_ip_recursive on;":                                    0,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
+
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
+	}
+}
+
+func TestExecuteServers_RewriteClientIP(t *testing.T) {
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname: "example.com",
+			Port:     8080,
+		},
+	}
+
+	sslServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8443,
+		},
+		{
+			Hostname: "example.com",
+			SSL: &dataplane.SSL{
+				KeyPairID: "test-keypair",
+			},
+			Port: 8443,
+		},
+	}
+	tests := []struct {
+		msg                string
+		expectedHTTPConfig map[string]int
+		config             dataplane.Configuration
+	}{
+		{
+			msg: "rewrite client IP settings configured with proxy protocol",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
+						Mode:             dataplane.RewriteIPModeProxyProtocol,
+						TrustedAddresses: []string{"10.56.73.51/32"},
+						IPRecursive:      false,
+					},
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"set_real_ip_from 10.56.73.51/32;":                         4,
+				"real_ip_header proxy_protocol;":                           4,
+				"listen 8080 default_server proxy_protocol;":               1,
+				"listen 8080 proxy_protocol;":                              1,
+				"listen 8443 ssl default_server proxy_protocol;":           1,
+				"listen 8443 ssl proxy_protocol;":                          1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server proxy_protocol;":          1,
+				"listen [::]:8080 proxy_protocol;":                         1,
+				"listen [::]:8443 ssl default_server proxy_protocol;":      1,
+				"listen [::]:8443 ssl proxy_protocol;":                     1,
+				"real_ip_recursive on;":                                    0,
+			},
+		},
+		{
+			msg: "rewrite client IP settings configured with x-forwarded-for",
+			config: dataplane.Configuration{
+				HTTPServers: httpServers,
+				SSLServers:  sslServers,
+				BaseHTTPConfig: dataplane.BaseHTTPConfig{
+					IPFamily: dataplane.Dual,
+					RewriteClientIPSettings: dataplane.RewriteClientIPSettings{
+						Mode:             dataplane.RewriteIPModeXForwardedFor,
+						TrustedAddresses: []string{"10.1.1.3/32", "2.2.2.2", "2001:db8::/32"},
+						IPRecursive:      true,
+					},
+				},
+			},
+			expectedHTTPConfig: map[string]int{
+				"set_real_ip_from 10.1.1.3/32;":                            4,
+				"set_real_ip_from 2.2.2.2;":                                4,
+				"set_real_ip_from 2001:db8::/32;":                          4,
+				"real_ip_header X-Forwarded-For;":                          4,
+				"real_ip_recursive on;":                                    4,
+				"listen 8080 default_server;":                              1,
+				"listen 8080;":                                             1,
+				"listen 8443 ssl default_server;":                          1,
+				"listen 8443 ssl;":                                         1,
+				"server_name example.com;":                                 2,
+				"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     1,
+				"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 1,
+				"ssl_reject_handshake on;":                                 1,
+				"listen [::]:8080 default_server;":                         1,
+				"listen [::]:8080;":                                        1,
+				"listen [::]:8443 ssl default_server;":                     1,
+				"listen [::]:8443 ssl;":                                    1,
 			},
 		},
 	}
@@ -796,44 +914,44 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	httpServers := []dataplane.VirtualServer{
-		{
-			IsDefault: true,
-			Port:      8080,
-		},
-		{
-			Hostname:  "cafe.example.com",
-			PathRules: cafePathRules,
-			Port:      8080,
-			Policies: []policies.Policy{
-				&policiesfakes.FakePolicy{},
-				&policiesfakes.FakePolicy{},
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8080,
+			},
+			{
+				Hostname:  "cafe.example.com",
+				PathRules: cafePathRules,
+				Port:      8080,
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
+					&policiesfakes.FakePolicy{},
+				},
 			},
 		},
-	}
-
-	sslServers := []dataplane.VirtualServer{
-		{
-			IsDefault: true,
-			Port:      8443,
-		},
-		{
-			Hostname:  "cafe.example.com",
-			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
-			PathRules: cafePathRules,
-			Port:      8443,
-			Policies: []policies.Policy{
-				&policiesfakes.FakePolicy{},
-				&policiesfakes.FakePolicy{},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				IsDefault: true,
+				Port:      8443,
+			},
+			{
+				Hostname:  "cafe.example.com",
+				SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
+				PathRules: cafePathRules,
+				Port:      8443,
+				Policies: []policies.Policy{
+					&policiesfakes.FakePolicy{},
+					&policiesfakes.FakePolicy{},
+				},
 			},
 		},
-	}
-
-	tlsPassthroughServers := []dataplane.Layer4VirtualServer{
-		{
-			Hostname:     "app.example.com",
-			Port:         8443,
-			UpstreamName: "sup",
+		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
+			{
+				Hostname:     "app.example.com",
+				Port:         8443,
+				UpstreamName: "sup",
+			},
 		},
 	}
 
@@ -904,6 +1022,22 @@ func TestCreateServers(t *testing.T) {
 		{
 			Name:  "Connection",
 			Value: "$connection_upgrade",
+		},
+		{
+			Name:  "X-Real-IP",
+			Value: "$remote_addr",
+		},
+		{
+			Name:  "X-Forwarded-Proto",
+			Value: "$scheme",
+		},
+		{
+			Name:  "X-Forwarded-Host",
+			Value: "$host",
+		},
+		{
+			Name:  "X-Forwarded-Port",
+			Value: "$server_port",
 		},
 	}
 
@@ -1172,6 +1306,22 @@ func TestCreateServers(t *testing.T) {
 						Name:  "Connection",
 						Value: "$connection_upgrade",
 					},
+					{
+						Name:  "X-Real-IP",
+						Value: "$remote_addr",
+					},
+					{
+						Name:  "X-Forwarded-Proto",
+						Value: "$scheme",
+					},
+					{
+						Name:  "X-Forwarded-Host",
+						Value: "$host",
+					},
+					{
+						Name:  "X-Forwarded-Port",
+						Value: "$server_port",
+					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
 					Add: []http.Header{
@@ -1209,6 +1359,22 @@ func TestCreateServers(t *testing.T) {
 					{
 						Name:  "Connection",
 						Value: "$connection_upgrade",
+					},
+					{
+						Name:  "X-Real-IP",
+						Value: "$remote_addr",
+					},
+					{
+						Name:  "X-Forwarded-Proto",
+						Value: "$scheme",
+					},
+					{
+						Name:  "X-Forwarded-Host",
+						Value: "$host",
+					},
+					{
+						Name:  "X-Forwarded-Port",
+						Value: "$server_port",
 					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
@@ -1315,7 +1481,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	})
 
-	result, httpMatchPair := createServers(httpServers, sslServers, tlsPassthroughServers, fakeGenerator)
+	result, httpMatchPair := createServers(conf, fakeGenerator)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1530,12 +1696,7 @@ func TestCreateServersConflicts(t *testing.T) {
 
 			g := NewWithT(t)
 
-			result, _ := createServers(
-				httpServers,
-				[]dataplane.VirtualServer{},
-				[]dataplane.Layer4VirtualServer{},
-				&policiesfakes.FakeGenerator{},
-			)
+			result, _ := createServers(dataplane.Configuration{HTTPServers: httpServers}, &policiesfakes.FakeGenerator{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
 	}
@@ -2385,6 +2546,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Name:  "Connection",
 					Value: "$connection_upgrade",
 				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
+				},
 			},
 		},
 		{
@@ -2422,6 +2599,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "Connection",
 					Value: "$connection_upgrade",
+				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
 				},
 			},
 		},
@@ -2469,6 +2662,22 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "Authority",
 					Value: "$gw_api_compliant_host",
+				},
+				{
+					Name:  "X-Real-IP",
+					Value: "$remote_addr",
+				},
+				{
+					Name:  "X-Forwarded-Proto",
+					Value: "$scheme",
+				},
+				{
+					Name:  "X-Forwarded-Host",
+					Value: "$host",
+				},
+				{
+					Name:  "X-Forwarded-Port",
+					Value: "$server_port",
 				},
 			},
 		},

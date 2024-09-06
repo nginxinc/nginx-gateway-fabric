@@ -5,6 +5,7 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -46,12 +47,17 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 	for _, server := range conf.TLSPassthroughServers {
 		if u, ok := upstreams[server.UpstreamName]; ok && server.UpstreamName != "" {
 			if server.Hostname != "" && len(u.Endpoints) > 0 {
-				streamServers = append(streamServers, stream.Server{
+				streamServer := stream.Server{
 					Listen:     getSocketNameTLS(server.Port, server.Hostname),
 					StatusZone: server.Hostname,
 					ProxyPass:  server.UpstreamName,
 					IsSocket:   true,
-				})
+				}
+				// set rewriteClientIP settings as this is a socket stream server
+				streamServer.RewriteClientIP = getRewriteClientIPSettingsForStream(
+					conf.BaseHTTPConfig.RewriteClientIPSettings,
+				)
+				streamServers = append(streamServers, streamServer)
 			}
 		}
 
@@ -60,13 +66,29 @@ func createStreamServers(conf dataplane.Configuration) []stream.Server {
 		}
 
 		portSet[server.Port] = struct{}{}
-		streamServers = append(streamServers, stream.Server{
+
+		// we do not evaluate rewriteClientIP settings for non-socket stream servers
+		streamServer := stream.Server{
 			Listen:     fmt.Sprint(server.Port),
 			StatusZone: server.Hostname,
 			Pass:       getTLSPassthroughVarName(server.Port),
 			SSLPreread: true,
-		})
+		}
+		streamServers = append(streamServers, streamServer)
+	}
+	return streamServers
+}
+
+func getRewriteClientIPSettingsForStream(
+	rewriteConfig dataplane.RewriteClientIPSettings,
+) shared.RewriteClientIPSettings {
+	proxyEnabled := rewriteConfig.Mode == dataplane.RewriteIPModeProxyProtocol
+	if proxyEnabled {
+		return shared.RewriteClientIPSettings{
+			ProxyProtocol: shared.ProxyProtocolDirective,
+			RealIPFrom:    rewriteConfig.TrustedAddresses,
+		}
 	}
 
-	return streamServers
+	return shared.RewriteClientIPSettings{}
 }

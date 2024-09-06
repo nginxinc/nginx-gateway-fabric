@@ -4,12 +4,13 @@ import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/conf
 
 // Server holds all configuration for a stream server.
 type Server struct {
-	Listen     string
-	StatusZone string
-	ProxyPass  string
-	Pass       string
-	SSLPreread bool
-	IsSocket   bool
+	Listen          string
+	StatusZone      string
+	ProxyPass       string
+	Pass            string
+	RewriteClientIP shared.RewriteClientIPSettings
+	SSLPreread      bool
+	IsSocket        bool
 }
 
 // Upstream holds all configuration for a stream upstream.
