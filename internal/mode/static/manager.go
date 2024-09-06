@@ -531,8 +531,6 @@ func registerControllers(
 	}
 
 	if cfg.SnippetsFilters {
-		cfg.Logger.V(1).Info("Registering controller for SnippetsFilter")
-
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
 				objectType: &ngfAPI.SnippetsFilter{},
