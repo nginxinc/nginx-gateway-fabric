@@ -38,6 +38,7 @@ type SnippetsFilterSpec struct {
 	// Snippets is a list of NGINX configuration snippets.
 	// There can only be one snippet per context.
 	// Allowed contexts: main, http, http.server, http.server.location.
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:XValidation:message="Only one snippet allowed per context",rule="self.all(s1, self.exists_one(s2, s1.context == s2.context))"
 	//nolint:lll
@@ -50,12 +51,14 @@ type Snippet struct {
 	Context NginxContext `json:"context"`
 
 	// Value is the NGINX configuration snippet.
+	// +kubebuilder:validation:MinLength=1
 	Value string `json:"value"`
 }
 
 // NginxContext represents the NGINX configuration context.
 //
 // +kubebuilder:validation:Enum=main;http;http.server;http.server.location
+// +kubebuilder:validation:MinLength=4
 type NginxContext string
 
 const (
