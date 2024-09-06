@@ -8,10 +8,10 @@ on:
     types:
       - opened
       - synchronize
+      - reopened
 
 concurrency:
   group: ${{ github.ref_name }}-cla
-  cancel-in-progress: true
 
 permissions:
   contents: read
