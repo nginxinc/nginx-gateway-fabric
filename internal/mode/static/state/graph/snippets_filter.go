@@ -49,9 +49,25 @@ func validateSnippetsFilter(filter *ngfAPI.SnippetsFilter) *conditions.Condition
 	var allErrs field.ErrorList
 	snippetsPath := field.NewPath("spec.snippets")
 
+	if len(filter.Spec.Snippets) == 0 {
+		cond := staticConds.NewSnippetsFilterInvalid(
+			field.Required(snippetsPath, "at least one snippet must be provided").Error(),
+		)
+		return &cond
+	}
+
 	usedContexts := make(map[ngfAPI.NginxContext]struct{})
 
 	for i, snippet := range filter.Spec.Snippets {
+		valuePath := snippetsPath.Index(i).Child("value")
+		if snippet.Value == "" {
+			cond := staticConds.NewSnippetsFilterInvalid(
+				field.Required(valuePath, "value cannot be empty").Error(),
+			)
+
+			return &cond
+		}
+
 		ctxPath := snippetsPath.Index(i).Child("context")
 
 		switch snippet.Context {

@@ -132,6 +132,13 @@ func TestValidateSnippetsFilter(t *testing.T) {
 			expCond: conditions.Condition{},
 		},
 		{
+			msg:    "empty filter",
+			filter: &ngfAPI.SnippetsFilter{},
+			expCond: staticConds.NewSnippetsFilterInvalid(
+				"spec.snippets: Required value: at least one snippet must be provided",
+			),
+		},
+		{
 			msg: "invalid filter; invalid snippet context",
 			filter: &ngfAPI.SnippetsFilter{
 				Spec: ngfAPI.SnippetsFilterSpec{
@@ -170,7 +177,7 @@ func TestValidateSnippetsFilter(t *testing.T) {
 							Value:   "invalid",
 						},
 						{
-							Context: "also invalid context",
+							Context: "", // empty context
 							Value:   "invalid too",
 						},
 					},
@@ -179,7 +186,7 @@ func TestValidateSnippetsFilter(t *testing.T) {
 			expCond: staticConds.NewSnippetsFilterInvalid(
 				"[spec.snippets[1].context: Unsupported value: \"invalid context\": supported values: " +
 					"\"main\", \"http\", \"http.server\", \"http.server.location\", spec.snippets[2].context: " +
-					"Unsupported value: \"also invalid context\": supported values: \"main\", \"http\", " +
+					"Unsupported value: \"\": supported values: \"main\", \"http\", " +
 					"\"http.server\", \"http.server.location\"]",
 			),
 		},
@@ -235,6 +242,26 @@ func TestValidateSnippetsFilter(t *testing.T) {
 				"[spec.snippets[2].context: Invalid value: \"main\": only one snippet is allowed per context, " +
 					"spec.snippets[3].context: Unsupported value: \"invalid context\": supported values: \"main\", " +
 					"\"http\", \"http.server\", \"http.server.location\"]",
+			),
+		},
+		{
+			msg: "invalid filter; empty value",
+			filter: &ngfAPI.SnippetsFilter{
+				Spec: ngfAPI.SnippetsFilterSpec{
+					Snippets: []ngfAPI.Snippet{
+						{
+							Context: ngfAPI.NginxContextMain,
+							Value:   "main snippet",
+						},
+						{
+							Context: ngfAPI.NginxContextMain,
+							Value:   "", // empty value
+						},
+					},
+				},
+			},
+			expCond: staticConds.NewSnippetsFilterInvalid(
+				"spec.snippets[1].value: Required value: value cannot be empty",
 			),
 		},
 	}
