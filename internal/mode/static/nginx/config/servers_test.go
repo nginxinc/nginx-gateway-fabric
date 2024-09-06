@@ -2681,53 +2681,6 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				},
 			},
 		},
-		{
-			msg: "request redirect filter with https scheme",
-			filters: &dataplane.HTTPFilters{
-				RequestRedirect: &dataplane.HTTPRequestRedirectFilter{
-					Scheme: helpers.GetPointer("https"),
-				},
-			},
-			expectedHeaders: []http.Header{
-				{
-					Name:  "Host",
-					Value: "$gw_api_compliant_host",
-				},
-				{
-					Name:  "X-Forwarded-For",
-					Value: "$proxy_add_x_forwarded_for",
-				},
-				{
-					Name:  "Upgrade",
-					Value: "$http_upgrade",
-				},
-				{
-					Name:  "Connection",
-					Value: "$connection_upgrade",
-				},
-				{
-					Name:  "X-Real-IP",
-					Value: "$remote_addr",
-				},
-				{
-					Name:  "X-Forwarded-Proto",
-					Value: "https",
-				},
-				{
-					Name:  "X-Forwarded-Host",
-					Value: "$host",
-				},
-				{
-					Name:  "X-Forwarded-Port",
-					Value: "$server_port",
-				},
-			},
-		},
-		{
-			msg:             "no filter set",
-			expectedHeaders: httpBaseHeaders,
-			GRPC:            false,
-		},
 	}
 
 	for _, tc := range tests {

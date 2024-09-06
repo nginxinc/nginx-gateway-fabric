@@ -800,7 +800,14 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 		copy(headers, grpcBaseHeaders)
 	}
 
-	setHeaderForHTTPSRedirect(filters, headers)
+	if filters != nil && filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
+		for i, header := range headers {
+			if header.Name == "Host" {
+				headers[i].Value = *filters.RequestURLRewrite.Hostname
+				break
+			}
+		}
+	}
 
 	if filters == nil || filters.RequestHeaderModifiers == nil {
 		return headers
@@ -827,31 +834,6 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 	}
 
 	return append(proxySetHeaders, headers...)
-}
-
-func setHeaderForHTTPSRedirect(filters *dataplane.HTTPFilters, headers []http.Header) {
-	if filters == nil {
-		return
-	}
-
-	if filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
-		for i, header := range headers {
-			if header.Name == "Host" {
-				headers[i].Value = *filters.RequestURLRewrite.Hostname
-				break
-			}
-		}
-	}
-	if filters.RequestRedirect != nil &&
-		filters.RequestRedirect.Scheme != nil &&
-		*filters.RequestRedirect.Scheme == http.HTTPSScheme {
-		for i, header := range headers {
-			if header.Name == "X-Forwarded-Proto" {
-				headers[i].Value = http.HTTPSScheme
-				return
-			}
-		}
-	}
 }
 
 func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
