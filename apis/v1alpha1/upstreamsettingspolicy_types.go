@@ -56,8 +56,8 @@ type UpstreamSettingsPolicySpec struct {
 	// Support: Service
 	//
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:message="TargetRefs Kind must be: Service",rule="self.exists(t, t.kind=='Service')"
-	// +kubebuilder:validation:XValidation:message="TargetRefs Group must be gateway.networking.k8s.io.",rule="self.all(t, t.group=='gateway.networking.k8s.io')"
+	// +kubebuilder:validation:XValidation:message="TargetRefs Kind must be: Service",rule="self.all(t, t.kind=='Service')"
+	// +kubebuilder:validation:XValidation:message="TargetRefs Group must be core.",rule="self.exists(t, t.group=='') || self.exists(t, t.group=='core')"
 	//nolint:lll
 	TargetRefs []gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRefs"`
 }

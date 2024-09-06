@@ -123,9 +123,9 @@ spec:
                 type: array
                 x-kubernetes-validations:
                 - message: 'TargetRefs Kind must be: Service'
-                  rule: self.exists(t, t.kind=='Service')
-                - message: TargetRefs Group must be gateway.networking.k8s.io.
-                  rule: self.all(t, t.group=='gateway.networking.k8s.io')
+                  rule: self.all(t, t.kind=='Service')
+                - message: TargetRefs Group must be core.
+                  rule: self.exists(t, t.group=='') || self.exists(t, t.group=='core')
               zoneSize:
                 description: |-
                   ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share
