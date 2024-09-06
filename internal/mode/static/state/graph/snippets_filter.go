@@ -9,6 +9,7 @@ import (
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
+// SnippetsFilter represents a ngfAPI.SnippetsFilter.
 type SnippetsFilter struct {
 	// Source is the SnippetsFilter.
 	Source *ngfAPI.SnippetsFilter
