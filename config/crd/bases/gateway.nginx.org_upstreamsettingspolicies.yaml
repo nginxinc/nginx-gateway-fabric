@@ -125,7 +125,7 @@ spec:
                 x-kubernetes-validations:
                 - message: 'TargetRefs Kind must be: Service'
                   rule: self.all(t, t.kind=='Service')
-                - message: TargetRefs Group must be core.
+                - message: TargetRefs Group must be core
                   rule: self.exists(t, t.group=='') || self.exists(t, t.group==`core`)
               zoneSize:
                 description: |-
