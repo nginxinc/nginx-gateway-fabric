@@ -65,6 +65,7 @@ func createStaticModeCommand() *cobra.Command {
 		usageReportServerURLFlag    = "usage-report-server-url"
 		usageReportSkipVerifyFlag   = "usage-report-skip-verify"
 		usageReportClusterNameFlag  = "usage-report-cluster-name"
+		snippetsFiltersFlag         = "snippets-filters"
 	)
 
 	// flag values
@@ -116,6 +117,8 @@ func createStaticModeCommand() *cobra.Command {
 		usageReportServerURL  = stringValidatingValue{
 			validator: validateURL,
 		}
+
+		snippetsFilters bool
 	)
 
 	cmd := &cobra.Command{
@@ -239,6 +242,7 @@ func createStaticModeCommand() *cobra.Command {
 					Names:  flagKeys,
 					Values: flagValues,
 				},
+				SnippetsFilters: snippetsFilters,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -392,6 +396,14 @@ func createStaticModeCommand() *cobra.Command {
 		usageReportSkipVerifyFlag,
 		false,
 		"Disable client verification of the NGINX Plus usage reporting server certificate.",
+	)
+
+	cmd.Flags().BoolVar(
+		&snippetsFilters,
+		snippetsFiltersFlag,
+		false,
+		"Enable SnippetsFilters feature. SnippetsFilters allow inserting NGINX configuration into the "+
+			"generated NGINX config for HTTPRoute and GRPCRoute resources.",
 	)
 
 	return cmd

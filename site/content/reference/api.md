@@ -1424,6 +1424,10 @@ string
 <td><p>SnippetsFilterConditionReasonAccepted is used with the Accepted condition type when
 the condition is true.</p>
 </td>
+</tr><tr><td><p>&#34;Invalid&#34;</p></td>
+<td><p>SnippetsFilterConditionReasonInvalid is used with the Accepted condition type when
+SnippetsFilter is invalid.</p>
+</td>
 </tr></tbody>
 </table>
 <h3 id="gateway.nginx.org/v1alpha1.SnippetsFilterConditionType">SnippetsFilterConditionType
@@ -1449,10 +1453,6 @@ the condition is true.</p>
 <ul>
 <li>Invalid.</li>
 </ul>
-</td>
-</tr><tr><td><p>&#34;Invalid&#34;</p></td>
-<td><p>SnippetsFilterConditionTypeInvalid is used with the Accepted condition type when
-SnippetsFilter is invalid.</p>
 </td>
 </tr></tbody>
 </table>

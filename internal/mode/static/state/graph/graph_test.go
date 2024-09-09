@@ -515,6 +515,26 @@ func TestBuildGraph(t *testing.T) {
 		Valid: true,
 	}
 
+	snippetsFilter := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-snippet-filter",
+			Namespace: testNs,
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextMain,
+					Value:   "main snippet",
+				},
+			},
+		},
+	}
+
+	processedSnippetsFilter := &SnippetsFilter{
+		Source: snippetsFilter,
+		Valid:  true,
+	}
+
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
 		return ClusterState{
 			GatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
@@ -563,6 +583,9 @@ func TestBuildGraph(t *testing.T) {
 			NGFPolicies: map[PolicyKey]policies.Policy{
 				hrPolicyKey: hrPolicy,
 				gwPolicyKey: gwPolicy,
+			},
+			SnippetsFilters: map[types.NamespacedName]*ngfAPI.SnippetsFilter{
+				client.ObjectKeyFromObject(snippetsFilter): snippetsFilter,
 			},
 		}
 	}
@@ -809,6 +832,9 @@ func TestBuildGraph(t *testing.T) {
 			GlobalSettings: &policies.GlobalSettings{
 				NginxProxyValid:  true,
 				TelemetryEnabled: true,
+			},
+			SnippetsFilters: map[types.NamespacedName]*SnippetsFilter{
+				client.ObjectKeyFromObject(snippetsFilter): processedSnippetsFilter,
 			},
 		}
 	}

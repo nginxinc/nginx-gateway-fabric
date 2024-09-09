@@ -293,6 +293,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginxGateway.replicaCount` | The number of replicas of the NGINX Gateway Fabric Deployment. | int | `1` |
 | `nginxGateway.resources` | The resource requests and/or limits of the nginx-gateway container. | object | `{}` |
 | `nginxGateway.securityContext.allowPrivilegeEscalation` | Some environments may need this set to true in order for the control plane to successfully reload NGINX. | bool | `false` |
+| `nginxGateway.snippetsFilters.enable` | Enable SnippetsFilters feature. SnippetsFilters allow inserting NGINX configuration into the generated NGINX config for HTTPRoute and GRPCRoute resources. | bool | `false` |
 | `nodeSelector` | The nodeSelector of the NGINX Gateway Fabric pod. | object | `{}` |
 | `service.annotations` | The annotations of the NGINX Gateway Fabric service. | object | `{}` |
 | `service.create` | Creates a service to expose the NGINX Gateway Fabric pods. | bool | `true` |

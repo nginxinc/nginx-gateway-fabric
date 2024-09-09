@@ -8,7 +8,7 @@ This directory contains examples of Helm charts that can be used to deploy NGINX
 
 ## Examples
 
-- [Default](./default) - deploys NGINX Gateway Fabric withg NGINX OSS with default configuration.
+- [Default](./default) - deploys NGINX Gateway Fabric with NGINX OSS with default configuration.
 - [NGINX Plus](./nginx-plus) - deploys NGINX Gateway Fabric with NGINX Plus as the data plane. The image is pulled from the
   NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the secret to use to pull the image.
   The secret must be created in the same namespace as the NGINX Gateway Fabric deployment.
