@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,9 +19,10 @@ import (
 // ExpectedNginxField contains an nginx directive key and value,
 // and the expected file, server, and location block that it should exist in.
 type ExpectedNginxField struct {
-	// Key is the directive name.
-	Key string
-	// Value is the value for the directive. Can be the full value or a substring.
+	// Directive is the directive name.
+	Directive string
+	// Value is the value for the directive. Can be the full value or a substring. If it's a substring,
+	// then ValueSubstringAllowed should be true.
 	Value string
 	// File is the file name that should contain the directive. Can be a full filename or a substring.
 	File string
@@ -36,7 +38,7 @@ type ExpectedNginxField struct {
 
 // ValidateNginxFieldExists accepts the nginx config and the configuration for the expected field,
 // and returns whether or not that field exists where it should.
-func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) bool {
+func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) error {
 	for _, config := range conf.Config {
 		if !strings.Contains(config.File, expFieldCfg.File) {
 			continue
@@ -45,7 +47,7 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) boo
 		for _, directive := range config.Parsed {
 			if len(expFieldCfg.Servers) == 0 {
 				if expFieldCfg.fieldFound(directive) {
-					return true
+					return nil
 				}
 				continue
 			}
@@ -54,10 +56,10 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) boo
 				if directive.Directive == "server" && getServerName(directive.Block) == serverName {
 					for _, serverDirective := range directive.Block {
 						if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
-							return true
+							return nil
 						} else if serverDirective.Directive == "location" &&
 							fieldExistsInLocation(serverDirective, expFieldCfg) {
-							return true
+							return nil
 						}
 					}
 				}
@@ -65,7 +67,12 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) boo
 		}
 	}
 
-	return false
+	b, err := json.Marshal(conf)
+	if err != nil {
+		return fmt.Errorf("error marshaling nginx config: %w", err)
+	}
+
+	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, string(b))
 }
 
 func getServerName(serverBlock Directives) string {
@@ -86,15 +93,15 @@ func (e ExpectedNginxField) fieldFound(directive *Directive) bool {
 		valueMatch = strings.Contains(arg, e.Value)
 	}
 
-	return directive.Directive == e.Key && valueMatch
+	return directive.Directive == e.Directive && valueMatch
 }
 
-func fieldExistsInLocation(serverDirective *Directive, expFieldCfg ExpectedNginxField) bool {
+func fieldExistsInLocation(locationDirective *Directive, expFieldCfg ExpectedNginxField) bool {
 	// location could start with '=', so get the last element which is the path
-	loc := serverDirective.Args[len(serverDirective.Args)-1]
+	loc := locationDirective.Args[len(locationDirective.Args)-1]
 	if loc == expFieldCfg.Location {
-		for _, locDirective := range serverDirective.Block {
-			if expFieldCfg.fieldFound(locDirective) {
+		for _, directive := range locationDirective.Block {
+			if expFieldCfg.fieldFound(directive) {
 				return true
 			}
 		}
