@@ -38,6 +38,10 @@ type SnippetsFilterSpec struct {
 	// Snippets is a list of NGINX configuration snippets.
 	// There can only be one snippet per context.
 	// Allowed contexts: main, http, http.server, http.server.location.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=4
+	// +kubebuilder:validation:XValidation:message="Only one snippet allowed per context",rule="self.all(s1, self.exists_one(s2, s1.context == s2.context))"
+	//nolint:lll
 	Snippets []Snippet `json:"snippets"`
 }
 
@@ -47,6 +51,7 @@ type Snippet struct {
 	Context NginxContext `json:"context"`
 
 	// Value is the NGINX configuration snippet.
+	// +kubebuilder:validation:MinLength=1
 	Value string `json:"value"`
 }
 
@@ -104,7 +109,7 @@ const (
 	// the condition is true.
 	SnippetsFilterConditionReasonAccepted SnippetsFilterConditionReason = "Accepted"
 
-	// SnippetsFilterConditionTypeInvalid is used with the Accepted condition type when
+	// SnippetsFilterConditionReasonInvalid is used with the Accepted condition type when
 	// SnippetsFilter is invalid.
-	SnippetsFilterConditionTypeInvalid SnippetsFilterConditionType = "Invalid"
+	SnippetsFilterConditionReasonInvalid SnippetsFilterConditionReason = "Invalid"
 )
