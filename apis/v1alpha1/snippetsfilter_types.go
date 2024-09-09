@@ -58,7 +58,6 @@ type Snippet struct {
 // NginxContext represents the NGINX configuration context.
 //
 // +kubebuilder:validation:Enum=main;http;http.server;http.server.location
-// +kubebuilder:validation:MinLength=4
 type NginxContext string
 
 const (

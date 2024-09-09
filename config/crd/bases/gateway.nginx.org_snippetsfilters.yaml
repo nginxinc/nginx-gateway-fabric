@@ -65,7 +65,6 @@ spec:
                       - http
                       - http.server
                       - http.server.location
-                      minLength: 4
                       type: string
                     value:
                       description: Value is the NGINX configuration snippet.
