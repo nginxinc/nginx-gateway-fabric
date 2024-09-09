@@ -113,6 +113,11 @@ nginxGateway:
     # APIs installed from the experimental channel.
     enable: false
 
+  snippetsFilters:
+    # -- Enable SnippetsFilters feature. SnippetsFilters allow inserting NGINX configuration into the generated NGINX
+    # config for HTTPRoute and GRPCRoute resources.
+    enable: false
+
 nginx:
   image:
     # -- The NGINX image to use.

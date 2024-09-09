@@ -36,6 +36,7 @@ type ClusterState struct {
 	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
 	GRPCRoutes         map[types.NamespacedName]*gatewayv1.GRPCRoute
 	NGFPolicies        map[PolicyKey]policies.Policy
+	SnippetsFilters    map[types.NamespacedName]*ngfAPI.SnippetsFilter
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -77,6 +78,8 @@ type Graph struct {
 	// GlobalSettings contains global settings from the current state of the graph that may be
 	// needed for policy validation or generation if certain policies rely on those global settings.
 	GlobalSettings *policies.GlobalSettings
+	// SnippetsFilters holds all the SnippetsFilters.
+	SnippetsFilters map[types.NamespacedName]*SnippetsFilter
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -215,6 +218,8 @@ func BuildGraph(
 		gw,
 	)
 
+	processedSnippetsFilters := processSnippetsFilters(state.SnippetsFilters)
+
 	routes := buildRoutesForGateways(
 		validators.HTTPFieldsValidator,
 		state.HTTPRoutes,
@@ -262,6 +267,7 @@ func BuildGraph(
 		NginxProxy:                 npCfg,
 		NGFPolicies:                processedPolicies,
 		GlobalSettings:             globalSettings,
+		SnippetsFilters:            processedSnippetsFilters,
 	}
 
 	g.attachPolicies(controllerName)

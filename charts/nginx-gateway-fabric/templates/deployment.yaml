@@ -102,6 +102,9 @@ spec:
         {{- if .Values.nginx.usage.insecureSkipVerify }}
         - --usage-report-skip-verify
         {{- end }}
+        {{- if .Values.nginxGateway.snippetsFilters.enable }}
+        - --snippets-filters
+        {{- end }}
         env:
         - name: POD_IP
           valueFrom:

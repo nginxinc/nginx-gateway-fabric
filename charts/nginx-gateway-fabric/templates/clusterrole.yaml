@@ -104,6 +104,9 @@ rules:
   - nginxproxies
   - clientsettingspolicies
   - observabilitypolicies
+  {{- if .Values.nginxGateway.snippetsFilters.enable }}
+  - snippetsfilters
+  {{- end }}
   verbs:
   - list
   - watch
@@ -113,6 +116,9 @@ rules:
   - nginxgateways/status
   - clientsettingspolicies/status
   - observabilitypolicies/status
+  {{- if .Values.nginxGateway.snippetsFilters.enable }}
+  - snippetsfilters/status
+  {{- end }}
   verbs:
   - update
 {{- if .Values.nginxGateway.leaderElection.enable }}

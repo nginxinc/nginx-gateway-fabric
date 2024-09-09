@@ -243,11 +243,8 @@ func StartManager(cfg config.Config) error {
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 	})
 
-	objects, objectLists := prepareFirstEventBatchPreparerArgs(
-		cfg.GatewayClassName,
-		cfg.GatewayNsName,
-		cfg.ExperimentalFeatures,
-	)
+	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg)
+
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
 	eventLoop := events.NewEventLoop(
 		eventCh,
@@ -535,6 +532,17 @@ func registerControllers(
 		}
 	}
 
+	if cfg.SnippetsFilters {
+		controllerRegCfgs = append(controllerRegCfgs,
+			ctlrCfg{
+				objectType: &ngfAPI.SnippetsFilter{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
+		)
+	}
+
 	for _, regCfg := range controllerRegCfgs {
 		name := regCfg.objectType.GetObjectKind().GroupVersionKind().Kind
 		if regCfg.name != "" {
@@ -652,13 +660,9 @@ func createUsageWarningJob(cfg config.Config, readyCh <-chan struct{}) *runnable
 	}
 }
 
-func prepareFirstEventBatchPreparerArgs(
-	gcName string,
-	gwNsName *types.NamespacedName,
-	enableExperimentalFeatures bool,
-) ([]client.Object, []client.ObjectList) {
+func prepareFirstEventBatchPreparerArgs(cfg config.Config) ([]client.Object, []client.ObjectList) {
 	objects := []client.Object{
-		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
+		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: cfg.GatewayClassName}},
 	}
 
 	partialObjectMetadataList := &metav1.PartialObjectMetadataList{}
@@ -684,7 +688,7 @@ func prepareFirstEventBatchPreparerArgs(
 		partialObjectMetadataList,
 	}
 
-	if enableExperimentalFeatures {
+	if cfg.ExperimentalFeatures {
 		objectLists = append(
 			objectLists,
 			&gatewayv1alpha3.BackendTLSPolicyList{},
@@ -692,6 +696,15 @@ func prepareFirstEventBatchPreparerArgs(
 			&gatewayv1alpha2.TLSRouteList{},
 		)
 	}
+
+	if cfg.SnippetsFilters {
+		objectLists = append(
+			objectLists,
+			&ngfAPI.SnippetsFilterList{},
+		)
+	}
+
+	gwNsName := cfg.GatewayNsName
 
 	if gwNsName == nil {
 		objectLists = append(objectLists, &gatewayv1.GatewayList{})
