@@ -25,6 +25,8 @@ Resource Types:
 <a href="#gateway.nginx.org/v1alpha1.NginxProxy">NginxProxy</a>
 </li><li>
 <a href="#gateway.nginx.org/v1alpha1.ObservabilityPolicy">ObservabilityPolicy</a>
+</li><li>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamSettingsPolicy">UpstreamSettingsPolicy</a>
 </li></ul>
 <h3 id="gateway.nginx.org/v1alpha1.ClientSettingsPolicy">ClientSettingsPolicy
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ClientSettingsPolicy" title="Permanent link">¶</a>
@@ -467,6 +469,131 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.UpstreamSettingsPolicy">UpstreamSettingsPolicy
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.UpstreamSettingsPolicy" title="Permanent link">¶</a>
+</h3>
+<p>
+<p>UpstreamSettingsPolicy is a Direct Attached Policy. It provides a way to configure the behavior of
+the connection between NGINX and the upstream applications.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+gateway.nginx.org/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>UpstreamSettingsPolicy</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamSettingsPolicySpec">
+UpstreamSettingsPolicySpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the UpstreamSettingsPolicy.</p>
+<br/>
+<br/>
+<table class="table table-bordered table-striped">
+<tr>
+<td>
+<code>zoneSize</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Size">
+Size
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share
+the upstream configuration between nginx worker processes. The more servers that an upstream has,
+the larger memory zone is required.
+Default: OSS: 512k, Plus: 1m.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keepAlive</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamKeepAlive">
+UpstreamKeepAlive
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KeepAlive defines the keep-alive settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetRefs</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+[]sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRefs identifies API object(s) to apply the policy to.
+Objects must be in the same namespace as the policy.
+Support: Service</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#PolicyStatus">
+sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
+</a>
+</em>
+</td>
+<td>
+<p>Status defines the state of the UpstreamSettingsPolicy.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.Address">Address
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Address" title="Permanent link">¶</a>
 </h3>
@@ -808,7 +935,8 @@ Support: Gateway, HTTPRoute, GRPCRoute.</p>
 <a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>,
 <a href="#gateway.nginx.org/v1alpha1.ClientKeepAlive">ClientKeepAlive</a>,
 <a href="#gateway.nginx.org/v1alpha1.ClientKeepAliveTimeout">ClientKeepAliveTimeout</a>,
-<a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>)
+<a href="#gateway.nginx.org/v1alpha1.TelemetryExporter">TelemetryExporter</a>,
+<a href="#gateway.nginx.org/v1alpha1.UpstreamKeepAlive">UpstreamKeepAlive</a>)
 </p>
 <p>
 <p>Duration is a string value representing a duration in time.
@@ -1226,7 +1354,8 @@ IP address in the X-Forwarded-For HTTP header.
 </h3>
 <p>
 (<em>Appears on: </em>
-<a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>)
+<a href="#gateway.nginx.org/v1alpha1.ClientBody">ClientBody</a>,
+<a href="#gateway.nginx.org/v1alpha1.UpstreamSettingsPolicySpec">UpstreamSettingsPolicySpec</a>)
 </p>
 <p>
 <p>Size is a string value representing a size. Size can be specified in bytes, kilobytes (k), megabytes (m),
@@ -1557,6 +1686,153 @@ Examples of invalid names: some-$value, quoted-&ldquo;value&rdquo;-name, unescap
 <td>
 <em>(Optional)</em>
 <p>SpanAttributes are custom key/value attributes that are added to each span.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.UpstreamKeepAlive">UpstreamKeepAlive
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.UpstreamKeepAlive" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamSettingsPolicySpec">UpstreamSettingsPolicySpec</a>)
+</p>
+<p>
+<p>UpstreamKeepAlive defines the keep-alive settings for upstreams.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>connections</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Connections sets the maximum number of idle keep-alive connections to upstream servers that are preserved
+in the cache of each nginx worker process. When this number is exceeded, the least recently used
+connections are closed.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>requests</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests sets the maximum number of requests that can be served through one keep-alive connection.
+After the maximum number of requests are made, the connection is closed.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_requests">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_requests</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>time</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Time defines the maximum time during which requests can be processed through one keep-alive connection.
+After this time is reached, the connection is closed following the subsequent request processing.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Timeout defines the keep-alive timeout for upstreams.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_timeout">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_timeout</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway.nginx.org/v1alpha1.UpstreamSettingsPolicySpec">UpstreamSettingsPolicySpec
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.UpstreamSettingsPolicySpec" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamSettingsPolicy">UpstreamSettingsPolicy</a>)
+</p>
+<p>
+<p>UpstreamSettingsPolicySpec defines the desired state of the UpstreamSettingsPolicy.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>zoneSize</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.Size">
+Size
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share
+the upstream configuration between nginx worker processes. The more servers that an upstream has,
+the larger memory zone is required.
+Default: OSS: 512k, Plus: 1m.
+Directive: <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone">https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keepAlive</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.UpstreamKeepAlive">
+UpstreamKeepAlive
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KeepAlive defines the keep-alive settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetRefs</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1alpha2#LocalPolicyTargetReference">
+[]sigs.k8s.io/gateway-api/apis/v1alpha2.LocalPolicyTargetReference
+</a>
+</em>
+</td>
+<td>
+<p>TargetRefs identifies API object(s) to apply the policy to.
+Objects must be in the same namespace as the policy.
+Support: Service</p>
 </td>
 </tr>
 </tbody>
