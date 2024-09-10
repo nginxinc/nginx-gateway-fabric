@@ -39,8 +39,8 @@ func (GenericValidator) ValidateServiceName(name string) error {
 }
 
 const (
-	durationStringFmt    = `\d{1,4}(ms|s)?`
-	durationStringErrMsg = "must contain a number followed by 'ms' or 's'"
+	durationStringFmt    = `^[0-9]{1,4}(ms|s|m|h)?`
+	durationStringErrMsg = "must contain a four digit number followed by 'ms', 's', 'm', or 'h'"
 )
 
 var durationStringFmtRegexp = regexp.MustCompile("^" + durationStringFmt + "$")
@@ -51,6 +51,8 @@ func (GenericValidator) ValidateNginxDuration(duration string) error {
 		examples := []string{
 			"5ms",
 			"10s",
+			"500m",
+			"1000h",
 		}
 
 		return errors.New(k8svalidation.RegexError(durationStringFmt, durationStringErrMsg, examples...))

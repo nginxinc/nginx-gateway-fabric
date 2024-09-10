@@ -812,8 +812,8 @@ Support: Gateway, HTTPRoute, GRPCRoute.</p>
 </p>
 <p>
 <p>Duration is a string value representing a duration in time.
-Duration can be specified in milliseconds (ms) or seconds (s) A value without a suffix is seconds.
-Examples: 120s, 50ms.</p>
+Duration can be specified in milliseconds (ms), seconds (s), minutes (m), hours (h) A value without a suffix is seconds.
+Examples: 120s, 50ms, 5m, 1h.</p>
 </p>
 <h3 id="gateway.nginx.org/v1alpha1.IPFamilyType">IPFamilyType
 (<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.IPFamilyType" title="Permanent link">¶</a>
