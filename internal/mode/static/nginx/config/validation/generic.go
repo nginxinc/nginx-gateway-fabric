@@ -40,7 +40,7 @@ func (GenericValidator) ValidateServiceName(name string) error {
 
 const (
 	durationStringFmt    = `^[0-9]{1,4}(ms|s|m|h)?`
-	durationStringErrMsg = "must contain a four digit number followed by 'ms', 's', 'm', or 'h'"
+	durationStringErrMsg = "must contain an, at most, four digit number followed by 'ms', 's', 'm', or 'h'"
 )
 
 var durationStringFmtRegexp = regexp.MustCompile("^" + durationStringFmt + "$")
