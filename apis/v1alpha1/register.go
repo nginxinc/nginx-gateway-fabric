@@ -42,6 +42,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClientSettingsPolicyList{},
 		&SnippetsFilter{},
 		&SnippetsFilterList{},
+		&UpstreamSettingsPolicy{},
+		&UpstreamSettingsPolicyList{},
 	)
 	// AddToGroupVersion allows the serialization of client types like ListOptions.
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
