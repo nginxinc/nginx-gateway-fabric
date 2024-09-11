@@ -78,7 +78,6 @@ var _ = Describe("Collector", Ordered, func() {
 		dataCollector           telemetry.DataCollector
 		version                 string
 		expData                 telemetry.Data
-		ctx                     context.Context
 		podNSName               types.NamespacedName
 		ngfPod                  *v1.Pod
 		ngfReplicaSet           *appsv1.ReplicaSet
@@ -90,7 +89,6 @@ var _ = Describe("Collector", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = context.Background()
 		version = "1.1"
 
 		ngfPod = &v1.Pod{
@@ -230,7 +228,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 	Describe("Normal case", func() {
 		When("collecting telemetry data", func() {
-			It("collects all fields", func() {
+			It("collects all fields", func(ctx SpecContext) {
 				nodes := &v1.NodeList{
 					Items: []v1.Node{
 						{
@@ -396,7 +394,7 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("cluster information collector", func() {
 		When("collecting cluster platform", func() {
 			When("it encounters an error while collecting data", func() {
-				It("should error if the kubernetes client errored when getting the NamespaceList", func() {
+				It("should error if the kubernetes client errored when getting the NamespaceList", func(ctx SpecContext) {
 					expectedError := errors.New("failed to get NamespaceList")
 					k8sClientReader.ListCalls(mergeListCallsWithBase(
 						func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
@@ -415,7 +413,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 		When("collecting clusterID data", func() {
 			When("it encounters an error while collecting data", func() {
-				It("should error if the kubernetes client errored when getting the namespace", func() {
+				It("should error if the kubernetes client errored when getting the namespace", func(ctx SpecContext) {
 					expectedError := errors.New("there was an error getting clusterID")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(
 						func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
@@ -434,7 +432,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 		When("collecting cluster version data", func() {
 			When("the kubelet version is missing", func() {
-				It("should be report 'unknown'", func() {
+				It("should be report 'unknown'", func(ctx SpecContext) {
 					nodes := &v1.NodeList{
 						Items: []v1.Node{
 							{
@@ -463,7 +461,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 	Describe("node count collector", func() {
 		When("collecting node count data", func() {
-			It("collects correct data for one node", func() {
+			It("collects correct data for one node", func(ctx SpecContext) {
 				k8sClientReader.ListCalls(createListCallsFunc(nodeList))
 
 				expData.Data.ClusterNodeCount = 1
@@ -475,7 +473,7 @@ var _ = Describe("Collector", Ordered, func() {
 			})
 
 			When("it encounters an error while collecting data", func() {
-				It("should error when there are no nodes", func() {
+				It("should error when there are no nodes", func(ctx SpecContext) {
 					expectedError := errors.New("failed to collect cluster information: NodeList length is zero")
 					k8sClientReader.ListCalls(createListCallsFunc(nil))
 
@@ -484,7 +482,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedError))
 				})
 
-				It("should error on kubernetes client api errors", func() {
+				It("should error on kubernetes client api errors", func(ctx SpecContext) {
 					expectedError := errors.New("failed to get NodeList")
 					k8sClientReader.ListCalls(
 						func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
@@ -593,7 +591,7 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 
 		When("collecting NGF resource counts", func() {
-			It("collects correct data for graph with no resources", func() {
+			It("collects correct data for graph with no resources", func(ctx SpecContext) {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
 
@@ -605,7 +603,7 @@ var _ = Describe("Collector", Ordered, func() {
 				Expect(expData).To(Equal(data))
 			})
 
-			It("collects correct data for graph with one of each resource", func() {
+			It("collects correct data for graph with one of each resource", func(ctx SpecContext) {
 				fakeGraphGetter.GetLatestGraphReturns(graph1)
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config1)
 
@@ -629,7 +627,7 @@ var _ = Describe("Collector", Ordered, func() {
 				Expect(expData).To(Equal(data))
 			})
 
-			It("ignores invalid and empty upstreams", func() {
+			It("ignores invalid and empty upstreams", func(ctx SpecContext) {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
@@ -659,7 +657,7 @@ var _ = Describe("Collector", Ordered, func() {
 					fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 					fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
 				})
-				It("should error on nil latest graph", func() {
+				It("should error on nil latest graph", func(ctx SpecContext) {
 					expectedError := errors.New("latest graph cannot be nil")
 					fakeGraphGetter.GetLatestGraphReturns(nil)
 
@@ -667,7 +665,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedError))
 				})
 
-				It("should error on nil latest configuration", func() {
+				It("should error on nil latest configuration", func(ctx SpecContext) {
 					expectedError := errors.New("latest configuration cannot be nil")
 					fakeConfigurationGetter.GetLatestConfigurationReturns(nil)
 
@@ -681,7 +679,7 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("NGF replica count collector", func() {
 		When("collecting NGF replica count", func() {
 			When("it encounters an error while collecting data", func() {
-				It("should error if the kubernetes client errored when getting the Pod", func() {
+				It("should error if the kubernetes client errored when getting the Pod", func(ctx SpecContext) {
 					expectedErr := errors.New("there was an error getting the Pod")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(
 						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
@@ -697,7 +695,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the Pod's owner reference is nil", func() {
+				It("should error if the Pod's owner reference is nil", func(ctx SpecContext) {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 0")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&v1.Pod{
@@ -712,7 +710,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the Pod has multiple owner references", func() {
+				It("should error if the Pod has multiple owner references", func(ctx SpecContext) {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 2")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&v1.Pod{
@@ -736,7 +734,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the Pod's owner reference is not a ReplicaSet", func() {
+				It("should error if the Pod's owner reference is not a ReplicaSet", func(ctx SpecContext) {
 					expectedErr := errors.New("expected pod owner reference to be ReplicaSet, got Deployment")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&v1.Pod{
@@ -757,7 +755,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the replica set's replicas is nil", func() {
+				It("should error if the replica set's replicas is nil", func(ctx SpecContext) {
 					expectedErr := errors.New("replica set replicas was nil")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&appsv1.ReplicaSet{
@@ -771,7 +769,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the kubernetes client errored when getting the ReplicaSet", func() {
+				It("should error if the kubernetes client errored when getting the ReplicaSet", func(ctx SpecContext) {
 					expectedErr := errors.New("there was an error getting the ReplicaSet")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(
 						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
@@ -792,7 +790,7 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("DeploymentID collector", func() {
 		When("collecting deploymentID", func() {
 			When("it encounters an error while collecting data", func() {
-				It("should error if the replicaSet's owner reference is nil", func() {
+				It("should error if the replicaSet's owner reference is nil", func(ctx SpecContext) {
 					replicas := int32(1)
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&appsv1.ReplicaSet{
@@ -807,7 +805,7 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
-				It("should error if the replicaSet's owner reference kind is not deployment", func() {
+				It("should error if the replicaSet's owner reference kind is not deployment", func(ctx SpecContext) {
 					replicas := int32(1)
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&appsv1.ReplicaSet{
@@ -829,7 +827,7 @@ var _ = Describe("Collector", Ordered, func() {
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
 				})
-				It("should error if the replicaSet's owner reference has empty UID", func() {
+				It("should error if the replicaSet's owner reference has empty UID", func(ctx SpecContext) {
 					replicas := int32(1)
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&appsv1.ReplicaSet{
