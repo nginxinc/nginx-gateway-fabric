@@ -11,6 +11,7 @@ import (
 )
 
 func TestLessObjectMeta(t *testing.T) {
+	t.Parallel()
 	before := metav1.Now()
 	later := metav1.NewTime(before.Add(1 * time.Second))
 
@@ -80,6 +81,7 @@ func TestLessObjectMeta(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := LessObjectMeta(test.meta1, test.meta2)
@@ -92,6 +94,7 @@ func TestLessObjectMeta(t *testing.T) {
 }
 
 func TestLessClientObject(t *testing.T) {
+	t.Parallel()
 	before := metav1.Now()
 	later := metav1.NewTime(before.Add(1 * time.Second))
 
@@ -177,6 +180,7 @@ func TestLessClientObject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := LessClientObject(test.obj1, test.obj2)

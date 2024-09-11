@@ -8,6 +8,7 @@ import (
 )
 
 func TestProvisioner(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Provisioner Suite")
 }

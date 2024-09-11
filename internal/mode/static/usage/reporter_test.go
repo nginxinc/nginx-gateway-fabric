@@ -13,6 +13,7 @@ import (
 )
 
 func TestReport(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	data := ClusterDetails{
@@ -68,6 +69,7 @@ func TestReport(t *testing.T) {
 }
 
 func TestReport_NoCredentials(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	insecureSkipVerify := false
 	reporter, err := NewNIMReporter(NewUsageSecret(), "", insecureSkipVerify)
@@ -79,6 +81,7 @@ func TestReport_NoCredentials(t *testing.T) {
 }
 
 func TestReport_ServerError(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	server := httptest.NewServer(

@@ -9,6 +9,7 @@ import (
 )
 
 func TestSet(t *testing.T) {
+	t.Parallel()
 	store := NewUsageSecret()
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -25,6 +26,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	t.Parallel()
 	store := NewUsageSecret()
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,6 +44,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestGetCredentials(t *testing.T) {
+	t.Parallel()
 	store := NewUsageSecret()
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

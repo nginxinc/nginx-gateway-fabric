@@ -7,6 +7,7 @@ import (
 )
 
 func TestReadyCheck(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	nginxChecker := newNginxConfiguredOnStartChecker()
 	g.Expect(nginxChecker.readyCheck(nil)).ToNot(Succeed())

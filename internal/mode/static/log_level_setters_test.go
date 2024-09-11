@@ -11,6 +11,7 @@ import (
 )
 
 func TestMultiLogLevelSetter_SetLevel(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	logr1 := &staticfakes.FakeLogLevelSetter{}
@@ -41,6 +42,7 @@ func TestMultiLogLevelSetter_SetLevel(t *testing.T) {
 }
 
 func TestZapLogLevelSetter_SetLevel(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	zapSetter := newZapLogLevelSetter(zap.NewAtomicLevel())
@@ -58,6 +60,7 @@ func TestZapLogLevelSetter_SetLevel(t *testing.T) {
 }
 
 func TestPromLogLevelSetter_SetLevel(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	logger, err := newLeveledPrometheusLogger()

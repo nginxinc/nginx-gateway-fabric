@@ -8,6 +8,7 @@ import (
 )
 
 func TestStatic(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Static Suite")
 }
