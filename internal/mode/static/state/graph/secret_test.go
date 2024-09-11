@@ -67,6 +67,7 @@ cpLlHMAqbLJ8WYGJCkhiWxyal6hYTyWY4cVkC0xtTl/hUE9IeNKo
 )
 
 func TestSecretResolver(t *testing.T) {
+	t.Parallel()
 	var (
 		validSecret1 = &apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

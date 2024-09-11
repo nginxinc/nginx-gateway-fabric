@@ -12,6 +12,7 @@ import (
 )
 
 func TestBuildReferencedNamespaces(t *testing.T) {
+	t.Parallel()
 	ns1 := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ns1",
@@ -170,6 +171,7 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(buildReferencedNamespaces(clusterNamespaces, test.gw)).To(Equal(test.expectedRefNS))
 		})
@@ -177,6 +179,7 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 }
 
 func TestIsNamespaceReferenced(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		ns   *v1.Namespace
 		gw   *Gateway
@@ -213,6 +216,7 @@ func TestIsNamespaceReferenced(t *testing.T) {
 	// Other test cases should be covered by testing of BuildReferencedNamespaces
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(isNamespaceReferenced(test.ns, test.gw)).To(Equal(test.exp))
 		})

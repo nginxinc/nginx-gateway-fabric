@@ -79,6 +79,7 @@ func createGRPCRoute(
 }
 
 func TestBuildGRPCRoutes(t *testing.T) {
+	t.Parallel()
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1.GRPCRouteRule{})
@@ -137,6 +138,7 @@ func TestBuildGRPCRoutes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			routes := buildRoutesForGateways(
 				validator,
@@ -151,6 +153,7 @@ func TestBuildGRPCRoutes(t *testing.T) {
 }
 
 func TestBuildGRPCRoute(t *testing.T) {
+	t.Parallel()
 	gatewayNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	methodMatchRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
@@ -685,6 +688,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled)
@@ -694,6 +698,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 }
 
 func TestConvertGRPCMatches(t *testing.T) {
+	t.Parallel()
 	methodMatch := createGRPCMethodMatch("myService", "myMethod", "Exact").Matches
 
 	headersMatch := createGRPCHeadersMatch("Exact", "MyHeader", "SomeValue").Matches
@@ -756,6 +761,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			httpMatches := convertGRPCMatches(test.methodMatches)
@@ -765,6 +771,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 }
 
 func TestConvertGRPCFilters(t *testing.T) {
+	t.Parallel()
 	grFilters := []v1.GRPCRouteFilter{
 		{
 			Type: "RequestHeaderModifier",

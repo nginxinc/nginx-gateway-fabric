@@ -12,6 +12,7 @@ import (
 )
 
 func TestSort(t *testing.T) {
+	t.Parallel()
 	// timestamps
 	earlier := metav1.Now()
 	later := metav1.NewTime(earlier.Add(1 * time.Second))

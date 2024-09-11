@@ -9,7 +9,9 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+//nolint:paralleltest,tparallel // Order matters for these tests.
 func TestSetChangeType(t *testing.T) {
+	t.Parallel()
 	ctu := newChangeTrackingUpdater(nil, nil)
 
 	// Order matters for these cases.

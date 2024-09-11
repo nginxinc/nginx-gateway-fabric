@@ -10,6 +10,7 @@ import (
 )
 
 func TestConvertMatch(t *testing.T) {
+	t.Parallel()
 	path := v1.HTTPPathMatch{
 		Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 		Value: helpers.GetPointer("/"),
@@ -115,6 +116,7 @@ func TestConvertMatch(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := convertMatch(test.match)
@@ -124,6 +126,7 @@ func TestConvertMatch(t *testing.T) {
 }
 
 func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filter   *v1.HTTPRequestRedirectFilter
 		expected *HTTPRequestRedirectFilter
@@ -153,6 +156,7 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := convertHTTPRequestRedirectFilter(test.filter)
@@ -162,6 +166,7 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 }
 
 func TestConvertHTTPURLRewriteFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filter   *v1.HTTPURLRewriteFilter
 		expected *HTTPURLRewriteFilter
@@ -210,6 +215,7 @@ func TestConvertHTTPURLRewriteFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := convertHTTPURLRewriteFilter(test.filter)
@@ -219,6 +225,7 @@ func TestConvertHTTPURLRewriteFilter(t *testing.T) {
 }
 
 func TestConvertHTTPHeaderFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filter   *v1.HTTPHeaderFilter
 		expected *HTTPHeaderFilter
@@ -258,6 +265,7 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := convertHTTPHeaderFilter(test.filter)
@@ -267,7 +275,7 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 }
 
 func TestConvertPathType(t *testing.T) {
-	g := NewWithT(t)
+	t.Parallel()
 
 	tests := []struct {
 		pathType v1.PathMatchType
@@ -289,11 +297,15 @@ func TestConvertPathType(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if tc.panic {
-			g.Expect(func() { convertPathType(tc.pathType) }).To(Panic())
-		} else {
-			result := convertPathType(tc.pathType)
-			g.Expect(result).To(Equal(tc.expected))
-		}
+		t.Run(string(tc.pathType), func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			if tc.panic {
+				g.Expect(func() { convertPathType(tc.pathType) }).To(Panic())
+			} else {
+				result := convertPathType(tc.pathType)
+				g.Expect(result).To(Equal(tc.expected))
+			}
+		})
 	}
 }
