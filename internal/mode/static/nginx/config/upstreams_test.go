@@ -12,6 +12,7 @@ import (
 )
 
 func TestExecuteUpstreams(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
@@ -72,6 +73,7 @@ func TestExecuteUpstreams(t *testing.T) {
 }
 
 func TestCreateUpstreams(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
@@ -175,6 +177,7 @@ func TestCreateUpstreams(t *testing.T) {
 }
 
 func TestCreateUpstream(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	tests := []struct {
 		msg              string
@@ -274,6 +277,7 @@ func TestCreateUpstream(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result := gen.createUpstream(test.stateUpstream)
 			g.Expect(result).To(Equal(test.expectedUpstream))
@@ -282,6 +286,7 @@ func TestCreateUpstream(t *testing.T) {
 }
 
 func TestCreateUpstreamPlus(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{plus: true}
 
 	stateUpstream := dataplane.Upstream{
@@ -310,6 +315,7 @@ func TestCreateUpstreamPlus(t *testing.T) {
 }
 
 func TestExecuteStreamUpstreams(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
@@ -355,6 +361,7 @@ func TestExecuteStreamUpstreams(t *testing.T) {
 }
 
 func TestCreateStreamUpstreams(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
@@ -429,6 +436,7 @@ func TestCreateStreamUpstreams(t *testing.T) {
 }
 
 func TestCreateStreamUpstream(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{}
 	up := dataplane.Upstream{
 		Name: "multiple-endpoints",
@@ -470,6 +478,7 @@ func TestCreateStreamUpstream(t *testing.T) {
 }
 
 func TestCreateStreamUpstreamPlus(t *testing.T) {
+	t.Parallel()
 	gen := GeneratorImpl{plus: true}
 
 	stateUpstream := dataplane.Upstream{

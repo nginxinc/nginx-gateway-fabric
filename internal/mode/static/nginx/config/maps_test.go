@@ -12,6 +12,7 @@ import (
 )
 
 func TestExecuteMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
@@ -97,6 +98,7 @@ func TestExecuteMaps(t *testing.T) {
 }
 
 func TestBuildAddHeaderMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
@@ -190,6 +192,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 }
 
 func TestExecuteStreamMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
@@ -257,6 +260,7 @@ func TestExecuteStreamMaps(t *testing.T) {
 }
 
 func TestCreateStreamMaps(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
@@ -371,6 +375,7 @@ func TestCreateStreamMaps(t *testing.T) {
 }
 
 func TestCreateStreamMapsWithEmpty(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: nil,

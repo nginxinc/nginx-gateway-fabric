@@ -7,6 +7,7 @@ import (
 )
 
 func TestConvertStringToSafeVariableName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		msg      string
 		s        string
@@ -25,6 +26,7 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(convertStringToSafeVariableName(test.s)).To(Equal(test.expected))
 		})
@@ -32,6 +34,7 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 }
 
 func TestGenerateAddHeaderMapVariableName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		msg        string
 		headerName string
@@ -50,6 +53,7 @@ func TestGenerateAddHeaderMapVariableName(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			actual := generateAddHeaderMapVariableName(test.headerName)
 			g.Expect(actual).To(Equal(test.expected))
