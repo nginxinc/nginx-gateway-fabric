@@ -10,6 +10,7 @@ import (
 )
 
 func TestConvertEndpoints(t *testing.T) {
+	t.Parallel()
 	endpoints := []resolver.Endpoint{
 		{
 			Address: "1.2.3.4",

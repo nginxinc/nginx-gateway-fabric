@@ -13,6 +13,7 @@ import (
 )
 
 func TestExecuteStreamServers(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
@@ -74,6 +75,7 @@ func TestExecuteStreamServers(t *testing.T) {
 }
 
 func TestExecuteStreamServers_Plus(t *testing.T) {
+	t.Parallel()
 	config := dataplane.Configuration{
 		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
@@ -112,6 +114,7 @@ func TestExecuteStreamServers_Plus(t *testing.T) {
 }
 
 func TestCreateStreamServers(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: []dataplane.Layer4VirtualServer{
 			{
@@ -214,6 +217,7 @@ func TestCreateStreamServers(t *testing.T) {
 }
 
 func TestExecuteStreamServersForIPFamily(t *testing.T) {
+	t.Parallel()
 	passThroughServers := []dataplane.Layer4VirtualServer{
 		{
 			UpstreamName: "backend1",
@@ -283,6 +287,7 @@ func TestExecuteStreamServersForIPFamily(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
@@ -298,6 +303,7 @@ func TestExecuteStreamServersForIPFamily(t *testing.T) {
 }
 
 func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
+	t.Parallel()
 	passThroughServers := []dataplane.Layer4VirtualServer{
 		{
 			UpstreamName: "backend1",
@@ -378,6 +384,7 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
@@ -393,6 +400,7 @@ func TestExecuteStreamServers_RewriteClientIP(t *testing.T) {
 }
 
 func TestCreateStreamServersWithNone(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		TLSPassthroughServers: nil,
 	}

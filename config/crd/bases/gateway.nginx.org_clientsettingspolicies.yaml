@@ -70,7 +70,7 @@ spec:
                       If a client does not transmit anything within this time, the request is terminated with the
                       408 (Request Time-out) error.
                       Default: https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout.
-                    pattern: ^\d{1,4}(ms|s)?$
+                    pattern: ^[0-9]{1,4}(ms|s|m|h)?$
                     type: string
                 type: object
               keepAlive:
@@ -91,7 +91,7 @@ spec:
                       Time defines the maximum time during which requests can be processed through one keep-alive connection.
                       After this time is reached, the connection is closed following the subsequent request processing.
                       Default: https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time.
-                    pattern: ^\d{1,4}(ms|s)?$
+                    pattern: ^[0-9]{1,4}(ms|s|m|h)?$
                     type: string
                   timeout:
                     description: Timeout defines the keep-alive timeouts for clients.
@@ -99,13 +99,13 @@ spec:
                       header:
                         description: 'Header sets the timeout in the "Keep-Alive:
                           timeout=time" response header field.'
-                        pattern: ^\d{1,4}(ms|s)?$
+                        pattern: ^[0-9]{1,4}(ms|s|m|h)?$
                         type: string
                       server:
                         description: |-
                           Server sets the timeout during which a keep-alive client connection will stay open on the server side.
                           Setting this value to 0 disables keep-alive client connections.
-                        pattern: ^\d{1,4}(ms|s)?$
+                        pattern: ^[0-9]{1,4}(ms|s|m|h)?$
                         type: string
                     type: object
                     x-kubernetes-validations:

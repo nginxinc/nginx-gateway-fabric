@@ -8,6 +8,7 @@ import (
 )
 
 func TestExecuteVersion(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 	expSubStrings := map[string]int{
 		"return 200 42;": 1,
