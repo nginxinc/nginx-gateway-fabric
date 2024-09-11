@@ -19,6 +19,7 @@ import (
 )
 
 func TestProcessGatewayClasses(t *testing.T) {
+	t.Parallel()
 	gcName := "test-gc"
 	ctlrName := "test-ctlr"
 	winner := &v1.GatewayClass{
@@ -114,6 +115,7 @@ func TestProcessGatewayClasses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			result, exists := processGatewayClasses(test.gcs, gcName, ctlrName)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
@@ -123,6 +125,7 @@ func TestProcessGatewayClasses(t *testing.T) {
 }
 
 func TestBuildGatewayClass(t *testing.T) {
+	t.Parallel()
 	validGC := &v1.GatewayClass{}
 
 	gcWithParams := &v1.GatewayClass{
@@ -288,6 +291,7 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			result := buildGatewayClass(test.gc, test.np, test.crdMetadata)

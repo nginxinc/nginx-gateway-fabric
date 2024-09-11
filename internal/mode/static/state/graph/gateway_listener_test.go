@@ -15,6 +15,7 @@ import (
 )
 
 func TestValidateHTTPListener(t *testing.T) {
+	t.Parallel()
 	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
 
 	tests := []struct {
@@ -60,6 +61,7 @@ func TestValidateHTTPListener(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			v := createHTTPListenerValidator(protectedPorts)
@@ -73,6 +75,7 @@ func TestValidateHTTPListener(t *testing.T) {
 }
 
 func TestValidateHTTPSListener(t *testing.T) {
+	t.Parallel()
 	secretNs := "secret-ns"
 
 	validSecretRef := v1.SecretObjectReference{
@@ -227,6 +230,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			v := createHTTPSListenerValidator(protectedPorts)
@@ -239,6 +243,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 }
 
 func TestValidateListenerHostname(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		hostname  *v1.Hostname
 		name      string
@@ -273,6 +278,7 @@ func TestValidateListenerHostname(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			conds, attachable := validateListenerHostname(v1.Listener{Hostname: test.hostname})
@@ -289,6 +295,7 @@ func TestValidateListenerHostname(t *testing.T) {
 }
 
 func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
+	t.Parallel()
 	HTTPRouteGroupKind := v1.RouteGroupKind{
 		Kind:  kinds.HTTPRoute,
 		Group: helpers.GetPointer[v1.Group](v1.GroupName),
@@ -417,6 +424,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			listener := v1.Listener{
@@ -441,6 +449,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 }
 
 func TestValidateListenerLabelSelector(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		selector  *metav1.LabelSelector
 		from      v1.FromNamespaces
@@ -469,6 +478,7 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			// create iteration variable inside the loop to fix implicit memory aliasing
@@ -496,12 +506,14 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 }
 
 func TestValidateListenerPort(t *testing.T) {
+	t.Parallel()
 	validPorts := []v1.PortNumber{1, 80, 443, 1000, 50000, 65535}
 	invalidPorts := []v1.PortNumber{-1, 0, 65536, 80000, 9113}
 	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
 
 	for _, p := range validPorts {
 		t.Run(fmt.Sprintf("valid port %d", p), func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(validateListenerPort(p, protectedPorts)).To(Succeed())
 		})
@@ -509,6 +521,7 @@ func TestValidateListenerPort(t *testing.T) {
 
 	for _, p := range invalidPorts {
 		t.Run(fmt.Sprintf("invalid port %d", p), func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(validateListenerPort(p, protectedPorts)).ToNot(Succeed())
 		})
@@ -516,6 +529,7 @@ func TestValidateListenerPort(t *testing.T) {
 }
 
 func TestListenerNamesHaveOverlap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		hostname1    *v1.Hostname
 		hostname2    *v1.Hostname
@@ -568,6 +582,7 @@ func TestListenerNamesHaveOverlap(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(haveOverlap(test.hostname1, test.hostname2)).To(Equal(test.expectResult))
 		})
@@ -575,6 +590,7 @@ func TestListenerNamesHaveOverlap(t *testing.T) {
 }
 
 func TestValidateTLSFieldOnTLSListener(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		listener     v1.Listener
 		msg          string
@@ -613,6 +629,7 @@ func TestValidateTLSFieldOnTLSListener(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			cond, valid := validateTLSFieldOnTLSListener(test.listener)
 

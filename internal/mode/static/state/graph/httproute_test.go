@@ -87,6 +87,7 @@ func addFilterToPath(hr *gatewayv1.HTTPRoute, path string, filter gatewayv1.HTTP
 }
 
 func TestBuildHTTPRoutes(t *testing.T) {
+	t.Parallel()
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	hr := createHTTPRoute("hr-1", gwNsName.Name, "example.com", "/")
@@ -144,6 +145,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			routes := buildRoutesForGateways(
 				validator,
@@ -158,6 +160,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
 }
 
 func TestBuildHTTPRoute(t *testing.T) {
+	t.Parallel()
 	const (
 		invalidPath             = "/invalid"
 		invalidRedirectHostname = "invalid.example.com"
@@ -580,6 +583,7 @@ func TestBuildHTTPRoute(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames)
@@ -589,6 +593,7 @@ func TestBuildHTTPRoute(t *testing.T) {
 }
 
 func TestValidateMatch(t *testing.T) {
+	t.Parallel()
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 		v.ValidateMethodInMatchReturns(true, nil)
@@ -844,6 +849,7 @@ func TestValidateMatch(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
@@ -852,6 +858,7 @@ func TestValidateMatch(t *testing.T) {
 }
 
 func TestValidateFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filter         gatewayv1.HTTPRouteFilter
 		name           string
@@ -902,6 +909,7 @@ func TestValidateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
@@ -910,6 +918,7 @@ func TestValidateFilter(t *testing.T) {
 }
 
 func TestValidateFilterRedirect(t *testing.T) {
+	t.Parallel()
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 
@@ -1030,6 +1039,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
@@ -1039,6 +1049,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 }
 
 func TestValidateFilterRewrite(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		urlRewrite     *gatewayv1.HTTPURLRewriteFilter
 		validator      *validationfakes.FakeHTTPFieldsValidator
@@ -1148,6 +1159,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))

@@ -8,6 +8,7 @@ import (
 )
 
 func TestBuildReferencedServices(t *testing.T) {
+	t.Parallel()
 	getNormalL7Route := func() *L7Route {
 		return &L7Route{
 			ParentRefs: []ParentRef{
@@ -315,6 +316,7 @@ func TestBuildReferencedServices(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 			g.Expect(buildReferencedServices(test.l7Routes, test.l4Routes)).To(Equal(test.exp))
 		})
