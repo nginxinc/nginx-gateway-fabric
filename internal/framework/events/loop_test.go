@@ -3,6 +3,7 @@ package events_test
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -19,8 +20,6 @@ var _ = Describe("EventLoop", func() {
 		eventCh      chan interface{}
 		fakePreparer *eventsfakes.FakeFirstEventBatchPreparer
 		eventLoop    *events.EventLoop
-		ctx          context.Context
-		cancel       context.CancelFunc
 		errorCh      chan error
 	)
 
@@ -31,12 +30,19 @@ var _ = Describe("EventLoop", func() {
 
 		eventLoop = events.NewEventLoop(eventCh, zap.New(), fakeHandler, fakePreparer)
 
-		ctx, cancel = context.WithCancel(context.Background())
 		errorCh = make(chan error)
 	})
 
 	Describe("Normal processing", func() {
 		BeforeEach(func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			DeferCleanup(func(dctx SpecContext) {
+				cancel()
+				var err error
+				Eventually(errorCh).WithContext(dctx).Should(Receive(&err))
+				Expect(err).ToNot(HaveOccurred())
+			}, NodeTimeout(time.Second*10))
+
 			batch := events.EventBatch{
 				"event0",
 			}
@@ -52,14 +58,6 @@ var _ = Describe("EventLoop", func() {
 
 			var expectedBatch events.EventBatch = []interface{}{"event0"}
 			Expect(batch).Should(Equal(expectedBatch))
-		})
-
-		AfterEach(func() {
-			cancel()
-
-			var err error
-			Eventually(errorCh).Should(Receive(&err))
-			Expect(err).ToNot(HaveOccurred())
 		})
 
 		// Because BeforeEach() creates the first batch and waits for it to be handled, in the tests below
@@ -123,7 +121,7 @@ var _ = Describe("EventLoop", func() {
 	})
 
 	Describe("Edge cases", func() {
-		It("should return error when preparer returns error without blocking", func() {
+		It("should return error when preparer returns error without blocking", func(ctx SpecContext) {
 			preparerError := errors.New("test")
 			fakePreparer.PrepareReturns(events.EventBatch{}, preparerError)
 
@@ -132,9 +130,10 @@ var _ = Describe("EventLoop", func() {
 			Expect(err).Should(MatchError(preparerError))
 		})
 
-		It("should return nil when started with canceled context without blocking", func() {
+		It("should return nil when started with canceled context without blocking", func(ctx context.Context) {
 			fakePreparer.PrepareReturns(events.EventBatch{}, nil)
 
+			ctx, cancel := context.WithCancel(ctx)
 			cancel()
 			err := eventLoop.Start(ctx)
 
