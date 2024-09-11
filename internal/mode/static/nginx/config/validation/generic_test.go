@@ -56,6 +56,8 @@ func TestValidateNginxDuration(t *testing.T) {
 		`5ms`,
 		`10s`,
 		`123ms`,
+		`5m`,
+		`2h`,
 	)
 
 	testInvalidValuesForSimpleValidator(
@@ -63,7 +65,7 @@ func TestValidateNginxDuration(t *testing.T) {
 		validator.ValidateNginxDuration,
 		`test`,
 		`12345`,
-		`5m`,
+		`5k`,
 	)
 }
 

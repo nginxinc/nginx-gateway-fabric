@@ -156,7 +156,7 @@ spec:
                         description: |-
                           Interval is the maximum interval between two exports.
                           Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
-                        pattern: ^\d{1,4}(ms|s)?$
+                        pattern: ^[0-9]{1,4}(ms|s|m|h)?$
                         type: string
                     required:
                     - endpoint

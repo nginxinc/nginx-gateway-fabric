@@ -103,13 +103,19 @@ func TestValidator_Validate(t *testing.T) {
 				return p
 			}),
 			expConditions: []conditions.Condition{
-				staticConds.NewPolicyInvalid("[spec.body.timeout: Invalid value: \"invalid\": \\d{1,4}(ms|s)? " +
-					"(e.g. '5ms',  or '10s', regex used for validation is 'must contain a number followed by 'ms' or 's''), " +
-					"spec.keepAlive.time: Invalid value: \"invalid\": \\d{1,4}(ms|s)? (e.g. '5ms',  or '10s', regex used for " +
-					"validation is 'must contain a number followed by 'ms' or 's''), spec.keepAlive.timeout.server: Invalid value: " +
-					"\"invalid\": \\d{1,4}(ms|s)? (e.g. '5ms',  or '10s', regex used for validation is 'must contain a number " +
-					"followed by 'ms' or 's''), spec.keepAlive.timeout.header: Invalid value: \"invalid\": \\d{1,4}(ms|s)? " +
-					"(e.g. '5ms',  or '10s', regex used for validation is 'must contain a number followed by 'ms' or 's'')]"),
+				staticConds.NewPolicyInvalid(
+					"[spec.body.timeout: Invalid value: \"invalid\": ^[0-9]{1,4}(ms|s|m|h)? " +
+						"(e.g. '5ms',  or '10s',  or '500m',  or '1000h', regex used for validation is " +
+						"'must contain an, at most, four digit number followed by 'ms', 's', 'm', or 'h''), " +
+						"spec.keepAlive.time: Invalid value: \"invalid\": ^[0-9]{1,4}(ms|s|m|h)? " +
+						"(e.g. '5ms',  or '10s',  or '500m',  or '1000h', regex used for validation is " +
+						"'must contain an, at most, four digit number followed by 'ms', 's', 'm', or 'h''), " +
+						"spec.keepAlive.timeout.server: Invalid value: \"invalid\": ^[0-9]{1,4}(ms|s|m|h)? " +
+						"(e.g. '5ms',  or '10s',  or '500m',  or '1000h', regex used for validation is " +
+						"'must contain an, at most, four digit number followed by 'ms', 's', 'm', or 'h''), " +
+						"spec.keepAlive.timeout.header: Invalid value: \"invalid\": ^[0-9]{1,4}(ms|s|m|h)? " +
+						"(e.g. '5ms',  or '10s',  or '500m',  or '1000h', regex used for validation is " +
+						"'must contain an, at most, four digit number followed by 'ms', 's', 'm', or 'h'')]"),
 			},
 		},
 		{
