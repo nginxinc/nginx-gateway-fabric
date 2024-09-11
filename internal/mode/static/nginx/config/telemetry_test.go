@@ -10,6 +10,7 @@ import (
 )
 
 func TestExecuteTelemetry(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		Telemetry: dataplane.Telemetry{
 			Endpoint:    "1.2.3.4:123",
@@ -50,6 +51,7 @@ func TestExecuteTelemetry(t *testing.T) {
 }
 
 func TestExecuteTelemetryNil(t *testing.T) {
+	t.Parallel()
 	conf := dataplane.Configuration{
 		Telemetry: dataplane.Telemetry{},
 	}

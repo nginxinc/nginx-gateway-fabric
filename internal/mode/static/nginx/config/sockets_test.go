@@ -7,6 +7,7 @@ import (
 )
 
 func TestGetSocketNameTLS(t *testing.T) {
+	t.Parallel()
 	res := getSocketNameTLS(800, "*.cafe.example.com")
 
 	g := NewGomegaWithT(t)
@@ -14,6 +15,7 @@ func TestGetSocketNameTLS(t *testing.T) {
 }
 
 func TestGetSocketNameHTTPS(t *testing.T) {
+	t.Parallel()
 	res := getSocketNameHTTPS(800)
 
 	g := NewGomegaWithT(t)
@@ -21,6 +23,7 @@ func TestGetSocketNameHTTPS(t *testing.T) {
 }
 
 func TestGetTLSPassthroughVarName(t *testing.T) {
+	t.Parallel()
 	res := getTLSPassthroughVarName(800)
 
 	g := NewGomegaWithT(t)
