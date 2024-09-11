@@ -104,6 +104,7 @@ var (
 )
 
 func TestFilterEndpointSliceList(t *testing.T) {
+	t.Parallel()
 	test := []struct {
 		msg                string
 		sliceList          discoveryV1.EndpointSliceList
@@ -162,13 +163,18 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	}
 
 	for _, tc := range test {
-		filteredSliceList := filterEndpointSliceList(tc.sliceList, svcPort, tc.allowedAddressType)
-		g := NewWithT(t)
-		g.Expect(filteredSliceList).To(Equal(tc.expList))
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			filteredSliceList := filterEndpointSliceList(tc.sliceList, svcPort, tc.allowedAddressType)
+			g.Expect(filteredSliceList).To(Equal(tc.expList))
+		})
 	}
 }
 
 func TestGetDefaultPort(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg     string
 		svcPort v1.ServicePort
@@ -199,13 +205,17 @@ func TestGetDefaultPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewWithT(t)
-		port := getDefaultPort(tc.svcPort)
-		g.Expect(port).To(Equal(tc.expPort))
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			port := getDefaultPort(tc.svcPort)
+			g.Expect(port).To(Equal(tc.expPort))
+		})
 	}
 }
 
 func TestIgnoreEndpointSlice(t *testing.T) {
+	t.Parallel()
 	var (
 		port4000 int32 = 4000
 		port8080 int32 = 8080
@@ -308,12 +318,16 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewWithT(t)
-		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort, dualAddressType)).To(Equal(tc.ignore))
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort, dualAddressType)).To(Equal(tc.ignore))
+		})
 	}
 }
 
 func TestEndpointReady(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		endpoint discoveryV1.Endpoint
 		msg      string
@@ -348,12 +362,16 @@ func TestEndpointReady(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewWithT(t)
-		g.Expect(endpointReady(tc.endpoint)).To(Equal(tc.ready))
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			g.Expect(endpointReady(tc.endpoint)).To(Equal(tc.ready))
+		})
 	}
 }
 
 func TestFindPort(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		msg     string
 		ports   []discoveryV1.EndpointPort
@@ -479,13 +497,17 @@ func TestFindPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewWithT(t)
-		port := findPort(tc.ports, tc.svcPort)
-		g.Expect(port).To(Equal(tc.expPort))
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			port := findPort(tc.ports, tc.svcPort)
+			g.Expect(port).To(Equal(tc.expPort))
+		})
 	}
 }
 
 func TestCalculateReadyEndpoints(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	slices := []discoveryV1.EndpointSlice{
