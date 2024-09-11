@@ -406,6 +406,35 @@ func PrepareBackendTLSPolicyRequests(
 	return reqs
 }
 
+// PrepareSnippetFilterRequests prepares status UpdateRequests for the given SnippetsFilters.
+func PrepareSnippetFilterRequests(
+	snippetFilters map[types.NamespacedName]*graph.SnippetsFilter,
+	transitionTime metav1.Time,
+) []frameworkStatus.UpdateRequest {
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetFilters))
+
+	for nsname, snippetFilter := range snippetFilters {
+		allConds := make([]conditions.Condition, 0, len(snippetFilter.Conditions)+1)
+
+		allConds = append(allConds, staticConds.NewSnippetFilterAccepted())
+		allConds = append(allConds, snippetFilter.Conditions...)
+
+		conds := conditions.DeduplicateConditions(allConds)
+		apiConds := conditions.ConvertConditions(conds, snippetFilter.Source.GetGeneration(), transitionTime)
+		status := ngfAPI.SnippetsFilterStatus{
+			Conditions: apiConds,
+		}
+
+		reqs = append(reqs, frameworkStatus.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: snippetFilter.Source,
+			Setter:       newSnippetsFilterStatusSetter(status),
+		})
+	}
+
+	return reqs
+}
+
 // ControlPlaneUpdateResult describes the result of a control plane update.
 type ControlPlaneUpdateResult struct {
 	// Error is the error that occurred during the update.

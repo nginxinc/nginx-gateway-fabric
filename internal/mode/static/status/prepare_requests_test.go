@@ -1768,3 +1768,123 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildSnippetFilterStatuses(t *testing.T) {
+	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
+
+	validSnippet := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "valid-snippet",
+				Namespace:  "test",
+				Generation: 1,
+			},
+			Spec: ngfAPI.SnippetsFilterSpec{
+				Snippets: []ngfAPI.Snippet{
+					{
+						Context: ngfAPI.NginxContextHTTP,
+						Value:   "proxy_buffer on;",
+					},
+				},
+			},
+		},
+		Conditions: []conditions.Condition{staticConds.NewSnippetFilterAccepted()},
+		Valid:      true,
+	}
+
+	invalidSnippet := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "invalid-snippet",
+				Namespace:  "test",
+				Generation: 1,
+			},
+		},
+		Conditions: []conditions.Condition{staticConds.NewSnippetsFilterInvalid("invalid snippet filter")},
+		Valid:      false,
+	}
+
+	tests := []struct {
+		snippetsFilters map[types.NamespacedName]*graph.SnippetsFilter
+		expected        map[types.NamespacedName]ngfAPI.SnippetsFilterStatus
+		name            string
+		expectedReqs    int
+	}{
+		{
+			name:         "nil snippetsFilters",
+			expectedReqs: 0,
+			expected:     map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{},
+		},
+		{
+			name: "valid snippet",
+			snippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+				{Namespace: "test", Name: "valid-snippet"}: validSnippet,
+			},
+			expectedReqs: 1,
+			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
+				{Namespace: "test", Name: "valid-snippet"}: {
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 1,
+							LastTransitionTime: transitionTime,
+							Reason:             string(ngfAPI.SnippetsFilterConditionReasonAccepted),
+							Message:            "The snippetFilter is accepted",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "invalid snippet",
+			snippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+				{Namespace: "test", Name: "invalid-snippet"}: invalidSnippet,
+			},
+			expectedReqs: 1,
+			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
+				{Namespace: "test", Name: "invalid-snippet"}: {
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+							Status:             metav1.ConditionFalse,
+							ObservedGeneration: 1,
+							LastTransitionTime: transitionTime,
+							Reason:             string(ngfAPI.SnippetsFilterConditionReasonInvalid),
+							Message:            "invalid snippet filter",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			k8sClient := createK8sClientFor(&ngfAPI.SnippetsFilter{})
+
+			for _, snippets := range test.snippetsFilters {
+				err := k8sClient.Create(context.Background(), snippets.Source)
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			updater := statusFramework.NewUpdater(k8sClient, zap.New())
+
+			reqs := PrepareSnippetFilterRequests(test.snippetsFilters, transitionTime)
+
+			g.Expect(reqs).To(HaveLen(test.expectedReqs))
+
+			updater.Update(context.Background(), reqs...)
+
+			for nsname, expected := range test.expected {
+				var snippets ngfAPI.SnippetsFilter
+
+				err := k8sClient.Get(context.Background(), nsname, &snippets)
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(helpers.Diff(expected, snippets.Status)).To(BeEmpty())
+			}
+		})
+	}
+}
