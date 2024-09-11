@@ -1,4 +1,4 @@
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric/badge)](https://scorecard.dev/viewer/?uri=github.com/nginxinc/nginx-gateway-fabric)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric?ref=badge_shield)
 [![Continuous Integration](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-gateway-fabric)](https://goreportcard.com/report/github.com/nginxinc/nginx-gateway-fabric)
