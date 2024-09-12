@@ -752,6 +752,6 @@ func NewSnippetFilterAccepted() conditions.Condition {
 		Type:    string(ngfAPI.SnippetsFilterConditionTypeAccepted),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(ngfAPI.SnippetsFilterConditionReasonAccepted),
-		Message: "The snippetFilter is accepted",
+		Message: "SnippetsFilter is accepted",
 	}
 }

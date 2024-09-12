@@ -406,16 +406,19 @@ func PrepareBackendTLSPolicyRequests(
 	return reqs
 }
 
-// PrepareSnippetFilterRequests prepares status UpdateRequests for the given SnippetsFilters.
-func PrepareSnippetFilterRequests(
-	snippetFilters map[types.NamespacedName]*graph.SnippetsFilter,
+// PrepareSnippetsFilterRequests prepares status UpdateRequests for the given SnippetsFilters.
+func PrepareSnippetsFilterRequests(
+	snippetsFilter map[types.NamespacedName]*graph.SnippetsFilter,
 	transitionTime metav1.Time,
 ) []frameworkStatus.UpdateRequest {
-	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetFilters))
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetsFilter))
 
-	for nsname, snippetFilter := range snippetFilters {
+	for nsname, snippetFilter := range snippetsFilter {
 		allConds := make([]conditions.Condition, 0, len(snippetFilter.Conditions)+1)
 
+		// The order of conditions matters here.
+		// We add the default condition first, followed by the snippetsFilter conditions.
+		// DeduplicateConditions will ensure the last condition wins.
 		allConds = append(allConds, staticConds.NewSnippetFilterAccepted())
 		allConds = append(allConds, snippetFilter.Conditions...)
 

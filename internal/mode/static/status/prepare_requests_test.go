@@ -1788,8 +1788,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 				},
 			},
 		},
-		Conditions: []conditions.Condition{staticConds.NewSnippetFilterAccepted()},
-		Valid:      true,
+		Valid: true,
 	}
 
 	invalidSnippet := &graph.SnippetsFilter{
@@ -1800,7 +1799,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 				Generation: 1,
 			},
 		},
-		Conditions: []conditions.Condition{staticConds.NewSnippetsFilterInvalid("invalid snippet filter")},
+		Conditions: []conditions.Condition{staticConds.NewSnippetsFilterInvalid("invalid snippetsFilter")},
 		Valid:      false,
 	}
 
@@ -1830,7 +1829,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 							ObservedGeneration: 1,
 							LastTransitionTime: transitionTime,
 							Reason:             string(ngfAPI.SnippetsFilterConditionReasonAccepted),
-							Message:            "The snippetFilter is accepted",
+							Message:            "SnippetsFilter is accepted",
 						},
 					},
 				},
@@ -1851,7 +1850,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 							ObservedGeneration: 1,
 							LastTransitionTime: transitionTime,
 							Reason:             string(ngfAPI.SnippetsFilterConditionReasonInvalid),
-							Message:            "invalid snippet filter",
+							Message:            "invalid snippetsFilter",
 						},
 					},
 				},
@@ -1872,7 +1871,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 
 			updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-			reqs := PrepareSnippetFilterRequests(test.snippetsFilters, transitionTime)
+			reqs := PrepareSnippetsFilterRequests(test.snippetsFilters, transitionTime)
 
 			g.Expect(reqs).To(HaveLen(test.expectedReqs))
 
