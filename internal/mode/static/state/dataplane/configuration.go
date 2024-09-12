@@ -279,12 +279,12 @@ func buildBackendGroups(servers []VirtualServer) []BackendGroup {
 			for _, mr := range pr.MatchRules {
 				group := mr.BackendGroup
 
-				key := key{
+				k := key{
 					nsname:  group.Source,
 					ruleIdx: group.RuleIdx,
 				}
 
-				uniqueGroups[key] = group
+				uniqueGroups[k] = group
 			}
 		}
 	}

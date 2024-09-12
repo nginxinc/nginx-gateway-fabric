@@ -107,7 +107,8 @@ func StartManager(cfg config.Config) error {
 		Namespace: cfg.GatewayPodConfig.Namespace,
 		Name:      cfg.ConfigName,
 	}
-	if err := registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName); err != nil {
+	err = registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName)
+	if err != nil {
 		return err
 	}
 
@@ -149,9 +150,11 @@ func StartManager(cfg config.Config) error {
 	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
-	if _, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout); err != nil {
+	p, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout)
+	if err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
+	cfg.Logger.Info("NGINX is running with PID", "pid", p)
 
 	var (
 		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
@@ -162,11 +165,6 @@ func StartManager(cfg config.Config) error {
 	var usageSecret *usage.Secret
 
 	if cfg.Plus {
-		ngxPlusClient, err = ngxruntime.CreatePlusClient()
-		if err != nil {
-			return fmt.Errorf("error creating NGINX plus client: %w", err)
-		}
-
 		if cfg.UsageReportConfig != nil {
 			usageSecret = usage.NewUsageSecret()
 			reporter, err := createUsageReporterJob(mgr.GetAPIReader(), cfg, usageSecret, nginxChecker.getReadyCh())
@@ -188,6 +186,10 @@ func StartManager(cfg config.Config) error {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
 		var ngxCollector prometheus.Collector
 		if cfg.Plus {
+			ngxPlusClient, err = ngxruntime.CreatePlusClient()
+			if err != nil {
+				return fmt.Errorf("error creating NGINX plus client: %w", err)
+			}
 			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(ngxPlusClient, constLabels, promLogger)
 		} else {
 			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)

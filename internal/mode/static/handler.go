@@ -471,8 +471,7 @@ func getGatewayAddresses(
 	}
 
 	var addresses, hostnames []string
-	switch gwSvc.Spec.Type {
-	case v1.ServiceTypeLoadBalancer:
+	if gwSvc.Spec.Type == v1.ServiceTypeLoadBalancer {
 		for _, ingress := range gwSvc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
 				addresses = append(addresses, ingress.IP)

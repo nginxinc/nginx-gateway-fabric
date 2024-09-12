@@ -58,8 +58,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 				return nil
 			},
 			getCalls: func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
-				switch typedObject := object.(type) {
-				case *v1.Namespace:
+				if typedObject, ok := object.(*v1.Namespace); ok {
 					typedObject.Name = metav1.NamespaceSystem
 					typedObject.UID = "1234abcd"
 					return nil
@@ -83,8 +82,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 		{
 			name: "collect node count fails",
 			listCalls: func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
-				switch object.(type) {
-				case *v1.NodeList:
+				if _, ok := object.(*v1.NodeList); ok {
 					return errors.New("failed to collect node list")
 				}
 				return nil
@@ -127,8 +125,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 				return nil
 			},
 			getCalls: func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
-				switch object.(type) {
-				case *v1.Namespace:
+				if _, ok := object.(*v1.Namespace); ok {
 					return errors.New("failed to collect namespace")
 				}
 				return nil

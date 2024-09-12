@@ -121,9 +121,9 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
-	if err := m.processHandler.Kill(pid); err != nil {
+	if errP := m.processHandler.Kill(pid); errP != nil {
 		m.metricsCollector.IncReloadErrors()
-		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
+		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", errP)
 	}
 
 	if err = m.verifyClient.WaitForCorrectVersion(

@@ -142,17 +142,13 @@ var _ = Describe("Tracing", FlakeAttempts(2), Label("functional", "tracing"), fu
 
 	checkStatusAndTraces := func() {
 		Eventually(
-			func() error {
-				return verifyGatewayClassResolvedRefs()
-			}).
+			verifyGatewayClassResolvedRefs).
 			WithTimeout(timeoutConfig.GetTimeout).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())
 
 		Eventually(
-			func() error {
-				return verifyPolicyStatus()
-			}).
+			verifyPolicyStatus).
 			WithTimeout(timeoutConfig.GetTimeout).
 			WithPolling(500 * time.Millisecond).
 			Should(Succeed())

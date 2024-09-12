@@ -53,14 +53,19 @@ linters:
   enable:
     - asasalint
     - asciicheck
+    - bidichk
     - copyloopvar
     - dupword
+    - durationcheck
     - errcheck
+    - errchkjson
     - errname
     - errorlint
     - fatcontext
     - ginkgolinter
     - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocritic
     - gocyclo
     - godot
     - gofmt
@@ -76,6 +81,7 @@ linters:
     - loggercheck
     - makezero
     - misspell
+    - musttag
     - nilerr
     - noctx
     - nolintlint
@@ -86,6 +92,7 @@ linters:
     - spancheck
     - staticcheck
     - stylecheck
+    - tagalign
     - tenv
     - thelper
     - tparallel

@@ -44,11 +44,14 @@ func (r *secretResolver) resolve(nsname types.NamespacedName) error {
 
 	var validationErr error
 
-	if !exist {
+	switch {
+	case !exist:
 		validationErr = errors.New("secret does not exist")
-	} else if secret.Type != apiv1.SecretTypeTLS {
+
+	case secret.Type != apiv1.SecretTypeTLS:
 		validationErr = fmt.Errorf("secret type must be %q not %q", apiv1.SecretTypeTLS, secret.Type)
-	} else {
+
+	default:
 		// A TLS Secret is guaranteed to have these data fields.
 		_, err := tls.X509KeyPair(secret.Data[apiv1.TLSCertKey], secret.Data[apiv1.TLSPrivateKeyKey])
 		if err != nil {
