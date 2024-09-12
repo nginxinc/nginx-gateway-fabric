@@ -19,3 +19,9 @@ kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/g
 
 
 To enable experimental features on NGINX Gateway Fabric:
+
+If using Helm: The nginxGateway.gwAPIExperimentalFeatures.enable option must be set to true. An example can be found
+in the [Installation with Helm]({{< relref "installation/installing-ngf/helm.md#Experimental-features" >}}) guide.
+
+If using Kubernetes manifests: The --gateway-api-experimental-features command-line flag must be set to true on the deployment manifest.
+An example can be found in the [Installation with Kubernetes manifests]({{< relref "installation/installing-ngf/manifests.md#3.-Deploy-NGINX-Gateway-Fabric" >}}) guide.
