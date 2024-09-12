@@ -14,6 +14,8 @@ In this guide, we will show how to specify the TLS configuration of the connecti
 
 ## Note on Gateway API Experimental Features
 
+{{< important >}} BackendTLSPolicy is a Gateway API resource from the experimental release channel. {{< /important >}}
+
 {{<include "installation/install-gateway-api-experimental-features.md" >}}
 
 ## Before you begin

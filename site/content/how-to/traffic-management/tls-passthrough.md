@@ -13,6 +13,8 @@ In this guide, we will show how to configure TLS passthrough for your applicatio
 
 ## Note on Gateway API Experimental Features
 
+{{< important >}} TLSRoute is a Gateway API resource from the experimental release channel. {{< /important >}}
+
 {{<include "installation/install-gateway-api-experimental-features.md" >}}
 
 ## Before you begin
