@@ -11,18 +11,18 @@ Learn which Gateway API resources NGINX Gateway Fabric supports and to which lev
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|---------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Supported                             | v1          |
-| [Gateway](#gateway)                   | Supported          | Partially supported    | Not supported                         | v1          |
-| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          |
-| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     |
-| [GRPCRoute](#grpcroute)               | Supported          | Partially supported    | Not supported                         | v1          |
-| [TLSRoute](#tlsroute)                 | Supported          | Not supported          | Not supported                         | v1alpha2    |
-| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha3    |
-| [Custom policies](#custom-policies)   | N/A                | N/A                    | Supported                             | N/A         |
+| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|---------------------------------------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Supported                             | v1          | Standard            |
+| [Gateway](#gateway)                   | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
+| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
+| [GRPCRoute](#grpcroute)               | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
+| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     | Standard            |
+| [TLSRoute](#tlsroute)                 | Supported          | Not supported          | Not supported                         | v1alpha2    | Experimental        |
+| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
+| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha3    | Experimental        |
+| [Custom policies](#custom-policies)   | N/A                | N/A                    | Supported                             | N/A         | N/A                 |
 
 {{< /bootstrap-table >}}
 
@@ -52,9 +52,9 @@ For a description of each field, visit the [Gateway API documentation](https://g
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource     | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|--------------|--------------------|------------------------|---------------------------------------|-------------|
-| GatewayClass | Supported          | Not supported          | Supported                             | v1          |
+| Resource     | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|--------------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| GatewayClass | Supported          | Not supported          | Supported                             | v1          | Standard            |
 
 {{< /bootstrap-table >}}
 
@@ -82,9 +82,9 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|----------|--------------------|------------------------|---------------------------------------|-------------|
-| Gateway  | Supported          | Partially supported    | Not supported                         | v1          |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| Gateway  | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
 
 {{< /bootstrap-table >}}
 
@@ -147,9 +147,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource  | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-----------|--------------------|------------------------|---------------------------------------|-------------|
-| HTTPRoute | Supported          | Partially supported    | Not supported                         | v1          |
+| Resource  | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|-----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| HTTPRoute | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
 
 {{< /bootstrap-table >}}
 
@@ -199,9 +199,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource  | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-----------|--------------------|------------------------|---------------------------------------|-------------|
-| GRPCRoute | Supported          | Partially supported    | Not supported                         | v1          |
+| Resource  | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|-----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| GRPCRoute | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
 
 {{< /bootstrap-table >}}
 
@@ -245,9 +245,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource       | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|----------------|--------------------|------------------------|---------------------------------------|-------------|
-| ReferenceGrant | Supported          | N/A                    | Not supported                         | v1beta1     |
+| Resource       | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|----------------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| ReferenceGrant | Supported          | N/A                    | Not supported                         | v1beta1     | Standard            |
 
 {{< /bootstrap-table >}}
 
@@ -269,9 +269,9 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|----------|--------------------|------------------------|---------------------------------------|-------------|
-| TLSRoute | Supported          | Not supported          | Not supported                         | v1alpha2    |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| TLSRoute | Supported          | Not supported          | Not supported                         | v1alpha2    | Experimental        |
 
 {{< /bootstrap-table >}}
 
@@ -309,9 +309,9 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|----------|--------------------|------------------------|---------------------------------------|-------------|
-| TCPRoute | Not supported      | Not supported          | Not supported                         | N/A         |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| TCPRoute | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
 
 {{< /bootstrap-table >}}
 
@@ -321,9 +321,9 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|----------|--------------------|------------------------|---------------------------------------|-------------|
-| UDPRoute | Not supported      | Not supported          | Not supported                         | N/A         |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| UDPRoute | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
 
 {{< /bootstrap-table >}}
 
@@ -333,9 +333,9 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource         | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|------------------|--------------------|------------------------|---------------------------------------|-------------|
-| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha3    |
+| Resource         | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|------------------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha3    | Experimental        |
 
 {{< /bootstrap-table >}}
 
@@ -367,9 +367,9 @@ Fields:
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
 
-| Resource        | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-----------------|--------------------|------------------------|---------------------------------------|-------------|
-| Custom policies | N/A                | N/A                    | Supported                             | N/A         |
+| Resource        | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
+|-----------------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
+| Custom policies | N/A                | N/A                    | Supported                             | N/A         | N/A                 |
 
 {{< /bootstrap-table >}}
 
