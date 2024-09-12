@@ -154,7 +154,7 @@ func StartManager(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
-	cfg.Logger.Info("NGINX is running with PID", "pid", p)
+	cfg.Logger.V(1).Info("NGINX is running with PID", "pid", p)
 
 	var (
 		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
