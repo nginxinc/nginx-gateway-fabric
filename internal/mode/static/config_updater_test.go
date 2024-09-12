@@ -103,6 +103,7 @@ func TestUpdateControlPlane(t *testing.T) {
 }
 
 func TestValidateLogLevel(t *testing.T) {
+	t.Parallel()
 	validLevels := []ngfAPI.ControllerLogLevel{
 		ngfAPI.ControllerLogLevelError,
 		ngfAPI.ControllerLogLevelInfo,
@@ -125,6 +126,7 @@ func TestValidateLogLevel(t *testing.T) {
 
 	for _, level := range invalidLevels {
 		t.Run(fmt.Sprintf("invalid level %q", level), func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			g.Expect(validateLogLevel(level)).ToNot(Succeed())

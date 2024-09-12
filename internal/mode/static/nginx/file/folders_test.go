@@ -21,6 +21,7 @@ func writeFile(t *testing.T, name string, data []byte) {
 }
 
 func TestClearFoldersRemoves(t *testing.T) {
+	t.Parallel()
 	g := NewWithT(t)
 
 	tempDir := t.TempDir()
@@ -41,6 +42,7 @@ func TestClearFoldersRemoves(t *testing.T) {
 }
 
 func TestClearFoldersFails(t *testing.T) {
+	t.Parallel()
 	files := []string{"file"}
 
 	testErr := errors.New("test error")
@@ -78,6 +80,7 @@ func TestClearFoldersFails(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			removedFiles, err := file.ClearFolders(test.fileMgr, files)
