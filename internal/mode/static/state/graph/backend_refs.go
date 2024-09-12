@@ -238,9 +238,8 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 		if referencePolicy == nil {
 			// First reference, store the policy as reference
 			referencePolicy = backendRef.BackendTLSPolicy
-		} else
-		// Check if the policies match
-		if checkPoliciesEqual(backendRef.BackendTLSPolicy.Source, referencePolicy.Source) {
+		} else if checkPoliciesEqual(backendRef.BackendTLSPolicy.Source, referencePolicy.Source) {
+			// Check if the policies match
 			mismatch = true
 			break
 		}
