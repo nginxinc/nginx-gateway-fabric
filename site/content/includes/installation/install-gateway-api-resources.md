@@ -12,9 +12,13 @@ kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/g
 
 {{<note>}}If you plan to use the `edge` version of NGINX Gateway Fabric, you can replace the version in `ref` with `main`, for example `ref=main`.{{</note>}}
 
-Alternatively, you can install the Gateway API resources from the experimental channel. We support a subset of the
-additional features provided by the experimental channel. To install from the experimental channel, run the following:
+Alternatively, you can install the Gateway API resources from the experimental channel.
+Installing Gateway API resources from the experimental channel includes everything in the standard release channel plus additional experimental resources and fields.
+NGINX Gateway Fabric currently supports a subset of the additional features provided by the experimental channel.
+To install from the experimental channel, run the following:
 
 ```shell
 kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.4.0" | kubectl apply -f -
 ```
+
+{{<note>}} To learn more about what Gateway API resources NGINX Gateway Fabric currently supports, visit our [Gateway API Compatibility]({{< relref "overview/gateway-api-compatibility.md" >}}) document.{{</note>}}

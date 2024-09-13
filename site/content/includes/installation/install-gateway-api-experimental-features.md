@@ -2,11 +2,7 @@
 docs: "DOCS-000"
 ---
 
-Installing Gateway API resources from the experimental channel includes everything in the standard release channel plus additional experimental resources and fields.
-NGINX Gateway Fabric currently supports a subset of the additional features provided by the experimental channel.
-To learn more about what Gateway API resources NGINX Gateway Fabric currently supports, visit our [Gateway API Compatibility]({{< relref "overview/gateway-api-compatibility.md" >}}) document.
-In order to use these experimental resources, the Gateway API resources from the experimental channel must be installed before deploying NGINX Gateway Fabric.
-Additionally, NGINX Gateway Fabric must have experimental features enabled.
+To use Gateway API experimental resources, the Gateway API resources from the experimental channel must be installed before deploying NGINX Gateway Fabric. Additionally, NGINX Gateway Fabric must have experimental features enabled.
 
 {{<caution>}}As noted in the [Gateway API documentation](https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel), future releases of the Gateway API can include breaking changes to experimental resources and fields.{{</caution>}}
 
