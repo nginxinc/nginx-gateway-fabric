@@ -1587,3 +1587,62 @@ func TestPolicyStatusEqual(t *testing.T) {
 		})
 	}
 }
+
+func TestNewSnippetsFilterStatusSetter(t *testing.T) {
+	tests := []struct {
+		name                         string
+		status, expStatus, newStatus ngfAPI.SnippetsFilterStatus
+		expStatusSet                 bool
+	}{
+		{
+			name: "SnippetsFilter has no status",
+			newStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+			expStatusSet: true,
+			expStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+		},
+		{
+			name: "SnippetsFilter has old status",
+			status: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "old condition"}},
+			},
+			newStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+			expStatusSet: true,
+			expStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+		},
+		{
+			name: "SnippetsFilter has same status",
+			status: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
+			},
+			newStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
+			},
+			expStatusSet: false,
+			expStatus: ngfAPI.SnippetsFilterStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newSnippetsFilterStatusSetter(test.newStatus)
+			sf := &ngfAPI.SnippetsFilter{Status: test.status}
+
+			statusSet := setter(sf)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(sf.Status).To(Equal(test.expStatus))
+		})
+	}
+}

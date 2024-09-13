@@ -333,3 +333,16 @@ func ancestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
 
 	return frameworkStatus.ConditionsEqual(p1.Conditions, p2.Conditions)
 }
+
+func newSnippetsFilterStatusSetter(status ngfAPI.SnippetsFilterStatus) frameworkStatus.Setter {
+	return func(obj client.Object) (wasSet bool) {
+		sf := helpers.MustCastObject[*ngfAPI.SnippetsFilter](obj)
+
+		if frameworkStatus.ConditionsEqual(sf.Status.Conditions, status.Conditions) {
+			return false
+		}
+
+		sf.Status = status
+		return true
+	}
+}
