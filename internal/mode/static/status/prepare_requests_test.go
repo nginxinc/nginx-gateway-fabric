@@ -1878,11 +1878,11 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 			updater.Update(context.Background(), reqs...)
 
 			for nsname, expected := range test.expected {
-				var snippets ngfAPI.SnippetsFilter
+				var snippetsFilter ngfAPI.SnippetsFilter
 
-				err := k8sClient.Get(context.Background(), nsname, &snippets)
+				err := k8sClient.Get(context.Background(), nsname, &snippetsFilter)
 				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(helpers.Diff(expected, snippets.Status)).To(BeEmpty())
+				g.Expect(helpers.Diff(expected, snippetsFilter.Status)).To(BeEmpty())
 			}
 		})
 	}

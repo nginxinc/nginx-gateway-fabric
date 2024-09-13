@@ -1564,14 +1564,14 @@ func TestPolicyStatusEqual(t *testing.T) {
 	}
 }
 
-func TestNewSnippetFilterStatusSetter(t *testing.T) {
+func TestBuildSnippetsFilterStatuses(t *testing.T) {
 	tests := []struct {
 		name                         string
 		status, expStatus, newStatus ngfAPI.SnippetsFilterStatus
 		expStatusSet                 bool
 	}{
 		{
-			name: "SnippetFilter has no status",
+			name: "SnippetsFilter has no status",
 			newStatus: ngfAPI.SnippetsFilterStatus{
 				Conditions: []metav1.Condition{{Message: "new condition"}},
 			},
@@ -1581,7 +1581,7 @@ func TestNewSnippetFilterStatusSetter(t *testing.T) {
 			},
 		},
 		{
-			name: "SnippetFilter has old status",
+			name: "SnippetsFilter has old status",
 			status: ngfAPI.SnippetsFilterStatus{
 				Conditions: []metav1.Condition{{Message: "old condition"}},
 			},
@@ -1594,7 +1594,7 @@ func TestNewSnippetFilterStatusSetter(t *testing.T) {
 			},
 		},
 		{
-			name: "SnippetFilter has same status",
+			name: "SnippetsFilter has same status",
 			status: ngfAPI.SnippetsFilterStatus{
 				Conditions: []metav1.Condition{{Message: "same condition"}},
 			},
@@ -1613,12 +1613,12 @@ func TestNewSnippetFilterStatusSetter(t *testing.T) {
 			g := NewWithT(t)
 
 			setter := newSnippetsFilterStatusSetter(test.newStatus)
-			obj := &ngfAPI.SnippetsFilter{Status: test.status}
+			sf := &ngfAPI.SnippetsFilter{Status: test.status}
 
-			statusSet := setter(obj)
+			statusSet := setter(sf)
 
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
-			g.Expect(obj.Status).To(Equal(test.expStatus))
+			g.Expect(sf.Status).To(Equal(test.expStatus))
 		})
 	}
 }

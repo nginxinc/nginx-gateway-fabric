@@ -408,29 +408,29 @@ func PrepareBackendTLSPolicyRequests(
 
 // PrepareSnippetsFilterRequests prepares status UpdateRequests for the given SnippetsFilters.
 func PrepareSnippetsFilterRequests(
-	snippetsFilter map[types.NamespacedName]*graph.SnippetsFilter,
+	snippetsFilters map[types.NamespacedName]*graph.SnippetsFilter,
 	transitionTime metav1.Time,
 ) []frameworkStatus.UpdateRequest {
-	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetsFilter))
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetsFilters))
 
-	for nsname, snippetFilter := range snippetsFilter {
-		allConds := make([]conditions.Condition, 0, len(snippetFilter.Conditions)+1)
+	for nsname, snippetsFilter := range snippetsFilters {
+		allConds := make([]conditions.Condition, 0, len(snippetsFilter.Conditions)+1)
 
 		// The order of conditions matters here.
 		// We add the default condition first, followed by the snippetsFilter conditions.
 		// DeduplicateConditions will ensure the last condition wins.
-		allConds = append(allConds, staticConds.NewSnippetFilterAccepted())
-		allConds = append(allConds, snippetFilter.Conditions...)
+		allConds = append(allConds, staticConds.NewSnippetsFilterAccepted())
+		allConds = append(allConds, snippetsFilter.Conditions...)
 
 		conds := conditions.DeduplicateConditions(allConds)
-		apiConds := conditions.ConvertConditions(conds, snippetFilter.Source.GetGeneration(), transitionTime)
+		apiConds := conditions.ConvertConditions(conds, snippetsFilter.Source.GetGeneration(), transitionTime)
 		status := ngfAPI.SnippetsFilterStatus{
 			Conditions: apiConds,
 		}
 
 		reqs = append(reqs, frameworkStatus.UpdateRequest{
 			NsName:       nsname,
-			ResourceType: snippetFilter.Source,
+			ResourceType: snippetsFilter.Source,
 			Setter:       newSnippetsFilterStatusSetter(status),
 		})
 	}
