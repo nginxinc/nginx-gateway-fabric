@@ -1564,7 +1564,7 @@ func TestPolicyStatusEqual(t *testing.T) {
 	}
 }
 
-func TestBuildSnippetsFilterStatuses(t *testing.T) {
+func TestNewSnippetsFilterStatusSetter(t *testing.T) {
 	tests := []struct {
 		name                         string
 		status, expStatus, newStatus ngfAPI.SnippetsFilterStatus

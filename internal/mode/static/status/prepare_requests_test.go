@@ -1769,10 +1769,10 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	}
 }
 
-func TestBuildSnippetFilterStatuses(t *testing.T) {
+func TestBuildSnippetsFilterStatuses(t *testing.T) {
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
 
-	validSnippet := &graph.SnippetsFilter{
+	validSnippetsFilter := &graph.SnippetsFilter{
 		Source: &ngfAPI.SnippetsFilter{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "valid-snippet",
@@ -1791,7 +1791,7 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 		Valid: true,
 	}
 
-	invalidSnippet := &graph.SnippetsFilter{
+	invalidSnippetsFilter := &graph.SnippetsFilter{
 		Source: &ngfAPI.SnippetsFilter{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "invalid-snippet",
@@ -1815,9 +1815,9 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 			expected:     map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{},
 		},
 		{
-			name: "valid snippet",
+			name: "valid snippetsFilter",
 			snippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
-				{Namespace: "test", Name: "valid-snippet"}: validSnippet,
+				{Namespace: "test", Name: "valid-snippet"}: validSnippetsFilter,
 			},
 			expectedReqs: 1,
 			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
@@ -1836,9 +1836,9 @@ func TestBuildSnippetFilterStatuses(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid snippet",
+			name: "invalid snippetsFilter",
 			snippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
-				{Namespace: "test", Name: "invalid-snippet"}: invalidSnippet,
+				{Namespace: "test", Name: "invalid-snippet"}: invalidSnippetsFilter,
 			},
 			expectedReqs: 1,
 			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
