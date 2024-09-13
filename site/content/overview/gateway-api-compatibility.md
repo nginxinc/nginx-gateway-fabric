@@ -19,8 +19,8 @@ Learn which Gateway API resources NGINX Gateway Fabric supports and to which lev
 | [GRPCRoute](#grpcroute)               | Supported          | Partially supported    | Not supported                         | v1          | Standard            |
 | [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     | Standard            |
 | [TLSRoute](#tlsroute)                 | Supported          | Not supported          | Not supported                         | v1alpha2    | Experimental        |
-| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
-| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
+| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | v1alpha2    | Experimental        |
+| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | v1alpha2    | Experimental        |
 | [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha3    | Experimental        |
 | [Custom policies](#custom-policies)   | N/A                | N/A                    | Supported                             | N/A         | N/A                 |
 
@@ -311,7 +311,7 @@ Fields:
 
 | Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
 |----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
-| TCPRoute | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
+| TCPRoute | Not supported      | Not supported          | Not supported                         | v1alpha2    | Experimental        |
 
 {{< /bootstrap-table >}}
 
@@ -323,7 +323,7 @@ Fields:
 
 | Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version | API Release Channel |
 |----------|--------------------|------------------------|---------------------------------------|-------------|---------------------|
-| UDPRoute | Not supported      | Not supported          | Not supported                         | N/A         | N/A                 |
+| UDPRoute | Not supported      | Not supported          | Not supported                         | v1alpha2    | Experimental        |
 
 {{< /bootstrap-table >}}
 
