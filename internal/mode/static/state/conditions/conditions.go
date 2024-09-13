@@ -744,3 +744,14 @@ func NewSnippetsFilterInvalid(msg string) conditions.Condition {
 		Message: msg,
 	}
 }
+
+// NewSnippetsFilterAccepted returns a Condition that indicates that the SnippetsFilter is accepted because it is
+// valid.
+func NewSnippetsFilterAccepted() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.SnippetsFilterConditionReasonAccepted),
+		Message: "SnippetsFilter is accepted",
+	}
+}
