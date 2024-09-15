@@ -6,16 +6,16 @@ NGINX Plus: false
 
 NGINX Gateway Fabric:
 
-- Commit: 3c029b1417c1f89f2a29aeef07f47078640e28b2
-- Date: 2024-08-15T00:04:25Z
+- Commit: bf8ea47203eb4695af0d359243c73de2d1badbbf
+- Date: 2024-09-13T20:33:11Z
 - Dirty: false
 
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1326000
+- k8s version: v1.30.3-gke.1639000
 - vCPUs per node: 16
-- RAM per node: 65855012Ki
+- RAM per node: 65853968Ki
 - Max pods per node: 110
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
@@ -26,7 +26,7 @@ GKE Cluster:
 
 - Total: 128
 - Total Errors: 0
-- Average Time: 151ms
+- Average Time: 145ms
 - Reload distribution:
 	- 500ms: 128
 	- 1000ms: 128
@@ -38,10 +38,10 @@ GKE Cluster:
 ### Event Batch Processing
 
 - Total: 386
-- Average Time: 124ms
+- Average Time: 120ms
 - Event Batch Processing distribution:
-	- 500ms: 352
-	- 1000ms: 384
+	- 500ms: 353
+	- 1000ms: 386
 	- 5000ms: 386
 	- 10000ms: 386
 	- 30000ms: 386
@@ -65,7 +65,7 @@ The logs are attached only if there are errors.
 
 - Total: 127
 - Total Errors: 0
-- Average Time: 177ms
+- Average Time: 166ms
 - Reload distribution:
 	- 500ms: 127
 	- 1000ms: 127
@@ -76,19 +76,19 @@ The logs are attached only if there are errors.
 
 ### Event Batch Processing
 
-- Total: 448
-- Average Time: 120ms
+- Total: 449
+- Average Time: 119ms
 - Event Batch Processing distribution:
-	- 500ms: 402
-	- 1000ms: 447
-	- 5000ms: 448
-	- 10000ms: 448
-	- 30000ms: 448
-	- +Infms: 448
+	- 500ms: 406
+	- 1000ms: 449
+	- 5000ms: 449
+	- 10000ms: 449
+	- 30000ms: 449
+	- +Infms: 449
 
 ### Errors
 
-- NGF errors: 0
+- NGF errors: 1
 - NGF container restarts: 0
 - NGINX errors: 0
 - NGINX container restarts: 0
@@ -104,9 +104,9 @@ The logs are attached only if there are errors.
 
 - Total: 1001
 - Total Errors: 0
-- Average Time: 394ms
+- Average Time: 349ms
 - Reload distribution:
-	- 500ms: 687
+	- 500ms: 827
 	- 1000ms: 1001
 	- 5000ms: 1001
 	- 10000ms: 1001
@@ -116,9 +116,9 @@ The logs are attached only if there are errors.
 ### Event Batch Processing
 
 - Total: 1008
-- Average Time: 444ms
+- Average Time: 410ms
 - Event Batch Processing distribution:
-	- 500ms: 613
+	- 500ms: 697
 	- 1000ms: 1008
 	- 5000ms: 1008
 	- 10000ms: 1008
@@ -141,28 +141,28 @@ The logs are attached only if there are errors.
 
 ### Reloads
 
-- Total: 107
+- Total: 142
 - Total Errors: 0
-- Average Time: 126ms
+- Average Time: 127ms
 - Reload distribution:
-	- 500ms: 107
-	- 1000ms: 107
-	- 5000ms: 107
-	- 10000ms: 107
-	- 30000ms: 107
-	- +Infms: 107
+	- 500ms: 142
+	- 1000ms: 142
+	- 5000ms: 142
+	- 10000ms: 142
+	- 30000ms: 142
+	- +Infms: 142
 
 ### Event Batch Processing
 
-- Total: 110
-- Average Time: 125ms
+- Total: 145
+- Average Time: 127ms
 - Event Batch Processing distribution:
-	- 500ms: 110
-	- 1000ms: 110
-	- 5000ms: 110
-	- 10000ms: 110
-	- 30000ms: 110
-	- +Infms: 110
+	- 500ms: 145
+	- 1000ms: 145
+	- 5000ms: 145
+	- 10000ms: 145
+	- 30000ms: 145
+	- +Infms: 145
 
 ### Errors
 
@@ -179,20 +179,20 @@ The logs are attached only if there are errors.
 ## Test TestScale_HTTPMatches
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.00, 999.98
-Duration      [total, attack, wait]             30.001s, 30s, 663.08µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  518.253µs, 721.379µs, 690.364µs, 801.458µs, 846.06µs, 972.256µs, 12.432ms
-Bytes In      [total, mean]                     4830000, 161.00
+Requests      [total, rate, throughput]         29999, 1000.00, 999.98
+Duration      [total, attack, wait]             30s, 29.999s, 606.451µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  526.999µs, 683.711µs, 660.153µs, 741.92µs, 772.925µs, 867.538µs, 21.592ms
+Bytes In      [total, mean]                     4799840, 160.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
-Status Codes  [code:count]                      200:30000  
+Status Codes  [code:count]                      200:29999  
 Error Set:
 ```
 ```text
 Requests      [total, rate, throughput]         30000, 1000.01, 999.98
-Duration      [total, attack, wait]             30.001s, 30s, 775.127µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  586.924µs, 794.034µs, 771.093µs, 911.524µs, 965.023µs, 1.086ms, 12.692ms
-Bytes In      [total, mean]                     4830000, 161.00
+Duration      [total, attack, wait]             30s, 30s, 710.171µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  583.591µs, 754.734µs, 733.67µs, 853.431µs, 912.996µs, 1.017ms, 13.579ms
+Bytes In      [total, mean]                     4800000, 160.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:30000  

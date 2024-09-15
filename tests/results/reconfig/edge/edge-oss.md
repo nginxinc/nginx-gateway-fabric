@@ -6,16 +6,16 @@ NGINX Plus: false
 
 NGINX Gateway Fabric:
 
-- Commit: 3c029b1417c1f89f2a29aeef07f47078640e28b2
-- Date: 2024-08-15T00:04:25Z
+- Commit: bf8ea47203eb4695af0d359243c73de2d1badbbf
+- Date: 2024-09-13T20:33:11Z
 - Dirty: false
 
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1326000
+- k8s version: v1.30.3-gke.1639000
 - vCPUs per node: 16
-- RAM per node: 65855012Ki
+- RAM per node: 65853968Ki
 - Max pods per node: 110
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
@@ -38,16 +38,15 @@ GKE Cluster:
 
 ### Event Batch Processing
 
-- Event Batch Total: 6
-- Event Batch Processing Average Time: 48ms
+- Event Batch Total: 7
+- Event Batch Processing Average Time: 39ms
 - Event Batch Processing distribution:
-	- 500ms: 6
-	- 1000ms: 6
-	- 5000ms: 6
-	- 10000ms: 6
-	- 30000ms: 6
-	- +Infms: 6
-
+	- 500ms: 7
+	- 1000ms: 7
+	- 5000ms: 7
+	- 10000ms: 7
+	- 30000ms: 7
+	- +Infms: 7
 
 ## Test 1: Resources exist before startup - NumResources 150
 
@@ -68,7 +67,7 @@ GKE Cluster:
 ### Event Batch Processing
 
 - Event Batch Total: 6
-- Event Batch Processing Average Time: 46ms
+- Event Batch Processing Average Time: 47ms
 - Event Batch Processing distribution:
 	- 500ms: 6
 	- 1000ms: 6
@@ -77,7 +76,6 @@ GKE Cluster:
 	- 30000ms: 6
 	- +Infms: 6
 
-
 ## Test 2: Start NGF, deploy Gateway, create many resources attached to GW - NumResources 30
 
 ### Reloads and Time to Ready
@@ -85,7 +83,7 @@ GKE Cluster:
 - TimeToReadyTotal: 8s
 - TimeToReadyAvgSingle: < 1s
 - NGINX Reloads: 62
-- NGINX Reload Average Time: 125ms
+- NGINX Reload Average Time: 126ms
 - Reload distribution:
 	- 500ms: 62
 	- 1000ms: 62
@@ -106,35 +104,33 @@ GKE Cluster:
 	- 30000ms: 338
 	- +Infms: 338
 
-
 ## Test 2: Start NGF, deploy Gateway, create many resources attached to GW - NumResources 150
 
 ### Reloads and Time to Ready
 
 - TimeToReadyTotal: 44s
 - TimeToReadyAvgSingle: < 1s
-- NGINX Reloads: 341
+- NGINX Reloads: 342
 - NGINX Reload Average Time: 126ms
 - Reload distribution:
-	- 500ms: 341
-	- 1000ms: 341
-	- 5000ms: 341
-	- 10000ms: 341
-	- 30000ms: 341
-	- +Infms: 341
+	- 500ms: 342
+	- 1000ms: 342
+	- 5000ms: 342
+	- 10000ms: 342
+	- 30000ms: 342
+	- +Infms: 342
 
 ### Event Batch Processing
 
-- Event Batch Total: 1695
+- Event Batch Total: 1696
 - Event Batch Processing Average Time: 25ms
 - Event Batch Processing distribution:
-	- 500ms: 1695
-	- 1000ms: 1695
-	- 5000ms: 1695
-	- 10000ms: 1695
-	- 30000ms: 1695
-	- +Infms: 1695
-
+	- 500ms: 1696
+	- 1000ms: 1696
+	- 5000ms: 1696
+	- 10000ms: 1696
+	- 30000ms: 1696
+	- +Infms: 1696
 
 ## Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway - NumResources 30
 
@@ -142,15 +138,15 @@ GKE Cluster:
 
 - TimeToReadyTotal: < 1s
 - TimeToReadyAvgSingle: < 1s
-- NGINX Reloads: 63
+- NGINX Reloads: 64
 - NGINX Reload Average Time: 125ms
 - Reload distribution:
-	- 500ms: 63
-	- 1000ms: 63
-	- 5000ms: 63
-	- 10000ms: 63
-	- 30000ms: 63
-	- +Infms: 63
+	- 500ms: 64
+	- 1000ms: 64
+	- 5000ms: 64
+	- 10000ms: 64
+	- 30000ms: 64
+	- +Infms: 64
 
 ### Event Batch Processing
 
@@ -164,31 +160,30 @@ GKE Cluster:
 	- 30000ms: 307
 	- +Infms: 307
 
-
 ## Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway - NumResources 150
 
 ### Reloads and Time to Ready
 
-- TimeToReadyTotal: < 1s
+- TimeToReadyTotal: 1s
 - TimeToReadyAvgSingle: < 1s
-- NGINX Reloads: 345
-- NGINX Reload Average Time: 126ms
+- NGINX Reloads: 343
+- NGINX Reload Average Time: 125ms
 - Reload distribution:
-	- 500ms: 345
-	- 1000ms: 345
-	- 5000ms: 345
-	- 10000ms: 345
-	- 30000ms: 345
-	- +Infms: 345
+	- 500ms: 343
+	- 1000ms: 343
+	- 5000ms: 343
+	- 10000ms: 343
+	- 30000ms: 343
+	- +Infms: 343
 
 ### Event Batch Processing
 
-- Event Batch Total: 1547
+- Event Batch Total: 1554
 - Event Batch Processing Average Time: 28ms
 - Event Batch Processing distribution:
-	- 500ms: 1547
-	- 1000ms: 1547
-	- 5000ms: 1547
-	- 10000ms: 1547
-	- 30000ms: 1547
-	- +Infms: 1547
+	- 500ms: 1554
+	- 1000ms: 1554
+	- 5000ms: 1554
+	- 10000ms: 1554
+	- 30000ms: 1554
+	- +Infms: 1554
