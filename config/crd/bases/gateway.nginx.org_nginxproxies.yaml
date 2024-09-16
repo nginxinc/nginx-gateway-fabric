@@ -67,7 +67,7 @@ spec:
                 properties:
                   level:
                     default: info
-                    description: Level defines the logging level.
+                    description: Level defines the error log level.
                     enum:
                     - debug
                     - info

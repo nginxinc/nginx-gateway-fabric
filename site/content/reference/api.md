@@ -1009,7 +1009,7 @@ Logging
 <a href="#gateway.nginx.org/v1alpha1.NginxLogging">NginxLogging</a>)
 </p>
 <p>
-<p>NginxLogLevel type defines the logging level of error logs for NGINX.</p>
+<p>NginxLogLevel type defines the log level of error logs for NGINX.</p>
 </p>
 <table class="table table-bordered table-striped">
 <thead>
@@ -1019,28 +1019,28 @@ Logging
 </tr>
 </thead>
 <tbody><tr><td><p>&#34;alert&#34;</p></td>
-<td><p>NginxLogLevelAlert is the alert level for NGINX logging.</p>
+<td><p>NginxLogLevelAlert is the alert level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;crit&#34;</p></td>
-<td><p>NginxLogLevelCrit is the crit level for NGINX logging.</p>
+<td><p>NginxLogLevelCrit is the crit level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;debug&#34;</p></td>
-<td><p>NginxLogLevelDebug is the debug level for NGINX logging.</p>
+<td><p>NginxLogLevelDebug is the debug level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;emerg&#34;</p></td>
-<td><p>NginxLogLevelEmerg is the emerg level for NGINX logging.</p>
+<td><p>NginxLogLevelEmerg is the emerg level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;error&#34;</p></td>
-<td><p>NginxLogLevelError is the error level for NGINX logging.</p>
+<td><p>NginxLogLevelError is the error level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;info&#34;</p></td>
-<td><p>NginxLogLevelInfo is the info level for NGINX logging.</p>
+<td><p>NginxLogLevelInfo is the info level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;notice&#34;</p></td>
-<td><p>NginxLogLevelNotice is the notice level for NGINX logging.</p>
+<td><p>NginxLogLevelNotice is the notice level for NGINX error logs.</p>
 </td>
 </tr><tr><td><p>&#34;warn&#34;</p></td>
-<td><p>NginxLogLevelWarn is the warn level for NGINX logging.</p>
+<td><p>NginxLogLevelWarn is the warn level for NGINX error logs.</p>
 </td>
 </tr></tbody>
 </table>
@@ -1073,7 +1073,7 @@ NginxLogLevel
 </td>
 <td>
 <em>(Optional)</em>
-<p>Level defines the logging level.</p>
+<p>Level defines the error log level.</p>
 </td>
 </tr>
 </tbody>

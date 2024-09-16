@@ -210,40 +210,40 @@ const (
 
 // NginxLogging defines logging related settings for NGINX.
 type NginxLogging struct {
-	// Level defines the logging level.
+	// Level defines the error log level.
 	//
 	// +optional
 	// +kubebuilder:default=info
 	Level *NginxLogLevel `json:"level,omitempty"`
 }
 
-// NginxLogLevel type defines the logging level of error logs for NGINX.
+// NginxLogLevel type defines the log level of error logs for NGINX.
 //
 // +kubebuilder:validation:Enum=debug;info;notice;warn;error;crit;alert;emerg
 type NginxLogLevel string
 
 const (
-	// NginxLogLevelDebug is the debug level for NGINX logging.
+	// NginxLogLevelDebug is the debug level for NGINX error logs.
 	NginxLogLevelDebug NginxLogLevel = "debug"
 
-	// NginxLogLevelInfo is the info level for NGINX logging.
+	// NginxLogLevelInfo is the info level for NGINX error logs.
 	NginxLogLevelInfo NginxLogLevel = "info"
 
-	// NginxLogLevelNotice is the notice level for NGINX logging.
+	// NginxLogLevelNotice is the notice level for NGINX error logs.
 	NginxLogLevelNotice NginxLogLevel = "notice"
 
-	// NginxLogLevelWarn is the warn level for NGINX logging.
+	// NginxLogLevelWarn is the warn level for NGINX error logs.
 	NginxLogLevelWarn NginxLogLevel = "warn"
 
-	// NginxLogLevelError is the error level for NGINX logging.
+	// NginxLogLevelError is the error level for NGINX error logs.
 	NginxLogLevelError NginxLogLevel = "error"
 
-	// NginxLogLevelCrit is the crit level for NGINX logging.
+	// NginxLogLevelCrit is the crit level for NGINX error logs.
 	NginxLogLevelCrit NginxLogLevel = "crit"
 
-	// NginxLogLevelAlert is the alert level for NGINX logging.
+	// NginxLogLevelAlert is the alert level for NGINX error logs.
 	NginxLogLevelAlert NginxLogLevel = "alert"
 
-	// NginxLogLevelEmerg is the emerg level for NGINX logging.
+	// NginxLogLevelEmerg is the emerg level for NGINX error logs.
 	NginxLogLevelEmerg NginxLogLevel = "emerg"
 )
