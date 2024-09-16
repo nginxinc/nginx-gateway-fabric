@@ -40,6 +40,8 @@ type Configuration struct {
 	BackendGroups []BackendGroup
 	// Telemetry holds the Otel configuration.
 	Telemetry Telemetry
+	// Logging defines logging related settings for NGINX.
+	Logging Logging
 	// BaseHTTPConfig holds the configuration options at the http context.
 	BaseHTTPConfig BaseHTTPConfig
 	// Version represents the version of the generated configuration.
@@ -354,4 +356,10 @@ type Ratio struct {
 	Name string
 	// Value is the value of the ratio.
 	Value int32
+}
+
+// Logging defines logging related settings for NGINX.
+type Logging struct {
+	// ErrorLevel defines the error log level.
+	ErrorLevel string
 }

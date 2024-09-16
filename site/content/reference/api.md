@@ -343,6 +343,20 @@ RewriteClientIP
 </tr>
 <tr>
 <td>
+<code>logging</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.NginxLogging">
+NginxLogging
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging defines logging related settings for NGINX.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>disableHTTP2</code><br/>
 <em>
 bool
@@ -880,6 +894,49 @@ ControllerLogLevel
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxErrorLogLevel">NginxErrorLogLevel
+(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxErrorLogLevel" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxLogging">NginxLogging</a>)
+</p>
+<p>
+<p>NginxErrorLogLevel type defines the log level of error logs for NGINX.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;alert&#34;</p></td>
+<td><p>NginxLogLevelAlert is the alert level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;crit&#34;</p></td>
+<td><p>NginxLogLevelCrit is the crit level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;debug&#34;</p></td>
+<td><p>NginxLogLevelDebug is the debug level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;emerg&#34;</p></td>
+<td><p>NginxLogLevelEmerg is the emerg level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;error&#34;</p></td>
+<td><p>NginxLogLevelError is the error level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;info&#34;</p></td>
+<td><p>NginxLogLevelInfo is the info level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;notice&#34;</p></td>
+<td><p>NginxLogLevelNotice is the notice level for NGINX error logs.</p>
+</td>
+</tr><tr><td><p>&#34;warn&#34;</p></td>
+<td><p>NginxLogLevelWarn is the warn level for NGINX error logs.</p>
+</td>
+</tr></tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxGatewayConditionReason">NginxGatewayConditionReason
 (<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxGatewayConditionReason" title="Permanent link">¶</a>
 </h3>
@@ -989,6 +1046,43 @@ Logging
 </tr>
 </tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.NginxLogging">NginxLogging
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxLogging" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec</a>)
+</p>
+<p>
+<p>NginxLogging defines logging related settings for NGINX.</p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>errorlevel</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.NginxErrorLogLevel">
+NginxErrorLogLevel
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ErrorLevel defines the error log level. Possible log levels listed in order of increasing severity are
+debug, info, notice, warn, error, crit, alert, and emerg. Setting a certain log level will cause all messages
+of the specified and more severe log levels to be logged. For example, the log level &lsquo;error&rsquo; will cause error,
+crit, alert, and emerg messages to be logged. <a href="https://nginx.org/en/docs/ngx_core_module.html#error_log">https://nginx.org/en/docs/ngx_core_module.html#error_log</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.NginxProxySpec">NginxProxySpec
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.NginxProxySpec" title="Permanent link">¶</a>
 </h3>
@@ -1048,6 +1142,20 @@ RewriteClientIP
 <td>
 <em>(Optional)</em>
 <p>RewriteClientIP defines configuration for rewriting the client IP to the original client&rsquo;s IP.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logging</code><br/>
+<em>
+<a href="#gateway.nginx.org/v1alpha1.NginxLogging">
+NginxLogging
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging defines logging related settings for NGINX.</p>
 </td>
 </tr>
 <tr>

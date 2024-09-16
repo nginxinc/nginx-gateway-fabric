@@ -7,8 +7,10 @@ ARG BUILD_AGENT
 
 RUN apk add --no-cache libcap \
     && mkdir -p /var/lib/nginx /usr/lib/nginx/modules \
-    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
-    && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+	&& setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+	&& setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx-debug \
+    && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx-debug \
     && apk del libcap
 
 COPY ${NJS_DIR}/httpmatches.js /usr/lib/nginx/modules/njs/httpmatches.js
@@ -22,4 +24,4 @@ LABEL org.nginx.ngf.image.build.agent="${BUILD_AGENT}"
 
 USER 101:1001
 
-CMD ["sh", "-c", "rm -rf /var/run/nginx/*.sock && /docker-entrypoint.sh nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "rm -rf /var/run/nginx/*.sock && nginx -g 'daemon off;'"]

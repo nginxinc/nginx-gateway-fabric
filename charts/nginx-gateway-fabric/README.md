@@ -261,6 +261,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `metrics.port` | Set the port where the Prometheus metrics are exposed. | int | `9113` |
 | `metrics.secure` | Enable serving metrics via https. By default metrics are served via http. Please note that this endpoint will be secured with a self-signed certificate. | bool | `false` |
 | `nginx.config` | The configuration for the data plane that is contained in the NginxProxy resource. | object | `{}` |
+| `nginx.debug` | Enable debugging for NGINX. Uses the nginx-debug binary. The NGINX error log level should be set to debug in the NginxProxy resource. | bool | `false` |
 | `nginx.extraVolumeMounts` | extraVolumeMounts are the additional volume mounts for the nginx container. | list | `[]` |
 | `nginx.image.pullPolicy` |  | string | `"Always"` |
 | `nginx.image.repository` | The NGINX image to use. | string | `"ghcr.io/nginxinc/nginx-gateway-fabric/nginx"` |

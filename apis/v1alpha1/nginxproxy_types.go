@@ -45,6 +45,10 @@ type NginxProxySpec struct {
 	// +optional
 	//nolint:lll
 	RewriteClientIP *RewriteClientIP `json:"rewriteClientIP,omitempty"`
+	// Logging defines logging related settings for NGINX.
+	//
+	// +optional
+	Logging *NginxLogging `json:"logging,omitempty"`
 	// DisableHTTP2 defines if http2 should be disabled for all servers.
 	// Default is false, meaning http2 will be enabled for all servers.
 	//
@@ -201,4 +205,47 @@ const (
 
 	// HostnameAddressType specifies that the address is a Hostname.
 	HostnameAddressType AddressType = "Hostname"
+)
+
+// NginxLogging defines logging related settings for NGINX.
+type NginxLogging struct {
+	// ErrorLevel defines the error log level. Possible log levels listed in order of increasing severity are
+	// debug, info, notice, warn, error, crit, alert, and emerg. Setting a certain log level will cause all messages
+	// of the specified and more severe log levels to be logged. For example, the log level 'error' will cause error,
+	// crit, alert, and emerg messages to be logged. https://nginx.org/en/docs/ngx_core_module.html#error_log
+	//
+	// +optional
+	// +kubebuilder:default=info
+	ErrorLevel *NginxErrorLogLevel `json:"errorlevel,omitempty"`
+}
+
+// NginxErrorLogLevel type defines the log level of error logs for NGINX.
+//
+// +kubebuilder:validation:Enum=debug;info;notice;warn;error;crit;alert;emerg
+type NginxErrorLogLevel string
+
+const (
+	// NginxLogLevelDebug is the debug level for NGINX error logs.
+	NginxLogLevelDebug NginxErrorLogLevel = "debug"
+
+	// NginxLogLevelInfo is the info level for NGINX error logs.
+	NginxLogLevelInfo NginxErrorLogLevel = "info"
+
+	// NginxLogLevelNotice is the notice level for NGINX error logs.
+	NginxLogLevelNotice NginxErrorLogLevel = "notice"
+
+	// NginxLogLevelWarn is the warn level for NGINX error logs.
+	NginxLogLevelWarn NginxErrorLogLevel = "warn"
+
+	// NginxLogLevelError is the error level for NGINX error logs.
+	NginxLogLevelError NginxErrorLogLevel = "error"
+
+	// NginxLogLevelCrit is the crit level for NGINX error logs.
+	NginxLogLevelCrit NginxErrorLogLevel = "crit"
+
+	// NginxLogLevelAlert is the alert level for NGINX error logs.
+	NginxLogLevelAlert NginxErrorLogLevel = "alert"
+
+	// NginxLogLevelEmerg is the emerg level for NGINX error logs.
+	NginxLogLevelEmerg NginxErrorLogLevel = "emerg"
 )

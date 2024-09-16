@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"slices"
+
 	"k8s.io/apimachinery/pkg/types"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -127,7 +129,46 @@ func validateNginxProxy(
 		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)
 	}
 
+	allErrs = append(allErrs, validateLogging(npCfg)...)
+
 	allErrs = append(allErrs, validateRewriteClientIP(npCfg)...)
+
+	return allErrs
+}
+
+func validateLogging(npCfg *ngfAPI.NginxProxy) field.ErrorList {
+	var allErrs field.ErrorList
+	spec := field.NewPath("spec")
+
+	if npCfg.Spec.Logging != nil {
+		logging := npCfg.Spec.Logging
+		loggingPath := spec.Child("logging")
+
+		if logging.ErrorLevel != nil {
+			errLevel := string(*logging.ErrorLevel)
+
+			validLogLevels := []string{
+				string(ngfAPI.NginxLogLevelDebug),
+				string(ngfAPI.NginxLogLevelInfo),
+				string(ngfAPI.NginxLogLevelNotice),
+				string(ngfAPI.NginxLogLevelWarn),
+				string(ngfAPI.NginxLogLevelError),
+				string(ngfAPI.NginxLogLevelCrit),
+				string(ngfAPI.NginxLogLevelAlert),
+				string(ngfAPI.NginxLogLevelEmerg),
+			}
+
+			if !slices.Contains(validLogLevels, errLevel) {
+				allErrs = append(
+					allErrs,
+					field.NotSupported(
+						loggingPath.Child("errorlevel"),
+						logging.ErrorLevel,
+						validLogLevels,
+					))
+			}
+		}
+	}
 
 	return allErrs
 }

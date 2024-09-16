@@ -628,3 +628,148 @@ func TestValidateRewriteClientIP(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateLogging(t *testing.T) {
+	t.Parallel()
+	invalidLogLevel := ngfAPI.NginxErrorLogLevel("invalid-log-level")
+
+	tests := []struct {
+		np             *ngfAPI.NginxProxy
+		name           string
+		errorString    string
+		expectErrCount int
+	}{
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelDebug),
+					},
+				},
+			},
+			name:           "valid debug log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelInfo),
+					},
+				},
+			},
+			name:           "valid info log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelNotice),
+					},
+				},
+			},
+			name:           "valid notice log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelWarn),
+					},
+				},
+			},
+			name:           "valid warn log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelError),
+					},
+				},
+			},
+			name:           "valid error log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelCrit),
+					},
+				},
+			},
+			name:           "valid crit log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelAlert),
+					},
+				},
+			},
+			name:           "valid alert log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelEmerg),
+					},
+				},
+			},
+			name:           "valid emerg log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{
+						ErrorLevel: &invalidLogLevel,
+					},
+				},
+			},
+			name: "invalid log level",
+			errorString: "spec.logging.errorlevel: Unsupported value: \"invalid-log-level\": supported values:" +
+				" \"debug\", \"info\", \"notice\", \"warn\", \"error\", \"crit\", \"alert\", \"emerg\"",
+			expectErrCount: 1,
+		},
+		{
+			np: &ngfAPI.NginxProxy{
+				Spec: ngfAPI.NginxProxySpec{
+					Logging: &ngfAPI.NginxLogging{},
+				},
+			},
+			name:           "empty log level",
+			errorString:    "",
+			expectErrCount: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			allErrs := validateLogging(test.np)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			if len(allErrs) > 0 {
+				g.Expect(allErrs.ToAggregate().Error()).To(Equal(test.errorString))
+			}
+		})
+	}
+}
