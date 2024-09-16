@@ -59,6 +59,10 @@ type NginxProxySpec struct {
 	// +optional
 	//nolint:lll
 	RewriteClientIP *RewriteClientIP `json:"rewriteClientIP,omitempty"`
+	// Logging defines logging related settings for NGINX.
+	//
+	// +optional
+	Logging *NginxLogging `json:"logging,omitempty"`
 	// DisableHTTP2 defines if http2 should be disabled for all servers.
 	// Default is false, meaning http2 will be enabled for all servers.
 	//
@@ -202,4 +206,44 @@ const (
 	// AddressTypeCIDR specifies that the address is a CIDR block.
 	// kubebuilder:validation:Pattern=`^[\.a-zA-Z0-9:]*(\/([0-9]?[0-9]?[0-9]))$`
 	AddressTypeCIDR AddressType = "cidr"
+)
+
+// NginxLogging defines logging related settings for NGINX.
+type NginxLogging struct {
+	// Level defines the logging level.
+	//
+	// +optional
+	// +kubebuilder:default=info
+	Level *NginxLogLevel `json:"level,omitempty"`
+}
+
+// NginxLogLevel type defines the logging level of error logs for NGINX.
+//
+// +kubebuilder:validation:Enum=debug;info;notice;warn;error;crit;alert;emerg
+type NginxLogLevel string
+
+const (
+	// NginxLogLevelDebug is the debug level for NGINX logging.
+	NginxLogLevelDebug NginxLogLevel = "debug"
+
+	// NginxLogLevelInfo is the info level for NGINX logging.
+	NginxLogLevelInfo NginxLogLevel = "info"
+
+	// NginxLogLevelNotice is the notice level for NGINX logging.
+	NginxLogLevelNotice NginxLogLevel = "notice"
+
+	// NginxLogLevelWarn is the warn level for NGINX logging.
+	NginxLogLevelWarn NginxLogLevel = "warn"
+
+	// NginxLogLevelError is the error level for NGINX logging.
+	NginxLogLevelError NginxLogLevel = "error"
+
+	// NginxLogLevelCrit is the crit level for NGINX logging.
+	NginxLogLevelCrit NginxLogLevel = "crit"
+
+	// NginxLogLevelAlert is the alert level for NGINX logging.
+	NginxLogLevelAlert NginxLogLevel = "alert"
+
+	// NginxLogLevelEmerg is the emerg level for NGINX logging.
+	NginxLogLevelEmerg NginxLogLevel = "emerg"
 )

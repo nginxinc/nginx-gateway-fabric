@@ -647,6 +647,23 @@ spec:
                 - ipv4
                 - ipv6
                 type: string
+              logging:
+                description: Logging defines logging related settings for NGINX.
+                properties:
+                  level:
+                    default: info
+                    description: Level defines the logging level.
+                    enum:
+                    - debug
+                    - info
+                    - notice
+                    - warn
+                    - error
+                    - crit
+                    - alert
+                    - emerg
+                    type: string
+                type: object
               rewriteClientIP:
                 description: RewriteClientIP defines configuration for rewriting the
                   client IP to the original client's IP.
