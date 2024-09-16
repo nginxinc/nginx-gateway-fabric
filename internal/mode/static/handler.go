@@ -255,7 +255,11 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
 	ngfPolReqs := status.PrepareNGFPolicyRequests(graph.NGFPolicies, transitionTime, h.cfg.gatewayCtlrName)
-	snippetsFilterReqs := status.PrepareSnippetsFilterRequests(graph.SnippetsFilters, transitionTime)
+	snippetsFilterReqs := status.PrepareSnippetsFilterRequests(
+		graph.SnippetsFilters,
+		transitionTime,
+		h.cfg.gatewayCtlrName,
+	)
 
 	reqs := make(
 		[]frameworkStatus.UpdateRequest,

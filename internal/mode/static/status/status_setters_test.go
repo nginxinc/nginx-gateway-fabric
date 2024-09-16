@@ -1565,6 +1565,10 @@ func TestPolicyStatusEqual(t *testing.T) {
 }
 
 func TestNewSnippetsFilterStatusSetter(t *testing.T) {
+	const (
+		controllerName      = "controller"
+		otherControllerName = "other-controller"
+	)
 	tests := []struct {
 		name                         string
 		status, expStatus, newStatus ngfAPI.SnippetsFilterStatus
@@ -1573,37 +1577,113 @@ func TestNewSnippetsFilterStatusSetter(t *testing.T) {
 		{
 			name: "SnippetsFilter has no status",
 			newStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "new condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 			expStatusSet: true,
 			expStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "new condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 		},
 		{
 			name: "SnippetsFilter has old status",
 			status: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "old condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 			newStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "new condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 			expStatusSet: true,
 			expStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "new condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
+		},
+		{
+			name: "SnippetsFilter has old status and other controller status",
+			newStatus: ngfAPI.SnippetsFilterStatus{
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+						ControllerName: controllerName,
+					},
+				},
+			},
+			status: ngfAPI.SnippetsFilterStatus{
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+					},
+				},
+			},
+			expStatus: ngfAPI.SnippetsFilterStatus{
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
 		},
 		{
 			name: "SnippetsFilter has same status",
 			status: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "same condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 			newStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "same condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 			expStatusSet: false,
 			expStatus: ngfAPI.SnippetsFilterStatus{
-				Conditions: []metav1.Condition{{Message: "same condition"}},
+				Controllers: []ngfAPI.ControllerStatus{
+					{
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+						ControllerName: controllerName,
+					},
+				},
 			},
 		},
 	}
@@ -1612,7 +1692,7 @@ func TestNewSnippetsFilterStatusSetter(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			setter := newSnippetsFilterStatusSetter(test.newStatus)
+			setter := newSnippetsFilterStatusSetter(test.newStatus, controllerName)
 			sf := &ngfAPI.SnippetsFilter{Status: test.status}
 
 			statusSet := setter(sf)

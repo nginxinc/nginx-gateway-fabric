@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // +genclient
@@ -79,10 +80,34 @@ const (
 
 // SnippetsFilterStatus defines the state of SnippetsFilter.
 type SnippetsFilterStatus struct {
-	// Conditions describes the state of the SnippetsFilter.
+	// Controllers describe the state of the SnippetsFilter and controller name.
 	// +optional
 	// +listType=map
+	// +kubebuilder:validation:MaxItems=16
+	Controllers []ControllerStatus `json:"controllers,omitempty"`
+}
+
+type ControllerStatus struct {
+	// ControllerName is a domain/path string that indicates the name of the
+	// controller that wrote this status. This corresponds with the
+	// controllerName field on GatewayClass.
+	//
+	// Example: "example.net/gateway-controller".
+	//
+	// The format of this field is DOMAIN "/" PATH, where DOMAIN and PATH are
+	// valid Kubernetes names
+	// (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
+	//
+	// Controllers MUST populate this field when writing status. Controllers should ensure that
+	// entries to status populated with their ControllerName are cleaned up when they are no
+	// longer necessary.
+	ControllerName v1.GatewayController `json:"controllerName"`
+
+	// Conditions describe the status of the SnippetsFilter.
+	//
+	// +listType=map
 	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
