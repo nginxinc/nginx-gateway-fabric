@@ -210,40 +210,43 @@ const (
 
 // NginxLogging defines logging related settings for NGINX.
 type NginxLogging struct {
-	// Level defines the error log level.
+	// ErrorLevel defines the error log level. Possible log levels listed in order of increasing severity are
+	// debug, info, notice, warn, error, crit, alert, and emerg. Setting a certain log level will cause all messages
+	// of the specified and more severe log levels to be logged. For example, the log level 'error' will cause error,
+	// crit, alert, and emerg messages to be logged. https://nginx.org/en/docs/ngx_core_module.html#error_log
 	//
 	// +optional
 	// +kubebuilder:default=info
-	Level *NginxLogLevel `json:"level,omitempty"`
+	ErrorLevel *NginxErrorLogLevel `json:"errorlevel,omitempty"`
 }
 
-// NginxLogLevel type defines the log level of error logs for NGINX.
+// NginxErrorLogLevel type defines the log level of error logs for NGINX.
 //
 // +kubebuilder:validation:Enum=debug;info;notice;warn;error;crit;alert;emerg
-type NginxLogLevel string
+type NginxErrorLogLevel string
 
 const (
 	// NginxLogLevelDebug is the debug level for NGINX error logs.
-	NginxLogLevelDebug NginxLogLevel = "debug"
+	NginxLogLevelDebug NginxErrorLogLevel = "debug"
 
 	// NginxLogLevelInfo is the info level for NGINX error logs.
-	NginxLogLevelInfo NginxLogLevel = "info"
+	NginxLogLevelInfo NginxErrorLogLevel = "info"
 
 	// NginxLogLevelNotice is the notice level for NGINX error logs.
-	NginxLogLevelNotice NginxLogLevel = "notice"
+	NginxLogLevelNotice NginxErrorLogLevel = "notice"
 
 	// NginxLogLevelWarn is the warn level for NGINX error logs.
-	NginxLogLevelWarn NginxLogLevel = "warn"
+	NginxLogLevelWarn NginxErrorLogLevel = "warn"
 
 	// NginxLogLevelError is the error level for NGINX error logs.
-	NginxLogLevelError NginxLogLevel = "error"
+	NginxLogLevelError NginxErrorLogLevel = "error"
 
 	// NginxLogLevelCrit is the crit level for NGINX error logs.
-	NginxLogLevelCrit NginxLogLevel = "crit"
+	NginxLogLevelCrit NginxErrorLogLevel = "crit"
 
 	// NginxLogLevelAlert is the alert level for NGINX error logs.
-	NginxLogLevelAlert NginxLogLevel = "alert"
+	NginxLogLevelAlert NginxErrorLogLevel = "alert"
 
 	// NginxLogLevelEmerg is the emerg level for NGINX error logs.
-	NginxLogLevelEmerg NginxLogLevel = "emerg"
+	NginxLogLevelEmerg NginxErrorLogLevel = "emerg"
 )
