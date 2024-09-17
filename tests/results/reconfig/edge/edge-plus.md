@@ -6,16 +6,16 @@ NGINX Plus: true
 
 NGINX Gateway Fabric:
 
-- Commit: 3c029b1417c1f89f2a29aeef07f47078640e28b2
-- Date: 2024-08-15T00:04:25Z
+- Commit: bf8ea47203eb4695af0d359243c73de2d1badbbf
+- Date: 2024-09-13T20:33:11Z
 - Dirty: false
 
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.29.6-gke.1326000
+- k8s version: v1.30.3-gke.1639000
 - vCPUs per node: 16
-- RAM per node: 65855012Ki
+- RAM per node: 65853960Ki
 - Max pods per node: 110
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
@@ -24,7 +24,7 @@ GKE Cluster:
 
 ### Reloads and Time to Ready
 
-- TimeToReadyTotal: 3s
+- TimeToReadyTotal: 2s
 - TimeToReadyAvgSingle: < 1s
 - NGINX Reloads: 2
 - NGINX Reload Average Time: 113ms
@@ -48,12 +48,11 @@ GKE Cluster:
 	- 30000ms: 6
 	- +Infms: 6
 
-
 ## Test 1: Resources exist before startup - NumResources 150
 
 ### Reloads and Time to Ready
 
-- TimeToReadyTotal: 1s
+- TimeToReadyTotal: 4s
 - TimeToReadyAvgSingle: < 1s
 - NGINX Reloads: 2
 - NGINX Reload Average Time: 113ms
@@ -68,7 +67,7 @@ GKE Cluster:
 ### Event Batch Processing
 
 - Event Batch Total: 6
-- Event Batch Processing Average Time: 54ms
+- Event Batch Processing Average Time: 47ms
 - Event Batch Processing distribution:
 	- 500ms: 6
 	- 1000ms: 6
@@ -77,7 +76,6 @@ GKE Cluster:
 	- 30000ms: 6
 	- +Infms: 6
 
-
 ## Test 2: Start NGF, deploy Gateway, create many resources attached to GW - NumResources 30
 
 ### Reloads and Time to Ready
@@ -85,7 +83,7 @@ GKE Cluster:
 - TimeToReadyTotal: 7s
 - TimeToReadyAvgSingle: < 1s
 - NGINX Reloads: 62
-- NGINX Reload Average Time: 126ms
+- NGINX Reload Average Time: 125ms
 - Reload distribution:
 	- 500ms: 62
 	- 1000ms: 62
@@ -96,45 +94,43 @@ GKE Cluster:
 
 ### Event Batch Processing
 
-- Event Batch Total: 338
+- Event Batch Total: 335
 - Event Batch Processing Average Time: 23ms
 - Event Batch Processing distribution:
-	- 500ms: 338
-	- 1000ms: 338
-	- 5000ms: 338
-	- 10000ms: 338
-	- 30000ms: 338
-	- +Infms: 338
-
+	- 500ms: 335
+	- 1000ms: 335
+	- 5000ms: 335
+	- 10000ms: 335
+	- 30000ms: 335
+	- +Infms: 335
 
 ## Test 2: Start NGF, deploy Gateway, create many resources attached to GW - NumResources 150
 
 ### Reloads and Time to Ready
 
-- TimeToReadyTotal: 44s
+- TimeToReadyTotal: 43s
 - TimeToReadyAvgSingle: < 1s
-- NGINX Reloads: 343
+- NGINX Reloads: 342
 - NGINX Reload Average Time: 126ms
 - Reload distribution:
-	- 500ms: 343
-	- 1000ms: 343
-	- 5000ms: 343
-	- 10000ms: 343
-	- 30000ms: 343
-	- +Infms: 343
+	- 500ms: 342
+	- 1000ms: 342
+	- 5000ms: 342
+	- 10000ms: 342
+	- 30000ms: 342
+	- +Infms: 342
 
 ### Event Batch Processing
 
-- Event Batch Total: 1699
+- Event Batch Total: 1691
 - Event Batch Processing Average Time: 25ms
 - Event Batch Processing distribution:
-	- 500ms: 1699
-	- 1000ms: 1699
-	- 5000ms: 1699
-	- 10000ms: 1699
-	- 30000ms: 1699
-	- +Infms: 1699
-
+	- 500ms: 1691
+	- 1000ms: 1691
+	- 5000ms: 1691
+	- 10000ms: 1691
+	- 30000ms: 1691
+	- +Infms: 1691
 
 ## Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway - NumResources 30
 
@@ -164,31 +160,30 @@ GKE Cluster:
 	- 30000ms: 307
 	- +Infms: 307
 
-
 ## Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway - NumResources 150
 
 ### Reloads and Time to Ready
 
 - TimeToReadyTotal: < 1s
 - TimeToReadyAvgSingle: < 1s
-- NGINX Reloads: 342
+- NGINX Reloads: 344
 - NGINX Reload Average Time: 125ms
 - Reload distribution:
-	- 500ms: 342
-	- 1000ms: 342
-	- 5000ms: 342
-	- 10000ms: 342
-	- 30000ms: 342
-	- +Infms: 342
+	- 500ms: 344
+	- 1000ms: 344
+	- 5000ms: 344
+	- 10000ms: 344
+	- 30000ms: 344
+	- +Infms: 344
 
 ### Event Batch Processing
 
-- Event Batch Total: 1550
+- Event Batch Total: 1556
 - Event Batch Processing Average Time: 28ms
 - Event Batch Processing distribution:
-	- 500ms: 1550
-	- 1000ms: 1550
-	- 5000ms: 1550
-	- 10000ms: 1550
-	- 30000ms: 1550
-	- +Infms: 1550
+	- 500ms: 1556
+	- 1000ms: 1556
+	- 5000ms: 1556
+	- 10000ms: 1556
+	- 30000ms: 1556
+	- +Infms: 1556
