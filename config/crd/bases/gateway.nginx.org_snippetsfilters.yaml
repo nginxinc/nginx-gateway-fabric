@@ -87,8 +87,9 @@ spec:
             description: Status defines the state of the SnippetsFilter.
             properties:
               controllers:
-                description: Controllers describe the state of the SnippetsFilter
-                  and controller name.
+                description: |-
+                  Controllers is a list of Gateway API controllers that processed the SnippetsFilter
+                  and the status of the SnippetsFilter with respect to each controller.
                 items:
                   properties:
                     conditions:
@@ -178,7 +179,6 @@ spec:
                   type: object
                 maxItems: 16
                 type: array
-                x-kubernetes-list-type: map
             type: object
         required:
         - spec

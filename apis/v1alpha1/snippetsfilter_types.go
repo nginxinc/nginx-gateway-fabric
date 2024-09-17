@@ -80,9 +80,9 @@ const (
 
 // SnippetsFilterStatus defines the state of SnippetsFilter.
 type SnippetsFilterStatus struct {
-	// Controllers describe the state of the SnippetsFilter and controller name.
-	// +optional
-	// +listType=map
+	// Controllers is a list of Gateway API controllers that processed the SnippetsFilter
+	// and the status of the SnippetsFilter with respect to each controller.
+	//
 	// +kubebuilder:validation:MaxItems=16
 	Controllers []ControllerStatus `json:"controllers,omitempty"`
 }
@@ -105,6 +105,7 @@ type ControllerStatus struct {
 
 	// Conditions describe the status of the SnippetsFilter.
 	//
+	// +optional
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MinItems=1

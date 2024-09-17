@@ -860,6 +860,7 @@ longer necessary.</p>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Conditions describe the status of the SnippetsFilter.</p>
 </td>
 </tr>
@@ -1364,8 +1365,8 @@ Allowed contexts: main, http, http.server, http.server.location.</p>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Controllers describe the state of the SnippetsFilter and controller name.</p>
+<p>Controllers is a list of Gateway API controllers that processed the SnippetsFilter
+and the status of the SnippetsFilter with respect to each controller.</p>
 </td>
 </tr>
 </tbody>
