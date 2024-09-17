@@ -36,11 +36,11 @@ type ngfPolicyObjectStore struct {
 
 // newNGFPolicyObjectStore returns a new ngfPolicyObjectStore.
 func newNGFPolicyObjectStore(
-	policies map[graph.PolicyKey]policies.Policy,
+	pols map[graph.PolicyKey]policies.Policy,
 	gvkFunc kinds.MustExtractGVK,
 ) *ngfPolicyObjectStore {
 	return &ngfPolicyObjectStore{
-		policies:       policies,
+		policies:       pols,
 		extractGVKFunc: gvkFunc,
 	}
 }

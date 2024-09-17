@@ -178,11 +178,11 @@ func (ins *PrometheusInstance) getAPIClient() (v1.API, error) {
 
 func (ins *PrometheusInstance) ensureAPIClient() error {
 	if ins.apiClient == nil {
-		api, err := ins.getAPIClient()
+		ac, err := ins.getAPIClient()
 		if err != nil {
 			return fmt.Errorf("failed to get Prometheus API client: %w", err)
 		}
-		ins.apiClient = api
+		ins.apiClient = ac
 	}
 
 	return nil

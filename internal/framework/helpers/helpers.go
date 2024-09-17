@@ -33,12 +33,12 @@ func GetPointer[T any](v T) *T {
 // making it is possible to use it in tests when comparing against values returned by the fake client.
 // It panics if it fails to process the time.
 func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
-	bytes, err := t.Marshal()
+	b, err := t.Marshal()
 	if err != nil {
 		panic(fmt.Errorf("failed to marshal time: %w", err))
 	}
 
-	if err = t.Unmarshal(bytes); err != nil {
+	if err = t.Unmarshal(b); err != nil {
 		panic(fmt.Errorf("failed to unmarshal time: %w", err))
 	}
 
@@ -78,10 +78,10 @@ func EqualPointers[T comparable](p1, p2 *T) bool {
 }
 
 // MustExecuteTemplate executes the template with the given data.
-func MustExecuteTemplate(template *template.Template, data interface{}) []byte {
+func MustExecuteTemplate(templ *template.Template, data interface{}) []byte {
 	var buf bytes.Buffer
 
-	if err := template.Execute(&buf, data); err != nil {
+	if err := templ.Execute(&buf, data); err != nil {
 		panic(err)
 	}
 

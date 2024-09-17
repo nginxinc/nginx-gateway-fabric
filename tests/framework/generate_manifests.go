@@ -283,7 +283,7 @@ func generateManifests(listeners []listener, routes []route) ([]client.Object, e
 
 	for _, r := range routes {
 		if buf.Len() > 0 {
-			buf.Write([]byte("\n---\n"))
+			buf.WriteString("\n---\n")
 		}
 
 		if err := hrTmpl.Execute(&buf, r); err != nil {

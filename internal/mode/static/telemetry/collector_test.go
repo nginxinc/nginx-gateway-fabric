@@ -401,8 +401,9 @@ var _ = Describe("Collector", Ordered, func() {
 							switch object.(type) {
 							case *v1.NamespaceList:
 								return expectedError
+							default:
+								return nil
 							}
-							return nil
 						}))
 
 					_, err := dataCollector.Collect(ctx)
@@ -420,8 +421,9 @@ var _ = Describe("Collector", Ordered, func() {
 							switch object.(type) {
 							case *v1.Namespace:
 								return expectedError
+							default:
+								return nil
 							}
-							return nil
 						}))
 
 					_, err := dataCollector.Collect(ctx)
@@ -489,8 +491,9 @@ var _ = Describe("Collector", Ordered, func() {
 							switch object.(type) {
 							case *v1.NodeList:
 								return expectedError
+							default:
+								return nil
 							}
-							return nil
 						})
 
 					_, err := dataCollector.Collect(ctx)
@@ -686,8 +689,9 @@ var _ = Describe("Collector", Ordered, func() {
 							switch object.(type) {
 							case *v1.Pod:
 								return expectedErr
+							default:
+								return nil
 							}
-							return nil
 						},
 					))
 
@@ -776,8 +780,9 @@ var _ = Describe("Collector", Ordered, func() {
 							switch object.(type) {
 							case *appsv1.ReplicaSet:
 								return expectedErr
+							default:
+								return nil
 							}
-							return nil
 						}))
 
 					_, err := dataCollector.Collect(ctx)

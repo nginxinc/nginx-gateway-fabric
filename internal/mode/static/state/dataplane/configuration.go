@@ -607,7 +607,7 @@ func (hpr *hostPathRules) maxServerCount() int {
 func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
-	resolver resolver.ServiceResolver,
+	svcResolver resolver.ServiceResolver,
 	ipFamily IPFamilyType,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
@@ -643,7 +643,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
+						eps, err := svcResolver.Resolve(ctx, br.SvcNsName, br.ServicePort, allowedAddressType)
 						if err != nil {
 							errMsg = err.Error()
 						}

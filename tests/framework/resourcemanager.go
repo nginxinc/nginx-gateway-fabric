@@ -81,7 +81,10 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 			obj = unstructuredObj.DeepCopy()
 		} else {
 			t := reflect.TypeOf(resource).Elem()
-			obj = reflect.New(t).Interface().(client.Object)
+			obj, ok = reflect.New(t).Interface().(client.Object)
+			if !ok {
+				panic("failed to cast object to client.Object")
+			}
 		}
 
 		if err := rm.K8sClient.Get(ctx, client.ObjectKeyFromObject(resource), obj); err != nil {
@@ -169,10 +172,10 @@ func (rm *ResourceManager) ApplyFromBuffer(buffer *bytes.Buffer, namespace strin
 
 // Delete deletes Kubernetes resources defined as Go objects.
 func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.DeleteOption) error {
-	for _, resource := range resources {
-		ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteTimeout)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteTimeout)
+	defer cancel()
 
+	for _, resource := range resources {
 		if err := rm.K8sClient.Delete(ctx, resource, opts...); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting resource: %w", err)
 		}
