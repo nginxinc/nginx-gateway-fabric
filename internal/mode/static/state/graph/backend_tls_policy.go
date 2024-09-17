@@ -86,23 +86,27 @@ func validateBackendTLSPolicy(
 
 	caCertRefs := backendTLSPolicy.Spec.Validation.CACertificateRefs
 	wellKnownCerts := backendTLSPolicy.Spec.Validation.WellKnownCACertificates
-	if len(caCertRefs) > 0 && wellKnownCerts != nil {
+	switch {
+	case len(caCertRefs) > 0 && wellKnownCerts != nil:
 		valid = false
 		msg := "CACertificateRefs and WellKnownCACertificates are mutually exclusive"
 		conds = append(conds, staticConds.NewPolicyInvalid(msg))
-	} else if len(caCertRefs) > 0 {
+
+	case len(caCertRefs) > 0:
 		if err := validateBackendTLSCACertRef(backendTLSPolicy, configMapResolver); err != nil {
 			valid = false
 			conds = append(conds, staticConds.NewPolicyInvalid(
 				fmt.Sprintf("invalid CACertificateRef: %s", err.Error())))
 		}
-	} else if wellKnownCerts != nil {
+
+	case wellKnownCerts != nil:
 		if err := validateBackendTLSWellKnownCACerts(backendTLSPolicy); err != nil {
 			valid = false
 			conds = append(conds, staticConds.NewPolicyInvalid(
 				fmt.Sprintf("invalid WellKnownCACertificates: %s", err.Error())))
 		}
-	} else {
+
+	default:
 		valid = false
 		conds = append(conds, staticConds.NewPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
 	}

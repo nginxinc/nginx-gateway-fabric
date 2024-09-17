@@ -28,12 +28,12 @@ func ClearFolders(fileMgr ClearFoldersOSFileManager, paths []string) (removedFil
 		}
 
 		for _, entry := range entries {
-			path := filepath.Join(path, entry.Name())
-			if err := fileMgr.Remove(path); err != nil {
-				return removedFiles, fmt.Errorf("failed to remove %q: %w", path, err)
+			entryPath := filepath.Join(path, entry.Name())
+			if err := fileMgr.Remove(entryPath); err != nil {
+				return removedFiles, fmt.Errorf("failed to remove %q: %w", entryPath, err)
 			}
 
-			removedFiles = append(removedFiles, path)
+			removedFiles = append(removedFiles, entryPath)
 		}
 	}
 

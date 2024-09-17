@@ -245,10 +245,10 @@ func computeRouteCount(
 
 	for _, r := range routes {
 		if r.RouteType == graph.RouteTypeHTTP {
-			httpRouteCount = httpRouteCount + 1
+			httpRouteCount++
 		}
 		if r.RouteType == graph.RouteTypeGRPC {
-			grpcRouteCount = grpcRouteCount + 1
+			grpcRouteCount++
 		}
 	}
 

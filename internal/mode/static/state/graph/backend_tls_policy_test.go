@@ -122,7 +122,18 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		},
 	}
 
-	localObjectRefTooManyCerts := append(localObjectRefNormalCase, localObjectRefInvalidName...)
+	localObjectRefTooManyCerts := []gatewayv1.LocalObjectReference{
+		{
+			Kind:  "ConfigMap",
+			Name:  "configmap",
+			Group: "",
+		},
+		{
+			Kind:  "ConfigMap",
+			Name:  "invalid",
+			Group: "",
+		},
+	}
 
 	getAncestorRef := func(ctlrName, parentName string) v1alpha2.PolicyAncestorStatus {
 		return v1alpha2.PolicyAncestorStatus{

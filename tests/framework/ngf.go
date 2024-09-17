@@ -73,7 +73,7 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args = append(args, setImageArgs(cfg)...)
-	fullArgs := append(args, extraArgs...)
+	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
 
@@ -102,7 +102,7 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args = append(args, setImageArgs(cfg)...)
-	fullArgs := append(args, extraArgs...)
+	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Upgrading NGF with command: helm %v\n", strings.Join(fullArgs, " "))
 

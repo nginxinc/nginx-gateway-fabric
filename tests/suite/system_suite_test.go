@@ -148,11 +148,12 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		Skip("Graceful Recovery test must be run on Kind")
 	}
 
-	if *versionUnderTest != "" {
+	switch {
+	case *versionUnderTest != "":
 		version = *versionUnderTest
-	} else if *imageTag != "" {
+	case *imageTag != "":
 		version = *imageTag
-	} else {
+	default:
 		version = "edge"
 	}
 
@@ -203,11 +204,9 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
-	} else {
-		if version == "edge" {
-			chartVersion = "0.0.0-edge"
-			installCfg.ChartVersion = chartVersion
-		}
+	} else if version == "edge" {
+		chartVersion = "0.0.0-edge"
+		installCfg.ChartVersion = chartVersion
 	}
 
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)

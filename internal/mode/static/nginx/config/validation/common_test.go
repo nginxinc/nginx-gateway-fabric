@@ -48,7 +48,7 @@ func TestValidateEscapedStringNoVarExpansion(t *testing.T) {
 
 func TestValidateValidHeaderName(t *testing.T) {
 	t.Parallel()
-	validator := func(value string) error { return validateHeaderName(value) }
+	validator := validateHeaderName
 
 	testValidValuesForSimpleValidator(
 		t,

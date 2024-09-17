@@ -68,7 +68,8 @@ func PrepareRouteRequests(
 			r.Source.GetGeneration(),
 		)
 
-		if r.RouteType == graph.RouteTypeHTTP {
+		switch r.RouteType {
+		case graph.RouteTypeHTTP:
 			status := v1.HTTPRouteStatus{
 				RouteStatus: routeStatus,
 			}
@@ -80,7 +81,8 @@ func PrepareRouteRequests(
 			}
 
 			reqs = append(reqs, req)
-		} else if r.RouteType == graph.RouteTypeGRPC {
+
+		case graph.RouteTypeGRPC:
 			status := v1.GRPCRouteStatus{
 				RouteStatus: routeStatus,
 			}
@@ -92,7 +94,8 @@ func PrepareRouteRequests(
 			}
 
 			reqs = append(reqs, req)
-		} else {
+
+		default:
 			panic(fmt.Sprintf("Unknown route type: %s", r.RouteType))
 		}
 	}

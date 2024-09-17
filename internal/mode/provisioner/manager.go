@@ -133,7 +133,7 @@ func StartManager(cfg Config) error {
 		statusUpdater,
 		mgr.GetClient(),
 		embeddedfiles.StaticModeDeploymentYAML,
-		func() metav1.Time { return metav1.Now() },
+		metav1.Now,
 	)
 
 	eventLoop := events.NewEventLoop(
