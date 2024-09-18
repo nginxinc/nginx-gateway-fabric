@@ -16,6 +16,7 @@ import (
 )
 
 func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
+	t.Parallel()
 	backendTLSPolicies := map[types.NamespacedName]*v1alpha3.BackendTLSPolicy{
 		{Namespace: "test", Name: "tls-policy"}: {
 			ObjectMeta: metav1.ObjectMeta{
@@ -71,6 +72,7 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			processed := processBackendTLSPolicies(test.backendTLSPolicies, nil, "test", test.gateway)

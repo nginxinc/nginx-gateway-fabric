@@ -88,6 +88,7 @@ UdxohGqleWFMQ3UNLOvc9Fk+q72ryg==
 )
 
 func TestValidateCA(t *testing.T) {
+	t.Parallel()
 	base64Data := make([]byte, base64.StdEncoding.EncodedLen(len(caBlock)))
 	base64.StdEncoding.Encode(base64Data, []byte(caBlock))
 
@@ -120,6 +121,7 @@ func TestValidateCA(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			g := NewWithT(t)
 
 			err := validateCA(test.data)
