@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"slices"
+
 	"k8s.io/apimachinery/pkg/types"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -126,6 +128,33 @@ func validateNginxProxy(
 	} else {
 		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)
 	}
+
+	if npCfg.Spec.Logging != nil {
+		logging := npCfg.Spec.Logging
+		loggingPath := spec.Child("logging")
+		errLevel := string(*logging.ErrorLevel)
+
+		validLogLevels := []string{
+			string(ngfAPI.NginxLogLevelDebug),
+			string(ngfAPI.NginxLogLevelInfo),
+			string(ngfAPI.NginxLogLevelNotice),
+			string(ngfAPI.NginxLogLevelWarn),
+			string(ngfAPI.NginxLogLevelError),
+			string(ngfAPI.NginxLogLevelCrit),
+			string(ngfAPI.NginxLogLevelAlert),
+			string(ngfAPI.NginxLogLevelEmerg),
+		}
+
+		if !slices.Contains(validLogLevels, errLevel) {
+			allErrs = append(
+				allErrs,
+				field.NotSupported(
+					loggingPath,
+					logging,
+					validLogLevels,
+				))
+		}
+	} // TODO: Might need to put an elseif here and fill in values for default logging
 
 	allErrs = append(allErrs, validateRewriteClientIP(npCfg)...)
 

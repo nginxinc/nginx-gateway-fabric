@@ -15,7 +15,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	policies "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -50,6 +50,7 @@ func BuildConfiguration(
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
+	logging := buildLogging(g)
 
 	config := Configuration{
 		HTTPServers:           httpServers,
@@ -63,6 +64,7 @@ func BuildConfiguration(
 		CertBundles:           certBundles,
 		Telemetry:             telemetry,
 		BaseHTTPConfig:        baseHTTPConfig,
+		Logging:               logging,
 	}
 
 	return config
@@ -900,4 +902,15 @@ func convertAddresses(addresses []ngfAPI.Address) []string {
 		trustedAddresses[i] = addr.Value
 	}
 	return trustedAddresses
+}
+
+func buildLogging(g *graph.Graph) Logging {
+	defaultErrorLogLevel := "info"
+
+	ngfProxy := g.NginxProxy
+	if ngfProxy != nil && ngfProxy.Source.Spec.Logging != nil {
+		return Logging{ErrorLevel: string(*ngfProxy.Source.Spec.Logging.ErrorLevel)}
+	}
+
+	return Logging{ErrorLevel: defaultErrorLogLevel}
 }

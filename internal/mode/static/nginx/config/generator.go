@@ -191,6 +191,19 @@ func generateConfigVersion(configVersion int) file.File {
 	}
 }
 
+//func generateMainContextConf(conf dataplane.Configuration) file.File {
+//	var c []byte
+//	if conf.Telemetry.Endpoint != "" {
+//		c = []byte("load_module modules/ngx_otel_module.so;")
+//	}
+//
+//	return file.File{
+//		Content: c,
+//		Path:    loadModulesFile,
+//		Type:    file.TypeRegular,
+//	}
+//}
+
 func generateLoadModulesConf(conf dataplane.Configuration) file.File {
 	var c []byte
 	if conf.Telemetry.Endpoint != "" {
