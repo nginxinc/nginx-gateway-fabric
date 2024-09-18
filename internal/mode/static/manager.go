@@ -715,14 +715,14 @@ func setInitialConfig(
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var config ngfAPI.NginxGateway
+	var conf ngfAPI.NginxGateway
 	// Polling to wait for CRD to exist if the Deployment is created first.
 	if err := wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-			if err := reader.Get(ctx, configName, &config); err != nil {
+			if err := reader.Get(ctx, configName, &conf); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return false, err
 				}
@@ -736,7 +736,7 @@ func setInitialConfig(
 
 	// status is not updated until the status updater's cache is started and the
 	// resource is processed by the controller
-	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
+	return updateControlPlane(&conf, logger, eventRecorder, configName, logLevelSetter)
 }
 
 func getMetricsOptions(cfg config.MetricsConfig) metricsserver.Options {

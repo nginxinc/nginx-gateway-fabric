@@ -66,8 +66,11 @@ var _ = Describe("Reconciler", func() {
 		) error {
 			Expect(object).To(BeAssignableToTypeOf(&v1.HTTPRoute{}))
 			Expect(nsname).To(Equal(client.ObjectKeyFromObject(hr)))
+			Expect(hr).ToNot(BeNil())
 
-			hr.DeepCopyInto(object.(*v1.HTTPRoute))
+			hrObj, ok := object.(*v1.HTTPRoute)
+			Expect(ok).To(BeTrue(), "object is not *v1.HTTPRoute")
+			hr.DeepCopyInto(hrObj)
 
 			return nil
 		}

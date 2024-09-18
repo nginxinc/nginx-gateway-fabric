@@ -69,7 +69,8 @@ func prepareReq(name string, condType string, updateNeeded bool) UpdateRequest {
 	var setter Setter
 	if updateNeeded {
 		setter = func(obj client.Object) bool {
-			gc := obj.(*v1.GatewayClass)
+			gc, ok := obj.(*v1.GatewayClass)
+			Expect(ok).To(BeTrue(), "obj is not a *v1.GatewayClass")
 			gc.Status = createGCStatus(condType)
 			return true
 		}

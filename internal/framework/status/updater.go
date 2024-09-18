@@ -54,9 +54,9 @@ type Updater struct {
 }
 
 // NewUpdater creates a new Updater.
-func NewUpdater(client client.Client, logger logr.Logger) *Updater {
+func NewUpdater(c client.Client, logger logr.Logger) *Updater {
 	return &Updater{
-		client: client,
+		client: c,
 		logger: logger,
 	}
 }

@@ -108,7 +108,8 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				fakeReader.ListCalls(
 					func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 						httpRoute := v1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
-						typedList := list.(*v1.HTTPRouteList)
+						typedList, ok := list.(*v1.HTTPRouteList)
+						Expect(ok).To(BeTrue(), "expected list to be of type *v1.HTTPRouteList")
 						typedList.Items = append(typedList.Items, httpRoute)
 
 						return nil

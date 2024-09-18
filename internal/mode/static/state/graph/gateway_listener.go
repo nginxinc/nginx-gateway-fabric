@@ -306,8 +306,8 @@ func validateListenerAllowedRouteKind(listener v1.Listener) (conds []conditions.
 }
 
 func getListenerSupportedKinds(listener v1.Listener) []v1.RouteGroupKind {
-	_, kinds := getAndValidateListenerSupportedKinds(listener)
-	return kinds
+	_, sk := getAndValidateListenerSupportedKinds(listener)
+	return sk
 }
 
 func validateListenerLabelSelector(listener v1.Listener) (conds []conditions.Condition, attachable bool) {

@@ -44,8 +44,8 @@ type ServiceResolverImpl struct {
 }
 
 // NewServiceResolverImpl creates a new instance of a ServiceResolverImpl.
-func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
-	return &ServiceResolverImpl{client: client}
+func NewServiceResolverImpl(c client.Client) *ServiceResolverImpl {
+	return &ServiceResolverImpl{client: c}
 }
 
 // Resolve resolves a Service's NamespacedName and ServicePort to a list of Endpoints.

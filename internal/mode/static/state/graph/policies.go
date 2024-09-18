@@ -154,19 +154,19 @@ func attachPolicyToGateway(
 }
 
 func processPolicies(
-	policies map[PolicyKey]policies.Policy,
+	pols map[PolicyKey]policies.Policy,
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
 	globalSettings *policies.GlobalSettings,
 ) map[PolicyKey]*Policy {
-	if len(policies) == 0 || gateways.Winner == nil {
+	if len(pols) == 0 || gateways.Winner == nil {
 		return nil
 	}
 
 	processedPolicies := make(map[PolicyKey]*Policy)
 
-	for key, policy := range policies {
+	for key, policy := range pols {
 		var conds []conditions.Condition
 
 		targetRefs := make([]PolicyTargetRef, 0, len(policy.GetTargetRefs()))
@@ -280,7 +280,7 @@ func buildHostPortPaths(route *L7Route) map[string]string {
 
 // markConflictedPolicies marks policies that conflict with a policy of greater precedence as invalid.
 // Policies are sorted by timestamp and then alphabetically.
-func markConflictedPolicies(policies map[PolicyKey]*Policy, validator validation.PolicyValidator) {
+func markConflictedPolicies(pols map[PolicyKey]*Policy, validator validation.PolicyValidator) {
 	// Policies can only conflict if they are the same policy type (gvk) and they target the same resource(s).
 	type key struct {
 		policyGVK schema.GroupVersionKind
@@ -289,7 +289,7 @@ func markConflictedPolicies(policies map[PolicyKey]*Policy, validator validation
 
 	possibles := make(map[key][]*Policy)
 
-	for policyKey, policy := range policies {
+	for policyKey, policy := range pols {
 		// If a policy is invalid, it cannot conflict with another policy.
 		if policy.Valid {
 			for _, ref := range policy.TargetRefs {
