@@ -53,6 +53,8 @@ type Updater struct {
 	logger logr.Logger
 }
 
+var ErrFailedAssert = errors.New("type assertion failed")
+
 // NewUpdater creates a new Updater.
 func NewUpdater(c client.Client, logger logr.Logger) *Updater {
 	return &Updater{
@@ -87,7 +89,12 @@ func (u *Updater) writeStatuses(
 	resourceType ngftypes.ObjectType,
 	statusSetter Setter,
 ) {
-	obj := resourceType.DeepCopyObject().(client.Object)
+	copiedObject := resourceType.DeepCopyObject()
+	obj, ok := copiedObject.(client.Object)
+	if !ok {
+		u.logger.Error(ErrFailedAssert, "object is not a client.Object")
+		return
+	}
 
 	err := wait.ExponentialBackoffWithContext(
 		ctx,

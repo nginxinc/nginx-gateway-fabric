@@ -200,10 +200,20 @@ func StartManager(cfg config.Config) error {
 
 		ngxruntimeCollector = collectors.NewManagerMetricsCollector(constLabels)
 		handlerCollector = collectors.NewControllerCollector(constLabels)
+
+		ngxruntimeCollector, ok := ngxruntimeCollector.(prometheus.Collector)
+		if !ok {
+			return fmt.Errorf("ngxruntimeCollector is not a prometheus.Collector: %w", status.ErrFailedAssert)
+		}
+		handlerCollector, ok := handlerCollector.(prometheus.Collector)
+		if !ok {
+			return fmt.Errorf("handlerCollector is not a prometheus.Collector: %w", status.ErrFailedAssert)
+		}
+
 		metrics.Registry.MustRegister(
 			ngxCollector,
-			ngxruntimeCollector.(prometheus.Collector),
-			handlerCollector.(prometheus.Collector),
+			ngxruntimeCollector,
+			handlerCollector,
 		)
 	}
 
