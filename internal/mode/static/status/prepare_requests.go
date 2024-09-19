@@ -413,6 +413,7 @@ func PrepareBackendTLSPolicyRequests(
 func PrepareSnippetsFilterRequests(
 	snippetsFilters map[types.NamespacedName]*graph.SnippetsFilter,
 	transitionTime metav1.Time,
+	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetsFilters))
 
@@ -428,13 +429,18 @@ func PrepareSnippetsFilterRequests(
 		conds := conditions.DeduplicateConditions(allConds)
 		apiConds := conditions.ConvertConditions(conds, snippetsFilter.Source.GetGeneration(), transitionTime)
 		status := ngfAPI.SnippetsFilterStatus{
-			Conditions: apiConds,
+			Controllers: []ngfAPI.ControllerStatus{
+				{
+					Conditions:     apiConds,
+					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+				},
+			},
 		}
 
 		reqs = append(reqs, frameworkStatus.UpdateRequest{
 			NsName:       nsname,
 			ResourceType: snippetsFilter.Source,
-			Setter:       newSnippetsFilterStatusSetter(status),
+			Setter:       newSnippetsFilterStatusSetter(status, gatewayCtlrName),
 		})
 	}
 

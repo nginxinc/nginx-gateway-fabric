@@ -895,6 +895,61 @@ Support: Gateway, HTTPRoute, GRPCRoute.</p>
 </td>
 </tr></tbody>
 </table>
+<h3 id="gateway.nginx.org/v1alpha1.ControllerStatus">ControllerStatus
+<a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.ControllerStatus" title="Permanent link">¶</a>
+</h3>
+<p>
+(<em>Appears on: </em>
+<a href="#gateway.nginx.org/v1alpha1.SnippetsFilterStatus">SnippetsFilterStatus</a>)
+</p>
+<p>
+</p>
+<table class="table table-bordered table-striped">
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>controllerName</code><br/>
+<em>
+<a href="https://pkg.go.dev/sigs.k8s.io/gateway-api/apis/v1#GatewayController">
+sigs.k8s.io/gateway-api/apis/v1.GatewayController
+</a>
+</em>
+</td>
+<td>
+<p>ControllerName is a domain/path string that indicates the name of the
+controller that wrote this status. This corresponds with the
+controllerName field on GatewayClass.</p>
+<p>Example: &ldquo;example.net/gateway-controller&rdquo;.</p>
+<p>The format of this field is DOMAIN &ldquo;/&rdquo; PATH, where DOMAIN and PATH are
+valid Kubernetes names
+(<a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a>).</p>
+<p>Controllers MUST populate this field when writing status. Controllers should ensure that
+entries to status populated with their ControllerName are cleaned up when they are no
+longer necessary.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>conditions</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#condition-v1-meta">
+[]Kubernetes meta/v1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions describe the status of the SnippetsFilter.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="gateway.nginx.org/v1alpha1.Duration">Duration
 (<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha1.Duration" title="Permanent link">¶</a>
 </h3>
@@ -1511,16 +1566,16 @@ Allowed contexts: main, http, http.server, http.server.location.</p>
 <tbody>
 <tr>
 <td>
-<code>conditions</code><br/>
+<code>controllers</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
+<a href="#gateway.nginx.org/v1alpha1.ControllerStatus">
+[]ControllerStatus
 </a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Conditions describes the state of the SnippetsFilter.</p>
+<p>Controllers is a list of Gateway API controllers that processed the SnippetsFilter
+and the status of the SnippetsFilter with respect to each controller.</p>
 </td>
 </tr>
 </tbody>
