@@ -10,7 +10,6 @@ import (
 )
 
 func TestExecuteMainIncludesConfig(t *testing.T) {
-	// Configuration.Logging will always be set, so no need to test if it is missing
 	t.Parallel()
 
 	completeConfiguration := dataplane.Configuration{
@@ -32,6 +31,7 @@ func TestExecuteMainIncludesConfig(t *testing.T) {
 		},
 	}
 
+	// Configuration.Logging will always be set, so no need to test if it is missing
 	tests := []struct {
 		name                      string
 		conf                      dataplane.Configuration
