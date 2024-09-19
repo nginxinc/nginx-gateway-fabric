@@ -1785,6 +1785,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 
 func TestBuildSnippetsFilterStatuses(t *testing.T) {
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
+	const gatewayCtlrName = "controller"
 
 	validSnippetsFilter := &graph.SnippetsFilter{
 		Source: &ngfAPI.SnippetsFilter{
@@ -1836,14 +1837,19 @@ func TestBuildSnippetsFilterStatuses(t *testing.T) {
 			expectedReqs: 1,
 			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
 				{Namespace: "test", Name: "valid-snippet"}: {
-					Conditions: []metav1.Condition{
+					Controllers: []ngfAPI.ControllerStatus{
 						{
-							Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 1,
-							LastTransitionTime: transitionTime,
-							Reason:             string(ngfAPI.SnippetsFilterConditionReasonAccepted),
-							Message:            "SnippetsFilter is accepted",
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+									LastTransitionTime: transitionTime,
+									Reason:             string(ngfAPI.SnippetsFilterConditionReasonAccepted),
+									Message:            "SnippetsFilter is accepted",
+								},
+							},
+							ControllerName: gatewayCtlrName,
 						},
 					},
 				},
@@ -1857,14 +1863,19 @@ func TestBuildSnippetsFilterStatuses(t *testing.T) {
 			expectedReqs: 1,
 			expected: map[types.NamespacedName]ngfAPI.SnippetsFilterStatus{
 				{Namespace: "test", Name: "invalid-snippet"}: {
-					Conditions: []metav1.Condition{
+					Controllers: []ngfAPI.ControllerStatus{
 						{
-							Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
-							Status:             metav1.ConditionFalse,
-							ObservedGeneration: 1,
-							LastTransitionTime: transitionTime,
-							Reason:             string(ngfAPI.SnippetsFilterConditionReasonInvalid),
-							Message:            "invalid snippetsFilter",
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 1,
+									LastTransitionTime: transitionTime,
+									Reason:             string(ngfAPI.SnippetsFilterConditionReasonInvalid),
+									Message:            "invalid snippetsFilter",
+								},
+							},
+							ControllerName: gatewayCtlrName,
 						},
 					},
 				},
@@ -1885,7 +1896,7 @@ func TestBuildSnippetsFilterStatuses(t *testing.T) {
 
 			updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-			reqs := PrepareSnippetsFilterRequests(test.snippetsFilters, transitionTime)
+			reqs := PrepareSnippetsFilterRequests(test.snippetsFilters, transitionTime, gatewayCtlrName)
 
 			g.Expect(reqs).To(HaveLen(test.expectedReqs))
 
