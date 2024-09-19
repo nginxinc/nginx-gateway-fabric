@@ -18,7 +18,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
 func TestBuildSectionNameRefs(t *testing.T) {
@@ -123,18 +122,20 @@ func TestBuildSectionNameRefs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
-			g.Expect(result).To(Equal(test.expectedRefs))
-			if test.expectedError != nil {
-				g.Expect(err).To(Equal(test.expectedError))
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-			}
-		})
+				result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
+				g.Expect(result).To(Equal(test.expectedRefs))
+				if test.expectedError != nil {
+					g.Expect(err).To(Equal(test.expectedError))
+				} else {
+					g.Expect(err).ToNot(HaveOccurred())
+				}
+			},
+		)
 	}
 }
 
@@ -214,14 +215,16 @@ func TestFindGatewayForParentRef(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
-			g.Expect(found).To(Equal(test.expectedFound))
-			g.Expect(gw).To(Equal(test.expectedGwNsName))
-		})
+				gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
+				g.Expect(found).To(Equal(test.expectedFound))
+				g.Expect(gw).To(Equal(test.expectedGwNsName))
+			},
+		)
 	}
 }
 
@@ -239,8 +242,14 @@ func TestBindRouteToListeners(t *testing.T) {
 			Attachable: true,
 			Routes:     map[RouteKey]*L7Route{},
 			SupportedKinds: []gatewayv1.RouteGroupKind{
-				{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
-				{Kind: gatewayv1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+				{
+					Kind:  gatewayv1.Kind(kinds.HTTPRoute),
+					Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+				},
+				{
+					Kind:  gatewayv1.Kind(kinds.GRPCRoute),
+					Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+				},
 			},
 		}
 	}
@@ -436,13 +445,17 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
-	invalidNotAttachableListener := createModifiedListener("listener-80-1", func(l *Listener) {
-		l.Valid = false
-		l.Attachable = false
-	})
-	nonMatchingHostnameListener := createModifiedListener("listener-80-1", func(l *Listener) {
-		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
-	})
+	invalidNotAttachableListener := createModifiedListener(
+		"listener-80-1", func(l *Listener) {
+			l.Valid = false
+			l.Attachable = false
+		},
+	)
+	nonMatchingHostnameListener := createModifiedListener(
+		"listener-80-1", func(l *Listener) {
+			l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
+		},
+	)
 
 	createGRPCRouteWithSectionNameAndPort := func(
 		sectionName *gatewayv1.SectionName,
@@ -531,11 +544,13 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			name: "normal case",
 		},
@@ -562,11 +577,13 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): routeWithMissingSectionName,
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): routeWithMissingSectionName,
+						}
+					},
+				),
 			},
 			name: "section name is nil",
 		},
@@ -595,16 +612,20 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80", func(l *Listener) {
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): routeWithEmptySectionName,
-					}
-				}),
-				createModifiedListener("listener-8080", func(l *Listener) {
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): routeWithEmptySectionName,
-					}
-				}),
+				createModifiedListener(
+					"listener-80", func(l *Listener) {
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): routeWithEmptySectionName,
+						}
+					},
+				),
+				createModifiedListener(
+					"listener-8080", func(l *Listener) {
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): routeWithEmptySectionName,
+						}
+					},
+				),
 			},
 			name: "section name is empty; bind to multiple listeners",
 		},
@@ -821,9 +842,11 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Valid = false
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Valid = false
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -840,12 +863,14 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Valid = false
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Valid = false
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
 			name:               "invalid attachable listener",
@@ -873,11 +898,13 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): invalidAttachableRoute1,
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): invalidAttachableRoute1,
+						}
+					},
+				),
 			},
 			name: "invalid attachable route",
 		},
@@ -887,9 +914,11 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Valid = false
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Valid = false
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -906,12 +935,14 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Valid = false
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): invalidAttachableRoute2,
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Valid = false
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): invalidAttachableRoute2,
+						}
+					},
+				),
 			},
 			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
 			name:               "invalid attachable listener with invalid attachable route",
@@ -922,15 +953,17 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-							},
-						}
-						allowedLabels := map[string]string{"app": "not-allowed"}
-						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
+								},
+							}
+							allowedLabels := map[string]string{"app": "not-allowed"}
+							l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -946,15 +979,17 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-						},
-					}
-					allowedLabels := map[string]string{"app": "not-allowed"}
-					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
+							},
+						}
+						allowedLabels := map[string]string{"app": "not-allowed"}
+						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+					},
+				),
 			},
 			name: "route not allowed via labels",
 		},
@@ -964,15 +999,17 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-							},
-						}
-						allowedLabels := map[string]string{"app": "allowed"}
-						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
+								},
+							}
+							allowedLabels := map[string]string{"app": "allowed"}
+							l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -989,18 +1026,20 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					allowedLabels := map[string]string{"app": "allowed"}
-					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
-						},
-					}
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						allowedLabels := map[string]string{"app": "allowed"}
+						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			name: "route allowed via labels",
 		},
@@ -1010,13 +1049,15 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gwDiffNamespace,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-							},
-						}
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
+								},
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1032,13 +1073,15 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-						},
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
+							},
+						}
+					},
+				),
 			},
 			name: "route not allowed via same namespace",
 		},
@@ -1048,13 +1091,15 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-							},
-						}
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
+								},
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1071,16 +1116,18 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
-						},
-					}
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			name: "route allowed via same namespace",
 		},
@@ -1090,13 +1137,15 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gwDiffNamespace,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{
-								From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
-							},
-						}
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
+								},
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1113,16 +1162,18 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{
-							From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
-						},
-					}
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			name: "route allowed via all namespaces",
 		},
@@ -1132,14 +1183,19 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.SupportedKinds = []gatewayv1.RouteGroupKind{
-							{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
-						}
-						l.Routes = map[RouteKey]*L7Route{
-							CreateRouteKey(gr): getLastNormalGRPCRoute(),
-						}
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.SupportedKinds = []gatewayv1.RouteGroupKind{
+								{
+									Kind:  gatewayv1.Kind(kinds.HTTPRoute),
+									Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+								},
+							}
+							l.Routes = map[RouteKey]*L7Route{
+								CreateRouteKey(gr): getLastNormalGRPCRoute(),
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1155,14 +1211,19 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.SupportedKinds = []gatewayv1.RouteGroupKind{
-						{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
-					}
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(gr): getLastNormalGRPCRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.SupportedKinds = []gatewayv1.RouteGroupKind{
+							{
+								Kind:  gatewayv1.Kind(kinds.HTTPRoute),
+								Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(gr): getLastNormalGRPCRoute(),
+						}
+					},
+				),
 			},
 			name: "grpc route not allowed when listener kind is HTTPRoute",
 		},
@@ -1172,16 +1233,18 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-80-1", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Kinds: []gatewayv1.RouteGroupKind{
-								{Kind: "HTTPRoute"},
-							},
-						}
-						l.Routes = map[RouteKey]*L7Route{
-							CreateRouteKey(hr): getLastNormalHTTPRoute(),
-						}
-					}),
+					createModifiedListener(
+						"listener-80-1", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Kinds: []gatewayv1.RouteGroupKind{
+									{Kind: "HTTPRoute"},
+								},
+							}
+							l.Routes = map[RouteKey]*L7Route{
+								CreateRouteKey(hr): getLastNormalHTTPRoute(),
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1198,16 +1261,18 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Kinds: []gatewayv1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
-						},
-					}
-					l.Routes = map[RouteKey]*L7Route{
-						CreateRouteKey(hr): getLastNormalHTTPRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Kinds: []gatewayv1.RouteGroupKind{
+								{Kind: "HTTPRoute"},
+							},
+						}
+						l.Routes = map[RouteKey]*L7Route{
+							CreateRouteKey(hr): getLastNormalHTTPRoute(),
+						}
+					},
+				),
 			},
 			name: "http route allowed when listener kind is HTTPRoute",
 		},
@@ -1222,19 +1287,21 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				g := NewWithT(t)
 
-			bindL7RouteToListeners(
-				test.route,
-				test.gateway,
-				namespaces,
-			)
+				bindL7RouteToListeners(
+					test.route,
+					test.gateway,
+					namespaces,
+				)
 
-			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
-			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
-			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
-		})
+				g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
+				g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
+				g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
+			},
+		)
 	}
 }
 
@@ -1314,12 +1381,14 @@ func TestFindAcceptedHostnames(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
-			g.Expect(result).To(Equal(test.expected))
-		})
+		t.Run(
+			test.msg, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+				result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
+				g.Expect(result).To(Equal(test.expected))
+			},
+		)
 	}
 }
 
@@ -1351,12 +1420,14 @@ func TestGetHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			result := getHostname(test.h)
-			g.Expect(result).To(Equal(test.expected))
-		})
+		t.Run(
+			test.msg, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+				result := getHostname(test.h)
+				g.Expect(result).To(Equal(test.expected))
+			},
+		)
 	}
 }
 
@@ -1391,344 +1462,20 @@ func TestValidateHostnames(t *testing.T) {
 	path := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			err := validateHostnames(test.hostnames, path)
+				err := validateHostnames(test.hostnames, path)
 
-			if test.expectErr {
-				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-			}
-		})
-	}
-}
-
-func TestValidateFilterRequestHeaderModifier(t *testing.T) {
-	t.Parallel()
-	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
-		v := &validationfakes.FakeHTTPFieldsValidator{}
-		return v
-	}
-
-	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
-	}{
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control"},
-				},
+				if test.expectErr {
+					g.Expect(err).To(HaveOccurred())
+				} else {
+					g.Expect(err).ToNot(HaveOccurred())
+				}
 			},
-			expectErrCount: 0,
-			name:           "valid request header modifier filter",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: nil,
-			},
-			expectErrCount: 1,
-			name:           "nil request header modifier filter",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "$var_name", Value: "gzip"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid add",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Remove: []string{"$var-name"},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid remove",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "yhu$"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid header value",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "Host", Value: "my_host"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "}90yh&$", Value: "gzip$"},
-						{Name: "}67yh&$", Value: "compress$"},
-					},
-					Remove: []string{"Cache-Control$}"},
-				},
-			},
-			expectErrCount: 7,
-			name:           "request header modifier filter all fields invalid",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-						{Name: "mYbespokeHEader", Value: "duplicate"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-						{Name: "accept-encodING", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control", "cache-control"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "request header modifier filter not unique names",
-		},
-	}
-
-	filterPath := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			allErrs := validateFilterHeaderModifier(
-				test.validator, test.filter.RequestHeaderModifier, filterPath,
-			)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
-	}
-}
-
-func TestValidateFilterResponseHeaderModifier(t *testing.T) {
-	t.Parallel()
-	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
-		v := &validationfakes.FakeHTTPFieldsValidator{}
-		return v
-	}
-
-	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
-	}{
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control"},
-				},
-			},
-			expectErrCount: 0,
-			name:           "valid response header modifier filter",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: nil,
-			},
-			expectErrCount: 1,
-			name:           "nil response header modifier filter",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "$var_name", Value: "gzip"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "response header modifier filter with invalid add",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Remove: []string{"$var-name"},
-				},
-			},
-			expectErrCount: 1,
-			name:           "response header modifier filter with invalid remove",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "yhu$"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "response header modifier filter with invalid header value",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "Host", Value: "my_host"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "}90yh&$", Value: "gzip$"},
-						{Name: "}67yh&$", Value: "compress$"},
-					},
-					Remove: []string{"Cache-Control$}"},
-				},
-			},
-			expectErrCount: 7,
-			name:           "response header modifier filter all fields invalid",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-						{Name: "mYbespokeHEader", Value: "duplicate"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-						{Name: "accept-encodING", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control", "cache-control"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "response header modifier filter not unique names",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "Content-Length", Value: "163"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Content-Type", Value: "text/plain"},
-					},
-					Remove: []string{"X-Pad"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "response header modifier filter with disallowed header name",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "X-Accel-Redirect", Value: "/protected/iso.img"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "X-Accel-Limit-Rate", Value: "1024"},
-					},
-					Remove: []string{"X-Accel-Charset"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "response header modifier filter with disallowed header name prefix",
-		},
-	}
-
-	filterPath := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			allErrs := validateFilterResponseHeaderModifier(
-				test.validator, test.filter.ResponseHeaderModifier, filterPath,
-			)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
+		)
 	}
 }
 
@@ -1803,11 +1550,18 @@ func TestAllowedRouteType(t *testing.T) {
 	}
 
 	for _, test := range test {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			g.Expect(isRouteTypeAllowedByListener(test.listener, convertRouteType(test.routeType))).To(Equal(test.expResult))
-		})
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+				g.Expect(
+					isRouteTypeAllowedByListener(
+						test.listener,
+						convertRouteType(test.routeType),
+					),
+				).To(Equal(test.expResult))
+			},
+		)
 	}
 }
 
@@ -1821,9 +1575,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Name:     gatewayv1.SectionName(name),
 				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
 				Protocol: gatewayv1.TLSProtocolType,
-				TLS: helpers.GetPointer(gatewayv1.GatewayTLSConfig{
-					Mode: helpers.GetPointer(gatewayv1.TLSModeTerminate),
-				}),
+				TLS: helpers.GetPointer(
+					gatewayv1.GatewayTLSConfig{
+						Mode: helpers.GetPointer(gatewayv1.TLSModeTerminate),
+					},
+				),
 			},
 			SupportedKinds: []gatewayv1.RouteGroupKind{
 				{Kind: kinds.TLSRoute, Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
@@ -1994,11 +1750,13 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.L4Routes = map[L4RouteKey]*L4Route{
-						CreateRouteKeyL4(tr): getLastNormalRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.L4Routes = map[L4RouteKey]*L4Route{
+							CreateRouteKeyL4(tr): getLastNormalRoute(),
+						}
+					},
+				),
 			},
 			name: "normal case",
 		},
@@ -2145,13 +1903,17 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Source: gwWrongNamespace,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-443", func(l *Listener) {
-						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
-								gatewayv1.FromNamespaces("Same"),
-							)},
-						}
-					}),
+					createModifiedListener(
+						"listener-443", func(l *Listener) {
+							l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(
+										gatewayv1.FromNamespaces("Same"),
+									),
+								},
+							}
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -2171,13 +1933,17 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
-							gatewayv1.FromNamespaces("Same"),
-						)},
-					}
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(
+									gatewayv1.FromNamespaces("Same"),
+								),
+							},
+						}
+					},
+				),
 			},
 			name: "route not allowed by listener; in different namespace",
 		},
@@ -2187,9 +1953,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-443", func(l *Listener) {
-						l.Valid = false
-					}),
+					createModifiedListener(
+						"listener-443", func(l *Listener) {
+							l.Valid = false
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -2206,27 +1974,29 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.Valid = false
-					r := createNormalRoute(gw)
-					r.Conditions = append(r.Conditions, staticConds.NewRouteInvalidListener())
-					r.ParentRefs = []ParentRef{
-						{
-							Idx:         0,
-							Gateway:     client.ObjectKeyFromObject(gw),
-							SectionName: tr.Spec.ParentRefs[0].SectionName,
-							Attachment: &ParentRefAttachmentStatus{
-								AcceptedHostnames: map[string][]string{
-									"listener-443": {"foo.example.com"},
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.Valid = false
+						r := createNormalRoute(gw)
+						r.Conditions = append(r.Conditions, staticConds.NewRouteInvalidListener())
+						r.ParentRefs = []ParentRef{
+							{
+								Idx:         0,
+								Gateway:     client.ObjectKeyFromObject(gw),
+								SectionName: tr.Spec.ParentRefs[0].SectionName,
+								Attachment: &ParentRefAttachmentStatus{
+									AcceptedHostnames: map[string][]string{
+										"listener-443": {"foo.example.com"},
+									},
+									Attached: true,
 								},
-								Attached: true,
 							},
-						},
-					}
-					l.L4Routes = map[L4RouteKey]*L4Route{
-						CreateRouteKeyL4(tr): r,
-					}
-				}),
+						}
+						l.L4Routes = map[L4RouteKey]*L4Route{
+							CreateRouteKeyL4(tr): r,
+						}
+					},
+				),
 			},
 			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
 			name:               "invalid attachable listener",
@@ -2237,9 +2007,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-443", func(l *Listener) {
-						l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
-					}),
+					createModifiedListener(
+						"listener-443", func(l *Listener) {
+							l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -2254,16 +2026,20 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.Source.Hostname = (*gatewayv1.Hostname)(helpers.GetPointer("*.example.org"))
+					},
+				),
 			},
 			name: "route hostname does not match any listener",
 		},
 		{
-			route: makeModifiedRoute(gw, func(r *L4Route) {
-				r.ParentRefs[0].SectionName = nil
-			}),
+			route: makeModifiedRoute(
+				gw, func(r *L4Route) {
+					r.ParentRefs[0].SectionName = nil
+				},
+			),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -2284,18 +2060,22 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.L4Routes = map[L4RouteKey]*L4Route{
-						CreateRouteKeyL4(tr): getLastNormalRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.L4Routes = map[L4RouteKey]*L4Route{
+							CreateRouteKeyL4(tr): getLastNormalRoute(),
+						}
+					},
+				),
 			},
 			name: "nil section name",
 		},
 		{
-			route: makeModifiedRoute(gw, func(r *L4Route) {
-				r.ParentRefs[0].SectionName = helpers.GetPointer[gatewayv1.SectionName]("")
-			}),
+			route: makeModifiedRoute(
+				gw, func(r *L4Route) {
+					r.ParentRefs[0].SectionName = helpers.GetPointer[gatewayv1.SectionName]("")
+				},
+			),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -2317,11 +2097,13 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.L4Routes = map[L4RouteKey]*L4Route{
-						CreateRouteKeyL4(tr): getLastNormalRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.L4Routes = map[L4RouteKey]*L4Route{
+							CreateRouteKeyL4(tr): getLastNormalRoute(),
+						}
+					},
+				),
 			},
 			name: "empty section name",
 		},
@@ -2344,9 +2126,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 			name:                     "listener does not exist",
 		},
 		{
-			route: makeModifiedRoute(gw, func(r *L4Route) {
-				r.Valid = false
-			}),
+			route: makeModifiedRoute(
+				gw, func(r *L4Route) {
+					r.Valid = false
+				},
+			),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -2368,11 +2152,13 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.L4Routes = map[L4RouteKey]*L4Route{
-						CreateRouteKeyL4(tr): getLastNormalRoute(),
-					}
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.L4Routes = map[L4RouteKey]*L4Route{
+							CreateRouteKeyL4(tr): getLastNormalRoute(),
+						}
+					},
+				),
 			},
 			name: "invalid attachable route",
 		},
@@ -2382,9 +2168,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					createModifiedListener("listener-443", func(l *Listener) {
-						l.SupportedKinds = nil
-					}),
+					createModifiedListener(
+						"listener-443", func(l *Listener) {
+							l.SupportedKinds = nil
+						},
+					),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -2399,9 +2187,11 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-443", func(l *Listener) {
-					l.SupportedKinds = nil
-				}),
+				createModifiedListener(
+					"listener-443", func(l *Listener) {
+						l.SupportedKinds = nil
+					},
+				),
 			},
 			name: "route kind not allowed",
 		},
@@ -2416,21 +2206,23 @@ func TestBindL4RouteToListeners(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			bindL4RouteToListeners(
-				test.route,
-				test.gateway,
-				namespaces,
-				map[string]struct{}{},
-			)
+				bindL4RouteToListeners(
+					test.route,
+					test.gateway,
+					namespaces,
+					map[string]struct{}{},
+				)
 
-			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
-			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
-			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
-		})
+				g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
+				g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
+				g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
+			},
+		)
 	}
 }
 
@@ -2458,13 +2250,15 @@ func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
 
 	refGrantResolver := newReferenceGrantResolver(nil)
 
-	g.Expect(buildL4RoutesForGateways(
-		tlsRoutes,
-		nil,
-		services,
-		nil,
-		refGrantResolver,
-	)).To(BeNil())
+	g.Expect(
+		buildL4RoutesForGateways(
+			tlsRoutes,
+			nil,
+			services,
+			nil,
+			refGrantResolver,
+		),
+	).To(BeNil())
 }
 
 func TestTryToAttachL4RouteToListeners_NoAttachableListeners(t *testing.T) {

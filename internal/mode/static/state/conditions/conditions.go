@@ -49,6 +49,10 @@ const (
 	// Used with ResolvedRefs (false).
 	RouteReasonInvalidIPFamily v1.RouteConditionReason = "InvalidServiceIPFamily"
 
+	// RouteReasonInvalidFilter is used when an extension ref filter referenced by a Route cannot be resolved, or is
+	// invalid. Used with ResolvedRefs (false).
+	RouteReasonInvalidFilter v1.RouteConditionReason = "InvalidFilter"
+
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
 	// This reason is used with GatewayConditionAccepted (false).
@@ -307,6 +311,17 @@ func NewRouteInvalidIPFamily(msg string) conditions.Condition {
 		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidIPFamily),
+		Message: msg,
+	}
+}
+
+// NewRouteResolvedRefsInvalidFilter returns a Condition that indicates that the Route has a filter that
+// cannot be resolved or is invalid.
+func NewRouteResolvedRefsInvalidFilter(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonInvalidFilter),
 		Message: msg,
 	}
 }

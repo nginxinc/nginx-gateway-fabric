@@ -3,9 +3,11 @@ package graph
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -13,10 +15,41 @@ import (
 type SnippetsFilter struct {
 	// Source is the SnippetsFilter.
 	Source *ngfAPI.SnippetsFilter
+	// Snippets stored as a map of nginx context to snippet value.
+	Snippets map[ngfAPI.NginxContext]string
 	// Conditions define the conditions to be reported in the status of the SnippetsFilter.
 	Conditions []conditions.Condition
 	// Valid indicates whether the SnippetsFilter is semantically and syntactically valid.
 	Valid bool
+	// Referenced indicates whether the SnippetsFilter is referenced by a Route.
+	Referenced bool
+}
+
+// getSnippetsFilterResolverForNamespace returns a resolveExtRefFilter function.
+// This function resolves a LocalObjectReference to a SnippetsFilter in the given namespace.
+// If the SnippetsFilter exists, it is marked as referenced and returned as an ExtensionRefFilter.
+func getSnippetsFilterResolverForNamespace(
+	snippetsFilters map[types.NamespacedName]*SnippetsFilter,
+	ns string,
+) resolveExtRefFilter {
+	return func(ref v1.LocalObjectReference) *ExtensionRefFilter {
+		if len(snippetsFilters) == 0 {
+			return nil
+		}
+
+		if ref.Group != ngfAPI.GroupName || ref.Kind != kinds.SnippetsFilter {
+			return nil
+		}
+
+		sf := snippetsFilters[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}]
+		if sf == nil {
+			return nil
+		}
+
+		sf.Referenced = true
+
+		return &ExtensionRefFilter{SnippetsFilter: sf, Valid: sf.Valid}
+	}
 }
 
 func processSnippetsFilters(
@@ -29,20 +62,34 @@ func processSnippetsFilters(
 	processed := make(map[types.NamespacedName]*SnippetsFilter)
 
 	for nsname, sf := range snippetsFilters {
-		processedSf := &SnippetsFilter{
-			Source: sf,
-			Valid:  true,
-		}
-
 		if cond := validateSnippetsFilter(sf); cond != nil {
-			processedSf.Valid = false
-			processedSf.Conditions = []conditions.Condition{*cond}
+			processed[nsname] = &SnippetsFilter{
+				Source:     sf,
+				Conditions: []conditions.Condition{*cond},
+				Valid:      false,
+			}
+
+			continue
 		}
 
-		processed[nsname] = processedSf
+		processed[nsname] = &SnippetsFilter{
+			Source:   sf,
+			Valid:    true,
+			Snippets: createSnippetsMap(sf.Spec.Snippets),
+		}
 	}
 
 	return processed
+}
+
+func createSnippetsMap(snippets []ngfAPI.Snippet) map[ngfAPI.NginxContext]string {
+	snippetsMap := make(map[ngfAPI.NginxContext]string)
+
+	for _, snippet := range snippets {
+		snippetsMap[snippet.Context] = snippet.Value
+	}
+
+	return snippetsMap
 }
 
 func validateSnippetsFilter(filter *ngfAPI.SnippetsFilter) *conditions.Condition {

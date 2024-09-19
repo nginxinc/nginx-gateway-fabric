@@ -111,6 +111,60 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	refSnippetsFilterExtensionRef := &gatewayv1.LocalObjectReference{
+		Group: ngfAPI.GroupName,
+		Kind:  kinds.SnippetsFilter,
+		Name:  "ref-snippets-filter",
+	}
+
+	unreferencedSnippetsFilter := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "unref-snippets-filter",
+			Namespace: testNs,
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextMain,
+					Value:   "main snippet",
+				},
+			},
+		},
+	}
+
+	referencedSnippetsFilter := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ref-snippets-filter",
+			Namespace: testNs,
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextHTTPServer,
+					Value:   "server snippet",
+				},
+			},
+		},
+	}
+
+	processedUnrefSnippetsFilter := &SnippetsFilter{
+		Source:     unreferencedSnippetsFilter,
+		Valid:      true,
+		Referenced: false,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextMain: "main snippet",
+		},
+	}
+
+	processedRefSnippetsFilter := &SnippetsFilter{
+		Source:     referencedSnippetsFilter,
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServer: "server snippet",
+		},
+	}
+
 	createValidRuleWithBackendRefs := func(matches []gatewayv1.HTTPRouteMatch) RouteRule {
 		refs := []BackendRef{
 			{
@@ -127,12 +181,38 @@ func TestBuildGraph(t *testing.T) {
 			},
 		}
 		return RouteRule{
-			ValidMatches:     true,
-			ValidFilters:     true,
+			ValidMatches: true,
+			Filters: RouteRuleFilters{
+				Filters: []Filter{},
+				Valid:   true,
+			},
 			BackendRefs:      refs,
 			Matches:          matches,
 			RouteBackendRefs: rbrs,
 		}
+	}
+
+	createValidRuleWithBackendRefsAndFilters := func(
+		matches []gatewayv1.HTTPRouteMatch,
+		routeType RouteType,
+	) RouteRule {
+		rule := createValidRuleWithBackendRefs(matches)
+		rule.Filters = RouteRuleFilters{
+			Filters: []Filter{
+				{
+					RouteType:    routeType,
+					FilterType:   FilterExtensionRef,
+					ExtensionRef: refSnippetsFilterExtensionRef,
+					ResolvedExtensionRef: &ExtensionRefFilter{
+						SnippetsFilter: processedRefSnippetsFilter,
+						Valid:          true,
+					},
+				},
+			},
+			Valid: true,
+		}
+
+		return rule
 	}
 
 	routeMatches := []gatewayv1.HTTPRouteMatch{
@@ -207,6 +287,15 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
+	addFilterToPath(
+		hr1,
+		"/",
+		gatewayv1.HTTPRouteFilter{
+			Type:         gatewayv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: refSnippetsFilterExtensionRef,
+		},
+	)
+
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
@@ -237,6 +326,12 @@ func TestBuildGraph(t *testing.T) {
 					BackendRefs: []gatewayv1.GRPCBackendRef{
 						{
 							BackendRef: commonGWBackendRef,
+						},
+					},
+					Filters: []gatewayv1.GRPCRouteFilter{
+						{
+							Type:         gatewayv1.GRPCRouteFilterExtensionRef,
+							ExtensionRef: refSnippetsFilterExtensionRef,
 						},
 					},
 				},
@@ -515,26 +610,6 @@ func TestBuildGraph(t *testing.T) {
 		Valid: true,
 	}
 
-	snippetsFilter := &ngfAPI.SnippetsFilter{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-snippet-filter",
-			Namespace: testNs,
-		},
-		Spec: ngfAPI.SnippetsFilterSpec{
-			Snippets: []ngfAPI.Snippet{
-				{
-					Context: ngfAPI.NginxContextMain,
-					Value:   "main snippet",
-				},
-			},
-		},
-	}
-
-	processedSnippetsFilter := &SnippetsFilter{
-		Source: snippetsFilter,
-		Valid:  true,
-	}
-
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
 		return ClusterState{
 			GatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
@@ -585,7 +660,8 @@ func TestBuildGraph(t *testing.T) {
 				gwPolicyKey: gwPolicy,
 			},
 			SnippetsFilters: map[types.NamespacedName]*ngfAPI.SnippetsFilter{
-				client.ObjectKeyFromObject(snippetsFilter): snippetsFilter,
+				client.ObjectKeyFromObject(unreferencedSnippetsFilter): unreferencedSnippetsFilter,
+				client.ObjectKeyFromObject(referencedSnippetsFilter):   referencedSnippetsFilter,
 			},
 		}
 	}
@@ -609,7 +685,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		Spec: L7RouteSpec{
 			Hostnames: hr1.Spec.Hostnames,
-			Rules:     []RouteRule{createValidRuleWithBackendRefs(routeMatches)},
+			Rules:     []RouteRule{createValidRuleWithBackendRefsAndFilters(routeMatches, RouteTypeHTTP)},
 		},
 		Policies: []*Policy{processedRoutePolicy},
 	}
@@ -696,7 +772,7 @@ func TestBuildGraph(t *testing.T) {
 		Spec: L7RouteSpec{
 			Hostnames: gr.Spec.Hostnames,
 			Rules: []RouteRule{
-				createValidRuleWithBackendRefs(routeMatches),
+				createValidRuleWithBackendRefsAndFilters(routeMatches, RouteTypeGRPC),
 			},
 		},
 	}
@@ -834,7 +910,8 @@ func TestBuildGraph(t *testing.T) {
 				TelemetryEnabled: true,
 			},
 			SnippetsFilters: map[types.NamespacedName]*SnippetsFilter{
-				client.ObjectKeyFromObject(snippetsFilter): processedSnippetsFilter,
+				client.ObjectKeyFromObject(unreferencedSnippetsFilter): processedUnrefSnippetsFilter,
+				client.ObjectKeyFromObject(referencedSnippetsFilter):   processedRefSnippetsFilter,
 			},
 		}
 	}
@@ -879,28 +956,30 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				g := NewWithT(t)
 
-			// The diffs get very large so the format max length will make sure the output doesn't get truncated.
-			format.MaxLength = 10000000
+				// The diffs get very large so the format max length will make sure the output doesn't get truncated.
+				format.MaxLength = 10000000
 
-			fakePolicyValidator := &validationfakes.FakePolicyValidator{}
+				fakePolicyValidator := &validationfakes.FakePolicyValidator{}
 
-			result := BuildGraph(
-				test.store,
-				controllerName,
-				gcName,
-				validation.Validators{
-					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
-					GenericValidator:    &validationfakes.FakeGenericValidator{},
-					PolicyValidator:     fakePolicyValidator,
-				},
-				protectedPorts,
-			)
+				result := BuildGraph(
+					test.store,
+					controllerName,
+					gcName,
+					validation.Validators{
+						HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+						GenericValidator:    &validationfakes.FakeGenericValidator{},
+						PolicyValidator:     fakePolicyValidator,
+					},
+					protectedPorts,
+				)
 
-			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-		})
+				g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+			},
+		)
 	}
 }
 
@@ -1197,13 +1276,15 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				g := NewWithT(t)
 
-			test.graph.GatewayClass = test.gc
-			result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
-			g.Expect(result).To(Equal(test.expected))
-		})
+				test.graph.GatewayClass = test.gc
+				result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
+				g.Expect(result).To(Equal(test.expected))
+			},
+		)
 	}
 }
 
@@ -1329,20 +1410,24 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 		},
 		{
 			name: "irrelevant; policy references a Gateway, but the graph's Gateway is nil",
-			graph: getModifiedGraph(func(g *Graph) *Graph {
-				g.Gateway = nil
-				return g
-			}),
+			graph: getModifiedGraph(
+				func(g *Graph) *Graph {
+					g.Gateway = nil
+					return g
+				},
+			),
 			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw"},
 			expRelevant: false,
 		},
 		{
 			name: "irrelevant; policy references a Gateway, but the graph's Gateway.Source is nil",
-			graph: getModifiedGraph(func(g *Graph) *Graph {
-				g.Gateway.Source = nil
-				return g
-			}),
+			graph: getModifiedGraph(
+				func(g *Graph) *Graph {
+					g.Gateway.Source = nil
+					return g
+				},
+			),
 			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw-source"},
 			expRelevant: false,
@@ -1350,13 +1435,15 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
-			g.Expect(relevant).To(Equal(test.expRelevant))
-		})
+				relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
+				g.Expect(relevant).To(Equal(test.expRelevant))
+			},
+		)
 	}
 }
 

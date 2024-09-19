@@ -71,7 +71,7 @@ func addBackendRefsToRules(
 		if !rule.ValidMatches {
 			continue
 		}
-		if !rule.ValidFilters {
+		if !rule.Filters.Valid {
 			continue
 		}
 
@@ -326,7 +326,8 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 	if *npIPFamily == ngfAPI.IPv4 {
 		if slices.Contains(svcIPFamily, v1.IPv6Protocol) {
 			// capitalizing error message to match the rest of the error messages associated with a condition
-			return errors.New( //nolint: stylecheck
+			//nolint: stylecheck
+			return errors.New(
 				"Service configured with IPv6 family but NginxProxy is configured with IPv4",
 			)
 		}
@@ -334,7 +335,8 @@ func verifyIPFamily(npCfg *NginxProxy, svcIPFamily []v1.IPFamily) error {
 	if *npIPFamily == ngfAPI.IPv6 {
 		if slices.Contains(svcIPFamily, v1.IPv4Protocol) {
 			// capitalizing error message to match the rest of the error messages associated with a condition
-			return errors.New( //nolint: stylecheck
+			//nolint: stylecheck
+			return errors.New(
 				"Service configured with IPv4 family but NginxProxy is configured with IPv6",
 			)
 		}

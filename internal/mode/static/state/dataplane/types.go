@@ -38,6 +38,8 @@ type Configuration struct {
 	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	// MainSnippets holds all the snippets that apply to the main context.
+	MainSnippets []Snippet
 	// Telemetry holds the Otel configuration.
 	Telemetry Telemetry
 	// BaseHTTPConfig holds the configuration options at the http context.
@@ -139,6 +141,18 @@ type HTTPFilters struct {
 	RequestHeaderModifiers *HTTPHeaderFilter
 	// ResponseHeaderModifiers holds the HTTPHeaderFilter.
 	ResponseHeaderModifiers *HTTPHeaderFilter
+	// SnippetsFilters holds all the SnippetsFilters for the MatchRule.
+	// Unlike the core and extended filters, there can be more than on SnippetsFilters defined on a routing rule.
+	SnippetsFilters []SnippetsFilter
+}
+
+// SnippetsFilter holds the location and server snippets in a SnippetsFilter.
+// The main and http snippets are store separately in Configuration.MainSnippets and BaseHTTPConfig.Snippets.
+type SnippetsFilter struct {
+	// LocationSnippet holds the snippet for the location context.
+	LocationSnippet *Snippet
+	// ServerSnippet holds the snippet for the location context.
+	ServerSnippet *Snippet
 }
 
 // HTTPHeader represents an HTTP header.
@@ -309,13 +323,23 @@ type SpanAttribute struct {
 type BaseHTTPConfig struct {
 	// IPFamily specifies the IP family for all servers.
 	IPFamily IPFamilyType
+	// Snippets contain the snippets that apply to the http context.
+	Snippets []Snippet
 	// RewriteIPSettings defines configuration for rewriting the client IP to the original client's IP.
 	RewriteClientIPSettings RewriteClientIPSettings
 	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
 
-// RewriteIPSettings defines configuration for rewriting the client IP to the original client's IP.
+// Snippet is a snippet of configuration.
+type Snippet struct {
+	// Name is the name of the snippet.
+	Name string
+	// Contents is the content of the snippet.
+	Contents string
+}
+
+// RewriteClientIPSettings defines configuration for rewriting the client IP to the original client's IP.
 type RewriteClientIPSettings struct {
 	// Mode specifies the mode for rewriting the client IP.
 	Mode RewriteIPModeType

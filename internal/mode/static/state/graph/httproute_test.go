@@ -11,8 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
@@ -40,16 +42,18 @@ func createHTTPRoute(
 		if path == emptyPathValue {
 			pathValue = nil
 		}
-		rules = append(rules, gatewayv1.HTTPRouteRule{
-			Matches: []gatewayv1.HTTPRouteMatch{
-				{
-					Path: &gatewayv1.HTTPPathMatch{
-						Type:  pathType,
-						Value: pathValue,
+		rules = append(
+			rules, gatewayv1.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  pathType,
+							Value: pathValue,
+						},
 					},
 				},
 			},
-		})
+		)
 	}
 
 	return &gatewayv1.HTTPRoute{
@@ -91,12 +95,42 @@ func TestBuildHTTPRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	hr := createHTTPRoute("hr-1", gwNsName.Name, "example.com", "/")
+	snippetsFilterRef := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Name:  "sf",
+			Kind:  kinds.SnippetsFilter,
+			Group: ngfAPI.GroupName,
+		},
+	}
+	requestRedirectFilter := gatewayv1.HTTPRouteFilter{
+		Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
+	}
+
+	addFilterToPath(hr, "/", snippetsFilterRef)
+	addFilterToPath(hr, "/", requestRedirectFilter)
 
 	hrWrongGateway := createHTTPRoute("hr-2", "some-gateway", "example.com", "/")
 
 	hrRoutes := map[types.NamespacedName]*gatewayv1.HTTPRoute{
 		client.ObjectKeyFromObject(hr):             hr,
 		client.ObjectKeyFromObject(hrWrongGateway): hrWrongGateway,
+	}
+
+	sf := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "sf",
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextHTTP,
+					Value:   "http snippet",
+				},
+			},
+		},
 	}
 
 	tests := []struct {
@@ -123,8 +157,33 @@ func TestBuildHTTPRoutes(t *testing.T) {
 						Hostnames: hr.Spec.Hostnames,
 						Rules: []RouteRule{
 							{
-								ValidMatches:     true,
-								ValidFilters:     true,
+								ValidMatches: true,
+								Filters: RouteRuleFilters{
+									Valid: true,
+									Filters: []Filter{
+										{
+											ExtensionRef: snippetsFilterRef.ExtensionRef,
+											ResolvedExtensionRef: &ExtensionRefFilter{
+												SnippetsFilter: &SnippetsFilter{
+													Source: sf,
+													Snippets: map[ngfAPI.NginxContext]string{
+														ngfAPI.NginxContextHTTP: "http snippet",
+													},
+													Valid:      true,
+													Referenced: true,
+												},
+												Valid: true,
+											},
+											RouteType:  RouteTypeHTTP,
+											FilterType: FilterExtensionRef,
+										},
+										{
+											RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
+											RouteType:       RouteTypeHTTP,
+											FilterType:      FilterRequestRedirect,
+										},
+									},
+								},
 								Matches:          hr.Spec.Rules[0].Matches,
 								RouteBackendRefs: []RouteBackendRef{},
 							},
@@ -144,18 +203,32 @@ func TestBuildHTTPRoutes(t *testing.T) {
 	validator := &validationfakes.FakeHTTPFieldsValidator{}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			routes := buildRoutesForGateways(
-				validator,
-				hrRoutes,
-				map[types.NamespacedName]*gatewayv1.GRPCRoute{},
-				test.gwNsNames,
-				nil,
-			)
-			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
-		})
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+
+				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+					client.ObjectKeyFromObject(sf): {
+						Source: sf,
+						Valid:  true,
+						Snippets: map[ngfAPI.NginxContext]string{
+							ngfAPI.NginxContextHTTP: "http snippet",
+						},
+					},
+				}
+
+				routes := buildRoutesForGateways(
+					validator,
+					hrRoutes,
+					map[types.NamespacedName]*gatewayv1.GRPCRoute{},
+					test.gwNsNames,
+					nil,
+					snippetsFilters,
+				)
+				g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
+			},
+		)
 	}
 }
 
@@ -168,48 +241,93 @@ func TestBuildHTTPRoute(t *testing.T) {
 
 	gatewayNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
+	// route with valid filter
 	validFilter := gatewayv1.HTTPRouteFilter{
 		Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
 	}
+	hr := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/", "/filter")
+	addFilterToPath(hr, "/filter", validFilter)
+
+	// invalid routes without filters
+	hrInvalidHostname := createHTTPRoute("hr", gatewayNsName.Name, "", "/")
+	hrNotNGF := createHTTPRoute("hr", "some-gateway", "example.com", "/")
+	hrInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath)
+	hrInvalidMatchesEmptyPathType := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathType)
+	hrInvalidMatchesEmptyPathValue := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathValue)
+	hrDroppedInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/")
+
+	// route with invalid filter
 	invalidFilter := gatewayv1.HTTPRouteFilter{
 		Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 			Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](invalidRedirectHostname),
 		},
 	}
-
-	hr := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/", "/filter")
-	addFilterToPath(hr, "/filter", validFilter)
-
-	hrInvalidHostname := createHTTPRoute("hr", gatewayNsName.Name, "", "/")
-	hrNotNGF := createHTTPRoute("hr", "some-gateway", "example.com", "/")
-	hrInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath)
-
-	hrInvalidMatchesEmptyPathType := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathType)
-	hrInvalidMatchesEmptyPathValue := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathValue)
-
 	hrInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
 	addFilterToPath(hrInvalidFilters, "/filter", invalidFilter)
 
-	hrDroppedInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/")
-
+	// route with invalid matches and filters
 	hrDroppedInvalidMatchesAndInvalidFilters := createHTTPRoute(
 		"hr",
 		gatewayNsName.Name,
 		"example.com",
-		invalidPath, "/filter", "/")
+		invalidPath, "/filter", "/",
+	)
 	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilters, "/filter", invalidFilter)
 
+	// route with both invalid and valid filters in the same rule
 	hrDroppedInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
 	addFilterToPath(hrDroppedInvalidFilters, "/filter", validFilter)
 	addFilterToPath(hrDroppedInvalidFilters, "/", invalidFilter)
 
+	// route with duplicate section names
 	hrDuplicateSectionName := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/")
 	hrDuplicateSectionName.Spec.ParentRefs = append(
 		hrDuplicateSectionName.Spec.ParentRefs,
 		hrDuplicateSectionName.Spec.ParentRefs[0],
 	)
+
+	// route with valid snippets filter extension ref
+	hrValidSnippetsFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
+	validSnippetsFilterExtRef := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Group: ngfAPI.GroupName,
+			Kind:  kinds.SnippetsFilter,
+			Name:  "sf",
+		},
+	}
+	addFilterToPath(hrValidSnippetsFilter, "/filter", validSnippetsFilterExtRef)
+
+	// route with invalid snippets filter extension ref
+	hrInvalidSnippetsFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
+	invalidSnippetsFilterExtRef := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Group: "wrong",
+			Kind:  kinds.SnippetsFilter,
+			Name:  "sf",
+		},
+	}
+	addFilterToPath(hrInvalidSnippetsFilter, "/filter", invalidSnippetsFilterExtRef)
+
+	// route with unresolvable snippets filter extension ref
+	hrUnresolvableSnippetsFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
+	unresolvableSnippetsFilterExtRef := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Group: ngfAPI.GroupName,
+			Kind:  kinds.SnippetsFilter,
+			Name:  "does-not-exist",
+		},
+	}
+	addFilterToPath(hrUnresolvableSnippetsFilter, "/filter", unresolvableSnippetsFilterExtRef)
+
+	// route with two invalid snippets filter extensions refs: (1) invalid group (2) unresolvable
+	hrInvalidAndUnresolvableSnippetsFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
+	addFilterToPath(hrInvalidAndUnresolvableSnippetsFilter, "/filter", invalidSnippetsFilterExtRef)
+	addFilterToPath(hrInvalidAndUnresolvableSnippetsFilter, "/filter", unresolvableSnippetsFilterExtRef)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
 		ValidatePathInMatchStub: func(path string) error {
@@ -251,16 +369,21 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hr.Spec.Rules[0].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: convertHTTPRouteFilters(hr.Spec.Rules[1].Filters),
+							},
 							Matches:          hr.Spec.Rules[1].Matches,
-							Filters:          hr.Spec.Rules[1].Filters,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -292,8 +415,11 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hrInvalidMatchesEmptyPathType.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							RouteBackendRefs: []RouteBackendRef{},
 							Matches:          hrInvalidMatchesEmptyPathType.Spec.Rules[0].Matches,
 						},
@@ -335,8 +461,11 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							RouteBackendRefs: []RouteBackendRef{},
 							Matches:          hrInvalidMatchesEmptyPathValue.Spec.Rules[0].Matches,
 						},
@@ -398,8 +527,11 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hrInvalidMatches.Spec.Rules[0].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -433,10 +565,12 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     false,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   false,
+								Filters: convertHTTPRouteFilters(hrInvalidFilters.Spec.Rules[0].Filters),
+							},
 							Matches:          hrInvalidFilters.Spec.Rules[0].Matches,
-							Filters:          hrInvalidFilters.Spec.Rules[0].Filters,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -468,14 +602,20 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hrDroppedInvalidMatches.Spec.Rules[0].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hrDroppedInvalidMatches.Spec.Rules[1].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -511,21 +651,31 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[0].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     false,
-							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Matches,
-							Filters:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Filters,
+							ValidMatches: true,
+							Matches:      hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Matches,
+							Filters: RouteRuleFilters{
+								Valid: false,
+								Filters: convertHTTPRouteFilters(
+									hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[1].Filters,
+								),
+							},
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          hrDroppedInvalidMatchesAndInvalidFilters.Spec.Rules[2].Matches,
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -559,17 +709,21 @@ func TestBuildHTTPRoute(t *testing.T) {
 					Hostnames: hr.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
-							Matches:          hrDroppedInvalidFilters.Spec.Rules[0].Matches,
-							Filters:          hrDroppedInvalidFilters.Spec.Rules[0].Filters,
+							ValidMatches: true,
+							Matches:      hrDroppedInvalidFilters.Spec.Rules[0].Matches,
+							Filters: RouteRuleFilters{
+								Filters: convertHTTPRouteFilters(hrDroppedInvalidFilters.Spec.Rules[0].Filters),
+								Valid:   true,
+							},
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     false,
-							Matches:          hrDroppedInvalidFilters.Spec.Rules[1].Matches,
-							Filters:          hrDroppedInvalidFilters.Spec.Rules[1].Filters,
+							ValidMatches: true,
+							Matches:      hrDroppedInvalidFilters.Spec.Rules[1].Matches,
+							Filters: RouteRuleFilters{
+								Filters: convertHTTPRouteFilters(hrDroppedInvalidFilters.Spec.Rules[1].Filters),
+								Valid:   false,
+							},
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -577,18 +731,188 @@ func TestBuildHTTPRoute(t *testing.T) {
 			},
 			name: "dropped invalid rule with invalid filters",
 		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrValidSnippetsFilter,
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
+				Source:     hrValidSnippetsFilter,
+				Valid:      true,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrValidSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Spec: L7RouteSpec{
+					Hostnames: hrValidSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Matches:      hrValidSnippetsFilter.Spec.Rules[0].Matches,
+							Filters: RouteRuleFilters{
+								Filters: []Filter{
+									{
+										RouteType:    RouteTypeHTTP,
+										FilterType:   FilterExtensionRef,
+										ExtensionRef: validSnippetsFilterExtRef.ExtensionRef,
+										ResolvedExtensionRef: &ExtensionRefFilter{
+											Valid:          true,
+											SnippetsFilter: &SnippetsFilter{Valid: true, Referenced: true},
+										},
+									},
+								},
+								Valid: true,
+							},
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+			name: "rule with valid snippets filter extension ref filter",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrInvalidSnippetsFilter,
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidSnippetsFilter,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						"All rules are invalid: spec.rules[0].filters[0].extensionRef: " +
+							"Unsupported value: \"wrong\": supported values: \"gateway.nginx.org\"",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: hrInvalidSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Matches:      hrInvalidSnippetsFilter.Spec.Rules[0].Matches,
+							Filters: RouteRuleFilters{
+								Filters: convertHTTPRouteFilters(hrInvalidSnippetsFilter.Spec.Rules[0].Filters),
+								Valid:   false,
+							},
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+			name: "rule with invalid snippets filter extension ref filter",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrUnresolvableSnippetsFilter,
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
+				Source:     hrUnresolvableSnippetsFilter,
+				Valid:      true,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrUnresolvableSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteResolvedRefsInvalidFilter(
+						"spec.rules[0].filters[0].extensionRef: Not found: " +
+							"v1.LocalObjectReference{Group:\"gateway.nginx.org\", Kind:\"SnippetsFilter\", " +
+							"Name:\"does-not-exist\"}",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: hrUnresolvableSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Matches:      hrUnresolvableSnippetsFilter.Spec.Rules[0].Matches,
+							Filters: RouteRuleFilters{
+								Filters: convertHTTPRouteFilters(hrUnresolvableSnippetsFilter.Spec.Rules[0].Filters),
+								Valid:   false,
+							},
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+			name: "rule with unresolvable snippets filter extension ref filter",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrInvalidAndUnresolvableSnippetsFilter,
+			expected: &L7Route{
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidAndUnresolvableSnippetsFilter,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidAndUnresolvableSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						"All rules are invalid: spec.rules[0].filters[0].extensionRef: " +
+							"Unsupported value: \"wrong\": supported values: \"gateway.nginx.org\"",
+					),
+					staticConds.NewRouteResolvedRefsInvalidFilter(
+						"spec.rules[0].filters[1].extensionRef: Not found: " +
+							"v1.LocalObjectReference{Group:\"gateway.nginx.org\", Kind:\"SnippetsFilter\", " +
+							"Name:\"does-not-exist\"}",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: hrInvalidAndUnresolvableSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Matches:      hrInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Matches,
+							Filters: RouteRuleFilters{
+								Filters: convertHTTPRouteFilters(
+									hrInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Filters,
+								),
+								Valid: false,
+							},
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+			name: "rule with one invalid and one unresolvable snippets filter extension ref filter",
+		},
 	}
 
 	gatewayNsNames := []types.NamespacedName{gatewayNsName}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames)
-			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
-		})
+				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+					{Namespace: "test", Name: "sf"}: {Valid: true},
+				}
+
+				route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames, snippetsFilters)
+				g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
+			},
+		)
 	}
 }
 
@@ -848,72 +1172,14 @@ func TestValidateMatch(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
-	}
-}
-
-func TestValidateFilter(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		name           string
-		expectErrCount int
-	}{
-		{
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+				allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
+				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 			},
-			expectErrCount: 0,
-			name:           "valid redirect filter",
-		},
-		{
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{},
-			},
-			expectErrCount: 0,
-			name:           "valid rewrite filter",
-		},
-		{
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
-			},
-			expectErrCount: 0,
-			name:           "valid request header modifiers filter",
-		},
-		{
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
-			},
-			expectErrCount: 0,
-			name:           "valid response header modifiers filter",
-		},
-		{
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestMirror,
-			},
-			expectErrCount: 1,
-			name:           "unsupported filter",
-		},
-	}
-
-	filterPath := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
+		)
 	}
 }
 
@@ -1038,13 +1304,15 @@ func TestValidateFilterRedirect(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
 
-			allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
+				allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
+				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			},
+		)
 	}
 }
 
@@ -1158,11 +1426,13 @@ func TestValidateFilterRewrite(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
+		t.Run(
+			test.name, func(t *testing.T) {
+				t.Parallel()
+				g := NewWithT(t)
+				allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
+				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			},
+		)
 	}
 }

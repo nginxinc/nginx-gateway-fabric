@@ -226,6 +226,7 @@ func BuildGraph(
 		state.GRPCRoutes,
 		processedGws.GetAllNsNames(),
 		npCfg,
+		processedSnippetsFilters,
 	)
 
 	l4routes := buildL4RoutesForGateways(
