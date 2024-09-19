@@ -23,8 +23,8 @@ const (
 	// streamFolder is the folder where NGINX Stream configuration files are stored.
 	streamFolder = configFolder + "/stream-conf.d"
 
-	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
-	modulesIncludesFolder = configFolder + "/module-includes"
+	// mainIncludesFolder is the folder where NGINX main context configuration files is stored.
+	mainIncludesFolder = configFolder + "/main-includes"
 
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
@@ -44,12 +44,12 @@ const (
 	// httpMatchVarsFile is the path to the http_match pairs configuration file.
 	httpMatchVarsFile = httpFolder + "/matches.json"
 
-	// loadModulesFile is the path to the file containing any load_module directives.
-	loadModulesFile = modulesIncludesFolder + "/load-modules.conf"
+	// mainIncludesConfigFile is the path to the file containing NGINX configuration in the main context.
+	mainIncludesConfigFile = mainIncludesFolder + "/main.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, modulesIncludesFolder, streamFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, mainIncludesFolder, streamFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -107,7 +107,7 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generateCertBundle(id, bundle))
 	}
 
-	files = append(files, generateLoadModulesConf(conf))
+	files = append(files, generateMainContextConf(conf))
 
 	return files
 }
@@ -191,28 +191,12 @@ func generateConfigVersion(configVersion int) file.File {
 	}
 }
 
-//func generateMainContextConf(conf dataplane.Configuration) file.File {
-//	var c []byte
-//	if conf.Telemetry.Endpoint != "" {
-//		c = []byte("load_module modules/ngx_otel_module.so;")
-//	}
-//
-//	return file.File{
-//		Content: c,
-//		Path:    loadModulesFile,
-//		Type:    file.TypeRegular,
-//	}
-//}
-
-func generateLoadModulesConf(conf dataplane.Configuration) file.File {
-	var c []byte
-	if conf.Telemetry.Endpoint != "" {
-		c = []byte("load_module modules/ngx_otel_module.so;")
-	}
+func generateMainContextConf(conf dataplane.Configuration) file.File {
+	result := executeMainIncludesConfig(conf)
 
 	return file.File{
-		Content: c,
-		Path:    loadModulesFile,
+		Content: result.data,
+		Path:    result.dest,
 		Type:    file.TypeRegular,
 	}
 }

@@ -32,12 +32,8 @@ func BuildConfiguration(
 	serviceResolver resolver.ServiceResolver,
 	configVersion int,
 ) Configuration {
-	if g.GatewayClass == nil || !g.GatewayClass.Valid {
-		return Configuration{Version: configVersion}
-	}
-
-	if g.Gateway == nil {
-		return Configuration{Version: configVersion}
+	if g.GatewayClass == nil || !g.GatewayClass.Valid || g.Gateway == nil {
+		return getDefaultConfiguration(configVersion)
 	}
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
@@ -913,4 +909,11 @@ func buildLogging(g *graph.Graph) Logging {
 	}
 
 	return Logging{ErrorLevel: defaultErrorLogLevel}
+}
+
+func getDefaultConfiguration(configVersion int) Configuration {
+	return Configuration{
+		Version: configVersion,
+		Logging: Logging{ErrorLevel: "info"},
+	}
 }
