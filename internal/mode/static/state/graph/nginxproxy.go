@@ -129,6 +129,17 @@ func validateNginxProxy(
 		npCfg.Spec.IPFamily = helpers.GetPointer[ngfAPI.IPFamilyType](ngfAPI.Dual)
 	}
 
+	allErrs = append(allErrs, validateLogging(npCfg)...)
+
+	allErrs = append(allErrs, validateRewriteClientIP(npCfg)...)
+
+	return allErrs
+}
+
+func validateLogging(npCfg *ngfAPI.NginxProxy) field.ErrorList {
+	var allErrs field.ErrorList
+	spec := field.NewPath("spec")
+
 	if npCfg.Spec.Logging != nil {
 		logging := npCfg.Spec.Logging
 		loggingPath := spec.Child("logging")
@@ -154,9 +165,7 @@ func validateNginxProxy(
 					validLogLevels,
 				))
 		}
-	} // TODO: Might need to put an elseif here and fill in values for default logging
-
-	allErrs = append(allErrs, validateRewriteClientIP(npCfg)...)
+	}
 
 	return allErrs
 }
