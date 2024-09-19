@@ -22,7 +22,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
-	policiesfakes "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
@@ -61,6 +61,9 @@ func getExpectedConfiguration() Configuration {
 			},
 		},
 		CertBundles: map[CertBundleID]CertBundle{},
+		Logging: Logging{
+			ErrorLevel: "info",
+		},
 	}
 }
 
@@ -1493,7 +1496,7 @@ func TestBuildConfiguration(t *testing.T) {
 				}
 				return g
 			}),
-			expConf: Configuration{},
+			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
 			msg:     "invalid gatewayclass",
 		},
 		{
@@ -1512,7 +1515,7 @@ func TestBuildConfiguration(t *testing.T) {
 				}
 				return g
 			}),
-			expConf: Configuration{},
+			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
 			msg:     "missing gatewayclass",
 		},
 		{
@@ -1520,7 +1523,7 @@ func TestBuildConfiguration(t *testing.T) {
 				g.Gateway = nil
 				return g
 			}),
-			expConf: Configuration{},
+			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
 			msg:     "missing gateway",
 		},
 		{
@@ -2228,6 +2231,36 @@ func TestBuildConfiguration(t *testing.T) {
 			}),
 			msg: "NginxProxy with rewriteClientIP details set",
 		},
+		{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.Gateway.Source.ObjectMeta = metav1.ObjectMeta{
+					Name:      "gw",
+					Namespace: "ns",
+				}
+				g.Gateway.Listeners = append(g.Gateway.Listeners, &graph.Listener{
+					Name:   "listener-80-1",
+					Source: listener80,
+					Valid:  true,
+					Routes: map[graph.RouteKey]*graph.L7Route{},
+				})
+				g.NginxProxy = &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelDebug)},
+						},
+					},
+				}
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+				conf.Logging = Logging{ErrorLevel: "debug"}
+				return conf
+			}),
+			msg: "NginxProxy with error log level set to debug",
+		},
 	}
 
 	for _, test := range tests {
@@ -2252,6 +2285,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g.Expect(result.CertBundles).To(Equal(test.expConf.CertBundles))
 			g.Expect(result.Telemetry).To(Equal(test.expConf.Telemetry))
 			g.Expect(result.BaseHTTPConfig).To(Equal(test.expConf.BaseHTTPConfig))
+			g.Expect(result.Logging).To(Equal(test.expConf.Logging))
 		})
 	}
 }
@@ -3741,6 +3775,154 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 			g := NewWithT(t)
 			baseConfig := buildBaseHTTPConfig(tc.g)
 			g.Expect(baseConfig.RewriteClientIPSettings).To(Equal(tc.expRewriteIPSettings))
+		})
+	}
+}
+
+func TestBuildLogging(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		msg                string
+		g                  *graph.Graph
+		expLoggingSettings Logging
+	}{
+		{
+			msg:                "NginxProxy is nil",
+			g:                  &graph.Graph{},
+			expLoggingSettings: Logging{ErrorLevel: "info"},
+		},
+		{
+			msg: "NginxProxy does not specify log level",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "info"},
+		},
+		{
+			msg: "NginxProxy log level set to debug",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelDebug)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "debug"},
+		},
+		{
+			msg: "NginxProxy log level set to info",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelInfo)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "info"},
+		},
+		{
+			msg: "NginxProxy log level set to notice",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelNotice)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "notice"},
+		},
+		{
+			msg: "NginxProxy log level set to warn",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelWarn)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "warn"},
+		},
+		{
+			msg: "NginxProxy log level set to error",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelError)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "error"},
+		},
+		{
+			msg: "NginxProxy log level set to crit",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelCrit)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "crit"},
+		},
+		{
+			msg: "NginxProxy log level set to alert",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelAlert)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "alert"},
+		},
+		{
+			msg: "NginxProxy log level set to emerg",
+			g: &graph.Graph{
+				NginxProxy: &graph.NginxProxy{
+					Valid: true,
+					Source: &ngfAPI.NginxProxy{
+						Spec: ngfAPI.NginxProxySpec{
+							Logging: &ngfAPI.NginxLogging{ErrorLevel: helpers.GetPointer(ngfAPI.NginxLogLevelEmerg)},
+						},
+					},
+				},
+			},
+			expLoggingSettings: Logging{ErrorLevel: "emerg"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			logging := buildLogging(tc.g)
+			g.Expect(logging).To(Equal(tc.expLoggingSettings))
 		})
 	}
 }

@@ -902,13 +902,16 @@ func convertAddresses(addresses []ngfAPI.Address) []string {
 
 func buildLogging(g *graph.Graph) Logging {
 	defaultErrorLogLevel := "info"
+	logSettings := Logging{ErrorLevel: defaultErrorLogLevel}
 
 	ngfProxy := g.NginxProxy
 	if ngfProxy != nil && ngfProxy.Source.Spec.Logging != nil {
-		return Logging{ErrorLevel: string(*ngfProxy.Source.Spec.Logging.ErrorLevel)}
+		if ngfProxy.Source.Spec.Logging.ErrorLevel != nil {
+			logSettings.ErrorLevel = string(*ngfProxy.Source.Spec.Logging.ErrorLevel)
+		}
 	}
 
-	return Logging{ErrorLevel: defaultErrorLogLevel}
+	return logSettings
 }
 
 func GetDefaultConfiguration(configVersion int) Configuration {
