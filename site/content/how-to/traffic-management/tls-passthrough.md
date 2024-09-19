@@ -11,9 +11,15 @@ Learn how to use TLSRoutes to configure TLS Passthrough load-balancing with NGIN
 
 In this guide, we will show how to configure TLS passthrough for your application, using a [TLSRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute).
 
+## Note on Gateway API Experimental Features
+
+{{< important >}} TLSRoute is a Gateway API resource from the experimental release channel. {{< /important >}}
+
+{{<include "installation/install-gateway-api-experimental-features.md" >}}
+
 ## Before you begin
 
-- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric with experimental features enabled.
 - Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text

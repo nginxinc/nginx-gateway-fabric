@@ -12,9 +12,15 @@ Learn how to encrypt HTTP traffic between NGINX Gateway Fabric and your backend 
 
 In this guide, we will show how to specify the TLS configuration of the connection from the Gateway to a backend pod/s via the Service API object using a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). This covers the use-case where the service or backend owner is doing their own TLS and NGINX Gateway Fabric needs to know how to connect to this backend pod that has its own certificate over HTTPS.
 
+## Note on Gateway API Experimental Features
+
+{{< important >}} BackendTLSPolicy is a Gateway API resource from the experimental release channel. {{< /important >}}
+
+{{<include "installation/install-gateway-api-experimental-features.md" >}}
+
 ## Before you begin
 
-- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `--gateway-api-experimental-features` flag.
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric with experimental features enabled.
 - Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
