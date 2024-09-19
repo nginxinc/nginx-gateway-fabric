@@ -143,27 +143,30 @@ func validateLogging(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 	if npCfg.Spec.Logging != nil {
 		logging := npCfg.Spec.Logging
 		loggingPath := spec.Child("logging")
-		errLevel := string(*logging.ErrorLevel)
 
-		validLogLevels := []string{
-			string(ngfAPI.NginxLogLevelDebug),
-			string(ngfAPI.NginxLogLevelInfo),
-			string(ngfAPI.NginxLogLevelNotice),
-			string(ngfAPI.NginxLogLevelWarn),
-			string(ngfAPI.NginxLogLevelError),
-			string(ngfAPI.NginxLogLevelCrit),
-			string(ngfAPI.NginxLogLevelAlert),
-			string(ngfAPI.NginxLogLevelEmerg),
-		}
+		if logging.ErrorLevel != nil {
+			errLevel := string(*logging.ErrorLevel)
 
-		if !slices.Contains(validLogLevels, errLevel) {
-			allErrs = append(
-				allErrs,
-				field.NotSupported(
-					loggingPath,
-					logging,
-					validLogLevels,
-				))
+			validLogLevels := []string{
+				string(ngfAPI.NginxLogLevelDebug),
+				string(ngfAPI.NginxLogLevelInfo),
+				string(ngfAPI.NginxLogLevelNotice),
+				string(ngfAPI.NginxLogLevelWarn),
+				string(ngfAPI.NginxLogLevelError),
+				string(ngfAPI.NginxLogLevelCrit),
+				string(ngfAPI.NginxLogLevelAlert),
+				string(ngfAPI.NginxLogLevelEmerg),
+			}
+
+			if !slices.Contains(validLogLevels, errLevel) {
+				allErrs = append(
+					allErrs,
+					field.NotSupported(
+						loggingPath.Child("errorlevel"),
+						logging.ErrorLevel,
+						validLogLevels,
+					))
+			}
 		}
 	}
 
