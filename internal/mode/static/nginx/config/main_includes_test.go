@@ -56,13 +56,15 @@ func TestExecuteMainIncludesConfig(t *testing.T) {
 
 			res := executeMainIncludesConfig(test.conf)
 
+			g.Expect(res).To(HaveLen(1))
+
 			g.Expect(strings.Count(
-				string(res.data),
+				string(res[0].data),
 				"load_module modules/ngx_otel_module.so;"),
 			).To(Equal(test.expTelemetryEndpointCount))
 
 			g.Expect(strings.Count(
-				string(res.data),
+				string(res[0].data),
 				"error_log stderr "+test.conf.Logging.ErrorLevel+";",
 			)).To(Equal(1))
 		})

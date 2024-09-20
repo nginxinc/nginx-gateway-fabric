@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 func TestExecuteVersion(t *testing.T) {
@@ -14,7 +16,11 @@ func TestExecuteVersion(t *testing.T) {
 		"return 200 42;": 1,
 	}
 
-	maps := string(executeVersion(42))
+	cfg := dataplane.Configuration{
+		Version: 42,
+	}
+
+	maps := string(executeVersion(cfg)[0].data)
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
 	}

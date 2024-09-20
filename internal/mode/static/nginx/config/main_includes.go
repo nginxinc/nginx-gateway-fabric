@@ -9,11 +9,11 @@ import (
 
 var mainIncludesTemplate = gotemplate.Must(gotemplate.New("mainIncludes").Parse(mainIncludesTemplateText))
 
-func executeMainIncludesConfig(conf dataplane.Configuration) executeResult {
+func executeMainIncludesConfig(conf dataplane.Configuration) []executeResult {
 	result := executeResult{
 		dest: mainIncludesConfigFile,
 		data: helpers.MustExecuteTemplate(mainIncludesTemplate, conf),
 	}
 
-	return result
+	return []executeResult{result}
 }

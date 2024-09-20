@@ -99,15 +99,11 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		observability.NewGenerator(conf.Telemetry),
 	)
 
-	files = append(files, g.generateHTTPConfig(conf, policyGenerator)...)
-
-	files = append(files, generateConfigVersion(conf.Version))
+	files = append(files, g.runExecuteFuncs(conf, policyGenerator)...)
 
 	for id, bundle := range conf.CertBundles {
 		files = append(files, generateCertBundle(id, bundle))
 	}
-
-	files = append(files, generateMainContextConf(conf))
 
 	return files
 }
@@ -141,7 +137,7 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(
+func (g GeneratorImpl) runExecuteFuncs(
 	conf dataplane.Configuration,
 	generator policies.Generator,
 ) []file.File {
@@ -177,26 +173,7 @@ func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFu
 		g.executeStreamServers,
 		g.executeStreamUpstreams,
 		executeStreamMaps,
-	}
-}
-
-// generateConfigVersion writes the config version file.
-func generateConfigVersion(configVersion int) file.File {
-	c := executeVersion(configVersion)
-
-	return file.File{
-		Content: c,
-		Path:    configVersionFile,
-		Type:    file.TypeRegular,
-	}
-}
-
-func generateMainContextConf(conf dataplane.Configuration) file.File {
-	result := executeMainIncludesConfig(conf)
-
-	return file.File{
-		Content: result.data,
-		Path:    result.dest,
-		Type:    file.TypeRegular,
+		executeVersion,
+		executeMainIncludesConfig,
 	}
 }
