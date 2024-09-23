@@ -3,6 +3,7 @@ package status
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -92,8 +93,7 @@ func (u *Updater) writeStatuses(
 	copiedObject := resourceType.DeepCopyObject()
 	obj, ok := copiedObject.(client.Object)
 	if !ok {
-		u.logger.Error(ErrFailedAssert, "object is not a client.Object")
-		return
+		panic(fmt.Errorf("object is not a client.Object: %w", ErrFailedAssert))
 	}
 
 	err := wait.ExponentialBackoffWithContext(
