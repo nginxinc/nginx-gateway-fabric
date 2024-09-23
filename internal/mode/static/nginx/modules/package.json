@@ -6,7 +6,7 @@
   "scripts": {
     "format": "prettier -w src/ test/",
     "lint": "prettier -c src/ test/",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage --config test/vitest.config.ts",
     "clean": "rm -rf node_modules coverage"
   },
   "devDependencies": {

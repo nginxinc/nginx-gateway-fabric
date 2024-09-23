@@ -77,6 +77,9 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-22.04
     needs: vars
+    permissions:
+      checks: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -109,13 +112,17 @@ jobs:
         with:
           name: Unit Tests Report
           path: unit-tests.xml
-          reporter: jest-junit
+          reporter: java-junit
+          only-summary: true
         if: always()
 
   njs-unit-tests:
     name: NJS Unit Tests
     runs-on: ubuntu-22.04
     needs: vars
+    permissions:
+      checks: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -137,8 +144,9 @@ jobs:
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests Report
-          path: njs-unit-tests.xml
+          path: ${{ github.workspace }}/internal/mode/static/nginx/modules/njs-unit-tests.xml
           reporter: jest-junit
+          only-summary: true
         if: always()
 
   binary:
