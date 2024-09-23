@@ -104,6 +104,14 @@ jobs:
           path: ${{ github.workspace }}/cover.html
         if: always()
 
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit Tests Report
+          path: unit-tests.xml
+          reporter: jest-junit
+        if: always()
+
   njs-unit-tests:
     name: NJS Unit Tests
     runs-on: ubuntu-22.04
@@ -124,6 +132,14 @@ jobs:
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit Tests Report
+          path: njs-unit-tests.xml
+          reporter: jest-junit
+        if: always()
 
   binary:
     name: Build Binary

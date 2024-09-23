@@ -58,3 +58,8 @@ internal/mode/static/nginx/modules/coverage
 # temporary files used for manifest generation
 config/base/deploy.yaml
 config/base/deploy.yaml.bak
+
+# test reports
+unit-tests.xml
+unit-tests.json
+njs-unit-tests.xml
