@@ -112,3 +112,24 @@ Status:
 ```
 
 If everything is valid, the `ResolvedRefs` condition should be `True`. Otherwise, you will see an `InvalidParameters` condition in the status.
+
+## Dynamically Configure the Data Plane Log Level
+
+You can use the `NginxProxy` resource to dynamically configure the Data Plane Log Level.
+
+The following command creates a basic `NginxProxy` configuration that sets the log level to `warn` instead of the default value of `info`:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: ngf-proxy-config
+spec:
+  logging:
+    errorlevel: warn
+EOF
+```
+
+After following the same instructions shown in Manually Creating The Configuration of attaching the NginxProxy to the GatewayClass,
+the log level of the data plane should be updated to `warn`.
