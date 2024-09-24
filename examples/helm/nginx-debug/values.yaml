@@ -1,0 +1,8 @@
+nginxGateway:
+  name: nginx-gateway
+
+nginx:
+  debug: true
+  config:
+    logging:
+      errorlevel: debug

@@ -88,6 +88,9 @@ nginx:
   # -- Is NGINX Plus image being used
   plus: false
 
+  # -- Is NGINX run in debug mode. This should be used with setting the NGINX error log level to debug.
+  debug: false
+
   # -- The configuration for the data plane that is contained in the NginxProxy resource.
   config:
     {}
@@ -112,6 +115,8 @@ nginx:
     #     batchCount: 4
     #   serviceName: ""
     #   spanAttributes: []
+    # logging:
+    #   errorlevel: info
 
   # Configuration for NGINX Plus usage reporting.
   usage:

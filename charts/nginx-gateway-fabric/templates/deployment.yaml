@@ -183,6 +183,13 @@ spec:
         {{- with .Values.nginx.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
+        {{- if .Values.nginx.debug}}
+        command:
+          - "/bin/sh"
+        args:
+          - "-c"
+          - "rm -rf /var/run/nginx/*.sock && nginx-debug -g 'daemon off;'"
+        {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- if .Values.affinity }}
       affinity:
