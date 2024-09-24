@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/v2/client"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 

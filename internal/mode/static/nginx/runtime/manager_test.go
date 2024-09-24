@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/v2/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"

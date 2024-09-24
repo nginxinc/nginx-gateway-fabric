@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/v2/client"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
