@@ -108,12 +108,9 @@ jobs:
         if: always()
 
       - name: Test Report
-        uses: dorny/test-reporter@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          name: Unit Tests Report
-          path: unit-tests.xml
-          reporter: java-junit
-          only-summary: true
+          files: unit-tests.xml
         if: always()
 
   njs-unit-tests:
@@ -141,12 +138,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Test Report
-        uses: dorny/test-reporter@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          name: Unit Tests Report
-          path: ${{ github.workspace }}/internal/mode/static/nginx/modules/njs-unit-tests.xml
-          reporter: jest-junit
-          only-summary: true
+          files: ${{ github.workspace }}/internal/mode/static/nginx/modules/njs-unit-tests.xml
         if: always()
 
   binary:
