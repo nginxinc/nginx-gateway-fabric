@@ -50,4 +50,4 @@ There are two options for accessing NGINX Gateway Fabric depending on the type o
 
 NGINX Gateway Fabric uses the created service to update the **Addresses** field in the **Gateway Status** resource. Using a **LoadBalancer** service sets this field to the IP address and/or hostname of that service. Without a service, the pod IP address is used.
 
-This gateway is associated with the NGINX Gateway Fabric through the **gatewayClassName** field. The default installation of NGINX Gateway Fabric creates a **GatewayClass** with the name **nginx**. NGINX Gateway Fabric will only configure gateways with a **gatewayClassName** of **nginx** unless you change the name via the `--gatewayclass` [command-line flag](/docs/cli-help.md#static-mode).
+This gateway is associated with the NGINX Gateway Fabric through the **gatewayClassName** field. The default installation of NGINX Gateway Fabric creates a **GatewayClass** with the name **nginx**. NGINX Gateway Fabric will only configure gateways with a **gatewayClassName** of **nginx** unless you change the name via the `--gatewayclass` [command-line flag]({{< relref "reference/cli-help.md#static-mode">}}).
