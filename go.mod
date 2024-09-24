@@ -2,8 +2,6 @@ module github.com/nginxinc/nginx-gateway-fabric
 
 go 1.22.6
 
-toolchain go1.23.1
-
 require (
 	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.4.2

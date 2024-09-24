@@ -1,6 +1,6 @@
 module github.com/nginxinc/nginx-gateway-fabric/tests
 
-go 1.22.2
+go 1.22.6
 
 require (
 	github.com/nginxinc/nginx-gateway-fabric v0.0.0
