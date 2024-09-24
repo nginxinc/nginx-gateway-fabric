@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	wildcardHostname    = "~^"
-	alpineSSLRootCAPath = "/etc/ssl/cert.pem"
+	wildcardHostname     = "~^"
+	alpineSSLRootCAPath  = "/etc/ssl/cert.pem"
+	defaultErrorLogLevel = "info"
 )
 
 // BuildConfiguration builds the Configuration from the Graph.
@@ -38,29 +39,22 @@ func BuildConfiguration(
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	httpServers, sslServers := buildServers(g)
-	passthroughServers := buildPassthroughServers(g)
-	streamUpstreams := buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
-	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
-	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
-	telemetry := buildTelemetry(g)
-	logging := buildLogging(g)
 
 	config := Configuration{
 		HTTPServers:           httpServers,
 		SSLServers:            sslServers,
-		TLSPassthroughServers: passthroughServers,
-		Upstreams:             upstreams,
-		StreamUpstreams:       streamUpstreams,
+		TLSPassthroughServers: buildPassthroughServers(g),
+		Upstreams:             buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
+		StreamUpstreams:       buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
 		BackendGroups:         backendGroups,
-		SSLKeyPairs:           keyPairs,
+		SSLKeyPairs:           buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners),
 		Version:               configVersion,
-		CertBundles:           certBundles,
-		Telemetry:             telemetry,
+		CertBundles:           buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups),
+		Telemetry:             buildTelemetry(g),
 		BaseHTTPConfig:        baseHTTPConfig,
-		Logging:               logging,
+		Logging:               buildLogging(g),
 	}
 
 	return config
@@ -901,7 +895,6 @@ func convertAddresses(addresses []ngfAPI.Address) []string {
 }
 
 func buildLogging(g *graph.Graph) Logging {
-	defaultErrorLogLevel := "info"
 	logSettings := Logging{ErrorLevel: defaultErrorLogLevel}
 
 	ngfProxy := g.NginxProxy

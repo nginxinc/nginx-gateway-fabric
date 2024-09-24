@@ -3921,8 +3921,8 @@ func TestBuildLogging(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
-			logging := buildLogging(tc.g)
-			g.Expect(logging).To(Equal(tc.expLoggingSettings))
+
+			g.Expect(buildLogging(tc.g)).To(Equal(tc.expLoggingSettings))
 		})
 	}
 }
