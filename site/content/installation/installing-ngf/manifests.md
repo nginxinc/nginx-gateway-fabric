@@ -138,6 +138,16 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{% /tab %}}
 
+{{%tab name="NGINX in debug mode"%}}
+
+Deploys NGINX Gateway Fabric with NGINX OSS in debug mode.
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/nginx-debug/deploy.yaml
+```
+
+{{% /tab %}}
+
 {{</tabs>}}
 
 ### 4. Verify the Deployment

@@ -131,5 +131,32 @@ spec:
 EOF
 ```
 
-After following the same instructions shown in Manually Creating The Configuration of attaching the NginxProxy to the GatewayClass,
-the log level of the data plane should be updated to `warn`.
+After attaching the NginxProxy to the GatewayClass, the log level of the data plane will be updated to `warn`.
+
+To view the full list of supported log levels, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}})
+
+{{< note >}}For `debug` logging to work, NGINX needs to be built with `--with-debug` or "in debug mode". For more information visit the official NGINX documentation
+["A debugging log"](https://nginx.org/en/docs/debugging_log.html). NGINX Gateway Fabric can easily
+be [run with NGINX in debug mode](#run-nginx-gateway-fabric-with-nginx-in-debug-mode) upon startup through the addition
+of a few arguments. {{</ note >}}
+
+## Run NGINX Gateway Fabric with NGINX in debug mode
+
+To run NGINX Gateway Fabric with NGINX in debug mode, follow the [installation document]({{< relref "installation/installing-ngf" >}}) with these additional steps:
+
+Using Helm: Set `nginx.debug` to true.
+
+Using Kubernetes Manifests: Under the `nginx` container of the deployment manifest, add `-c` and `rm -rf /var/run/nginx/*.sock && nginx-debug -g 'daemon off;'`
+as arguments and add `/bin/sh` as the command. The deployment manifest should look something like this:
+
+```text
+...
+- args:
+  - -c
+  - rm -rf /var/run/nginx/*.sock && nginx-debug -g 'daemon off;'
+  command:
+  - /bin/sh
+...
+```
+
+To view a full example, look at our generated [deployment manifest](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/deploy/nginx-debug/deploy.yaml).
