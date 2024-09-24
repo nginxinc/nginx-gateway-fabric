@@ -178,7 +178,7 @@ func createCrossplaneExecutor(
 	ngfPodName,
 	namespace string,
 ) (remotecommand.Executor, error) {
-	cmd := []string{"crossplane", "parse", "/etc/nginx/nginx.conf"}
+	cmd := []string{"./crossplane", "/etc/nginx/nginx.conf"}
 	opts := &core.PodExecOptions{
 		Command:   cmd,
 		Container: "crossplane",

@@ -41,7 +41,7 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: build-crossplane-image
 build-crossplane-image: ## Build the crossplane image
-	docker build --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) -t nginx-crossplane:latest -f Dockerfile.crossplane ..
+	docker build --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) -t nginx-crossplane:latest -f framework/crossplane/Dockerfile ..
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
