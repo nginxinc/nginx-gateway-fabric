@@ -189,23 +189,23 @@ being performed on NGF), you may need to configure delayed termination on the NG
 
    ```yaml
     nginxGateway:
-    <...>
-    lifecycle:
-        preStop:
-        exec:
-            command:
-            - /usr/bin/gateway
-            - sleep
-            - --duration=40s # This flag is optional, the default is 30s
+        <...>
+        lifecycle:
+            preStop:
+                exec:
+                    command:
+                    - /usr/bin/gateway
+                    - sleep
+                    - --duration=40s # This flag is optional, the default is 30s
 
     nginx:
-    <...>
-    lifecycle:
-        preStop:
-        exec:
-            command:
-            - /bin/sleep
-            - "40"
+        <...>
+        lifecycle:
+            preStop:
+                exec:
+                    command:
+                    - /bin/sleep
+                    - "40"
    ```
 
 2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
