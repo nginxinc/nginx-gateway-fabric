@@ -349,7 +349,7 @@ func (h *eventHandlerImpl) updateUpstreamServers(
 		}
 		var upstreams []upstream
 
-		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
+		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams(context.TODO())
 		if err != nil {
 			logger.Error(err, "failed to get upstreams from API, reloading configuration instead")
 			return reload()

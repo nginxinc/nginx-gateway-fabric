@@ -151,7 +151,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		})
 
 		It("returns no upstreams from NGINX Plus API when upstreams are nil", func() {
-			upstreams, err := manager.GetUpstreams()
+			upstreams, err := manager.GetUpstreams(context.Background())
 
 			Expect(err).To(HaveOccurred())
 			Expect(upstreams).To(BeEmpty())
@@ -179,7 +179,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 			ngxPlusClient.GetUpstreamsReturns(&expUpstreams, nil)
 
-			upstreams, err := manager.GetUpstreams()
+			upstreams, err := manager.GetUpstreams(context.Background())
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expUpstreams).To(Equal(upstreams))
@@ -188,7 +188,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		It("returns an error when GetUpstreams fails", func() {
 			ngxPlusClient.GetUpstreamsReturns(nil, errors.New("failed to get upstreams"))
 
-			upstreams, err := manager.GetUpstreams()
+			upstreams, err := manager.GetUpstreams(context.Background())
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to get upstreams"))
@@ -213,7 +213,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 		It("should panic when fetching HTTP upstream servers", func() {
 			upstreams := func() {
-				_, err = manager.GetUpstreams()
+				_, err = manager.GetUpstreams(context.Background())
 			}
 
 			Expect(upstreams).To(Panic())

@@ -38,6 +38,7 @@ var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
 type NginxPlusClient interface {
 	UpdateHTTPServers(
+		ctx context.Context,
 		upstream string,
 		servers []ngxclient.UpstreamServer,
 	) (
@@ -46,7 +47,7 @@ type NginxPlusClient interface {
 		updated []ngxclient.UpstreamServer,
 		err error,
 	)
-	GetUpstreams() (*ngxclient.Upstreams, error)
+	GetUpstreams(ctx context.Context) (*ngxclient.Upstreams, error)
 }
 
 //counterfeiter:generate . Manager
@@ -62,7 +63,7 @@ type Manager interface {
 	UpdateHTTPServers(string, []ngxclient.UpstreamServer) error
 	// GetUpstreams uses the NGINX Plus API to get the upstreams.
 	// Only usable if running NGINX Plus.
-	GetUpstreams() (ngxclient.Upstreams, error)
+	GetUpstreams(ctx context.Context) (ngxclient.Upstreams, error)
 }
 
 // MetricsCollector is an interface for the metrics of the NGINX runtime manager.
@@ -150,7 +151,7 @@ func (m *ManagerImpl) UpdateHTTPServers(upstream string, servers []ngxclient.Ups
 		panic("cannot update HTTP upstream servers: NGINX Plus not enabled")
 	}
 
-	added, deleted, updated, err := m.ngxPlusClient.UpdateHTTPServers(upstream, servers)
+	added, deleted, updated, err := m.ngxPlusClient.UpdateHTTPServers(context.TODO(), upstream, servers)
 	m.logger.V(1).Info("Added upstream servers", "count", len(added))
 	m.logger.V(1).Info("Deleted upstream servers", "count", len(deleted))
 	m.logger.V(1).Info("Updated upstream servers", "count", len(updated))
@@ -160,12 +161,12 @@ func (m *ManagerImpl) UpdateHTTPServers(upstream string, servers []ngxclient.Ups
 
 // GetUpstreams uses the NGINX Plus API to get the upstreams.
 // Only usable if running NGINX Plus.
-func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
+func (m *ManagerImpl) GetUpstreams(ctx context.Context) (ngxclient.Upstreams, error) {
 	if !m.IsPlus() {
 		panic("cannot get HTTP upstream servers: NGINX Plus not enabled")
 	}
 
-	upstreams, err := m.ngxPlusClient.GetUpstreams()
+	upstreams, err := m.ngxPlusClient.GetUpstreams(ctx)
 	if err != nil {
 		return nil, err
 	}
