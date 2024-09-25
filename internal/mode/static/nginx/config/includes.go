@@ -105,11 +105,9 @@ func createIncludesFromServerSnippetsFilters(server dataplane.VirtualServer) []s
 
 	for _, pr := range server.PathRules {
 		for _, mr := range pr.MatchRules {
-			if len(mr.Filters.SnippetsFilters) > 0 {
-				for _, sf := range mr.Filters.SnippetsFilters {
-					if sf.ServerSnippet != nil {
-						includes = append(includes, createIncludeFromSnippet(*sf.ServerSnippet))
-					}
+			for _, sf := range mr.Filters.SnippetsFilters {
+				if sf.ServerSnippet != nil {
+					includes = append(includes, createIncludeFromSnippet(*sf.ServerSnippet))
 				}
 			}
 		}
