@@ -466,22 +466,9 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		return hr
 	}
 
-	hrWithOneBackend := createRoute("hr1", "Service", 1, "svc1")
-	hrWithTwoBackends := createRoute("hr2", "Service", 2, "svc1")
-	hrWithTwoDiffBackends := createRoute("hr2", "Service", 2, "svc1")
-	hrWithInvalidRule := createRoute("hr3", "NotService", 1, "svc1")
-	hrWithZeroBackendRefs := createRoute("hr4", "Service", 1, "svc1")
-	hrWithZeroBackendRefs.Spec.Rules[0].RouteBackendRefs = nil
-	hrWithTwoDiffBackends.Spec.Rules[0].RouteBackendRefs[1].Name = "svc2"
-
-	hrWithOneBackendInvalid := createRoute("hr1", "Service", 1, "svc1")
-	hrWithOneBackendInvalid.Valid = false
-
-	hrWithOneBackendInvalidMatches := createRoute("hr1", "Service", 1, "svc1")
-	hrWithOneBackendInvalidMatches.Spec.Rules[0].ValidMatches = false
-
-	hrWithOneBackendInvalidFilters := createRoute("hr1", "Service", 1, "svc1")
-	hrWithOneBackendInvalidFilters.Spec.Rules[0].Filters = RouteRuleFilters{Valid: false}
+	modRoute := func(route *L7Route, mod func(*L7Route) *L7Route) *L7Route {
+		return mod(route)
+	}
 
 	getSvc := func(name string) *v1.Service {
 		return &v1.Service{
@@ -619,7 +606,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		expectedConditions  []conditions.Condition
 	}{
 		{
-			route: hrWithOneBackend,
+			route: createRoute("hr1", "Service", 1, "svc1"),
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -633,7 +620,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with one backend",
 		},
 		{
-			route: hrWithTwoBackends,
+			route: createRoute("hr2", "Service", 2, "svc1"),
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -653,7 +640,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends",
 		},
 		{
-			route: hrWithTwoBackends,
+			route: createRoute("hr2", "Service", 2, "svc1"),
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -675,28 +662,37 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends and matching policies",
 		},
 		{
-			route:               hrWithOneBackendInvalid,
+			route: modRoute(createRoute("hr1", "Service", 1, "svc1"), func(route *L7Route) *L7Route {
+				route.Valid = false
+				return route
+			}),
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid route",
 		},
 		{
-			route:               hrWithOneBackendInvalidMatches,
+			route: modRoute(createRoute("hr1", "Service", 1, "svc1"), func(route *L7Route) *L7Route {
+				route.Spec.Rules[0].ValidMatches = false
+				return route
+			}),
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid matches",
 		},
 		{
-			route:               hrWithOneBackendInvalidFilters,
+			route: modRoute(createRoute("hr1", "Service", 1, "svc1"), func(route *L7Route) *L7Route {
+				route.Spec.Rules[0].Filters = RouteRuleFilters{Valid: false}
+				return route
+			}),
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid filters",
 		},
 		{
-			route: hrWithInvalidRule,
+			route: createRoute("hr3", "NotService", 1, "svc1"),
 			expectedBackendRefs: []BackendRef{
 				{
 					Weight: 1,
@@ -711,7 +707,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef",
 		},
 		{
-			route: hrWithTwoDiffBackends,
+			route: modRoute(createRoute("hr2", "Service", 2, "svc1"), func(route *L7Route) *L7Route {
+				route.Spec.Rules[0].RouteBackendRefs[1].Name = "svc2"
+				return route
+			}),
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -737,7 +736,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef - backend TLS policies do not match for all backends",
 		},
 		{
-			route:               hrWithZeroBackendRefs,
+			route: modRoute(createRoute("hr4", "Service", 1, "svc1"), func(route *L7Route) *L7Route {
+				route.Spec.Rules[0].RouteBackendRefs = nil
+				return route
+			}),
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			name:                "zero backendRefs",
