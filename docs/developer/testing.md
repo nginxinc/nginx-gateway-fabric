@@ -36,7 +36,7 @@ the [Counterfeiter](https://github.com/maxbrunsfeld/counterfeiter) tool. Counter
 implementations of internal and public interfaces, allowing us to isolate and control dependencies during testing. It
 simplifies the process of mocking and stubbing, making our tests more robust and flexible.
 
-**Parallelize unit tests**:  We use `t.Parallel()` to parallelize all unit tests and subtests, allowing us faster execution. To avoid race conditions, each test and subtest is designed to be independent. If a test cannot be parallelized due to sequential dependencies, a comment stating the reason must be provided.
+**Parallelize unit tests**: In general, all tests should be designed to run in parallel for faster execution and help uncover bugs. For standard Go tests, this requires adding `t.Parallel()` to every test and subtest. Ginkgo tests, on the other hand, automatically run in parallel without the need for additional configuration. If a component under test requires sequential execution, you can run tests sequentially by using an [ordered container](https://onsi.github.io/ginkgo/#ordered-containers) for Ginkgo tests or by omitting `t.Parallel()` from the go test or subtest. In such cases, it’s essential to include a comment explaining why parallel execution is not possible.
 
 By combining BDD style tests, unit tests, and mock generation, we aim to achieve a comprehensive and maintainable
 testing strategy. This approach enables us to ensure the correctness, reliability, and flexibility of our codebase while
