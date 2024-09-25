@@ -345,63 +345,57 @@ func TestRefAllowedFrom(t *testing.T) {
 		},
 	}
 
-	resolver := newReferenceGrantResolver(refGrants)
-	refAllowedFromGRPCRoute := resolver.refAllowedFrom(fromGRPCRoute(grNs))
-	refAllowedFromHTTPRoute := resolver.refAllowedFrom(fromHTTPRoute(hrNs))
-	refAllowedFromTLSRoute := resolver.refAllowedFrom(fromTLSRoute(trNs))
-	refAllowedFromGateway := resolver.refAllowedFrom(fromGateway(gwNs))
-
 	tests := []struct {
 		name           string
-		refAllowedFrom func(resource toResource) bool
+		refAllowedFrom fromResource
 		toResource     toResource
 		expAllowed     bool
 	}{
 		{
 			name:           "ref allowed from gateway to secret",
-			refAllowedFrom: refAllowedFromGateway,
+			refAllowedFrom: fromGateway(gwNs),
 			toResource:     toSecret(allowedGatewayNsName),
 			expAllowed:     true,
 		},
 		{
 			name:           "ref not allowed from gateway to secret",
-			refAllowedFrom: refAllowedFromGateway,
+			refAllowedFrom: fromGateway(gwNs),
 			toResource:     toSecret(notAllowedNsName),
 			expAllowed:     false,
 		},
 		{
 			name:           "ref allowed from httproute to service",
-			refAllowedFrom: refAllowedFromHTTPRoute,
+			refAllowedFrom: fromHTTPRoute(hrNs),
 			toResource:     toService(allowedHTTPRouteNsName),
 			expAllowed:     true,
 		},
 		{
 			name:           "ref not allowed from httproute to service",
-			refAllowedFrom: refAllowedFromHTTPRoute,
+			refAllowedFrom: fromHTTPRoute(hrNs),
 			toResource:     toService(notAllowedNsName),
 			expAllowed:     false,
 		},
 		{
 			name:           "ref allowed from grpcroute to service",
-			refAllowedFrom: refAllowedFromGRPCRoute,
+			refAllowedFrom: fromGRPCRoute(grNs),
 			toResource:     toService(allowedGRPCRouteNsName),
 			expAllowed:     true,
 		},
 		{
 			name:           "ref not allowed from grpcroute to service",
-			refAllowedFrom: refAllowedFromGRPCRoute,
+			refAllowedFrom: fromGRPCRoute(grNs),
 			toResource:     toService(notAllowedNsName),
 			expAllowed:     false,
 		},
 		{
 			name:           "ref allowed from tlsroute to service",
-			refAllowedFrom: refAllowedFromTLSRoute,
+			refAllowedFrom: fromTLSRoute(trNs),
 			toResource:     toService(allowedTLSRouteNsName),
 			expAllowed:     true,
 		},
 		{
 			name:           "ref not allowed from tlsroute to service",
-			refAllowedFrom: refAllowedFromTLSRoute,
+			refAllowedFrom: fromTLSRoute(trNs),
 			toResource:     toService(notAllowedNsName),
 			expAllowed:     false,
 		},
@@ -411,8 +405,11 @@ func TestRefAllowedFrom(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
+			resolver := newReferenceGrantResolver(refGrants)
+			refAllowed := resolver.refAllowedFrom(test.refAllowedFrom)
+
 			g := NewWithT(t)
-			g.Expect(test.refAllowedFrom(test.toResource)).To(Equal(test.expAllowed))
+			g.Expect(refAllowed(test.toResource)).To(Equal(test.expAllowed))
 		})
 	}
 }
