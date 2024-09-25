@@ -738,29 +738,6 @@ func createHTTPFilters(filters []graph.Filter) HTTPFilters {
 	return result
 }
 
-func convertSnippetsFilter(filter *graph.SnippetsFilter) SnippetsFilter {
-	result := SnippetsFilter{}
-
-	if snippet, ok := filter.Snippets[ngfAPI.NginxContextHTTPServer]; ok {
-		result.ServerSnippet = &Snippet{
-			Name:     createSnippetName(ngfAPI.NginxContextHTTPServer, client.ObjectKeyFromObject(filter.Source)),
-			Contents: snippet,
-		}
-	}
-
-	if snippet, ok := filter.Snippets[ngfAPI.NginxContextHTTPServerLocation]; ok {
-		result.LocationSnippet = &Snippet{
-			Name: createSnippetName(
-				ngfAPI.NginxContextHTTPServerLocation,
-				client.ObjectKeyFromObject(filter.Source),
-			),
-			Contents: snippet,
-		}
-	}
-
-	return result
-}
-
 // listenerHostnameMoreSpecific returns true if host1 is more specific than host2.
 func listenerHostnameMoreSpecific(host1, host2 *v1.Hostname) bool {
 	var host1Str, host2Str string
