@@ -6,18 +6,13 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 source scripts/vars.env
 
-SCRIPT=run-tests.sh
-if [ "${NFR}" = "true" ]; then
-    SCRIPT=run-nfr-tests.sh
-fi
-
 gcloud compute scp --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" "${SCRIPT_DIR}"/vars.env username@"${RESOURCE_NAME}":~
 
 gcloud compute ssh --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" username@"${RESOURCE_NAME}" \
     --command="export START_LONGEVITY=${START_LONGEVITY} &&\
         export STOP_LONGEVITY=${STOP_LONGEVITY} &&\
         export CI=${CI} &&\
-        bash -s" <"${SCRIPT_DIR}"/remote-scripts/${SCRIPT}
+        bash -s" <"${SCRIPT_DIR}"/remote-scripts/run-nfr-tests.sh
 retcode=$?
 
 if [ ${retcode} -ne 0 ]; then
@@ -25,14 +20,12 @@ if [ ${retcode} -ne 0 ]; then
     exit 1
 fi
 
-if [ "${NFR}" = "true" ]; then
-    ## Use rsync if running locally (faster); otherwise if in the pipeline don't download an SSH config
-    if [ "${CI}" = "false" ]; then
-        gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh >/dev/null
-        rsync -ave 'ssh -F ngf-gcp.ssh' username@"${RESOURCE_NAME}"."${GKE_CLUSTER_ZONE}"."${GKE_PROJECT}":~/nginx-gateway-fabric/tests/results .
-    else
-        gcloud compute scp --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" --recurse username@"${RESOURCE_NAME}":~/nginx-gateway-fabric/tests/results .
-    fi
+## Use rsync if running locally (faster); otherwise if in the pipeline don't download an SSH config
+if [ "${CI}" = "false" ]; then
+    gcloud compute config-ssh --ssh-config-file ngf-gcp.ssh >/dev/null
+    rsync -ave 'ssh -F ngf-gcp.ssh' username@"${RESOURCE_NAME}"."${GKE_CLUSTER_ZONE}"."${GKE_PROJECT}":~/nginx-gateway-fabric/tests/results .
+else
+    gcloud compute scp --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" --recurse username@"${RESOURCE_NAME}":~/nginx-gateway-fabric/tests/results .
 fi
 
 ## If tearing down the longevity test, we need to collect logs from gcloud and add to the results

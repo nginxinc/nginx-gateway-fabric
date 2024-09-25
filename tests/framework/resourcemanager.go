@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,8 +31,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"k8s.io/client-go/util/retry"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -42,6 +41,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -50,6 +52,7 @@ import (
 type ResourceManager struct {
 	K8sClient      client.Client
 	ClientGoClient kubernetes.Interface // used when k8sClient is not enough
+	K8sConfig      *rest.Config
 	FS             embed.FS
 	TimeoutConfig  TimeoutConfig
 }
@@ -811,4 +814,56 @@ func (rm *ResourceManager) WaitForGatewayObservedGeneration(
 			return false, nil
 		},
 	)
+}
+
+// GetNginxConfig uses crossplane to get the nginx configuration and convert it to JSON.
+func (rm *ResourceManager) GetNginxConfig(ngfPodName, namespace string) (*Payload, error) {
+	if err := injectCrossplaneContainer(
+		rm.ClientGoClient,
+		rm.TimeoutConfig.UpdateTimeout,
+		ngfPodName,
+		namespace,
+	); err != nil {
+		return nil, err
+	}
+
+	exec, err := createCrossplaneExecutor(rm.ClientGoClient, rm.K8sConfig, ngfPodName, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.RequestTimeout)
+	defer cancel()
+
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+
+	if err := wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			if err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+				Stdout: buf,
+				Stderr: errBuf,
+			}); err != nil {
+				return false, nil //nolint:nilerr // we want to retry if there's an error
+			}
+
+			if errBuf.String() != "" {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	); err != nil {
+		return nil, fmt.Errorf("could not connect to ephemeral container: %w", err)
+	}
+
+	conf := &Payload{}
+	if err := json.Unmarshal(buf.Bytes(), conf); err != nil {
+		return nil, fmt.Errorf("error unmarshaling nginx config: %w", err)
+	}
+
+	return conf, nil
 }

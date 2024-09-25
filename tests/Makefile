@@ -12,6 +12,7 @@ GW_SERVICE_TYPE = NodePort## Service type to use for the gateway
 GW_SVC_GKE_INTERNAL = false
 NGF_VERSION ?= edge## NGF version to be tested
 PULL_POLICY = Never## Pull policy for the images
+NGINX_CONF_DIR = internal/mode/static/nginx/conf
 PROVISIONER_MANIFEST = conformance/provisioner/provisioner.yaml
 SUPPORTED_EXTENDED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification
 STANDARD_CONFORMANCE_PROFILES = GATEWAY-HTTP,GATEWAY-GRPC
@@ -37,6 +38,10 @@ update-go-modules: ## Update the gateway-api go modules to latest main version
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
 	docker build -t $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) -f conformance/Dockerfile .
+
+.PHONY: build-crossplane-image
+build-crossplane-image: ## Build the crossplane image
+	docker build --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) -t nginx-crossplane:latest -f framework/crossplane/Dockerfile ..
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
@@ -80,9 +85,6 @@ ifeq ($(PLUS_ENABLED),true)
 	NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
 endif
 
-.PHONY: setup-gcp-and-run-tests
-setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the functional tests
-
 .PHONY: setup-gcp-and-run-nfr-tests
 setup-gcp-and-run-nfr-tests: create-gke-router create-and-setup-vm nfr-test ## Create and setup a GKE router and GCP VM for tests and run the NFR tests
 
@@ -102,13 +104,9 @@ create-gke-router: ## Create a GKE router to allow egress traffic from private n
 sync-files-to-vm: ## Syncs your local NGF files with the NGF repo on the VM
 	./scripts/sync-files-to-vm.sh
 
-.PHONY: run-tests-on-vm
-run-tests-on-vm: ## Run the functional tests on a GCP VM
-	./scripts/run-tests-gcp-vm.sh
-
 .PHONY: nfr-test
 nfr-test: ## Run the NFR tests on a GCP VM
-	NFR=true CI=$(CI) ./scripts/run-tests-gcp-vm.sh
+	CI=$(CI) ./scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
 start-longevity-test: export START_LONGEVITY=true
@@ -130,7 +128,8 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: test
-test: ## Runs the functional tests on your default k8s cluster
+test: build-crossplane-image ## Runs the functional tests on your kind k8s cluster
+	kind load docker-image nginx-crossplane:latest --name $(CLUSTER_NAME)
 	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending \
 		--trace -r -v --buildvcs --force-newlines $(GITHUB_OUTPUT) \
 		--label-filter "functional" $(GINKGO_FLAGS) ./suite -- \
