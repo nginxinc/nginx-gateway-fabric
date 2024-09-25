@@ -242,20 +242,15 @@ func validateFilterHeaderModifierFields(
 	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
 		headerModifier.Add,
 		headerModifierPath.Child(add),
-	)...,
-	)
-	allErrs = append(
-		allErrs, validateRequestHeadersCaseInsensitiveUnique(
-			headerModifier.Set,
-			headerModifierPath.Child(set),
-		)...,
-	)
-	allErrs = append(
-		allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
-			headerModifier.Remove,
-			headerModifierPath.Child(remove),
-		)...,
-	)
+	)...)
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Set,
+		headerModifierPath.Child(set),
+	)...)
+	allErrs = append(allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
+		headerModifier.Remove,
+		headerModifierPath.Child(remove),
+	)...)
 
 	for _, h := range headerModifier.Add {
 		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
@@ -297,31 +292,25 @@ func validateFilterResponseHeaderModifier(
 	}
 	var allErrs field.ErrorList
 
-	allErrs = append(
-		allErrs, validateResponseHeaders(
-			responseHeaderModifier.Add,
-			filterPath.Child(add),
-		)...,
-	)
+	allErrs = append(allErrs, validateResponseHeaders(
+		responseHeaderModifier.Add,
+		filterPath.Child(add),
+	)...)
 
-	allErrs = append(
-		allErrs, validateResponseHeaders(
-			responseHeaderModifier.Set,
-			filterPath.Child(set),
-		)...,
-	)
+	allErrs = append(allErrs, validateResponseHeaders(
+		responseHeaderModifier.Set,
+		filterPath.Child(set),
+	)...)
 
 	var removeHeaders []v1.HTTPHeader
 	for _, h := range responseHeaderModifier.Remove {
 		removeHeaders = append(removeHeaders, v1.HTTPHeader{Name: v1.HTTPHeaderName(h)})
 	}
 
-	allErrs = append(
-		allErrs, validateResponseHeaders(
-			removeHeaders,
-			filterPath.Child(remove),
-		)...,
-	)
+	allErrs = append(allErrs, validateResponseHeaders(
+		removeHeaders,
+		filterPath.Child(remove),
+	)...)
 
 	return allErrs
 }

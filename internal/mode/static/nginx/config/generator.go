@@ -122,13 +122,11 @@ func (g GeneratorImpl) executeConfigTemplates(
 
 	files := make([]file.File, 0, len(fileBytes))
 	for fp, bytes := range fileBytes {
-		files = append(
-			files, file.File{
-				Path:    fp,
-				Content: bytes,
-				Type:    file.TypeRegular,
-			},
-		)
+		files = append(files, file.File{
+			Path:    fp,
+			Content: bytes,
+			Type:    file.TypeRegular,
+		})
 	}
 
 	return files

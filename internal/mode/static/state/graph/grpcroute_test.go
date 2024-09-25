@@ -203,32 +203,30 @@ func TestBuildGRPCRoutes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
-					client.ObjectKeyFromObject(sf): {
-						Source: sf,
-						Valid:  true,
-						Snippets: map[ngfAPI.NginxContext]string{
-							ngfAPI.NginxContextHTTP: "http snippet",
-						},
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				client.ObjectKeyFromObject(sf): {
+					Source: sf,
+					Valid:  true,
+					Snippets: map[ngfAPI.NginxContext]string{
+						ngfAPI.NginxContextHTTP: "http snippet",
 					},
-				}
+				},
+			}
 
-				routes := buildRoutesForGateways(
-					validator,
-					map[types.NamespacedName]*v1.HTTPRoute{},
-					grRoutes,
-					test.gwNsNames,
-					npCfg,
-					snippetsFilters,
-				)
-				g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
-			},
-		)
+			routes := buildRoutesForGateways(
+				validator,
+				map[types.NamespacedName]*v1.HTTPRoute{},
+				grRoutes,
+				test.gwNsNames,
+				npCfg,
+				snippetsFilters,
+			)
+			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
+		})
 	}
 }
 

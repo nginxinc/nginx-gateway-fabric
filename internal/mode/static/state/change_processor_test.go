@@ -348,15 +348,13 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			processor = state.NewChangeProcessorImpl(
-				state.ChangeProcessorConfig{
-					GatewayCtlrName:  controllerName,
-					GatewayClassName: gcName,
-					Logger:           zap.New(),
-					Validators:       createAlwaysValidValidators(),
-					MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
-				},
-			)
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:  controllerName,
+				GatewayClassName: gcName,
+				Logger:           zap.New(),
+				Validators:       createAlwaysValidValidators(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
+			})
 		})
 
 		Describe("Process gateway resources", Ordered, func() {
@@ -503,10 +501,7 @@ var _ = Describe("ChangeProcessor", func() {
 				gw1 = createGateway(
 					"gateway-1",
 					createHTTPListener(),
-					createHTTPSListener(
-						httpsListenerName,
-						diffNsTLSSecret,
-					), // cert in diff namespace than gw
+					createHTTPSListener(httpsListenerName, diffNsTLSSecret), // cert in diff namespace than gw
 					createTLSListener(tlsListenerName),
 				)
 
@@ -567,11 +562,8 @@ var _ = Describe("ChangeProcessor", func() {
 							{
 								BackendRefs: []graph.BackendRef{
 									{
-										SvcNsName: types.NamespacedName{
-											Namespace: "service-ns",
-											Name:      "service",
-										},
-										Weight: 1,
+										SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+										Weight:    1,
 									},
 								},
 								ValidMatches: true,
@@ -650,11 +642,8 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: graph.L4RouteSpec{
 						Hostnames: tr1.Spec.Hostnames,
 						BackendRef: graph.BackendRef{
-							SvcNsName: types.NamespacedName{
-								Namespace: "tls-service-ns",
-								Name:      "tls-service",
-							},
-							Valid: false,
+							SvcNsName: types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"},
+							Valid:     false,
 						},
 					},
 					Valid:      true,
@@ -681,11 +670,8 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: graph.L4RouteSpec{
 						Hostnames: tr2.Spec.Hostnames,
 						BackendRef: graph.BackendRef{
-							SvcNsName: types.NamespacedName{
-								Namespace: "tls-service-ns",
-								Name:      "tls-service",
-							},
-							Valid: false,
+							SvcNsName: types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"},
+							Valid:     false,
 						},
 					},
 					Valid:      true,
@@ -715,14 +701,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Routes:     map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 								L4Routes:   map[graph.L4RouteKey]*graph.L4Route{},
 								SupportedKinds: []v1.RouteGroupKind{
-									{
-										Kind:  v1.Kind(kinds.HTTPRoute),
-										Group: helpers.GetPointer[v1.Group](v1.GroupName),
-									},
-									{
-										Kind:  v1.Kind(kinds.GRPCRoute),
-										Group: helpers.GetPointer[v1.Group](v1.GroupName),
-									},
+									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+									{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 								},
 							},
 							{
@@ -734,14 +714,8 @@ var _ = Describe("ChangeProcessor", func() {
 								L4Routes:       map[graph.L4RouteKey]*graph.L4Route{},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
 								SupportedKinds: []v1.RouteGroupKind{
-									{
-										Kind:  v1.Kind(kinds.HTTPRoute),
-										Group: helpers.GetPointer[v1.Group](v1.GroupName),
-									},
-									{
-										Kind:  v1.Kind(kinds.GRPCRoute),
-										Group: helpers.GetPointer[v1.Group](v1.GroupName),
-									},
+									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+									{Kind: v1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 								},
 							},
 							{
@@ -752,10 +726,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Routes:     map[graph.RouteKey]*graph.L7Route{},
 								L4Routes:   map[graph.L4RouteKey]*graph.L4Route{trKey1: expRouteTR1},
 								SupportedKinds: []v1.RouteGroupKind{
-									{
-										Kind:  v1.Kind(kinds.TLSRoute),
-										Group: helpers.GetPointer[v1.Group](v1.GroupName),
-									},
+									{Kind: v1.Kind(kinds.TLSRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 								},
 							},
 						},
@@ -793,12 +764,7 @@ var _ = Describe("ChangeProcessor", func() {
 						changed, graphCfg := processor.Process()
 						Expect(changed).To(Equal(state.ClusterStateChange))
 						Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-						Expect(
-							helpers.Diff(
-								&graph.Graph{},
-								processor.GetLatestGraph(),
-							),
-						).To(BeEmpty())
+						Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 					})
 				})
 				When("Gateways don't exist", func() {
@@ -809,12 +775,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.ClusterStateChange))
 							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-							Expect(
-								helpers.Diff(
-									&graph.Graph{},
-									processor.GetLatestGraph(),
-								),
-							).To(BeEmpty())
+							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 					When("the first TLSRoute is upserted", func() {
@@ -824,12 +785,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.ClusterStateChange))
 							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-							Expect(
-								helpers.Diff(
-									&graph.Graph{},
-									processor.GetLatestGraph(),
-								),
-							).To(BeEmpty())
+							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 					When("the different namespace TLS Secret is upserted", func() {
@@ -839,12 +795,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.NoChange))
 							Expect(graphCfg).To(BeNil())
-							Expect(
-								helpers.Diff(
-									&graph.Graph{},
-									processor.GetLatestGraph(),
-								),
-							).To(BeEmpty())
+							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 					When("the first Gateway is upserted", func() {
@@ -893,12 +844,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.ClusterStateChange))
 							Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-							Expect(
-								helpers.Diff(
-									expGraph,
-									processor.GetLatestGraph(),
-								),
-							).To(BeEmpty())
+							Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 				})
@@ -1007,10 +953,7 @@ var _ = Describe("ChangeProcessor", func() {
 							"Backend ref to Service tls-service-ns/tls-service not permitted by any ReferenceGrant",
 						),
 					}
-					delete(
-						expGraph.ReferencedServices,
-						types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"},
-					)
+					delete(expGraph.ReferencedServices, types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"})
 					expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
 
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
@@ -1310,10 +1253,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: sameNsTLSSecret,
 					}
 
-					delete(
-						expGraph.ReferencedServices,
-						expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName,
-					)
+					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					changed, graphCfg := processor.Process()
@@ -1357,10 +1297,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: sameNsTLSSecret,
 					}
 
-					delete(
-						expGraph.ReferencedServices,
-						expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName,
-					)
+					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					changed, graphCfg := processor.Process()
@@ -1580,11 +1517,7 @@ var _ = Describe("ChangeProcessor", func() {
 				testProcessChangedVal(expChanged)
 			}
 
-			testDeleteTriggersChange := func(
-				obj client.Object,
-				nsname types.NamespacedName,
-				expChanged state.ChangeType,
-			) {
+			testDeleteTriggersChange := func(obj client.Object, nsname types.NamespacedName, expChanged state.ChangeType) {
 				processor.CaptureDeleteChange(obj, nsname)
 				testProcessChangedVal(expChanged)
 			}
@@ -1754,10 +1687,7 @@ var _ = Describe("ChangeProcessor", func() {
 				It("should not trigger a change", func() {
 					testDeleteTriggersChange(
 						noRefSlice,
-						types.NamespacedName{
-							Namespace: noRefSlice.Namespace,
-							Name:      noRefSlice.Name,
-						},
+						types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name},
 						state.NoChange,
 					)
 				})
@@ -1782,10 +1712,7 @@ var _ = Describe("ChangeProcessor", func() {
 					It("should trigger a change", func() {
 						testDeleteTriggersChange(
 							bazSvc1,
-							types.NamespacedName{
-								Namespace: bazSvc1.Namespace,
-								Name:      bazSvc1.Name,
-							},
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
 							state.ClusterStateChange,
 						)
 					})
@@ -1809,10 +1736,7 @@ var _ = Describe("ChangeProcessor", func() {
 					It("should trigger a change", func() {
 						testDeleteTriggersChange(
 							hrMultipleRules,
-							types.NamespacedName{
-								Namespace: hrMultipleRules.Namespace,
-								Name:      hrMultipleRules.Name,
-							},
+							types.NamespacedName{Namespace: hrMultipleRules.Namespace, Name: hrMultipleRules.Name},
 							state.ClusterStateChange,
 						)
 					})
@@ -1821,36 +1745,25 @@ var _ = Describe("ChangeProcessor", func() {
 					It("should not trigger a change", func() {
 						testDeleteTriggersChange(
 							bazSvc1,
-							types.NamespacedName{
-								Namespace: bazSvc1.Namespace,
-								Name:      bazSvc1.Name,
-							},
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
 							state.NoChange,
 						)
-					},
-					)
+					})
 				})
 				When("second referenced service is deleted", func() {
 					It("should not trigger a change", func() {
 						testDeleteTriggersChange(
 							bazSvc2,
-							types.NamespacedName{
-								Namespace: bazSvc2.Namespace,
-								Name:      bazSvc2.Name,
-							},
+							types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name},
 							state.NoChange,
 						)
-					},
-					)
+					})
 				})
 				When("final referenced service is deleted", func() {
 					It("should not trigger a change", func() {
 						testDeleteTriggersChange(
 							bazSvc3,
-							types.NamespacedName{
-								Namespace: bazSvc3.Namespace,
-								Name:      bazSvc3.Name,
-							},
+							types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name},
 							state.NoChange,
 						)
 					})
@@ -1910,15 +1823,13 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				processor = state.NewChangeProcessorImpl(
-					state.ChangeProcessorConfig{
-						GatewayCtlrName:  controllerName,
-						GatewayClassName: gcName,
-						Logger:           zap.New(),
-						Validators:       createAlwaysValidValidators(),
-						MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
-					},
-				)
+				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+					GatewayCtlrName:  controllerName,
+					GatewayClassName: gcName,
+					Logger:           zap.New(),
+					Validators:       createAlwaysValidValidators(),
+					MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
+				})
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw)
 				processor.Process()
@@ -1940,10 +1851,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("a namespace is deleted that is not linked to a listener", func() {
 				It("does not trigger an update", func() {
-					processor.CaptureDeleteChange(
-						nsNoLabels,
-						types.NamespacedName{Name: "no-labels"},
-					)
+					processor.CaptureDeleteChange(nsNoLabels, types.NamespacedName{Name: "no-labels"})
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
 				})
@@ -2205,14 +2113,8 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("the policy is deleted", func() {
 				It("removes the policy from the graph", func() {
-					processor.CaptureDeleteChange(
-						&ngfAPI.ClientSettingsPolicy{},
-						client.ObjectKeyFromObject(csp),
-					)
-					processor.CaptureDeleteChange(
-						&ngfAPI.ObservabilityPolicy{},
-						client.ObjectKeyFromObject(obs),
-					)
+					processor.CaptureDeleteChange(&ngfAPI.ClientSettingsPolicy{}, client.ObjectKeyFromObject(csp))
+					processor.CaptureDeleteChange(&ngfAPI.ObservabilityPolicy{}, client.ObjectKeyFromObject(obs))
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -2313,14 +2215,12 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			processor = state.NewChangeProcessorImpl(
-				state.ChangeProcessorConfig{
-					GatewayCtlrName:  "test.controller",
-					GatewayClassName: "test-class",
-					Validators:       createAlwaysValidValidators(),
-					MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
-				},
-			)
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "test-class",
+				Validators:       createAlwaysValidValidators(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
+			})
 
 			secretNsName = types.NamespacedName{Namespace: "test", Name: "tls-secret"}
 			secret = &apiv1.Secret{
@@ -2769,10 +2669,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are changing changes
 					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
 					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
-					processor.CaptureDeleteChange(
-						&apiv1.Namespace{},
-						types.NamespacedName{Name: "ns"},
-					)
+					processor.CaptureDeleteChange(&apiv1.Namespace{}, types.NamespacedName{Name: "ns"})
 					processor.CaptureDeleteChange(&apiv1.Secret{}, secretNsName)
 					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
 
@@ -2843,18 +2740,15 @@ var _ = Describe("ChangeProcessor", func() {
 		var processor state.ChangeProcessor
 
 		BeforeEach(func() {
-			processor = state.NewChangeProcessorImpl(
-				state.ChangeProcessorConfig{
-					GatewayCtlrName:  "test.controller",
-					GatewayClassName: "my-class",
-					Validators:       createAlwaysValidValidators(),
-					MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
-				},
-			)
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "my-class",
+				Validators:       createAlwaysValidValidators(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
+			})
 		})
 
-		DescribeTable(
-			"CaptureUpsertChange must panic",
+		DescribeTable("CaptureUpsertChange must panic",
 			func(obj client.Object) {
 				process := func() {
 					processor.CaptureUpsertChange(obj)

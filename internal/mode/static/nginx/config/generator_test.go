@@ -189,15 +189,11 @@ func TestGenerate(t *testing.T) {
 	certBundle := string(files[8].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 
-	g.Expect(files[9]).To(
-		Equal(
-			file.File{
-				Type:    file.TypeSecret,
-				Path:    "/etc/nginx/secrets/test-keypair.pem",
-				Content: []byte("test-cert\ntest-key"),
-			},
-		),
-	)
+	g.Expect(files[9]).To(Equal(file.File{
+		Type:    file.TypeSecret,
+		Path:    "/etc/nginx/secrets/test-keypair.pem",
+		Content: []byte("test-cert\ntest-key"),
+	}))
 
 	g.Expect(files[10].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
 	g.Expect(files[10].Type).To(Equal(file.TypeRegular))

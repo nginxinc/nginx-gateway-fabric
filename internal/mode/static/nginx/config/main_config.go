@@ -24,12 +24,10 @@ func executeMainConfig(conf dataplane.Configuration) []executeResult {
 	}
 
 	results := make([]executeResult, 0, len(includes)+1)
-	results = append(
-		results, executeResult{
-			dest: mainIncludeFile,
-			data: helpers.MustExecuteTemplate(mainConfigTemplate, mc),
-		},
-	)
+	results = append(results, executeResult{
+		dest: mainIncludeFile,
+		data: helpers.MustExecuteTemplate(mainConfigTemplate, mc),
+	})
 	results = append(results, createIncludeExecuteResults(includes)...)
 
 	return results

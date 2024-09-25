@@ -1528,22 +1528,18 @@ func TestCreateServers(t *testing.T) {
 	g := NewWithT(t)
 
 	fakeGenerator := &policiesfakes.FakeGenerator{}
-	fakeGenerator.GenerateForLocationReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "include-1.conf",
-				Content: []byte("include-1"),
-			},
+	fakeGenerator.GenerateForLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "include-1.conf",
+			Content: []byte("include-1"),
 		},
-	)
-	fakeGenerator.GenerateForInternalLocationReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "internal-include-1.conf",
-				Content: []byte("include-1"),
-			},
+	})
+	fakeGenerator.GenerateForInternalLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "internal-include-1.conf",
+			Content: []byte("include-1"),
 		},
-	)
+	})
 
 	result, httpMatchPair := createServers(conf, fakeGenerator)
 
@@ -1832,22 +1828,18 @@ func TestCreateServers_Includes(t *testing.T) {
 	}
 
 	fakeGenerator := &policiesfakes.FakeGenerator{}
-	fakeGenerator.GenerateForLocationReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "ext-policy.conf",
-				Content: []byte("external policy conf"),
-			},
+	fakeGenerator.GenerateForLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "ext-policy.conf",
+			Content: []byte("external policy conf"),
 		},
-	)
-	fakeGenerator.GenerateForServerReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "server-policy.conf",
-				Content: []byte("server policy conf"),
-			},
+	})
+	fakeGenerator.GenerateForServerReturns(policies.GenerateResultFiles{
+		{
+			Name:    "server-policy.conf",
+			Content: []byte("server policy conf"),
 		},
-	)
+	})
 
 	expServers := []http.Server{
 		{
@@ -2068,22 +2060,18 @@ func TestCreateLocations_Includes(t *testing.T) {
 	}
 
 	fakeGenerator := &policiesfakes.FakeGenerator{}
-	fakeGenerator.GenerateForLocationReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "ext-policy.conf",
-				Content: []byte("external policy conf"),
-			},
+	fakeGenerator.GenerateForLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "ext-policy.conf",
+			Content: []byte("external policy conf"),
 		},
-	)
-	fakeGenerator.GenerateForInternalLocationReturns(
-		policies.GenerateResultFiles{
-			{
-				Name:    "int-policy.conf",
-				Content: []byte("internal policy conf"),
-			},
+	})
+	fakeGenerator.GenerateForInternalLocationReturns(policies.GenerateResultFiles{
+		{
+			Name:    "int-policy.conf",
+			Content: []byte("internal policy conf"),
 		},
-	)
+	})
 
 	locations, matches, grpc := createLocations(&httpServer, "1", fakeGenerator)
 
@@ -2136,32 +2124,28 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		}
 
 		if rootPath {
-			rules = append(
-				rules, dataplane.PathRule{
-					Path: "/",
-					MatchRules: []dataplane.MatchRule{
-						{
-							Match:        dataplane.Match{},
-							BackendGroup: fooGroup,
-						},
+			rules = append(rules, dataplane.PathRule{
+				Path: "/",
+				MatchRules: []dataplane.MatchRule{
+					{
+						Match:        dataplane.Match{},
+						BackendGroup: fooGroup,
 					},
 				},
-			)
+			})
 		}
 
 		if grpc {
-			rules = append(
-				rules, dataplane.PathRule{
-					Path: "/grpc",
-					GRPC: true,
-					MatchRules: []dataplane.MatchRule{
-						{
-							Match:        dataplane.Match{},
-							BackendGroup: fooGroup,
-						},
+			rules = append(rules, dataplane.PathRule{
+				Path: "/grpc",
+				GRPC: true,
+				MatchRules: []dataplane.MatchRule{
+					{
+						Match:        dataplane.Match{},
+						BackendGroup: fooGroup,
 					},
 				},
-			)
+			})
 		}
 
 		return rules
@@ -2272,12 +2256,10 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			locs, httpMatchPair, grpc := createLocations(
-				&dataplane.VirtualServer{
-					PathRules: test.pathRules,
-					Port:      80,
-				}, "1", &policiesfakes.FakeGenerator{},
-			)
+			locs, httpMatchPair, grpc := createLocations(&dataplane.VirtualServer{
+				PathRules: test.pathRules,
+				Port:      80,
+			}, "1", &policiesfakes.FakeGenerator{})
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
 			g.Expect(grpc).To(Equal(test.grpc))

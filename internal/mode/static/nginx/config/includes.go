@@ -30,12 +30,10 @@ func createIncludeExecuteResultsFromServers(servers []http.Server) []executeResu
 	results := make([]executeResult, 0, len(uniqueIncludes))
 
 	for filename, contents := range uniqueIncludes {
-		results = append(
-			results, executeResult{
-				dest: filename,
-				data: contents,
-			},
-		)
+		results = append(results, executeResult{
+			dest: filename,
+			data: contents,
+		})
 	}
 
 	return results
@@ -49,12 +47,10 @@ func createIncludesFromPolicyGenerateResult(resFiles []policies.File) []shared.I
 
 	includes := make([]shared.Include, 0, len(resFiles))
 	for _, file := range resFiles {
-		includes = append(
-			includes, shared.Include{
-				Name:    includesFolder + "/" + file.Name,
-				Content: file.Content,
-			},
-		)
+		includes = append(includes, shared.Include{
+			Name:    includesFolder + "/" + file.Name,
+			Content: file.Content,
+		})
 	}
 
 	return includes
@@ -151,12 +147,10 @@ func createIncludeExecuteResults(includes []shared.Include) []executeResult {
 	results := make([]executeResult, 0, len(includes))
 
 	for _, inc := range includes {
-		results = append(
-			results, executeResult{
-				dest: inc.Name,
-				data: inc.Content,
-			},
-		)
+		results = append(results, executeResult{
+			dest: inc.Name,
+			data: inc.Content,
+		})
 	}
 
 	return results

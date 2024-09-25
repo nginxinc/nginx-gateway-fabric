@@ -24,13 +24,10 @@ func executeBaseHTTPConfig(conf dataplane.Configuration) []executeResult {
 	}
 
 	results := make([]executeResult, 0, len(includes)+1)
-	results = append(
-		results,
-		executeResult{
-			dest: httpConfigFile,
-			data: helpers.MustExecuteTemplate(baseHTTPTemplate, hc),
-		},
-	)
+	results = append(results, executeResult{
+		dest: httpConfigFile,
+		data: helpers.MustExecuteTemplate(baseHTTPTemplate, hc),
+	})
 	results = append(results, createIncludeExecuteResults(includes)...)
 
 	return results

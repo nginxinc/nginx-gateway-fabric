@@ -238,14 +238,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			Attachable: true,
 			Routes:     map[RouteKey]*L7Route{},
 			SupportedKinds: []gatewayv1.RouteGroupKind{
-				{
-					Kind:  gatewayv1.Kind(kinds.HTTPRoute),
-					Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				},
-				{
-					Kind:  gatewayv1.Kind(kinds.GRPCRoute),
-					Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				},
+				{Kind: gatewayv1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
+				{Kind: gatewayv1.Kind(kinds.GRPCRoute), Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName)},
 			},
 		}
 	}
@@ -1826,7 +1820,9 @@ func TestBindL4RouteToListeners(t *testing.T) {
 				Listeners: []*Listener{
 					createModifiedListener("listener-443", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-							Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(gatewayv1.FromNamespaces("Same"))},
+							Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
+								gatewayv1.FromNamespaces("Same"),
+							)},
 						}
 					}),
 				},
@@ -1850,7 +1846,9 @@ func TestBindL4RouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-443", func(l *Listener) {
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
-						Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(gatewayv1.FromNamespaces("Same"))},
+						Namespaces: &gatewayv1.RouteNamespaces{From: helpers.GetPointer(
+							gatewayv1.FromNamespaces("Same"),
+						)},
 					}
 				}),
 			},
@@ -2133,7 +2131,13 @@ func TestBuildL4RoutesForGateways_NoGateways(t *testing.T) {
 
 	refGrantResolver := newReferenceGrantResolver(nil)
 
-	g.Expect(buildL4RoutesForGateways(tlsRoutes, nil, services, nil, refGrantResolver)).To(BeNil())
+	g.Expect(buildL4RoutesForGateways(
+		tlsRoutes,
+		nil,
+		services,
+		nil,
+		refGrantResolver,
+	)).To(BeNil())
 }
 
 func TestTryToAttachL4RouteToListeners_NoAttachableListeners(t *testing.T) {

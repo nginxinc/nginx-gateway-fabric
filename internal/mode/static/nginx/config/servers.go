@@ -797,12 +797,10 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 	}
 	// If the value of a header field is an empty string then this field will not be passed to a proxied server
 	for _, h := range headerFilter.Remove {
-		proxySetHeaders = append(
-			proxySetHeaders, http.Header{
-				Name:  h,
-				Value: "",
-			},
-		)
+		proxySetHeaders = append(proxySetHeaders, http.Header{
+			Name:  h,
+			Value: "",
+		})
 	}
 
 	return append(proxySetHeaders, headers...)
@@ -830,12 +828,10 @@ func createHeadersWithVarName(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
 		mapVarName := "${" + generateAddHeaderMapVariableName(h.Name) + "}"
-		locHeaders = append(
-			locHeaders, http.Header{
-				Name:  h.Name,
-				Value: mapVarName + h.Value,
-			},
-		)
+		locHeaders = append(locHeaders, http.Header{
+			Name:  h.Name,
+			Value: mapVarName + h.Value,
+		})
 	}
 	return locHeaders
 }
@@ -843,12 +839,10 @@ func createHeadersWithVarName(headers []dataplane.HTTPHeader) []http.Header {
 func createHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
-		locHeaders = append(
-			locHeaders, http.Header{
-				Name:  h.Name,
-				Value: h.Value,
-			},
-		)
+		locHeaders = append(locHeaders, http.Header{
+			Name:  h.Name,
+			Value: h.Value,
+		})
 	}
 	return locHeaders
 }
