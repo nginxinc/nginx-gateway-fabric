@@ -105,31 +105,25 @@ func buildPassthroughServers(g *graph.Graph) []Layer4VirtualServer {
 				if l.Source.Hostname != nil && h == string(*l.Source.Hostname) {
 					foundRouteMatchingListenerHostname = true
 				}
-				passthroughServersMap[key] = append(
-					passthroughServersMap[key], Layer4VirtualServer{
-						Hostname:     h,
-						UpstreamName: r.Spec.BackendRef.ServicePortReference(),
-						Port:         int32(l.Source.Port),
-					},
-				)
+				passthroughServersMap[key] = append(passthroughServersMap[key], Layer4VirtualServer{
+					Hostname:     h,
+					UpstreamName: r.Spec.BackendRef.ServicePortReference(),
+					Port:         int32(l.Source.Port),
+				})
 			}
 		}
 		if !foundRouteMatchingListenerHostname {
 			if l.Source.Hostname != nil {
-				listenerPassthroughServers = append(
-					listenerPassthroughServers, Layer4VirtualServer{
-						Hostname:  string(*l.Source.Hostname),
-						IsDefault: true,
-						Port:      int32(l.Source.Port),
-					},
-				)
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname:  string(*l.Source.Hostname),
+					IsDefault: true,
+					Port:      int32(l.Source.Port),
+				})
 			} else {
-				listenerPassthroughServers = append(
-					listenerPassthroughServers, Layer4VirtualServer{
-						Hostname: "",
-						Port:     int32(l.Source.Port),
-					},
-				)
+				listenerPassthroughServers = append(listenerPassthroughServers, Layer4VirtualServer{
+					Hostname: "",
+					Port:     int32(l.Source.Port),
+				})
 			}
 		}
 	}
@@ -317,14 +311,12 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 	}
 
 	for _, ref := range refs {
-		backends = append(
-			backends, Backend{
-				UpstreamName: ref.ServicePortReference(),
-				Weight:       ref.Weight,
-				Valid:        ref.Valid,
-				VerifyTLS:    convertBackendTLS(ref.BackendTLSPolicy),
-			},
-		)
+		backends = append(backends, Backend{
+			UpstreamName: ref.ServicePortReference(),
+			Weight:       ref.Weight,
+			Valid:        ref.Valid,
+			VerifyTLS:    convertBackendTLS(ref.BackendTLSPolicy),
+		})
 	}
 
 	return BackendGroup{
@@ -516,14 +508,12 @@ func (hpr *hostPathRules) upsertRoute(
 				hostRule.GRPC = GRPC
 				hostRule.Policies = append(hostRule.Policies, pols...)
 
-				hostRule.MatchRules = append(
-					hostRule.MatchRules, MatchRule{
-						Source:       objectSrc,
-						BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
-						Filters:      filters,
-						Match:        convertMatch(m),
-					},
-				)
+				hostRule.MatchRules = append(hostRule.MatchRules, MatchRule{
+					Source:       objectSrc,
+					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
+					Filters:      filters,
+					Match:        convertMatch(m),
+				})
 
 				hpr.rulesPerHost[h][key] = hostRule
 			}
@@ -559,15 +549,13 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		}
 
 		// We sort the path rules so the order is preserved after reconfiguration.
-		sort.Slice(
-			s.PathRules, func(i, j int) bool {
-				if s.PathRules[i].Path != s.PathRules[j].Path {
-					return s.PathRules[i].Path < s.PathRules[j].Path
-				}
+		sort.Slice(s.PathRules, func(i, j int) bool {
+			if s.PathRules[i].Path != s.PathRules[j].Path {
+				return s.PathRules[i].Path < s.PathRules[j].Path
+			}
 
-				return s.PathRules[i].PathType < s.PathRules[j].PathType
-			},
-		)
+			return s.PathRules[i].PathType < s.PathRules[j].PathType
+		})
 
 		servers = append(servers, s)
 	}
@@ -594,20 +582,16 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 	// if any listeners exist, we need to generate a default server block.
 	if hpr.listenersExist {
-		servers = append(
-			servers, VirtualServer{
-				IsDefault: true,
-				Port:      hpr.port,
-			},
-		)
+		servers = append(servers, VirtualServer{
+			IsDefault: true,
+			Port:      hpr.port,
+		})
 	}
 
 	// We sort the servers so the order is preserved after reconfiguration.
-	sort.Slice(
-		servers, func(i, j int) bool {
-			return servers[i].Hostname < servers[j].Hostname
-		},
-	)
+	sort.Slice(servers, func(i, j int) bool {
+		return servers[i].Hostname < servers[j].Hostname
+	})
 
 	return servers
 }
@@ -955,13 +939,10 @@ func buildSnippetsForContext(
 			continue
 		}
 
-		snippetsForContext = append(
-			snippetsForContext,
-			Snippet{
-				Name:     createSnippetName(nc, client.ObjectKeyFromObject(filter.Source)),
-				Contents: snippetValue,
-			},
-		)
+		snippetsForContext = append(snippetsForContext, Snippet{
+			Name:     createSnippetName(nc, client.ObjectKeyFromObject(filter.Source)),
+			Contents: snippetValue,
+		})
 	}
 
 	return snippetsForContext

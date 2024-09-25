@@ -72,12 +72,10 @@ func TestValidateRouteBackendRef(t *testing.T) {
 		{
 			name: "invalid base ref",
 			ref: RouteBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
+					return backend
+				}),
 			},
 			expectedValid: false,
 			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
@@ -87,23 +85,16 @@ func TestValidateRouteBackendRef(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
 
-				valid, cond := validateRouteBackendRef(
-					test.ref,
-					"test",
-					alwaysTrueRefGrantResolver,
-					field.NewPath("test"),
-				)
+			valid, cond := validateRouteBackendRef(test.ref, "test", alwaysTrueRefGrantResolver, field.NewPath("test"))
 
-				g.Expect(valid).To(Equal(test.expectedValid))
-				g.Expect(cond).To(Equal(test.expectedCondition))
-			},
-		)
+			g.Expect(valid).To(Equal(test.expectedValid))
+			g.Expect(cond).To(Equal(test.expectedCondition))
+		})
 	}
 }
 
@@ -127,45 +118,37 @@ func TestValidateBackendRef(t *testing.T) {
 		},
 		{
 			name: "normal case with implicit namespace",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Namespace = nil
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Namespace = nil
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    true,
 		},
 		{
 			name: "normal case with implicit kind Service",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Kind = nil
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Kind = nil
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    true,
 		},
 		{
 			name: "normal case with backend ref allowed by reference grant",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Namespace = helpers.GetPointer[gatewayv1.Namespace]("cross-ns")
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Namespace = helpers.GetPointer[gatewayv1.Namespace]("cross-ns")
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    true,
 		},
 		{
 			name: "invalid group",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Group = helpers.GetPointer[gatewayv1.Group]("invalid")
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Group = helpers.GetPointer[gatewayv1.Group]("invalid")
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    false,
 			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
@@ -174,12 +157,10 @@ func TestValidateBackendRef(t *testing.T) {
 		},
 		{
 			name: "not a service kind",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    false,
 			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
@@ -188,12 +169,10 @@ func TestValidateBackendRef(t *testing.T) {
 		},
 		{
 			name: "backend ref not allowed by reference grant",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Namespace = helpers.GetPointer[gatewayv1.Namespace]("invalid")
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Namespace = helpers.GetPointer[gatewayv1.Namespace]("invalid")
+				return backend
+			}),
 			refGrantResolver: alwaysFalseRefGrantResolver,
 			expectedValid:    false,
 			expectedCondition: staticConds.NewRouteBackendRefRefNotPermitted(
@@ -202,12 +181,10 @@ func TestValidateBackendRef(t *testing.T) {
 		},
 		{
 			name: "invalid weight",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Weight = helpers.GetPointer[int32](-1)
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Weight = helpers.GetPointer[int32](-1)
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    false,
 			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
@@ -216,12 +193,10 @@ func TestValidateBackendRef(t *testing.T) {
 		},
 		{
 			name: "nil port",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Port = nil
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Port = nil
+				return backend
+			}),
 			refGrantResolver: alwaysTrueRefGrantResolver,
 			expectedValid:    false,
 			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
@@ -231,17 +206,15 @@ func TestValidateBackendRef(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				valid, cond := validateBackendRef(test.ref, "test", test.refGrantResolver, field.NewPath("test"))
+			valid, cond := validateBackendRef(test.ref, "test", test.refGrantResolver, field.NewPath("test"))
 
-				g.Expect(valid).To(Equal(test.expectedValid))
-				g.Expect(cond).To(Equal(test.expectedCondition))
-			},
-		)
+			g.Expect(valid).To(Equal(test.expectedValid))
+			g.Expect(cond).To(Equal(test.expectedCondition))
+		})
 	}
 }
 
@@ -303,12 +276,10 @@ func TestGetIPFamilyAndPortFromRef(t *testing.T) {
 		},
 		{
 			name: "service does not exist",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Name = "does-not-exist"
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Name = "does-not-exist"
+				return backend
+			}),
 			expErr:         true,
 			expServicePort: v1.ServicePort{},
 			expSvcIPFamily: []v1.IPFamily{},
@@ -316,12 +287,10 @@ func TestGetIPFamilyAndPortFromRef(t *testing.T) {
 		},
 		{
 			name: "no matching port for service and port",
-			ref: getModifiedRef(
-				func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Port = helpers.GetPointer[gatewayv1.PortNumber](504)
-					return backend
-				},
-			),
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Port = helpers.GetPointer[gatewayv1.PortNumber](504)
+				return backend
+			}),
 			expErr:         true,
 			expServicePort: v1.ServicePort{},
 			expSvcIPFamily: []v1.IPFamily{},
@@ -337,18 +306,16 @@ func TestGetIPFamilyAndPortFromRef(t *testing.T) {
 	refPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				svcIPFamily, servicePort, err := getIPFamilyAndPortFromRef(test.ref, test.svcNsName, services, refPath)
+			svcIPFamily, servicePort, err := getIPFamilyAndPortFromRef(test.ref, test.svcNsName, services, refPath)
 
-				g.Expect(err != nil).To(Equal(test.expErr))
-				g.Expect(servicePort).To(Equal(test.expServicePort))
-				g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
-			},
-		)
+			g.Expect(err != nil).To(Equal(test.expErr))
+			g.Expect(servicePort).To(Equal(test.expServicePort))
+			g.Expect(svcIPFamily).To(Equal(test.expSvcIPFamily))
+		})
 	}
 }
 
@@ -417,22 +384,22 @@ func TestVerifyIPFamily(t *testing.T) {
 	}
 
 	for _, test := range test {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				err := verifyIPFamily(test.npCfg, test.svcIPFamily)
-				if test.expErr != nil {
-					g.Expect(err).To(Equal(test.expErr))
-				} else {
-					g.Expect(err).ToNot(HaveOccurred())
-				}
-			},
-		)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			err := verifyIPFamily(test.npCfg, test.svcIPFamily)
+			if test.expErr != nil {
+				g.Expect(err).To(Equal(test.expErr))
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+		})
 	}
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
+	t.Parallel()
+
 	sectionNameRefs := []ParentRef{
 		{
 			Idx:     0,
@@ -636,13 +603,12 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	btp1 := getBtp("btp1", "svc1", "test1")
 	btp2 := getBtp("btp2", "svc2", "test2")
 	btp3 := getBtp("btp1", "svc1", "test")
-	btp3.Conditions = append(
-		btp3.Conditions, conditions.Condition{
-			Type:    "Accepted",
-			Status:  "True",
-			Reason:  "Accepted",
-			Message: "Policy is accepted",
-		},
+	btp3.Conditions = append(btp3.Conditions, conditions.Condition{
+		Type:    "Accepted",
+		Status:  "True",
+		Reason:  "Accepted",
+		Message: "Policy is accepted",
+	},
 	)
 
 	tests := []struct {
@@ -779,21 +745,21 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				g := NewWithT(t)
-				resolver := newReferenceGrantResolver(nil)
-				addBackendRefsToRules(test.route, resolver, services, test.policies, nil)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				var actual []BackendRef
-				if test.route.Spec.Rules != nil {
-					actual = test.route.Spec.Rules[0].BackendRefs
-				}
+			g := NewWithT(t)
+			resolver := newReferenceGrantResolver(nil)
+			addBackendRefsToRules(test.route, resolver, services, test.policies, nil)
 
-				g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
-				g.Expect(test.route.Conditions).To(Equal(test.expectedConditions))
-			},
-		)
+			var actual []BackendRef
+			if test.route.Spec.Rules != nil {
+				actual = test.route.Spec.Rules[0].BackendRefs
+			}
+
+			g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
+			g.Expect(test.route.Conditions).To(Equal(test.expectedConditions))
+		})
 	}
 }
 
@@ -899,12 +865,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Weight = nil
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Weight = nil
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:   svc1NamespacedName,
@@ -918,12 +882,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Weight = helpers.GetPointer[int32](-1)
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Weight = helpers.GetPointer[int32](-1)
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:   types.NamespacedName{},
@@ -941,12 +903,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:   types.NamespacedName{},
@@ -964,12 +924,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Name = "not-exist"
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "not-exist"
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				Weight: 5,
@@ -987,12 +945,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Name = "service2"
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service2"
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:   svc2NamespacedName,
@@ -1013,12 +969,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Name = "service2"
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service2"
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:        svc2NamespacedName,
@@ -1033,12 +987,10 @@ func TestCreateBackend(t *testing.T) {
 		},
 		{
 			ref: gatewayv1.HTTPBackendRef{
-				BackendRef: getModifiedRef(
-					func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-						backend.Name = "service3"
-						return backend
-					},
-				),
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service3"
+					return backend
+				}),
 			},
 			expectedBackend: BackendRef{
 				SvcNsName:   svc3NamespacedName,
@@ -1071,34 +1023,32 @@ func TestCreateBackend(t *testing.T) {
 	refPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
+			alwaysTrueRefGrantResolver := func(_ toResource) bool { return true }
 
-				rbr := RouteBackendRef{
-					test.ref.BackendRef,
-					[]any{},
-				}
-				backend, cond := createBackendRef(
-					rbr,
-					sourceNamespace,
-					alwaysTrueRefGrantResolver,
-					services,
-					refPath,
-					policies,
-					test.nginxProxy,
-				)
+			rbr := RouteBackendRef{
+				test.ref.BackendRef,
+				[]any{},
+			}
+			backend, cond := createBackendRef(
+				rbr,
+				sourceNamespace,
+				alwaysTrueRefGrantResolver,
+				services,
+				refPath,
+				policies,
+				test.nginxProxy,
+			)
 
-				g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
-				g.Expect(cond).To(Equal(test.expectedCondition))
+			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
+			g.Expect(cond).To(Equal(test.expectedCondition))
 
-				servicePortRef := backend.ServicePortReference()
-				g.Expect(servicePortRef).To(Equal(test.expectedServicePortReference))
-			},
-		)
+			servicePortRef := backend.ServicePortReference()
+			g.Expect(servicePortRef).To(Equal(test.expectedServicePortReference))
+		})
 	}
 }
 
@@ -1225,16 +1175,14 @@ func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			t.Parallel()
 
-				cond := validateBackendTLSPolicyMatchingAllBackends(test.backendRefs)
+			cond := validateBackendTLSPolicyMatchingAllBackends(test.backendRefs)
 
-				g.Expect(cond).To(Equal(test.expectedCondition))
-			},
-		)
+			g.Expect(cond).To(Equal(test.expectedCondition))
+		})
 	}
 }
 
@@ -1304,22 +1252,15 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				btp, err := findBackendTLSPolicyForService(
-					test.backendTLSPolicies,
-					ref.Namespace,
-					string(ref.Name),
-					"test",
-				)
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref.Namespace, string(ref.Name), "test")
 
-				g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
-				g.Expect(err).ToNot(HaveOccurred())
-			},
-		)
+			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
+			g.Expect(err).ToNot(HaveOccurred())
+		})
 	}
 }
 
@@ -1346,13 +1287,11 @@ func TestGetRefGrantFromResourceForRoute(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				g.Expect(getRefGrantFromResourceForRoute(test.routeType, test.ns)).To(Equal(test.expFromResource))
-			},
-		)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			g.Expect(getRefGrantFromResourceForRoute(test.routeType, test.ns)).To(Equal(test.expFromResource))
+		})
 	}
 }
 

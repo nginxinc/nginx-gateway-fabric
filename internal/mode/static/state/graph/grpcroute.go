@@ -195,12 +195,10 @@ func convertGRPCMatches(grpcMatches []v1.GRPCRouteMatch) []v1.HTTPRouteMatch {
 		var hm v1.HTTPRouteMatch
 		hmHeaders := make([]v1.HTTPHeaderMatch, 0, len(gm.Headers))
 		for _, head := range gm.Headers {
-			hmHeaders = append(
-				hmHeaders, v1.HTTPHeaderMatch{
-					Name:  v1.HTTPHeaderName(head.Name),
-					Value: head.Value,
-				},
-			)
+			hmHeaders = append(hmHeaders, v1.HTTPHeaderMatch{
+				Name:  v1.HTTPHeaderName(head.Name),
+				Value: head.Value,
+			})
 		}
 		hm.Headers = hmHeaders
 

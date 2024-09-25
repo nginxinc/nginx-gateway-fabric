@@ -1009,19 +1009,17 @@ func TestBuildGRPCRoute(t *testing.T) {
 	gatewayNsNames := []types.NamespacedName{gatewayNsName}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
-					{Namespace: "test", Name: "sf"}: {Valid: true},
-				}
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				{Namespace: "test", Name: "sf"}: {Valid: true},
+			}
 
-				route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled, snippetsFilters)
-				g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
-			},
-		)
+			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled, snippetsFilters)
+			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
+		})
 	}
 }
 
@@ -1088,14 +1086,12 @@ func TestConvertGRPCMatches(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				httpMatches := convertGRPCMatches(test.methodMatches)
-				g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
-			},
-		)
+			httpMatches := convertGRPCMatches(test.methodMatches)
+			g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
+		})
 	}
 }

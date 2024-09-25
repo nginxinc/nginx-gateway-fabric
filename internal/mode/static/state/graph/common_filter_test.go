@@ -122,15 +122,13 @@ func TestValidateFilter(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
-				allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+			g := NewWithT(t)
+			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
 
@@ -304,17 +302,15 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				allErrs := validateFilterResponseHeaderModifier(
-					test.validator, test.filter.ResponseHeaderModifier, filterPath,
-				)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+			allErrs := validateFilterResponseHeaderModifier(
+				test.validator, test.filter.ResponseHeaderModifier, filterPath,
+			)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
 
@@ -454,17 +450,15 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				allErrs := validateFilterHeaderModifier(
-					test.validator, test.filter.RequestHeaderModifier, filterPath,
-				)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+			allErrs := validateFilterHeaderModifier(
+				test.validator, test.filter.RequestHeaderModifier, filterPath,
+			)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
 
@@ -548,15 +542,13 @@ func TestConvertGRPCFilters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				convertedFilters := convertGRPCRouteFilters(test.grpcFilters)
-				g.Expect(convertedFilters).To(Equal(test.expFilters))
-			},
-		)
+			convertedFilters := convertGRPCRouteFilters(test.grpcFilters)
+			g.Expect(convertedFilters).To(Equal(test.expFilters))
+		})
 	}
 }
 
@@ -658,14 +650,12 @@ func TestConvertHTTPFilters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				convertedFilters := convertHTTPRouteFilters(test.httpFilters)
-				g.Expect(convertedFilters).To(Equal(test.expFilters))
-			},
-		)
+			convertedFilters := convertHTTPRouteFilters(test.httpFilters)
+			g.Expect(convertedFilters).To(Equal(test.expFilters))
+		})
 	}
 }

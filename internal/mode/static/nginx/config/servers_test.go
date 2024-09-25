@@ -316,23 +316,21 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				gen := GeneratorImpl{}
-				results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
-				g.Expect(results).To(HaveLen(2))
-				serverConf := string(results[0].data)
-				httpMatchConf := string(results[1].data)
-				g.Expect(httpMatchConf).To(Equal("{}"))
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
 
-				for expSubStr, expCount := range test.expectedHTTPConfig {
-					g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
-				}
-			},
-		)
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
 	}
 }
 
@@ -436,23 +434,21 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				gen := GeneratorImpl{}
-				results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
-				g.Expect(results).To(HaveLen(2))
-				serverConf := string(results[0].data)
-				httpMatchConf := string(results[1].data)
-				g.Expect(httpMatchConf).To(Equal("{}"))
+			gen := GeneratorImpl{}
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			g.Expect(results).To(HaveLen(2))
+			serverConf := string(results[0].data)
+			httpMatchConf := string(results[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
 
-				for expSubStr, expCount := range test.expectedHTTPConfig {
-					g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
-				}
-			},
-		)
+			for expSubStr, expCount := range test.expectedHTTPConfig {
+				g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+			}
+		})
 	}
 }
 
@@ -564,27 +560,25 @@ func TestExecuteForDefaultServers(t *testing.T) {
 	httpDefaultFmt := "listen %d default_server"
 
 	for _, tc := range testcases {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				gen := GeneratorImpl{}
-				serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{})
-				g.Expect(serverResults).To(HaveLen(2))
-				serverConf := string(serverResults[0].data)
-				httpMatchConf := string(serverResults[1].data)
-				g.Expect(httpMatchConf).To(Equal("{}"))
+			gen := GeneratorImpl{}
+			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{})
+			g.Expect(serverResults).To(HaveLen(2))
+			serverConf := string(serverResults[0].data)
+			httpMatchConf := string(serverResults[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
 
-				for _, expPort := range tc.httpPorts {
-					g.Expect(serverConf).To(ContainSubstring(fmt.Sprintf(httpDefaultFmt, expPort)))
-				}
+			for _, expPort := range tc.httpPorts {
+				g.Expect(serverConf).To(ContainSubstring(fmt.Sprintf(httpDefaultFmt, expPort)))
+			}
 
-				for _, expPort := range tc.sslPorts {
-					g.Expect(serverConf).To(ContainSubstring(fmt.Sprintf(sslDefaultFmt, expPort)))
-				}
-			},
-		)
+			for _, expPort := range tc.sslPorts {
+				g.Expect(serverConf).To(ContainSubstring(fmt.Sprintf(sslDefaultFmt, expPort)))
+			}
+		})
 	}
 }
 
@@ -1741,42 +1735,40 @@ func TestCreateServersConflicts(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				httpServers := []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-						Port:      8080,
-					},
-					{
-						Hostname:  "cafe.example.com",
-						PathRules: test.rules,
-						Port:      8080,
-					},
-				}
-				expectedServers := []http.Server{
-					{
-						IsDefaultHTTP: true,
-						Listen:        "8080",
-					},
-					{
-						ServerName: "cafe.example.com",
-						Locations:  test.expLocs,
-						Listen:     "8080",
-						Includes:   []shared.Include{},
-					},
-				}
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			httpServers := []dataplane.VirtualServer{
+				{
+					IsDefault: true,
+					Port:      8080,
+				},
+				{
+					Hostname:  "cafe.example.com",
+					PathRules: test.rules,
+					Port:      8080,
+				},
+			}
+			expectedServers := []http.Server{
+				{
+					IsDefaultHTTP: true,
+					Listen:        "8080",
+				},
+				{
+					ServerName: "cafe.example.com",
+					Locations:  test.expLocs,
+					Listen:     "8080",
+					Includes:   []shared.Include{},
+				},
+			}
 
-				g := NewWithT(t)
+			g := NewWithT(t)
 
-				result, _ := createServers(
-					dataplane.Configuration{HTTPServers: httpServers},
-					&policiesfakes.FakeGenerator{},
-				)
-				g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
-			},
-		)
+			result, _ := createServers(
+				dataplane.Configuration{HTTPServers: httpServers},
+				&policiesfakes.FakeGenerator{},
+			)
+			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -2276,22 +2268,20 @@ func TestCreateLocationsRootPath(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				locs, httpMatchPair, grpc := createLocations(
-					&dataplane.VirtualServer{
-						PathRules: test.pathRules,
-						Port:      80,
-					}, "1", &policiesfakes.FakeGenerator{},
-				)
-				g.Expect(locs).To(Equal(test.expLocations))
-				g.Expect(httpMatchPair).To(BeEmpty())
-				g.Expect(grpc).To(Equal(test.grpc))
-			},
-		)
+			locs, httpMatchPair, grpc := createLocations(
+				&dataplane.VirtualServer{
+					PathRules: test.pathRules,
+					Port:      80,
+				}, "1", &policiesfakes.FakeGenerator{},
+			)
+			g.Expect(locs).To(Equal(test.expLocations))
+			g.Expect(httpMatchPair).To(BeEmpty())
+			g.Expect(grpc).To(Equal(test.grpc))
+		})
 	}
 }
 
@@ -2418,15 +2408,13 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
-				g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-			},
-		)
+			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -2548,15 +2536,13 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := createRewritesValForRewriteFilter(test.filter, test.path)
-				g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-			},
-		)
+			result := createRewritesValForRewriteFilter(test.filter, test.path)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -2711,15 +2697,13 @@ func TestCreateRouteMatch(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := createRouteMatch(tc.match, testPath)
-				g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
-			},
-		)
+			result := createRouteMatch(tc.match, testPath)
+			g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
+		})
 	}
 }
 
@@ -2812,15 +2796,13 @@ func TestIsPathOnlyMatch(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := isPathOnlyMatch(tc.match)
-				g.Expect(result).To(Equal(tc.expected))
-			},
-		)
+			result := isPathOnlyMatch(tc.match)
+			g.Expect(result).To(Equal(tc.expected))
+		})
 	}
 }
 
@@ -2894,14 +2876,12 @@ func TestCreateProxyPass(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(
-			tc.expected, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil, tc.GRPC), tc.GRPC)
-				g.Expect(result).To(Equal(tc.expected))
-			},
-		)
+		t.Run(tc.expected, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil, tc.GRPC), tc.GRPC)
+			g.Expect(result).To(Equal(tc.expected))
+		})
 	}
 }
 
@@ -3123,15 +3103,13 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				headers := generateProxySetHeaders(tc.filters, tc.GRPC)
-				g.Expect(headers).To(Equal(tc.expectedHeaders))
-			},
-		)
+			headers := generateProxySetHeaders(tc.filters, tc.GRPC)
+			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
 	}
 }
 
@@ -3217,15 +3195,13 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := createProxyTLSFromBackends(tc.grp)
-				g.Expect(result).To(Equal(tc.expected))
-			},
-		)
+			result := createProxyTLSFromBackends(tc.grp)
+			g.Expect(result).To(Equal(tc.expected))
+		})
 	}
 }
 
@@ -3289,15 +3265,13 @@ func TestGenerateResponseHeaders(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				headers := generateResponseHeaders(tc.filters)
-				g.Expect(headers).To(Equal(tc.expectedHeaders))
-			},
-		)
+			headers := generateResponseHeaders(tc.filters)
+			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
 	}
 }
 
@@ -3326,14 +3300,12 @@ func TestGetIPFamily(t *testing.T) {
 	}
 
 	for _, tc := range test {
-		t.Run(
-			tc.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				result := getIPFamily(tc.baseHTTPConfig)
-				g.Expect(result).To(Equal(tc.expected))
-			},
-		)
+			result := getIPFamily(tc.baseHTTPConfig)
+			g.Expect(result).To(Equal(tc.expected))
+		})
 	}
 }

@@ -285,14 +285,12 @@ func buildSectionNameRefs(
 		}
 		uniqueSectionsPerGateway[k] = struct{}{}
 
-		sectionNameRefs = append(
-			sectionNameRefs, ParentRef{
-				Idx:         i,
-				Gateway:     gw,
-				SectionName: p.SectionName,
-				Port:        p.Port,
-			},
-		)
+		sectionNameRefs = append(sectionNameRefs, ParentRef{
+			Idx:         i,
+			Gateway:     gw,
+			SectionName: p.SectionName,
+			Port:        p.Port,
+		})
 	}
 
 	return sectionNameRefs, nil
@@ -345,11 +343,9 @@ func bindRoutesToListeners(
 	}
 
 	// Sort the slice by timestamp and name so that we process the routes in the priority order
-	sort.Slice(
-		routes, func(i, j int) bool {
-			return ngfSort.LessClientObject(routes[i].Source, routes[j].Source)
-		},
-	)
+	sort.Slice(routes, func(i, j int) bool {
+		return ngfSort.LessClientObject(routes[i].Source, routes[j].Source)
+	})
 
 	// portHostnamesMap exists to detect duplicate hostnames on the same port
 	portHostnamesMap := make(map[string]struct{})
@@ -474,19 +470,17 @@ func tryToAttachL4RouteToListeners(
 	)
 
 	// Sorting the listeners from most specific hostname to the least specific hostname
-	sort.Slice(
-		attachableListeners, func(i, j int) bool {
-			h1 := ""
-			h2 := ""
-			if attachableListeners[i].Source.Hostname != nil {
-				h1 = string(*attachableListeners[i].Source.Hostname)
-			}
-			if attachableListeners[j].Source.Hostname != nil {
-				h2 = string(*attachableListeners[j].Source.Hostname)
-			}
-			return h1 == GetMoreSpecificHostname(h1, h2)
-		},
-	)
+	sort.Slice(attachableListeners, func(i, j int) bool {
+		h1 := ""
+		h2 := ""
+		if attachableListeners[i].Source.Hostname != nil {
+			h1 = string(*attachableListeners[i].Source.Hostname)
+		}
+		if attachableListeners[j].Source.Hostname != nil {
+			h2 = string(*attachableListeners[j].Source.Hostname)
+		}
+		return h1 == GetMoreSpecificHostname(h1, h2)
+	})
 
 	for _, l := range attachableListeners {
 		routeAllowed, routeAttached, routeHostnamesUnique := bindToListenerL4(

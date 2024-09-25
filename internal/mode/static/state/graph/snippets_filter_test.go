@@ -114,15 +114,13 @@ func TestProcessSnippetsFilters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				processedSnippetsFilters := processSnippetsFilters(test.snippetsFilters)
-				g.Expect(processedSnippetsFilters).To(BeEquivalentTo(test.expProcessedSnippets))
-			},
-		)
+			processedSnippetsFilters := processSnippetsFilters(test.snippetsFilters)
+			g.Expect(processedSnippetsFilters).To(BeEquivalentTo(test.expProcessedSnippets))
+		})
 	}
 }
 
@@ -288,20 +286,18 @@ func TestValidateSnippetsFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.msg, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				cond := validateSnippetsFilter(test.filter)
-				if test.expCond != (conditions.Condition{}) {
-					g.Expect(cond).ToNot(BeNil())
-					g.Expect(*cond).To(Equal(test.expCond))
-				} else {
-					g.Expect(cond).To(BeNil())
-				}
-			},
-		)
+			cond := validateSnippetsFilter(test.filter)
+			if test.expCond != (conditions.Condition{}) {
+				g.Expect(cond).ToNot(BeNil())
+				g.Expect(*cond).To(Equal(test.expCond))
+			} else {
+				g.Expect(cond).To(BeNil())
+			}
+		})
 	}
 }
 
@@ -430,24 +426,22 @@ func TestGetSnippetsFilterResolverForNamespace(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				resolve := getSnippetsFilterResolverForNamespace(test.snippetsFilterMap, test.resolveInNamespace)
-				resolvedSf := resolve(test.extRef)
-				if test.expResolve {
-					g.Expect(resolvedSf).ToNot(BeNil())
-					g.Expect(resolvedSf.SnippetsFilter).ToNot(BeNil())
-					g.Expect(resolvedSf.SnippetsFilter.Referenced).To(BeTrue())
-					g.Expect(resolvedSf.SnippetsFilter.Source.Name).To(BeEquivalentTo(test.extRef.Name))
-					g.Expect(resolvedSf.SnippetsFilter.Source.Namespace).To(Equal(test.resolveInNamespace))
-					g.Expect(resolvedSf.Valid).To(BeEquivalentTo(test.expValid))
-				} else {
-					g.Expect(resolvedSf).To(BeNil())
-				}
-			},
-		)
+			resolve := getSnippetsFilterResolverForNamespace(test.snippetsFilterMap, test.resolveInNamespace)
+			resolvedSf := resolve(test.extRef)
+			if test.expResolve {
+				g.Expect(resolvedSf).ToNot(BeNil())
+				g.Expect(resolvedSf.SnippetsFilter).ToNot(BeNil())
+				g.Expect(resolvedSf.SnippetsFilter.Referenced).To(BeTrue())
+				g.Expect(resolvedSf.SnippetsFilter.Source.Name).To(BeEquivalentTo(test.extRef.Name))
+				g.Expect(resolvedSf.SnippetsFilter.Source.Namespace).To(Equal(test.resolveInNamespace))
+				g.Expect(resolvedSf.Valid).To(BeEquivalentTo(test.expValid))
+			} else {
+				g.Expect(resolvedSf).To(BeNil())
+			}
+		})
 	}
 }

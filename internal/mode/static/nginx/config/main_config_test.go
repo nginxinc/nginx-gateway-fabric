@@ -40,21 +40,19 @@ func TestExecuteMainConfig_Telemetry(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				res := executeMainConfig(test.conf)
-				g.Expect(res).To(HaveLen(1))
-				g.Expect(res[0].dest).To(Equal(mainIncludeFile))
-				if test.expLoadModuleDirective {
-					g.Expect(res[0].data).To(ContainSubstring(loadModuleDirective))
-				} else {
-					g.Expect(res[0].data).ToNot(ContainSubstring(loadModuleDirective))
-				}
-			},
-		)
+			res := executeMainConfig(test.conf)
+			g.Expect(res).To(HaveLen(1))
+			g.Expect(res[0].dest).To(Equal(mainIncludeFile))
+			if test.expLoadModuleDirective {
+				g.Expect(res[0].data).To(ContainSubstring(loadModuleDirective))
+			} else {
+				g.Expect(res[0].data).ToNot(ContainSubstring(loadModuleDirective))
+			}
+		})
 	}
 }
 

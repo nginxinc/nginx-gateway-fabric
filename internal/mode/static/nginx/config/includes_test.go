@@ -150,15 +150,13 @@ func TestCreateIncludesFromPolicyGenerateResult(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				includes := createIncludesFromPolicyGenerateResult(test.files)
-				g.Expect(includes).To(Equal(test.includes))
-			},
-		)
+			includes := createIncludesFromPolicyGenerateResult(test.files)
+			g.Expect(includes).To(Equal(test.includes))
+		})
 	}
 }
 
@@ -223,16 +221,14 @@ func TestCreateIncludesFromLocationSnippetsFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
+			g := NewWithT(t)
 
-				includes := createIncludesFromLocationSnippetsFilters(test.filters)
-				g.Expect(includes).To(ConsistOf(test.expIncludes))
-			},
-		)
+			includes := createIncludesFromLocationSnippetsFilters(test.filters)
+			g.Expect(includes).To(ConsistOf(test.expIncludes))
+		})
 	}
 }
 
@@ -378,15 +374,13 @@ func TestCreateIncludesFromServerSnippetsFilters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
-				includes := createIncludesFromServerSnippetsFilters(test.server)
-				g.Expect(includes).To(ConsistOf(test.expIncludes))
-			},
-		)
+			g := NewWithT(t)
+			includes := createIncludesFromServerSnippetsFilters(test.server)
+			g.Expect(includes).To(ConsistOf(test.expIncludes))
+		})
 	}
 }
 
@@ -453,16 +447,14 @@ func TestCreateIncludesFromSnippets(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
+			g := NewWithT(t)
 
-				includes := createIncludesFromSnippets(test.snippets)
-				g.Expect(includes).To(ConsistOf(test.expIncludes))
-			},
-		)
+			includes := createIncludesFromSnippets(test.snippets)
+			g.Expect(includes).To(ConsistOf(test.expIncludes))
+		})
 	}
 }
 
@@ -513,15 +505,13 @@ func TestCreateIncludeExecuteResults(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
+			g := NewWithT(t)
 
-				results := createIncludeExecuteResults(test.includes)
-				g.Expect(results).To(ConsistOf(test.expExecuteResults))
-			},
-		)
+			results := createIncludeExecuteResults(test.includes)
+			g.Expect(results).To(ConsistOf(test.expExecuteResults))
+		})
 	}
 }

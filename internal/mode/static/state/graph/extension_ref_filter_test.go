@@ -86,22 +86,20 @@ func TestValidateExtensionRefFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-				g := NewWithT(t)
+			g := NewWithT(t)
 
-				errs := validateExtensionRefFilter(test.ref, testPath)
-				g.Expect(errs).To(HaveLen(test.expErrCount))
+			errs := validateExtensionRefFilter(test.ref, testPath)
+			g.Expect(errs).To(HaveLen(test.expErrCount))
 
-				if len(test.errSubString) > 0 {
-					aggregateErrStr := errs.ToAggregate().Error()
-					for _, ss := range test.errSubString {
-						g.Expect(aggregateErrStr).To(ContainSubstring(ss))
-					}
+			if len(test.errSubString) > 0 {
+				aggregateErrStr := errs.ToAggregate().Error()
+				for _, ss := range test.errSubString {
+					g.Expect(aggregateErrStr).To(ContainSubstring(ss))
 				}
-			},
-		)
+			}
+		})
 	}
 }

@@ -956,30 +956,28 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
 
-				// The diffs get very large so the format max length will make sure the output doesn't get truncated.
-				format.MaxLength = 10000000
+			// The diffs get very large so the format max length will make sure the output doesn't get truncated.
+			format.MaxLength = 10000000
 
-				fakePolicyValidator := &validationfakes.FakePolicyValidator{}
+			fakePolicyValidator := &validationfakes.FakePolicyValidator{}
 
-				result := BuildGraph(
-					test.store,
-					controllerName,
-					gcName,
-					validation.Validators{
-						HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
-						GenericValidator:    &validationfakes.FakeGenericValidator{},
-						PolicyValidator:     fakePolicyValidator,
-					},
-					protectedPorts,
-				)
+			result := BuildGraph(
+				test.store,
+				controllerName,
+				gcName,
+				validation.Validators{
+					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+					GenericValidator:    &validationfakes.FakeGenericValidator{},
+					PolicyValidator:     fakePolicyValidator,
+				},
+				protectedPorts,
+			)
 
-				g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-			},
-		)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -1276,15 +1274,13 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
 
-				test.graph.GatewayClass = test.gc
-				result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
-				g.Expect(result).To(Equal(test.expected))
-			},
-		)
+			test.graph.GatewayClass = test.gc
+			result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1410,24 +1406,20 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 		},
 		{
 			name: "irrelevant; policy references a Gateway, but the graph's Gateway is nil",
-			graph: getModifiedGraph(
-				func(g *Graph) *Graph {
-					g.Gateway = nil
-					return g
-				},
-			),
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.Gateway = nil
+				return g
+			}),
 			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw"},
 			expRelevant: false,
 		},
 		{
 			name: "irrelevant; policy references a Gateway, but the graph's Gateway.Source is nil",
-			graph: getModifiedGraph(
-				func(g *Graph) *Graph {
-					g.Gateway.Source = nil
-					return g
-				},
-			),
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.Gateway.Source = nil
+				return g
+			}),
 			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw-source"},
 			expRelevant: false,
@@ -1435,15 +1427,13 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
-				g.Expect(relevant).To(Equal(test.expRelevant))
-			},
-		)
+			relevant := test.graph.IsNGFPolicyRelevant(test.policy, policyGVK, test.nsname)
+			g.Expect(relevant).To(Equal(test.expRelevant))
+		})
 	}
 }
 

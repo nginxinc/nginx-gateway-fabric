@@ -76,18 +76,16 @@ func convertHTTPRouteFilters(filters []v1.HTTPRouteFilter) []Filter {
 	routeFilters := make([]Filter, 0, len(filters))
 
 	for _, filter := range filters {
-		routeFilters = append(
-			routeFilters, Filter{
-				RouteType:              RouteTypeHTTP,
-				FilterType:             FilterType(filter.Type),
-				RequestHeaderModifier:  filter.RequestHeaderModifier,
-				ResponseHeaderModifier: filter.ResponseHeaderModifier,
-				RequestRedirect:        filter.RequestRedirect,
-				URLRewrite:             filter.URLRewrite,
-				RequestMirror:          filter.RequestMirror,
-				ExtensionRef:           filter.ExtensionRef,
-			},
-		)
+		routeFilters = append(routeFilters, Filter{
+			RouteType:              RouteTypeHTTP,
+			FilterType:             FilterType(filter.Type),
+			RequestHeaderModifier:  filter.RequestHeaderModifier,
+			ResponseHeaderModifier: filter.ResponseHeaderModifier,
+			RequestRedirect:        filter.RequestRedirect,
+			URLRewrite:             filter.URLRewrite,
+			RequestMirror:          filter.RequestMirror,
+			ExtensionRef:           filter.ExtensionRef,
+		})
 	}
 
 	return routeFilters
@@ -97,16 +95,14 @@ func convertGRPCRouteFilters(filters []v1.GRPCRouteFilter) []Filter {
 	routeFilters := make([]Filter, 0, len(filters))
 
 	for _, filter := range filters {
-		routeFilters = append(
-			routeFilters, Filter{
-				RouteType:              RouteTypeGRPC,
-				FilterType:             FilterType(filter.Type),
-				RequestHeaderModifier:  filter.RequestHeaderModifier,
-				ResponseHeaderModifier: filter.ResponseHeaderModifier,
-				RequestMirror:          filter.RequestMirror,
-				ExtensionRef:           filter.ExtensionRef,
-			},
-		)
+		routeFilters = append(routeFilters, Filter{
+			RouteType:              RouteTypeGRPC,
+			FilterType:             FilterType(filter.Type),
+			RequestHeaderModifier:  filter.RequestHeaderModifier,
+			ResponseHeaderModifier: filter.ResponseHeaderModifier,
+			RequestMirror:          filter.RequestMirror,
+			ExtensionRef:           filter.ExtensionRef,
+		})
 	}
 
 	return routeFilters
@@ -243,11 +239,10 @@ func validateFilterHeaderModifierFields(
 	var allErrs field.ErrorList
 
 	// Ensure that the header names are case-insensitive unique
-	allErrs = append(
-		allErrs, validateRequestHeadersCaseInsensitiveUnique(
-			headerModifier.Add,
-			headerModifierPath.Child(add),
-		)...,
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Add,
+		headerModifierPath.Child(add),
+	)...,
 	)
 	allErrs = append(
 		allErrs, validateRequestHeadersCaseInsensitiveUnique(

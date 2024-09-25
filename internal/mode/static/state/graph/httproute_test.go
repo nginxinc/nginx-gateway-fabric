@@ -42,18 +42,16 @@ func createHTTPRoute(
 		if path == emptyPathValue {
 			pathValue = nil
 		}
-		rules = append(
-			rules, gatewayv1.HTTPRouteRule{
-				Matches: []gatewayv1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  pathType,
-							Value: pathValue,
-						},
+		rules = append(rules, gatewayv1.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{
+					Path: &gatewayv1.HTTPPathMatch{
+						Type:  pathType,
+						Value: pathValue,
 					},
 				},
 			},
-		)
+		})
 	}
 
 	return &gatewayv1.HTTPRoute{
@@ -203,32 +201,30 @@ func TestBuildHTTPRoutes(t *testing.T) {
 	validator := &validationfakes.FakeHTTPFieldsValidator{}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
-					client.ObjectKeyFromObject(sf): {
-						Source: sf,
-						Valid:  true,
-						Snippets: map[ngfAPI.NginxContext]string{
-							ngfAPI.NginxContextHTTP: "http snippet",
-						},
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				client.ObjectKeyFromObject(sf): {
+					Source: sf,
+					Valid:  true,
+					Snippets: map[ngfAPI.NginxContext]string{
+						ngfAPI.NginxContextHTTP: "http snippet",
 					},
-				}
+				},
+			}
 
-				routes := buildRoutesForGateways(
-					validator,
-					hrRoutes,
-					map[types.NamespacedName]*gatewayv1.GRPCRoute{},
-					test.gwNsNames,
-					nil,
-					snippetsFilters,
-				)
-				g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
-			},
-		)
+			routes := buildRoutesForGateways(
+				validator,
+				hrRoutes,
+				map[types.NamespacedName]*gatewayv1.GRPCRoute{},
+				test.gwNsNames,
+				nil,
+				snippetsFilters,
+			)
+			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
+		})
 	}
 }
 
@@ -900,19 +896,17 @@ func TestBuildHTTPRoute(t *testing.T) {
 	gatewayNsNames := []types.NamespacedName{gatewayNsName}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
-					{Namespace: "test", Name: "sf"}: {Valid: true},
-				}
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				{Namespace: "test", Name: "sf"}: {Valid: true},
+			}
 
-				route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames, snippetsFilters)
-				g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
-			},
-		)
+			route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames, snippetsFilters)
+			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
+		})
 	}
 }
 
@@ -1172,14 +1166,12 @@ func TestValidateMatch(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
 
@@ -1304,15 +1296,13 @@ func TestValidateFilterRedirect(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-				allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+			allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
 
@@ -1426,13 +1416,11 @@ func TestValidateFilterRewrite(t *testing.T) {
 	filterPath := field.NewPath("test")
 
 	for _, test := range tests {
-		t.Run(
-			test.name, func(t *testing.T) {
-				t.Parallel()
-				g := NewWithT(t)
-				allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			},
-		)
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
 	}
 }
