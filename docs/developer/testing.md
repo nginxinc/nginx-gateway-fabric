@@ -36,6 +36,8 @@ the [Counterfeiter](https://github.com/maxbrunsfeld/counterfeiter) tool. Counter
 implementations of internal and public interfaces, allowing us to isolate and control dependencies during testing. It
 simplifies the process of mocking and stubbing, making our tests more robust and flexible.
 
+**Parallelize unit tests**:  We use `t.Parallel()` to parallelize all unit tests and subtests, allowing us faster execution. To avoid race conditions, each test and subtest is designed to be independent. If a test cannot be parallelized due to sequential dependencies, a comment stating the reason must be provided.
+
 By combining BDD style tests, unit tests, and mock generation, we aim to achieve a comprehensive and maintainable
 testing strategy. This approach enables us to ensure the correctness, reliability, and flexibility of our codebase while
 promoting efficient refactoring and continuous development.
