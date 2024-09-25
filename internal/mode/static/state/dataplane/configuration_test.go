@@ -1090,7 +1090,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 					Port: 80,
-				})
+				},
+				)
 				conf.SSLServers = []VirtualServer{}
 				conf.Upstreams = append(conf.Upstreams, fooUpstream)
 				conf.BackendGroups = []BackendGroup{expGRGroups[0]}

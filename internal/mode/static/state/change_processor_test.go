@@ -1050,7 +1050,8 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
-				})
+				},
+				)
 			})
 			When("the first TLSRoute update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
@@ -1067,7 +1068,8 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
-				})
+				},
+				)
 			})
 			When("the first Gateway update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
@@ -1736,7 +1738,10 @@ var _ = Describe("ChangeProcessor", func() {
 					It("should trigger a change", func() {
 						testDeleteTriggersChange(
 							hrMultipleRules,
-							types.NamespacedName{Namespace: hrMultipleRules.Namespace, Name: hrMultipleRules.Name},
+							types.NamespacedName{
+								Namespace: hrMultipleRules.Namespace,
+								Name:      hrMultipleRules.Name,
+							},
 							state.ClusterStateChange,
 						)
 					})
@@ -1877,16 +1882,19 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 				})
 			})
-			When("a namespace that is linked to a listener has its labels changed to no longer match a listener", func() {
-				It("triggers an update", func() {
-					nsDifferentLabels.Labels = map[string]string{
-						"oranges": "bananas",
-					}
-					processor.CaptureUpsertChange(nsDifferentLabels)
-					changed, _ := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-				})
-			})
+			When(
+				"a namespace that is linked to a listener has its labels changed to no longer match a listener",
+				func() {
+					It("triggers an update", func() {
+						nsDifferentLabels.Labels = map[string]string{
+							"oranges": "bananas",
+						}
+						processor.CaptureUpsertChange(nsDifferentLabels)
+						changed, _ := processor.Process()
+						Expect(changed).To(Equal(state.ClusterStateChange))
+					})
+				},
+			)
 			When("a gateway changes its listener's labels", func() {
 				It("triggers an update when a namespace that matches the new labels is created", func() {
 					gwChangedLabel := gw.DeepCopy()
