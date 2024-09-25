@@ -85,6 +85,7 @@ func processSnippetsFilters(
 func createSnippetsMap(snippets []ngfAPI.Snippet) map[ngfAPI.NginxContext]string {
 	snippetsMap := make(map[ngfAPI.NginxContext]string)
 
+	// snippets are already validated, so we can assume there's max one snippet per context.
 	for _, snippet := range snippets {
 		snippetsMap[snippet.Context] = snippet.Value
 	}
