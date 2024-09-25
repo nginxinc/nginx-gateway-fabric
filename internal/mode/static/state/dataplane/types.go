@@ -142,7 +142,7 @@ type HTTPFilters struct {
 	// ResponseHeaderModifiers holds the HTTPHeaderFilter.
 	ResponseHeaderModifiers *HTTPHeaderFilter
 	// SnippetsFilters holds all the SnippetsFilters for the MatchRule.
-	// Unlike the core and extended filters, there can be more than on SnippetsFilters defined on a routing rule.
+	// Unlike the core and extended filters, there can be more than one SnippetsFilters defined on a routing rule.
 	SnippetsFilters []SnippetsFilter
 }
 
@@ -151,7 +151,7 @@ type HTTPFilters struct {
 type SnippetsFilter struct {
 	// LocationSnippet holds the snippet for the location context.
 	LocationSnippet *Snippet
-	// ServerSnippet holds the snippet for the location context.
+	// ServerSnippet holds the snippet for the server context.
 	ServerSnippet *Snippet
 }
 
