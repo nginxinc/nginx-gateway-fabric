@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -41,7 +42,12 @@ func Post(url, address string, body io.Reader, timeout time.Duration) (*http.Res
 func makeRequest(method, url, address string, body io.Reader, timeout time.Duration) (*http.Response, error) {
 	dialer := &net.Dialer{}
 
-	http.DefaultTransport.(*http.Transport).DialContext = func(
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("transport is not of type *http.Transport")
+	}
+
+	transport.DialContext = func(
 		ctx context.Context,
 		network,
 		addr string,
@@ -61,7 +67,12 @@ func makeRequest(method, url, address string, body io.Reader, timeout time.Durat
 
 	var resp *http.Response
 	if strings.HasPrefix(url, "https") {
-		customTransport := http.DefaultTransport.(*http.Transport).Clone()
+		transport, ok := http.DefaultTransport.(*http.Transport)
+		if !ok {
+			return nil, errors.New("transport is not of type *http.Transport")
+		}
+
+		customTransport := transport.Clone()
 		// similar to how in our examples with https requests we run our curl command
 		// we turn off verification of the certificate, we do the same here
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // for https test traffic

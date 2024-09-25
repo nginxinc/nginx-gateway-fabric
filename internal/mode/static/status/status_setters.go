@@ -82,7 +82,7 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 
 func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		hr := object.(*gatewayv1.HTTPRoute)
+		hr := helpers.MustCastObject[*gatewayv1.HTTPRoute](object)
 
 		// keep all the parent statuses that belong to other controllers
 		for _, os := range hr.Status.Parents {
@@ -103,7 +103,7 @@ func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtlrName 
 
 func newTLSRouteStatusSetter(status v1alpha2.TLSRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		tr := object.(*v1alpha2.TLSRoute)
+		tr := helpers.MustCastObject[*v1alpha2.TLSRoute](object)
 
 		// keep all the parent statuses that belong to other controllers
 		for _, os := range tr.Status.Parents {
@@ -124,7 +124,7 @@ func newTLSRouteStatusSetter(status v1alpha2.TLSRouteStatus, gatewayCtlrName str
 
 func newGRPCRouteStatusSetter(status gatewayv1.GRPCRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		gr := object.(*gatewayv1.GRPCRoute)
+		gr := helpers.MustCastObject[*gatewayv1.GRPCRoute](object)
 
 		// keep all the parent statuses that belong to other controllers
 		for _, os := range gr.Status.Parents {

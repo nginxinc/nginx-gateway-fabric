@@ -37,6 +37,7 @@ linters-settings:
       - name: string-of-int
       - name: superfluous-else
       - name: time-naming
+      - name: unchecked-type-assertion
       - name: unexported-return
       - name: unnecessary-stmt
       - name: unreachable-code
@@ -70,6 +71,7 @@ linters:
     - errname
     - errorlint
     - fatcontext
+    - forcetypeassert
     - ginkgolinter
     - gocheckcompilerdirectives
     - gochecksumtype
