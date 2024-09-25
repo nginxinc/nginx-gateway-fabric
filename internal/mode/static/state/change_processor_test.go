@@ -2724,24 +2724,26 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.NoChange))
 			})
-			It("should report changed after upserting changed resources followed by upserting unrelated resources", func() {
-				// these are changing changes
-				processor.CaptureUpsertChange(gcUpdated)
-				processor.CaptureUpsertChange(gw1Updated)
-				processor.CaptureUpsertChange(hr1Updated)
-				processor.CaptureUpsertChange(rg1Updated)
-				processor.CaptureUpsertChange(btlsUpdated)
+			It("should report changed after upserting changed resources followed by upserting unrelated resources",
+				func() {
+					// these are changing changes
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
+					processor.CaptureUpsertChange(btlsUpdated)
 
-				// these are non-changing changes
-				processor.CaptureUpsertChange(unrelatedSvc)
-				processor.CaptureUpsertChange(unrelatedSlice)
-				processor.CaptureUpsertChange(unrelatedNS)
-				processor.CaptureUpsertChange(unrelatedSecret)
-				processor.CaptureUpsertChange(unrelatedCM)
+					// these are non-changing changes
+					processor.CaptureUpsertChange(unrelatedSvc)
+					processor.CaptureUpsertChange(unrelatedSlice)
+					processor.CaptureUpsertChange(unrelatedNS)
+					processor.CaptureUpsertChange(unrelatedSecret)
+					processor.CaptureUpsertChange(unrelatedCM)
 
-				changed, _ := processor.Process()
-				Expect(changed).To(Equal(state.ClusterStateChange))
-			})
+					changed, _ := processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+				},
+			)
 		})
 	})
 	Describe("Edge cases with panic", func() {
