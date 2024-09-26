@@ -15,12 +15,12 @@ changelog:
     - title: 📦 Helm Chart
       labels:
         - helm-chart
-    - title: 📝 Documentation
-      labels:
-        - documentation
     - title: 🧪 Tests
       labels:
         - tests
+    - title: 📝 Documentation
+      labels:
+        - documentation
     - title: 🧹 Tech debt
       labels:
         - tech-debt

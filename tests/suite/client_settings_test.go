@@ -91,9 +91,122 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 			}
 		})
 
+		Context("nginx config", func() {
+			var conf *framework.Payload
+			filePrefix := fmt.Sprintf("/etc/nginx/includes/ClientSettingsPolicy_%s", namespace)
+
+			BeforeAll(func() {
+				podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(podNames).To(HaveLen(1))
+
+				ngfPodName := podNames[0]
+
+				conf, err = resourceManager.GetNginxConfig(ngfPodName, ngfNamespace)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			DescribeTable("is set properly for",
+				func(expCfgs []framework.ExpectedNginxField) {
+					for _, expCfg := range expCfgs {
+						Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
+					}
+				},
+				Entry("gateway policy", []framework.ExpectedNginxField{
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+						File:      "http.conf",
+						Servers:   []string{"*.example.com", "cafe.example.com"},
+					},
+					{
+						Directive: "client_max_body_size",
+						Value:     "1000",
+						File:      fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+					},
+					{
+						Directive: "client_body_timeout",
+						Value:     "30s",
+						File:      fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+					},
+					{
+						Directive: "keepalive_requests",
+						Value:     "100",
+						File:      fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+					},
+					{
+						Directive: "keepalive_time",
+						Value:     "5s",
+						File:      fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+					},
+					{
+						Directive: "keepalive_timeout",
+						Value:     "2s 1s",
+						File:      fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+					},
+				}),
+				Entry("coffee route policy", []framework.ExpectedNginxField{
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_coffee-route-csp.conf", filePrefix),
+						File:      "http.conf",
+						Servers:   []string{"cafe.example.com"},
+						Location:  "/coffee",
+					},
+					{
+						Directive: "client_max_body_size",
+						Value:     "2000",
+						File:      fmt.Sprintf("%s_coffee-route-csp.conf", filePrefix),
+					},
+				}),
+				Entry("tea route policy", []framework.ExpectedNginxField{
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_tea-route-csp.conf", filePrefix),
+						File:      "http.conf",
+						Servers:   []string{"cafe.example.com"},
+						Location:  "/tea",
+					},
+					{
+						Directive: "keepalive_requests",
+						Value:     "200",
+						File:      fmt.Sprintf("%s_tea-route-csp.conf", filePrefix),
+					},
+				}),
+				Entry("soda route policy", []framework.ExpectedNginxField{
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_soda-route-csp.conf", filePrefix),
+						File:      "http.conf",
+						Servers:   []string{"cafe.example.com"},
+						Location:  "/soda",
+					},
+					{
+						Directive: "client_max_body_size",
+						Value:     "3000",
+						File:      fmt.Sprintf("%s_soda-route-csp.conf", filePrefix),
+					},
+				}),
+				Entry("grpc route policy", []framework.ExpectedNginxField{
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_grpc-route-csp.conf", filePrefix),
+						File:      "http.conf",
+						Servers:   []string{"*.example.com"},
+						Location:  "/helloworld.Greeter/SayHello",
+					},
+					{
+						Directive: "client_max_body_size",
+						Value:     "0",
+						File:      fmt.Sprintf("%s_grpc-route-csp.conf", filePrefix),
+					},
+				}),
+			)
+		})
+
 		// We only test that the client_max_body_size directive in this test is propagated correctly.
 		// This is because we can easily verify this directive by sending requests with different sized payloads.
-		DescribeTable("the settings are propagated to the nginx config",
+		DescribeTable("client_max_body_size requests work as expected",
 			func(uri string, byteLengthOfRequestBody, expStatus int) {
 				url := baseURL + uri
 

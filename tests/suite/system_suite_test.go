@@ -128,6 +128,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	resourceManager = framework.ResourceManager{
 		K8sClient:      k8sClient,
 		ClientGoClient: clientGoClient,
+		K8sConfig:      k8sConfig,
 		FS:             manifests,
 		TimeoutConfig:  timeoutConfig,
 	}
