@@ -5,3 +5,5 @@ coverage:
         informational: true
 comment:
   require_changes: true
+ignore:
+  - "**/fake_*.go"

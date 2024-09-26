@@ -40,21 +40,6 @@ func testFlag(t *testing.T, cmd *cobra.Command, test flagTestCase) {
 	}
 }
 
-/*
-This test cannot be run with ginkgo. Ginkgo reports the following error:
-* Unexpected error:
-*       <*errors.errorString | 0xc0004746b0>:
-*       unknown flag: --test.v
-*       {
-*           s: "unknown flag: --test.v",
-*       }
-*   occurred
-*
-* This is because cobra sets the args of the command to the OS args when args are nil, and adds the testing flags
-* that ginkgo passes to the testing binary as flags on the command. This does not happen with the `go test` flags
-* because those only have one dash (e.g. -test) and are ignored by cobra.
-* See https://github.com/spf13/cobra/issues/2104.
-*/
 func TestRootCmd(t *testing.T) {
 	t.Parallel()
 	testCase := flagTestCase{
@@ -410,21 +395,6 @@ func TestProvisionerModeCmdFlagValidation(t *testing.T) {
 	testFlag(t, createProvisionerModeCommand(), testCase)
 }
 
-/*
-This test cannot be run with ginkgo. Ginkgo reports the following error for the "omitted flag" case:
-* Unexpected error:
-*       <*errors.errorString | 0xc0004746b0>:
-*       unknown flag: --test.v
-*       {
-*           s: "unknown flag: --test.v",
-*       }
-*   occurred
-*
-* This is because cobra sets the args of the command to the OS args when args are nil, and adds the testing flags
-* that ginkgo passes to the testing binary as flags on the command. This does not happen with the `go test` flags
-* because those only have one dash (e.g. -test) and are ignored by cobra.
-* See https://github.com/spf13/cobra/issues/2104.
-*/
 func TestSleepCmdFlagValidation(t *testing.T) {
 	t.Parallel()
 	tests := []flagTestCase{

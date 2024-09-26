@@ -30,6 +30,10 @@ ifneq ($(GINKGO_LABEL),)
 	override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
 endif
 
+ifeq ($(CI),true)
+	GITHUB_OUTPUT := --github-output
+endif
+
 .PHONY: update-go-modules
 update-go-modules: ## Update the gateway-api go modules to latest main version
 	go get -u sigs.k8s.io/gateway-api@main
