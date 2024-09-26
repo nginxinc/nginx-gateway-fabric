@@ -2201,7 +2201,7 @@ func TestBuildConfiguration(t *testing.T) {
 								SetIPRecursively: helpers.GetPointer(true),
 								TrustedAddresses: []ngfAPI.Address{
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "1.1.1.1/32",
 									},
 								},
@@ -3651,7 +3651,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeProxyProtocol),
 								TrustedAddresses: []ngfAPI.Address{
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "10.9.9.4/32",
 									},
 								},
@@ -3678,7 +3678,7 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
 								TrustedAddresses: []ngfAPI.Address{
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "76.89.90.11/24",
 									},
 								},
@@ -3705,19 +3705,19 @@ func TestBuildRewriteIPSettings(t *testing.T) {
 								Mode: helpers.GetPointer(ngfAPI.RewriteClientIPModeXForwardedFor),
 								TrustedAddresses: []ngfAPI.Address{
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "5.5.5.5/12",
 									},
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "1.1.1.1/26",
 									},
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "2.2.2.2/32",
 									},
 									{
-										Type:  ngfAPI.AddressTypeCIDR,
+										Type:  ngfAPI.CIDRAddressType,
 										Value: "3.3.3.3/24",
 									},
 								},

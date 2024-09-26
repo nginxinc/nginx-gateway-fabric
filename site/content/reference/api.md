@@ -495,9 +495,7 @@ AddressType
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Type specifies the type of address.
-Default is &ldquo;cidr&rdquo; which specifies that the address is a CIDR block.</p>
+<p>Type specifies the type of address.</p>
 </td>
 </tr>
 <tr>
@@ -508,7 +506,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Value specifies the address value.</p>
 </td>
 </tr>
@@ -531,9 +528,14 @@ string
 <th>Description</th>
 </tr>
 </thead>
-<tbody><tr><td><p>&#34;cidr&#34;</p></td>
-<td><p>AddressTypeCIDR specifies that the address is a CIDR block.
-kubebuilder:validation:Pattern=<code>^[\.a-zA-Z0-9:]*(\/([0-9]?[0-9]?[0-9]))$</code></p>
+<tbody><tr><td><p>&#34;CIDR&#34;</p></td>
+<td><p>CIDRAddressType specifies that the address is a CIDR block.</p>
+</td>
+</tr><tr><td><p>&#34;Hostname&#34;</p></td>
+<td><p>HostnameAddressType specifies that the address is a Hostname.</p>
+</td>
+</tr><tr><td><p>&#34;IPAddress&#34;</p></td>
+<td><p>IPAddressType specifies that the address is an IP address.</p>
 </td>
 </tr></tbody>
 </table>

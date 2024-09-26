@@ -73,6 +73,47 @@
               "required": [],
               "type": "string"
             },
+            "rewriteClientIP": {
+              "description": "RewriteClientIP defines configuration for rewriting the client IP to the original client's IP.",
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "ProxyProtocol",
+                    "XForwardedFor"
+                  ],
+                  "required": [],
+                  "type": "string"
+                },
+                "setIPRecursively": {
+                  "required": [],
+                  "type": "boolean"
+                },
+                "trustedAddresses": {
+                  "items": {
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "CIDR",
+                          "IPAddress",
+                          "Hostname"
+                        ],
+                        "required": [],
+                        "type": "string"
+                      },
+                      "value": {
+                        "required": [],
+                        "type": "string"
+                      }
+                    },
+                    "required": []
+                  },
+                  "required": [],
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
             "telemetry": {
               "description": "Telemetry specifies the OpenTelemetry configuration.",
               "properties": {
