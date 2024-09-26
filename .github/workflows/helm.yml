@@ -16,7 +16,7 @@ permissions:
 jobs:
   helm-tests-local:
     name: Helm Tests Local
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ github.event_name != 'schedule' }}
     steps:
       - name: Checkout Repository
@@ -120,7 +120,7 @@ jobs:
 
   helm-test-remote:
     name: Helm Tests Remote
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'schedule' }}
     steps:
       - name: Checkout Repository
