@@ -268,7 +268,9 @@ func TestBuildHTTPRoute(t *testing.T) {
 		"hr",
 		gatewayNsName.Name,
 		"example.com",
-		invalidPath, "/filter", "/",
+		invalidPath,
+		"/filter",
+		"/",
 	)
 	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilters, "/filter", invalidFilter)
 

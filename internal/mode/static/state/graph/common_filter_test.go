@@ -73,7 +73,7 @@ func TestValidateFilter(t *testing.T) {
 		{
 			filter: Filter{
 				RouteType:  RouteTypeHTTP,
-				FilterType: "RequestMirror",
+				FilterType: FilterRequestMirror,
 			},
 			expectErrCount: 1,
 			name:           "unsupported HTTP filter type",

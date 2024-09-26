@@ -278,7 +278,8 @@ func validatePathMatch(
 
 	if *path.Type != v1.PathMatchPathPrefix && *path.Type != v1.PathMatchExact {
 		valErr := field.NotSupported(
-			fieldPath.Child("type"), *path.Type,
+			fieldPath.Child("type"),
+			*path.Type,
 			[]string{string(v1.PathMatchExact), string(v1.PathMatchPathPrefix)},
 		)
 		allErrs = append(allErrs, valErr)
