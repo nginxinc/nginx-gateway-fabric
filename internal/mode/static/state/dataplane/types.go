@@ -147,7 +147,7 @@ type HTTPFilters struct {
 }
 
 // SnippetsFilter holds the location and server snippets in a SnippetsFilter.
-// The main and http snippets are store separately in Configuration.MainSnippets and BaseHTTPConfig.Snippets.
+// The main and http snippets are stored separately in Configuration.MainSnippets and BaseHTTPConfig.Snippets.
 type SnippetsFilter struct {
 	// LocationSnippet holds the snippet for the location context.
 	LocationSnippet *Snippet

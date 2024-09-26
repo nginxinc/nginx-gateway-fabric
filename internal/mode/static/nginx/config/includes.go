@@ -9,7 +9,7 @@ import (
 
 // createIncludeExecuteResultsFromServers creates a list of executeResults -- or NGINX config files -- from all
 // the includes in the provided servers. Since there may be duplicate includes, such as configuration for policies that
-// apply to multiple route, or snippets filters that are attached to multiple routing rules, this function deduplicates
+// apply to multiple routes, or snippets filters that are attached to multiple routing rules, this function deduplicates
 // all includes, ensuring only a single file per unique include is generated.
 func createIncludeExecuteResultsFromServers(servers []http.Server) []executeResult {
 	uniqueIncludes := make(map[string][]byte)
@@ -141,7 +141,7 @@ func createIncludesFromSnippets(snippets []dataplane.Snippet) []shared.Include {
 	return deduplicateIncludes(includes)
 }
 
-// createIncludeExecuteResults creates a list of executeResult -- or NGINX config files -- from a list of includes.
+// createIncludeExecuteResults creates a list of executeResults -- or NGINX config files -- from a list of includes.
 // Used for main and http snippets only. Server and location snippets are handled by other functions above.
 func createIncludeExecuteResults(includes []shared.Include) []executeResult {
 	results := make([]executeResult, 0, len(includes))
