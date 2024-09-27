@@ -112,8 +112,7 @@ jobs:
       - name: Publish CTRF Detailed Test Summary Results
         run: |
           npx github-actions-ctrf summary ctrf-report.json
-          npx github-actions-ctrf failed ctrf-report.json --pr-comment --on-fail-only
-          npx github-actions-ctrf annotate ctrf-report.json
+          npx github-actions-ctrf failed ctrf-report.json --pr-comment --on-fail-only --annotate
         env:
           GITHUB_TOKEN: ${{ secrets.NGINX_PAT }}
         if: always()
