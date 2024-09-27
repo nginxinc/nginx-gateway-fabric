@@ -94,7 +94,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test ./cmd/... ./internal/... -buildvcs -race -shuffle=on -coverprofile=coverage.out -covermode=atomic -json | go run github.com/ctrf-io/go-ctrf-json-reporter/cmd/go-ctrf-json-reporter@latest -output ctrf-report.json
+          go test ./cmd/... ./internal/... -race -shuffle=on -coverprofile=coverage.out -covermode=atomic -json | go run github.com/ctrf-io/go-ctrf-json-reporter/cmd/go-ctrf-json-reporter@latest -output ctrf-report.json
           go tool cover -html=coverage.out -o cover.html
 
       - name: Upload coverage reports to Codecov
