@@ -110,7 +110,10 @@ jobs:
         if: always()
 
       - name: Publish CTRF Detailed Test Summary Results
-        run: npx github-actions-ctrf summary failed ctrf-report.json
+        run: |
+          npx github-actions-ctrf summary ctrf-report.json
+          npx github-actions-ctrf failed ctrf-report.json --pr-comment --on-fail-only
+          npx github-actions-ctrf annotate ctrf-report.json
         if: always()
 
   njs-unit-tests:
