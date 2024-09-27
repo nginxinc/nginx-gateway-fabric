@@ -93,7 +93,9 @@ jobs:
             .github/.cache/buster-for-unit-tests
 
       - name: Run Tests
-        run: make unit-test
+        run: |
+          go test ./cmd/... ./internal/... -buildvcs -race -shuffle=on -coverprofile=coverage.out -covermode=atomic -json | go run github.com/ctrf-io/go-ctrf-json-reporter/cmd/go-ctrf-json-reporter@latest -output ctrf-report.json
+          go tool cover -html=coverage.out -o cover.html
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
@@ -107,10 +109,8 @@ jobs:
           path: ${{ github.workspace }}/cover.html
         if: always()
 
-      - name: Test Report
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: unit-tests.xml
+      - name: Publish CTRF Detailed Test Summary Results
+        run: npx github-actions-ctrf tests ctrf-report.json
         if: always()
 
   njs-unit-tests:
