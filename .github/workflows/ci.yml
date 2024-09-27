@@ -110,7 +110,7 @@ jobs:
         if: always()
 
       - name: Publish CTRF Detailed Test Summary Results
-        run: npx github-actions-ctrf tests ctrf-report.json
+        run: npx github-actions-ctrf ctrf-report.json
         if: always()
 
   njs-unit-tests:
