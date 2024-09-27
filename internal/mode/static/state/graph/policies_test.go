@@ -25,60 +25,20 @@ var testNs = "test"
 func TestAttachPolicies(t *testing.T) {
 	t.Parallel()
 	policyGVK := schema.GroupVersionKind{Group: "Group", Version: "Version", Kind: "Policy"}
-
-	gwPolicyKey := createTestPolicyKey(policyGVK, "gw-policy")
-	gwPolicy := &Policy{
-		Valid:  true,
-		Source: &policiesfakes.FakePolicy{},
-		TargetRefs: []PolicyTargetRef{
-			{
-				Kind:   kinds.Gateway,
+	createPolicy := func(targetRefsNames []string, refKind v1.Kind) *Policy {
+		targetRefs := make([]PolicyTargetRef, 0, len(targetRefsNames))
+		for _, name := range targetRefsNames {
+			targetRefs = append(targetRefs, PolicyTargetRef{
+				Kind:   refKind,
 				Group:  v1.GroupName,
-				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway"},
-			},
-			{
-				Kind:   kinds.Gateway,
-				Group:  v1.GroupName,
-				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway2"}, // ignored
-			},
-		},
-	}
-
-	routePolicyKey := createTestPolicyKey(policyGVK, "route-policy")
-	routePolicy := &Policy{
-		Valid:  true,
-		Source: &policiesfakes.FakePolicy{},
-		TargetRefs: []PolicyTargetRef{
-			{
-				Kind:   kinds.HTTPRoute,
-				Group:  v1.GroupName,
-				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-route"},
-			},
-			{
-				Kind:   kinds.HTTPRoute,
-				Group:  v1.GroupName,
-				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr2-route"},
-			},
-		},
-	}
-
-	grpcRoutePolicyKey := createTestPolicyKey(policyGVK, "grpc-route-policy")
-	grpcRoutePolicy := &Policy{
-		Valid:  true,
-		Source: &policiesfakes.FakePolicy{},
-		TargetRefs: []PolicyTargetRef{
-			{
-				Kind:   kinds.GRPCRoute,
-				Group:  v1.GroupName,
-				Nsname: types.NamespacedName{Namespace: testNs, Name: "grpc-route"},
-			},
-		},
-	}
-
-	ngfPolicies := map[PolicyKey]*Policy{
-		gwPolicyKey:        gwPolicy,
-		routePolicyKey:     routePolicy,
-		grpcRoutePolicyKey: grpcRoutePolicy,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: name},
+			})
+		}
+		return &Policy{
+			Valid:      true,
+			Source:     &policiesfakes.FakePolicy{},
+			TargetRefs: targetRefs,
+		}
 	}
 
 	createRouteKey := func(name string, routeType RouteType) RouteKey {
@@ -88,77 +48,40 @@ func TestAttachPolicies(t *testing.T) {
 		}
 	}
 
-	newGraph := func() *Graph {
-		return &Graph{
-			Gateway: &Gateway{
-				Source: &v1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway",
-						Namespace: testNs,
-					},
-				},
-				Valid: true,
-			},
-			Routes: map[RouteKey]*L7Route{
-				createRouteKey("hr-route", RouteTypeHTTP): {
-					Source: &v1.HTTPRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "hr-route",
-							Namespace: testNs,
-						},
-					},
-					ParentRefs: []ParentRef{
-						{
-							Attachment: &ParentRefAttachmentStatus{
-								Attached: true,
-							},
-						},
-					},
-					Valid:      true,
-					Attachable: true,
-				},
-				createRouteKey("hr2-route", RouteTypeHTTP): {
-					Source: &v1.HTTPRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "hr2-route",
-							Namespace: testNs,
-						},
-					},
-					ParentRefs: []ParentRef{
-						{
-							Attachment: &ParentRefAttachmentStatus{
-								Attached: true,
-							},
-						},
-					},
-					Valid:      true,
-					Attachable: true,
-				},
-				createRouteKey("grpc-route", RouteTypeGRPC): {
-					Source: &v1alpha2.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "grpc-route",
-							Namespace: testNs,
-						},
-					},
-					ParentRefs: []ParentRef{
-						{
-							Attachment: &ParentRefAttachmentStatus{
-								Attached: true,
-							},
-						},
-					},
-					Valid:      true,
-					Attachable: true,
+	createGateway := func(name string) *Gateway {
+		return &Gateway{
+			Source: &v1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: testNs,
 				},
 			},
-
-			NGFPolicies: ngfPolicies,
+			Valid: true,
 		}
 	}
 
-	newModifiedGraph := func(mod func(g *Graph) *Graph) *Graph {
-		return mod(newGraph())
+	createRoutesForGraph := func(routes map[string]RouteType) map[RouteKey]*L7Route {
+		routesMap := make(map[RouteKey]*L7Route, len(routes))
+		for routeName, routeType := range routes {
+			routesMap[createRouteKey(routeName, routeType)] = &L7Route{
+				Source: &v1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      routeName,
+						Namespace: testNs,
+					},
+				},
+				ParentRefs: []ParentRef{
+					{
+						Attachment: &ParentRefAttachmentStatus{
+							Attached: true,
+						},
+					},
+				},
+				Valid:      true,
+				Attachable: true,
+			}
+		}
+		return routesMap
 	}
 
 	expectNoPolicyAttachment := func(g *WithT, graph *Graph) {
@@ -192,30 +115,63 @@ func TestAttachPolicies(t *testing.T) {
 	}
 
 	tests := []struct {
-		graph  *Graph
-		expect func(g *WithT, graph *Graph)
-		name   string
+		gateway     *Gateway
+		routes      map[RouteKey]*L7Route
+		ngfPolicies map[PolicyKey]*Policy
+		expect      func(g *WithT, graph *Graph)
+		name        string
 	}{
 		{
 			name: "nil Gateway",
-			graph: newModifiedGraph(func(g *Graph) *Graph {
-				g.Gateway = nil
-				return g
-			}),
+			routes: createRoutesForGraph(
+				map[string]RouteType{
+					"hr1-route":  RouteTypeHTTP,
+					"hr2-route":  RouteTypeHTTP,
+					"grpc-route": RouteTypeGRPC,
+				},
+			),
+			ngfPolicies: map[PolicyKey]*Policy{
+				createTestPolicyKey(policyGVK, "gw-policy"): createPolicy([]string{"gateway", "gateway1"}, kinds.Gateway),
+				createTestPolicyKey(policyGVK, "route-policy"): createPolicy(
+					[]string{"hr1-route", "hr2-route"},
+					kinds.HTTPRoute,
+				),
+				createTestPolicyKey(policyGVK, "grpc-route-policy"): createPolicy([]string{"grpc-route"}, kinds.GRPCRoute),
+			},
 			expect: expectNoPolicyAttachment,
 		},
 		{
-			name: "nil routes",
-			graph: newModifiedGraph(func(g *Graph) *Graph {
-				g.Routes = nil
-				return g
-			}),
+			name:    "nil routes",
+			gateway: createGateway("gateway"),
+			ngfPolicies: map[PolicyKey]*Policy{
+				createTestPolicyKey(policyGVK, "gw-policy1"): createPolicy([]string{"gateway", "gateway1"}, kinds.Gateway),
+				createTestPolicyKey(policyGVK, "route-policy1"): createPolicy(
+					[]string{"hr1-route", "hr2-route"},
+					kinds.HTTPRoute,
+				),
+				createTestPolicyKey(policyGVK, "grpc-route-policy1"): createPolicy([]string{"grpc-route"}, kinds.GRPCRoute),
+			},
 			expect: expectGatewayPolicyAttachment,
 		},
 		{
-			name:   "normal",
-			graph:  newGraph(),
-			expect: expectPolicyAttachment,
+			name: "normal",
+			routes: createRoutesForGraph(
+				map[string]RouteType{
+					"hr-1":   RouteTypeHTTP,
+					"hr-2":   RouteTypeHTTP,
+					"grpc-1": RouteTypeGRPC,
+				},
+			),
+			ngfPolicies: map[PolicyKey]*Policy{
+				createTestPolicyKey(policyGVK, "gw-policy2"): createPolicy([]string{"gateway2", "gateway3"}, kinds.Gateway),
+				createTestPolicyKey(policyGVK, "route-policy2"): createPolicy(
+					[]string{"hr-1", "hr-2"},
+					kinds.HTTPRoute,
+				),
+				createTestPolicyKey(policyGVK, "grpc-route-policy2"): createPolicy([]string{"grpc-1"}, kinds.GRPCRoute),
+			},
+			gateway: createGateway("gateway2"),
+			expect:  expectPolicyAttachment,
 		},
 	}
 
@@ -224,8 +180,14 @@ func TestAttachPolicies(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			test.graph.attachPolicies("nginx-gateway")
-			test.expect(g, test.graph)
+			graph := &Graph{
+				Gateway:     test.gateway,
+				Routes:      test.routes,
+				NGFPolicies: test.ngfPolicies,
+			}
+
+			graph.attachPolicies("nginx-gateway")
+			test.expect(g, graph)
 		})
 	}
 }

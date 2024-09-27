@@ -11,7 +11,7 @@ This document describes how to enable Usage Reporting for NGINX Gateway Fabric a
 
 Usage Reporting connects to the NGINX Instance Manager and reports the number of Nodes and NGINX Gateway Fabric Pods in the cluster.
 
-To use Usage Reporting, you must have access to [NGINX Instance Manager](https://www.nginx.com/products/nginx-management-suite/instance-manager). Usage Reporting is a requirement of the new Flexible Consumption Program for NGINX Gateway Fabric, used to calculate costs. **This only applies if using NGINX Plus as the data plane.** Usage is reported every 24 hours.
+To use Usage Reporting, you must have access to [NGINX Instance Manager](https://www.f5.com/products/nginx/instance-manager). Usage Reporting is a requirement of the new Flexible Consumption Program for NGINX Gateway Fabric, used to calculate costs. **This only applies if using NGINX Plus as the data plane.** Usage is reported every 24 hours.
 
 ## Requirements
 

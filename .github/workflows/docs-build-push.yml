@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   vars:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       azure_creds: ${{ steps.vars.outputs.defined }}
     steps:
