@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -125,6 +126,8 @@ func createStaticModeCommand() *cobra.Command {
 			atom := zap.NewAtomicLevel()
 
 			logger := ctlrZap.New(ctlrZap.Level(atom))
+			klog.SetLogger(logger)
+
 			commit, date, dirty := getBuildInfo()
 			logger.Info(
 				"Starting NGINX Gateway Fabric in static mode",
