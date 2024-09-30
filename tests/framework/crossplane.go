@@ -145,8 +145,8 @@ func injectCrossplaneContainer(
 								Name:      "nginx-stream-conf",
 							},
 							{
-								MountPath: "/etc/nginx/module-includes",
-								Name:      "module-includes",
+								MountPath: "/etc/nginx/main-includes",
+								Name:      "nginx-main-includes",
 							},
 							{
 								MountPath: "/etc/nginx/secrets",
