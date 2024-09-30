@@ -1912,20 +1912,20 @@ func TestCreateServers_Includes(t *testing.T) {
 
 	conf := dataplane.Configuration{HTTPServers: httpServers, SSLServers: sslServers}
 
-	servers, matchPairs := createServers(conf, fakeGenerator)
+	actualServers, matchPairs := createServers(conf, fakeGenerator)
 	g.Expect(matchPairs).To(BeEmpty())
-	g.Expect(servers).To(HaveLen(len(expServers)))
+	g.Expect(actualServers).To(HaveLen(len(expServers)))
 
-	for i, server := range expServers {
-		g.Expect(server.ServerName).To(Equal(servers[i].ServerName))
+	for i, expServer := range expServers {
+		g.Expect(actualServers[i].ServerName).To(Equal(expServer.ServerName))
 
-		if servers[i].IsDefaultHTTP || servers[i].IsDefaultSSL {
-			g.Expect(servers[i].Includes).To(BeEmpty())
+		if actualServers[i].IsDefaultHTTP || actualServers[i].IsDefaultSSL {
+			g.Expect(actualServers[i].Includes).To(BeEmpty())
 		} else {
-			g.Expect(server.Includes).To(ConsistOf(servers[i].Includes))
-			g.Expect(server.Locations).To(HaveLen(1))
-			g.Expect(server.Locations[0].Path).To(Equal(servers[i].Locations[0].Path))
-			g.Expect(server.Locations[0].Includes).To(ConsistOf(servers[i].Locations[0].Includes))
+			g.Expect(actualServers[i].Includes).To(ConsistOf(expServer.Includes))
+			g.Expect(actualServers[i].Locations).To(HaveLen(1))
+			g.Expect(actualServers[i].Locations[0].Path).To(Equal(expServer.Locations[0].Path))
+			g.Expect(actualServers[i].Locations[0].Includes).To(ConsistOf(expServer.Locations[0].Includes))
 		}
 	}
 }
