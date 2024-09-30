@@ -10,8 +10,7 @@
     "extraVolumes": {
       "description": "extraVolumes for the NGINX Gateway Fabric pod. Use in conjunction with\nnginxGateway.extraVolumeMounts and nginx.extraVolumeMounts to mount additional volumes to the containers.",
       "items": {
-        "required": [],
-        "type": "array"
+        "required": []
       },
       "required": [],
       "title": "extraVolumes",
@@ -111,11 +110,15 @@
                   "items": {
                     "properties": {
                       "key": {
+                        "maxLength": 255,
+                        "minLength": 1,
                         "pattern": "^([^\"$\\\\]|\\\\[^$])*$",
                         "required": [],
                         "type": "string"
                       },
                       "value": {
+                        "maxLength": 255,
+                        "minLength": 1,
                         "pattern": "^([^\"$\\\\]|\\\\[^$])*$",
                         "required": [],
                         "type": "string"
@@ -138,8 +141,7 @@
         "extraVolumeMounts": {
           "description": "extraVolumeMounts are the additional volume mounts for the nginx container.",
           "items": {
-            "required": [],
-            "type": "array"
+            "required": []
           },
           "required": [],
           "title": "extraVolumeMounts",
@@ -266,8 +268,7 @@
         "extraVolumeMounts": {
           "description": "extraVolumeMounts are the additional volume mounts for the nginx-gateway container.",
           "items": {
-            "required": [],
-            "type": "array"
+            "required": []
           },
           "required": [],
           "title": "extraVolumeMounts",
@@ -559,8 +560,7 @@
         "imagePullSecrets": {
           "description": "A list of secret names containing docker registry credentials.\nSecrets must exist in the same namespace as the helm release.",
           "items": {
-            "required": [],
-            "type": "array"
+            "required": []
           },
           "required": [],
           "title": "imagePullSecrets",
@@ -588,8 +588,7 @@
     "tolerations": {
       "description": "Tolerations for the NGINX Gateway Fabric pod.",
       "items": {
-        "required": [],
-        "type": "array"
+        "required": []
       },
       "required": [],
       "title": "tolerations",
