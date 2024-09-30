@@ -383,6 +383,7 @@ There are two critical libraries for NGF that log:
       of that project.
 - [client-go](https://github.com/kubernetes/client-go).
   - It uses [klog](https://github.com/kubernetes/klog) for logging.
+  - We inject the above logger into klog to ensure it uses the same formatting.
   - Most of the logging is done at increased klog-specific
       verbosity. However, errors are logged at the default verbosity like
       in [this line](https://github.com/kubernetes/client-go/blob/c5b1c13ccbedeb03c00ba162ef27566b0dfb512d/tools/record/event.go#L240).
