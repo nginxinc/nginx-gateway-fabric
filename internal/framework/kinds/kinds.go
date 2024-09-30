@@ -31,6 +31,8 @@ const (
 	ObservabilityPolicy = "ObservabilityPolicy"
 	// NginxProxy is the NginxProxy kind.
 	NginxProxy = "NginxProxy"
+	// SnippetsFilter is the SnippetsFilter kind.
+	SnippetsFilter = "SnippetsFilter"
 )
 
 // MustExtractGVK is a function that extracts the GroupVersionKind (GVK) of a client.object.

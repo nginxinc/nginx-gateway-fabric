@@ -1,7 +1,6 @@
 package config
 
 import (
-	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -12,16 +11,10 @@ import (
 func TestExecuteVersion(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)
-	expSubStrings := map[string]int{
-		"return 200 42;": 1,
-	}
 
-	cfg := dataplane.Configuration{
-		Version: 42,
-	}
-
-	maps := string(executeVersion(cfg)[0].data)
-	for expSubStr, expCount := range expSubStrings {
-		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
-	}
+	conf := dataplane.Configuration{Version: 42}
+	res := executeVersion(conf)
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].dest).To(Equal(configVersionFile))
+	g.Expect(string(res[0].data)).To(ContainSubstring("return 200 42;"))
 }

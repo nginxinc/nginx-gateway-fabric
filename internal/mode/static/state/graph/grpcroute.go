@@ -5,6 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -15,6 +16,7 @@ func buildGRPCRoute(
 	ghr *v1.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
 	http2disabled bool,
+	snippetsFilters map[types.NamespacedName]*SnippetsFilter,
 ) *L7Route {
 	r := &L7Route{
 		Source:    ghr,
@@ -52,95 +54,124 @@ func buildGRPCRoute(
 	}
 
 	r.Spec.Hostnames = ghr.Spec.Hostnames
-
-	r.Valid = true
 	r.Attachable = true
 
-	rules, atLeastOneValid, allRulesErrs := processGRPCRouteRules(ghr.Spec.Rules, validator)
+	rules, valid, conds := processGRPCRouteRules(
+		ghr.Spec.Rules,
+		validator,
+		getSnippetsFilterResolverForNamespace(snippetsFilters, r.Source.GetNamespace()),
+	)
 
 	r.Spec.Rules = rules
+	r.Valid = valid
+	r.Conditions = append(r.Conditions, conds...)
 
-	if len(allRulesErrs) > 0 {
-		msg := allRulesErrs.ToAggregate().Error()
+	return r
+}
 
-		if atLeastOneValid {
-			r.Conditions = append(r.Conditions, staticConds.NewRoutePartiallyInvalid(msg))
-		} else {
-			msg = "All rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(msg))
+func processGRPCRouteRule(
+	specRule v1.GRPCRouteRule,
+	rulePath *field.Path,
+	validator validation.HTTPFieldsValidator,
+	resolveExtRefFunc resolveExtRefFilter,
+) (RouteRule, routeRuleErrors) {
+	var errors routeRuleErrors
 
-			r.Valid = false
+	validMatches := true
+
+	for j, match := range specRule.Matches {
+		matchPath := rulePath.Child("matches").Index(j)
+
+		matchesErrs := validateGRPCMatch(validator, match, matchPath)
+		if len(matchesErrs) > 0 {
+			validMatches = false
+			errors.invalid = append(errors.invalid, matchesErrs...)
 		}
 	}
 
-	return r
+	routeFilters, filterErrors := processRouteRuleFilters(
+		convertGRPCRouteFilters(specRule.Filters),
+		rulePath.Child("filters"),
+		validator,
+		resolveExtRefFunc,
+	)
+
+	errors = errors.append(filterErrors)
+
+	backendRefs := make([]RouteBackendRef, 0, len(specRule.BackendRefs))
+
+	// rule.BackendRefs are validated separately because of their special requirements
+	for _, b := range specRule.BackendRefs {
+		var interfaceFilters []interface{}
+		if len(b.Filters) > 0 {
+			interfaceFilters = make([]interface{}, 0, len(b.Filters))
+			for i, v := range b.Filters {
+				interfaceFilters[i] = v
+			}
+		}
+		rbr := RouteBackendRef{
+			BackendRef: b.BackendRef,
+			Filters:    interfaceFilters,
+		}
+		backendRefs = append(backendRefs, rbr)
+	}
+
+	return RouteRule{
+		ValidMatches:     validMatches,
+		Matches:          convertGRPCMatches(specRule.Matches),
+		Filters:          routeFilters,
+		RouteBackendRefs: backendRefs,
+	}, errors
 }
 
 func processGRPCRouteRules(
 	specRules []v1.GRPCRouteRule,
 	validator validation.HTTPFieldsValidator,
-) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
+	resolveExtRefFunc resolveExtRefFilter,
+) (rules []RouteRule, valid bool, conds []conditions.Condition) {
 	rules = make([]RouteRule, len(specRules))
+
+	var (
+		allRulesErrors  routeRuleErrors
+		atLeastOneValid bool
+	)
 
 	for i, rule := range specRules {
 		rulePath := field.NewPath("spec").Child("rules").Index(i)
 
-		var allErrs field.ErrorList
-		var matchesErrs field.ErrorList
-		var filtersErrs field.ErrorList
+		rr, errors := processGRPCRouteRule(rule, rulePath, validator, resolveExtRefFunc)
 
-		for j, match := range rule.Matches {
-			matchPath := rulePath.Child("matches").Index(j)
-			matchesErrs = append(matchesErrs, validateGRPCMatch(validator, match, matchPath)...)
-		}
-
-		for j, filter := range rule.Filters {
-			filterPath := rulePath.Child("filters").Index(j)
-			filtersErrs = append(filtersErrs, validateGRPCFilter(validator, filter, filterPath)...)
-		}
-
-		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
-
-		// rule.BackendRefs are validated separately because of their special requirements
-		for _, b := range rule.BackendRefs {
-			var interfaceFilters []interface{}
-			if len(b.Filters) > 0 {
-				interfaceFilters = make([]interface{}, 0, len(b.Filters))
-				for i, v := range b.Filters {
-					interfaceFilters[i] = v
-				}
-			}
-			rbr := RouteBackendRef{
-				BackendRef: b.BackendRef,
-				Filters:    interfaceFilters,
-			}
-			backendRefs = append(backendRefs, rbr)
-		}
-
-		allErrs = append(allErrs, matchesErrs...)
-		allErrs = append(allErrs, filtersErrs...)
-		allRulesErrs = append(allRulesErrs, allErrs...)
-
-		if len(allErrs) == 0 {
+		if rr.ValidMatches && rr.Filters.Valid {
 			atLeastOneValid = true
 		}
 
-		validFilters := len(filtersErrs) == 0
+		allRulesErrors = allRulesErrors.append(errors)
 
-		var convertedFilters []v1.HTTPRouteFilter
-		if validFilters {
-			convertedFilters = convertGRPCFilters(rule.Filters)
-		}
+		rules[i] = rr
+	}
 
-		rules[i] = RouteRule{
-			ValidMatches:     len(matchesErrs) == 0,
-			ValidFilters:     validFilters,
-			Matches:          convertGRPCMatches(rule.Matches),
-			Filters:          convertedFilters,
-			RouteBackendRefs: backendRefs,
+	conds = make([]conditions.Condition, 0, 2)
+	valid = true
+
+	if len(allRulesErrors.invalid) > 0 {
+		msg := allRulesErrors.invalid.ToAggregate().Error()
+
+		if atLeastOneValid {
+			conds = append(conds, staticConds.NewRoutePartiallyInvalid(msg))
+		} else {
+			msg = "All rules are invalid: " + msg
+			conds = append(conds, staticConds.NewRouteUnsupportedValue(msg))
+			valid = false
 		}
 	}
-	return rules, atLeastOneValid, allRulesErrs
+
+	// resolve errors do not invalidate routes
+	if len(allRulesErrors.resolve) > 0 {
+		msg := allRulesErrors.resolve.ToAggregate().Error()
+		conds = append(conds, staticConds.NewRouteResolvedRefsInvalidFilter(msg))
+	}
+
+	return rules, valid, conds
 }
 
 func convertGRPCMatches(grpcMatches []v1.GRPCRouteMatch) []v1.HTTPRouteMatch {
@@ -245,58 +276,4 @@ func validateGRPCMethodMatch(
 		}
 	}
 	return allErrs
-}
-
-func validateGRPCFilter(
-	validator validation.HTTPFieldsValidator,
-	filter v1.GRPCRouteFilter,
-	filterPath *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	switch filter.Type {
-	case v1.GRPCRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
-	case v1.GRPCRouteFilterResponseHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)))
-	default:
-		valErr := field.NotSupported(
-			filterPath.Child("type"),
-			filter.Type,
-			[]string{
-				string(v1.GRPCRouteFilterRequestHeaderModifier),
-				string(v1.GRPCRouteFilterResponseHeaderModifier),
-			},
-		)
-		allErrs = append(allErrs, valErr)
-		return allErrs
-	}
-}
-
-// convertGRPCFilters converts GRPCRouteFilters (a subset of HTTPRouteFilter) to HTTPRouteFilters
-// so we can reuse the logic from HTTPRoute filter validation and processing.
-func convertGRPCFilters(filters []v1.GRPCRouteFilter) []v1.HTTPRouteFilter {
-	if len(filters) == 0 {
-		return nil
-	}
-	httpFilters := make([]v1.HTTPRouteFilter, 0, len(filters))
-	for _, filter := range filters {
-		switch filter.Type {
-		case v1.GRPCRouteFilterRequestHeaderModifier:
-			httpRequestHeaderFilter := v1.HTTPRouteFilter{
-				Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: filter.RequestHeaderModifier,
-			}
-			httpFilters = append(httpFilters, httpRequestHeaderFilter)
-		case v1.GRPCRouteFilterResponseHeaderModifier:
-			httpResponseHeaderFilter := v1.HTTPRouteFilter{
-				Type:                   v1.HTTPRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: filter.ResponseHeaderModifier,
-			}
-			httpFilters = append(httpFilters, httpResponseHeaderFilter)
-		default:
-			continue
-		}
-	}
-	return httpFilters
 }

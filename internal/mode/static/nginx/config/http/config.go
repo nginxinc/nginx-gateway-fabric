@@ -13,7 +13,7 @@ type Server struct {
 	ServerName    string
 	Listen        string
 	Locations     []Location
-	Includes      []Include
+	Includes      []shared.Include
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
@@ -39,7 +39,7 @@ type Location struct {
 	Return          *Return
 	ResponseHeaders ResponseHeaders
 	Rewrites        []string
-	Includes        []Include
+	Includes        []shared.Include
 	GRPC            bool
 }
 
@@ -116,10 +116,4 @@ type ServerConfig struct {
 	RewriteClientIP shared.RewriteClientIPSettings
 	IPFamily        shared.IPFamily
 	Plus            bool
-}
-
-// Include defines a file that's included via the include directive.
-type Include struct {
-	Name    string
-	Content []byte
 }

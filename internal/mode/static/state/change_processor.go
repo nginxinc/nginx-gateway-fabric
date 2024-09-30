@@ -222,7 +222,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       cfg.MustExtractGVK(&ngfAPI.SnippetsFilter{}),
 				store:     newObjectStoreMapAdapter(clusterStore.SnippetsFilters),
-				predicate: nil, /*TODO(kate-osborn): will add predicate in next PR*/
+				predicate: nil, // we always want to write status to SnippetsFilters so we don't filter them out
 			},
 		},
 	)

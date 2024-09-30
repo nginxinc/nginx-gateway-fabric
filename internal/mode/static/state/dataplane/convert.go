@@ -3,7 +3,11 @@ package dataplane
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
 func convertMatch(m v1.HTTPRouteMatch) Match {
@@ -103,4 +107,27 @@ func convertPathModifier(path *v1.HTTPPathModifier) *HTTPPathModifier {
 	}
 
 	return nil
+}
+
+func convertSnippetsFilter(filter *graph.SnippetsFilter) SnippetsFilter {
+	result := SnippetsFilter{}
+
+	if snippet, ok := filter.Snippets[ngfAPI.NginxContextHTTPServer]; ok {
+		result.ServerSnippet = &Snippet{
+			Name:     createSnippetName(ngfAPI.NginxContextHTTPServer, client.ObjectKeyFromObject(filter.Source)),
+			Contents: snippet,
+		}
+	}
+
+	if snippet, ok := filter.Snippets[ngfAPI.NginxContextHTTPServerLocation]; ok {
+		result.LocationSnippet = &Snippet{
+			Name: createSnippetName(
+				ngfAPI.NginxContextHTTPServerLocation,
+				client.ObjectKeyFromObject(filter.Source),
+			),
+			Contents: snippet,
+		}
+	}
+
+	return result
 }

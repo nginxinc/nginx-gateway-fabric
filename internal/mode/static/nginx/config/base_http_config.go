@@ -4,16 +4,31 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var baseHTTPTemplate = gotemplate.Must(gotemplate.New("baseHttp").Parse(baseHTTPTemplateText))
 
+type httpConfig struct {
+	Includes []shared.Include
+	HTTP2    bool
+}
+
 func executeBaseHTTPConfig(conf dataplane.Configuration) []executeResult {
-	result := executeResult{
-		dest: httpConfigFile,
-		data: helpers.MustExecuteTemplate(baseHTTPTemplate, conf.BaseHTTPConfig),
+	includes := createIncludesFromSnippets(conf.BaseHTTPConfig.Snippets)
+
+	hc := httpConfig{
+		HTTP2:    conf.BaseHTTPConfig.HTTP2,
+		Includes: includes,
 	}
 
-	return []executeResult{result}
+	results := make([]executeResult, 0, len(includes)+1)
+	results = append(results, executeResult{
+		dest: httpConfigFile,
+		data: helpers.MustExecuteTemplate(baseHTTPTemplate, hc),
+	})
+	results = append(results, createIncludeExecuteResults(includes)...)
+
+	return results
 }

@@ -13,6 +13,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
@@ -82,13 +83,46 @@ func TestBuildGRPCRoutes(t *testing.T) {
 	t.Parallel()
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
-	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1.GRPCRouteRule{})
+	snippetsFilterRef := v1.GRPCRouteFilter{
+		Type: v1.GRPCRouteFilterExtensionRef,
+		ExtensionRef: &v1.LocalObjectReference{
+			Name:  "sf",
+			Kind:  kinds.SnippetsFilter,
+			Group: ngfAPI.GroupName,
+		},
+	}
+
+	requestHeaderFilter := v1.GRPCRouteFilter{
+		Type:                  v1.GRPCRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &v1.HTTPHeaderFilter{},
+	}
+
+	grRuleWithFilters := v1.GRPCRouteRule{
+		Filters: []v1.GRPCRouteFilter{snippetsFilterRef, requestHeaderFilter},
+	}
+
+	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1.GRPCRouteRule{grRuleWithFilters})
 
 	grWrongGateway := createGRPCRoute("gr-2", "some-gateway", "example.com", []v1.GRPCRouteRule{})
 
 	grRoutes := map[types.NamespacedName]*v1.GRPCRoute{
 		client.ObjectKeyFromObject(gr):             gr,
 		client.ObjectKeyFromObject(grWrongGateway): grWrongGateway,
+	}
+
+	sf := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "sf",
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextHTTP,
+					Value:   "http snippet",
+				},
+			},
+		},
 	}
 
 	tests := []struct {
@@ -113,7 +147,39 @@ func TestBuildGRPCRoutes(t *testing.T) {
 					Attachable: true,
 					Spec: L7RouteSpec{
 						Hostnames: gr.Spec.Hostnames,
-						Rules:     []RouteRule{},
+						Rules: []RouteRule{
+							{
+								Matches: convertGRPCMatches(gr.Spec.Rules[0].Matches),
+								Filters: RouteRuleFilters{
+									Valid: true,
+									Filters: []Filter{
+										{
+											ExtensionRef: snippetsFilterRef.ExtensionRef,
+											ResolvedExtensionRef: &ExtensionRefFilter{
+												SnippetsFilter: &SnippetsFilter{
+													Source: sf,
+													Snippets: map[ngfAPI.NginxContext]string{
+														ngfAPI.NginxContextHTTP: "http snippet",
+													},
+													Valid:      true,
+													Referenced: true,
+												},
+												Valid: true,
+											},
+											RouteType:  RouteTypeGRPC,
+											FilterType: FilterExtensionRef,
+										},
+										{
+											RequestHeaderModifier: &v1.HTTPHeaderFilter{},
+											RouteType:             RouteTypeGRPC,
+											FilterType:            FilterRequestHeaderModifier,
+										},
+									},
+								},
+								ValidMatches:     true,
+								RouteBackendRefs: []RouteBackendRef{},
+							},
+						},
 					},
 				},
 			},
@@ -140,12 +206,24 @@ func TestBuildGRPCRoutes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
+
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				client.ObjectKeyFromObject(sf): {
+					Source: sf,
+					Valid:  true,
+					Snippets: map[ngfAPI.NginxContext]string{
+						ngfAPI.NginxContextHTTP: "http snippet",
+					},
+				},
+			}
+
 			routes := buildRoutesForGateways(
 				validator,
 				map[types.NamespacedName]*v1.HTTPRoute{},
 				grRoutes,
 				test.gwNsNames,
 				npCfg,
+				snippetsFilters,
 			)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
@@ -252,6 +330,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 	)
 
 	grValidFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+	validSnippetsFilterRef := &v1.LocalObjectReference{
+		Group: ngfAPI.GroupName,
+		Kind:  kinds.SnippetsFilter,
+		Name:  "sf",
+	}
 
 	grValidFilterRule.Filters = []v1.GRPCRouteFilter{
 		{
@@ -268,6 +351,10 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Type:         v1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: validSnippetsFilterRef,
+		},
 	}
 
 	grValidFilter := createGRPCRoute(
@@ -277,22 +364,70 @@ func TestBuildGRPCRoute(t *testing.T) {
 		[]v1.GRPCRouteRule{grValidFilterRule},
 	)
 
-	convertedFilters := []v1.HTTPRouteFilter{
+	// route with invalid snippets filter extension ref
+	grInvalidSnippetsFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+	grInvalidSnippetsFilterRule.Filters = []v1.GRPCRouteFilter{
 		{
-			Type: v1.HTTPRouteFilterRequestHeaderModifier,
-			RequestHeaderModifier: &v1.HTTPHeaderFilter{
-				Remove: []string{"header"},
-			},
-		},
-		{
-			Type: v1.HTTPRouteFilterResponseHeaderModifier,
-			ResponseHeaderModifier: &v1.HTTPHeaderFilter{
-				Add: []v1.HTTPHeader{
-					{Name: "Accept-Encoding", Value: "gzip"},
-				},
+			Type: v1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &v1.LocalObjectReference{
+				Group: "wrong",
+				Kind:  kinds.SnippetsFilter,
+				Name:  "sf",
 			},
 		},
 	}
+	grInvalidSnippetsFilter := createGRPCRoute(
+		"gr",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1.GRPCRouteRule{grInvalidSnippetsFilterRule},
+	)
+
+	// route with unresolvable snippets filter extension ref
+	grUnresolvableSnippetsFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+	grUnresolvableSnippetsFilterRule.Filters = []v1.GRPCRouteFilter{
+		{
+			Type: v1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &v1.LocalObjectReference{
+				Group: ngfAPI.GroupName,
+				Kind:  kinds.SnippetsFilter,
+				Name:  "does-not-exist",
+			},
+		},
+	}
+	grUnresolvableSnippetsFilter := createGRPCRoute(
+		"gr",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1.GRPCRouteRule{grUnresolvableSnippetsFilterRule},
+	)
+
+	// route with two invalid snippets filter extensions refs: (1) invalid group (2) unresolvable
+	grInvalidAndUnresolvableSnippetsFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+	grInvalidAndUnresolvableSnippetsFilterRule.Filters = []v1.GRPCRouteFilter{
+		{
+			Type: v1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &v1.LocalObjectReference{
+				Group: ngfAPI.GroupName,
+				Kind:  kinds.SnippetsFilter,
+				Name:  "does-not-exist",
+			},
+		},
+		{
+			Type: v1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &v1.LocalObjectReference{
+				Group: "wrong",
+				Kind:  kinds.SnippetsFilter,
+				Name:  "sf",
+			},
+		},
+	}
+	grInvalidAndUnresolvableSnippetsFilter := createGRPCRoute(
+		"gr",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1.GRPCRouteRule{grInvalidAndUnresolvableSnippetsFilterRule},
+	)
 
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
@@ -326,14 +461,20 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grBoth.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grBoth.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grBoth.Spec.Rules[1].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -361,8 +502,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grEmptyMatch.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grEmptyMatch.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{{BackendRef: backendRef}},
 						},
@@ -391,10 +535,41 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Rules: []RouteRule{
 						{
 							ValidMatches:     true,
-							ValidFilters:     true,
 							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
-							Filters:          convertedFilters,
+							Filters: RouteRuleFilters{
+								Filters: []Filter{
+									{
+										RouteType:  RouteTypeGRPC,
+										FilterType: FilterRequestHeaderModifier,
+										RequestHeaderModifier: &v1.HTTPHeaderFilter{
+											Remove: []string{"header"},
+										},
+									},
+									{
+										RouteType:  RouteTypeGRPC,
+										FilterType: FilterResponseHeaderModifier,
+										ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+											Add: []v1.HTTPHeader{
+												{Name: "Accept-Encoding", Value: "gzip"},
+											},
+										},
+									},
+									{
+										RouteType:    RouteTypeGRPC,
+										FilterType:   FilterExtensionRef,
+										ExtensionRef: validSnippetsFilterRef,
+										ResolvedExtensionRef: &ExtensionRefFilter{
+											SnippetsFilter: &SnippetsFilter{
+												Valid:      true,
+												Referenced: true,
+											},
+											Valid: true,
+										},
+									},
+								},
+								Valid: true,
+							},
 						},
 					},
 				},
@@ -428,8 +603,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grInvalidMatchesEmptyMethodFields.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grInvalidMatchesEmptyMethodFields.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -468,8 +646,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grInvalidMatchesInvalidMethodFields.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grInvalidMatchesInvalidMethodFields.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -533,14 +714,20 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grOneInvalid.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     true,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[1].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -574,8 +761,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grInvalidHeadersEmptyType.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grInvalidHeadersEmptyType.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -608,8 +798,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Hostnames: grInvalidMatchesNilMethodType.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     false,
-							ValidFilters:     true,
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
 							Matches:          convertGRPCMatches(grInvalidMatchesNilMethodType.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -635,16 +828,20 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
-						`All rules are invalid: spec.rules[0].filters[0].type: ` +
-							`Unsupported value: "RequestMirror": supported values: "RequestHeaderModifier", "ResponseHeaderModifier"`,
+						`All rules are invalid: spec.rules[0].filters[0].type: Unsupported value: ` +
+							`"RequestMirror": supported values: "ResponseHeaderModifier", ` +
+							`"RequestHeaderModifier", "ExtensionRef"`,
 					),
 				},
 				Spec: L7RouteSpec{
 					Hostnames: grInvalidFilter.Spec.Hostnames,
 					Rules: []RouteRule{
 						{
-							ValidMatches:     true,
-							ValidFilters:     false,
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   false,
+								Filters: convertGRPCRouteFilters(grInvalidFilter.Spec.Rules[0].Filters),
+							},
 							Matches:          convertGRPCMatches(grInvalidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
@@ -682,6 +879,129 @@ func TestBuildGRPCRoute(t *testing.T) {
 			},
 			name: "invalid hostname",
 		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grInvalidSnippetsFilter,
+			expected: &L7Route{
+				Source:     grInvalidSnippetsFilter,
+				RouteType:  RouteTypeGRPC,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grInvalidSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						"All rules are invalid: spec.rules[0].filters[0].extensionRef: " +
+							"Unsupported value: \"wrong\": supported values: \"gateway.nginx.org\"",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   false,
+								Filters: convertGRPCRouteFilters(grInvalidSnippetsFilter.Spec.Rules[0].Filters),
+							},
+							Matches:          convertGRPCMatches(grInvalidSnippetsFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+
+			name: "invalid snippet filter extension ref",
+		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grUnresolvableSnippetsFilter,
+			expected: &L7Route{
+				Source:     grUnresolvableSnippetsFilter,
+				RouteType:  RouteTypeGRPC,
+				Valid:      true,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grUnresolvableSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteResolvedRefsInvalidFilter(
+						"spec.rules[0].filters[0].extensionRef: Not found: " +
+							"v1.LocalObjectReference{Group:\"gateway.nginx.org\", Kind:\"SnippetsFilter\", " +
+							"Name:\"does-not-exist\"}",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: grUnresolvableSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   false,
+								Filters: convertGRPCRouteFilters(grUnresolvableSnippetsFilter.Spec.Rules[0].Filters),
+							},
+							Matches:          convertGRPCMatches(grUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+
+			name: "unresolvable snippet filter extension ref",
+		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grInvalidAndUnresolvableSnippetsFilter,
+			expected: &L7Route{
+				Source:     grInvalidAndUnresolvableSnippetsFilter,
+				RouteType:  RouteTypeGRPC,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grInvalidAndUnresolvableSnippetsFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						"All rules are invalid: spec.rules[0].filters[1].extensionRef: " +
+							"Unsupported value: \"wrong\": supported values: \"gateway.nginx.org\"",
+					),
+					staticConds.NewRouteResolvedRefsInvalidFilter(
+						"spec.rules[0].filters[0].extensionRef: Not found: " +
+							"v1.LocalObjectReference{Group:\"gateway.nginx.org\", Kind:\"SnippetsFilter\", " +
+							"Name:\"does-not-exist\"}",
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidAndUnresolvableSnippetsFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: true,
+							Filters: RouteRuleFilters{
+								Valid:   false,
+								Filters: convertGRPCRouteFilters(grInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Filters),
+							},
+							Matches:          convertGRPCMatches(grInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+
+			name: "one invalid and one unresolvable snippet filter extension ref",
+		},
 	}
 
 	gatewayNsNames := []types.NamespacedName{gatewayNsName}
@@ -691,7 +1011,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled)
+			snippetsFilters := map[types.NamespacedName]*SnippetsFilter{
+				{Namespace: "test", Name: "sf"}: {Valid: true},
+			}
+
+			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled, snippetsFilters)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
 		})
 	}
@@ -768,43 +1092,4 @@ func TestConvertGRPCMatches(t *testing.T) {
 			g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
 		})
 	}
-}
-
-func TestConvertGRPCFilters(t *testing.T) {
-	t.Parallel()
-	grFilters := []v1.GRPCRouteFilter{
-		{
-			Type: "RequestHeaderModifier",
-			RequestHeaderModifier: &v1.HTTPHeaderFilter{
-				Remove: []string{"header"},
-			},
-		},
-		{
-			Type: "ResponseHeaderModifier",
-			ResponseHeaderModifier: &v1.HTTPHeaderFilter{
-				Add: []v1.HTTPHeader{
-					{Name: "Accept-Encoding", Value: "gzip"},
-				},
-			},
-		},
-		{
-			Type: "RequestMirror",
-		},
-	}
-
-	expectedHTTPFilters := []v1.HTTPRouteFilter{
-		{
-			Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
-			RequestHeaderModifier: grFilters[0].RequestHeaderModifier,
-		},
-		{
-			Type:                   v1.HTTPRouteFilterResponseHeaderModifier,
-			ResponseHeaderModifier: grFilters[1].ResponseHeaderModifier,
-		},
-	}
-
-	g := NewWithT(t)
-
-	httpFilters := convertGRPCFilters(grFilters)
-	g.Expect(helpers.Diff(expectedHTTPFilters, httpFilters)).To(BeEmpty())
 }

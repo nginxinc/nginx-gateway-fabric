@@ -257,8 +257,8 @@ spec:
           name: nginx-conf
         - mountPath: /etc/nginx/stream-conf.d
           name: nginx-stream-conf
-        - mountPath: /etc/nginx/module-includes
-          name: module-includes
+        - mountPath: /etc/nginx/main-includes
+          name: nginx-main-includes
         - mountPath: /etc/nginx/secrets
           name: nginx-secrets
         - mountPath: /var/run/nginx
@@ -289,8 +289,8 @@ spec:
           name: nginx-conf
         - mountPath: /etc/nginx/stream-conf.d
           name: nginx-stream-conf
-        - mountPath: /etc/nginx/module-includes
-          name: module-includes
+        - mountPath: /etc/nginx/main-includes
+          name: nginx-main-includes
         - mountPath: /etc/nginx/secrets
           name: nginx-secrets
         - mountPath: /var/run/nginx
@@ -311,7 +311,7 @@ spec:
       - emptyDir: {}
         name: nginx-stream-conf
       - emptyDir: {}
-        name: module-includes
+        name: nginx-main-includes
       - emptyDir: {}
         name: nginx-secrets
       - emptyDir: {}

@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -23,6 +25,7 @@ func buildHTTPRoute(
 	validator validation.HTTPFieldsValidator,
 	ghr *v1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,
+	snippetsFilters map[types.NamespacedName]*SnippetsFilter,
 ) *L7Route {
 	r := &L7Route{
 		Source:    ghr,
@@ -52,87 +55,125 @@ func buildHTTPRoute(
 	}
 
 	r.Spec.Hostnames = ghr.Spec.Hostnames
-
-	r.Valid = true
 	r.Attachable = true
 
-	rules, atLeastOneValid, allRulesErrs := processHTTPRouteRules(ghr.Spec.Rules, validator)
+	rules, valid, conds := processHTTPRouteRules(
+		ghr.Spec.Rules,
+		validator,
+		getSnippetsFilterResolverForNamespace(snippetsFilters, r.Source.GetNamespace()),
+	)
 
 	r.Spec.Rules = rules
+	r.Conditions = append(r.Conditions, conds...)
+	r.Valid = valid
 
-	if len(allRulesErrs) > 0 {
-		msg := allRulesErrs.ToAggregate().Error()
+	return r
+}
 
-		if atLeastOneValid {
-			r.Conditions = append(r.Conditions, staticConds.NewRoutePartiallyInvalid(msg))
-		} else {
-			msg = "All rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(msg))
+func processHTTPRouteRule(
+	specRule v1.HTTPRouteRule,
+	rulePath *field.Path,
+	validator validation.HTTPFieldsValidator,
+	resolveExtRefFunc resolveExtRefFilter,
+) (RouteRule, routeRuleErrors) {
+	var errors routeRuleErrors
 
-			r.Valid = false
+	validMatches := true
+
+	for j, match := range specRule.Matches {
+		matchPath := rulePath.Child("matches").Index(j)
+
+		matchesErrs := validateMatch(validator, match, matchPath)
+		if len(matchesErrs) > 0 {
+			validMatches = false
+			errors.invalid = append(errors.invalid, matchesErrs...)
 		}
 	}
 
-	return r
+	routeFilters, filterErrors := processRouteRuleFilters(
+		convertHTTPRouteFilters(specRule.Filters),
+		rulePath.Child("filters"),
+		validator,
+		resolveExtRefFunc,
+	)
+
+	errors = errors.append(filterErrors)
+
+	backendRefs := make([]RouteBackendRef, 0, len(specRule.BackendRefs))
+
+	// rule.BackendRefs are validated separately because of their special requirements
+	for _, b := range specRule.BackendRefs {
+		var interfaceFilters []interface{}
+		if len(b.Filters) > 0 {
+			interfaceFilters = make([]interface{}, 0, len(b.Filters))
+			for i, v := range b.Filters {
+				interfaceFilters[i] = v
+			}
+		}
+		rbr := RouteBackendRef{
+			BackendRef: b.BackendRef,
+			Filters:    interfaceFilters,
+		}
+		backendRefs = append(backendRefs, rbr)
+	}
+
+	return RouteRule{
+		ValidMatches:     validMatches,
+		Matches:          specRule.Matches,
+		Filters:          routeFilters,
+		RouteBackendRefs: backendRefs,
+	}, errors
 }
 
 func processHTTPRouteRules(
 	specRules []v1.HTTPRouteRule,
 	validator validation.HTTPFieldsValidator,
-) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
+	resolveExtRefFunc resolveExtRefFilter,
+) (rules []RouteRule, valid bool, conds []conditions.Condition) {
 	rules = make([]RouteRule, len(specRules))
+
+	var (
+		allRulesErrors  routeRuleErrors
+		atLeastOneValid bool
+	)
 
 	for i, rule := range specRules {
 		rulePath := field.NewPath("spec").Child("rules").Index(i)
 
-		var matchesErrs field.ErrorList
-		for j, match := range rule.Matches {
-			matchPath := rulePath.Child("matches").Index(j)
-			matchesErrs = append(matchesErrs, validateMatch(validator, match, matchPath)...)
-		}
+		rr, errors := processHTTPRouteRule(rule, rulePath, validator, resolveExtRefFunc)
 
-		var filtersErrs field.ErrorList
-		for j, filter := range rule.Filters {
-			filterPath := rulePath.Child("filters").Index(j)
-			filtersErrs = append(filtersErrs, validateFilter(validator, filter, filterPath)...)
-		}
-
-		var allErrs field.ErrorList
-		allErrs = append(allErrs, matchesErrs...)
-		allErrs = append(allErrs, filtersErrs...)
-		allRulesErrs = append(allRulesErrs, allErrs...)
-
-		if len(allErrs) == 0 {
+		if rr.ValidMatches && rr.Filters.Valid {
 			atLeastOneValid = true
 		}
 
-		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
+		allRulesErrors = allRulesErrors.append(errors)
 
-		// rule.BackendRefs are validated separately because of their special requirements
-		for _, b := range rule.BackendRefs {
-			var interfaceFilters []interface{}
-			if len(b.Filters) > 0 {
-				interfaceFilters = make([]interface{}, 0, len(b.Filters))
-				for i, v := range b.Filters {
-					interfaceFilters[i] = v
-				}
-			}
-			rbr := RouteBackendRef{
-				BackendRef: b.BackendRef,
-				Filters:    interfaceFilters,
-			}
-			backendRefs = append(backendRefs, rbr)
-		}
+		rules[i] = rr
+	}
 
-		rules[i] = RouteRule{
-			ValidMatches:     len(matchesErrs) == 0,
-			ValidFilters:     len(filtersErrs) == 0,
-			Matches:          rule.Matches,
-			Filters:          rule.Filters,
-			RouteBackendRefs: backendRefs,
+	conds = make([]conditions.Condition, 0, 2)
+
+	valid = true
+
+	if len(allRulesErrors.invalid) > 0 {
+		msg := allRulesErrors.invalid.ToAggregate().Error()
+
+		if atLeastOneValid {
+			conds = append(conds, staticConds.NewRoutePartiallyInvalid(msg))
+		} else {
+			msg = "All rules are invalid: " + msg
+			conds = append(conds, staticConds.NewRouteUnsupportedValue(msg))
+			valid = false
 		}
 	}
-	return rules, atLeastOneValid, allRulesErrs
+
+	// resolve errors do not invalidate routes
+	if len(allRulesErrors.resolve) > 0 {
+		msg := allRulesErrors.resolve.ToAggregate().Error()
+		conds = append(conds, staticConds.NewRouteResolvedRefsInvalidFilter(msg))
+	}
+
+	return rules, valid, conds
 }
 
 func validateMatch(
@@ -228,14 +269,19 @@ func validatePathMatch(
 	}
 
 	if strings.HasPrefix(*path.Value, http.InternalRoutePathPrefix) {
-		msg := fmt.Sprintf("path cannot start with %s. This prefix is reserved for internal use",
-			http.InternalRoutePathPrefix)
+		msg := fmt.Sprintf(
+			"path cannot start with %s. This prefix is reserved for internal use",
+			http.InternalRoutePathPrefix,
+		)
 		return field.ErrorList{field.Invalid(fieldPath.Child("value"), *path.Value, msg)}
 	}
 
 	if *path.Type != v1.PathMatchPathPrefix && *path.Type != v1.PathMatchExact {
-		valErr := field.NotSupported(fieldPath.Child("type"), *path.Type,
-			[]string{string(v1.PathMatchExact), string(v1.PathMatchPathPrefix)})
+		valErr := field.NotSupported(
+			fieldPath.Child("type"),
+			*path.Type,
+			[]string{string(v1.PathMatchExact), string(v1.PathMatchPathPrefix)},
+		)
 		allErrs = append(allErrs, valErr)
 	}
 
@@ -245,40 +291,6 @@ func validatePathMatch(
 	}
 
 	return allErrs
-}
-
-func validateFilter(
-	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
-	filterPath *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	switch filter.Type {
-	case v1.HTTPRouteFilterRequestRedirect:
-		return validateFilterRedirect(validator, filter.RequestRedirect, filterPath)
-	case v1.HTTPRouteFilterURLRewrite:
-		return validateFilterRewrite(validator, filter.URLRewrite, filterPath)
-	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
-	case v1.HTTPRouteFilterResponseHeaderModifier:
-		return validateFilterResponseHeaderModifier(
-			validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)),
-		)
-	default:
-		valErr := field.NotSupported(
-			filterPath.Child("type"),
-			filter.Type,
-			[]string{
-				string(v1.HTTPRouteFilterRequestRedirect),
-				string(v1.HTTPRouteFilterURLRewrite),
-				string(v1.HTTPRouteFilterRequestHeaderModifier),
-				string(v1.HTTPRouteFilterResponseHeaderModifier),
-			},
-		)
-		allErrs = append(allErrs, valErr)
-		return allErrs
-	}
 }
 
 func validateFilterRedirect(
