@@ -23,7 +23,7 @@ const (
 	// streamFolder is the folder where NGINX Stream configuration files are stored.
 	streamFolder = configFolder + "/stream-conf.d"
 
-	// mainIncludesFolder is the folder where NGINX main context configuration files is stored.
+	// mainIncludesFolder is the folder where NGINX main context configuration files are stored.
 	mainIncludesFolder = configFolder + "/main-includes"
 
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.

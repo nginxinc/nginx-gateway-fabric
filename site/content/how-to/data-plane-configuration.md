@@ -133,7 +133,7 @@ EOF
 
 After attaching the NginxProxy to the GatewayClass, the log level of the data plane will be updated to `warn`.
 
-To view the full list of supported log levels, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}})
+To view the full list of supported log levels, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
 
 {{< note >}}For `debug` logging to work, NGINX needs to be built with `--with-debug` or "in debug mode". NGINX Gateway Fabric can easily
 be [run with NGINX in debug mode](#run-nginx-gateway-fabric-with-nginx-in-debug-mode) upon startup through the addition
