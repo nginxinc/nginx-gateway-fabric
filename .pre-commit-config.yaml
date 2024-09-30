@@ -85,6 +85,16 @@ repos:
       - id: shfmt-src
         args: [-w, -s, -i, "4"]
 
+  - repo: https://github.com/dadav/helm-schema
+    rev: 0.13.0
+    hooks:
+      - id: helm-schema
+        args:
+          - --chart-search-root=charts
+          - --add-schema-reference
+          - "--skip-auto-generation=required,additionalProperties"
+          - --append-newline
+
 ci:
   skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]
   autofix_prs: false
