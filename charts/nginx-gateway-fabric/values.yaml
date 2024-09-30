@@ -142,6 +142,29 @@ nginx:
   #       - ipv4
   #       - ipv6
   #       - dual
+  #   rewriteClientIP:
+  #     type: object
+  #     description: RewriteClientIP defines configuration for rewriting the client IP to the original client's IP.
+  #     properties:
+  #       mode:
+  #         type: string
+  #         enum:
+  #           - ProxyProtocol
+  #           - XForwardedFor
+  #       setIPRecursively:
+  #         type: boolean
+  #       trustedAddresses:
+  #         type: array
+  #         items:
+  #           properties:
+  #             type:
+  #               type: string
+  #               enum:
+  #                 - CIDR
+  #                 - IPAddress
+  #                 - Hostname
+  #             value:
+  #               type: string
   #   telemetry:
   #     type: object
   #     description: Telemetry specifies the OpenTelemetry configuration.
