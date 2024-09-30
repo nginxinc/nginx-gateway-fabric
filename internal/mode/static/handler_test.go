@@ -155,7 +155,7 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := dataplane.GetDefaultConfiguration(1)
+				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 
 				checkUpsertEventExpectations(e)
 				expectReconfig(dcfg, fakeCfgFiles)
@@ -171,7 +171,7 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := dataplane.GetDefaultConfiguration(1)
+				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 
 				checkDeleteEventExpectations(e)
 				expectReconfig(dcfg, fakeCfgFiles)
@@ -195,7 +195,7 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := dataplane.GetDefaultConfiguration(2)
+				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 2)
 				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 			})
 		})
@@ -520,7 +520,7 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := dataplane.GetDefaultConfiguration(1)
+				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
@@ -533,7 +533,7 @@ var _ = Describe("eventHandler", func() {
 			It("should not call the NGINX Plus API", func() {
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := dataplane.GetDefaultConfiguration(1)
+				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
@@ -629,7 +629,7 @@ var _ = Describe("eventHandler", func() {
 		Expect(handler.cfg.nginxConfiguredOnStartChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-		dcfg := dataplane.GetDefaultConfiguration(1)
+		dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 		Expect(readyChannel).To(BeClosed())
@@ -677,7 +677,7 @@ var _ = Describe("eventHandler", func() {
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-		dcfg := dataplane.GetDefaultConfiguration(2)
+		dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 2)
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 		Expect(readyChannel).To(BeClosed())

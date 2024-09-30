@@ -437,6 +437,51 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 }
 
+func TestCopyCmdFlagValidation(t *testing.T) {
+	t.Parallel()
+	tests := []flagTestCase{
+		{
+			name: "valid flags",
+			args: []string{
+				"--source=/my/file",
+				"--destination=dest/file",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "omitted flags",
+			args:    nil,
+			wantErr: false,
+		},
+		{
+			name: "source set without destination",
+			args: []string{
+				"--source=/my/file",
+			},
+			wantErr: true,
+			expectedErrPrefix: "if any flags in the group [source destination] are set they must all be set; " +
+				"missing [destination]",
+		},
+		{
+			name: "destination set without source",
+			args: []string{
+				"--destination=/dest/file",
+			},
+			wantErr: true,
+			expectedErrPrefix: "if any flags in the group [source destination] are set they must all be set; " +
+				"missing [source]",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := createCopyCommand()
+			testFlag(t, cmd, test)
+		})
+	}
+}
+
 func TestParseFlags(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)

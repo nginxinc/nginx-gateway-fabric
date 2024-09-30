@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -477,6 +478,63 @@ func createSleepCommand() *cobra.Command {
 		30*time.Second,
 		"Set the duration of sleep. Must be parsable by https://pkg.go.dev/time#ParseDuration",
 	)
+
+	return cmd
+}
+
+func createCopyCommand() *cobra.Command {
+	// flag names
+	const srcFlag = "source"
+	const destFlag = "destination"
+	// flag values
+	var src, dest string
+
+	cmd := &cobra.Command{
+		Use:   "copy",
+		Short: "Copy a file to a destination",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if len(src) == 0 {
+				return errors.New("source must not be empty")
+			}
+			if len(dest) == 0 {
+				return errors.New("destination must not be empty")
+			}
+
+			srcFile, err := os.Open(src)
+			if err != nil {
+				return fmt.Errorf("error opening source file: %w", err)
+			}
+			defer srcFile.Close()
+
+			destFile, err := os.Create(dest)
+			if err != nil {
+				return fmt.Errorf("error creating destination file: %w", err)
+			}
+			defer destFile.Close()
+
+			if _, err := io.Copy(destFile, srcFile); err != nil {
+				return fmt.Errorf("error copying file contents: %w", err)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(
+		&src,
+		srcFlag,
+		"",
+		"The source file to be copied",
+	)
+
+	cmd.Flags().StringVar(
+		&dest,
+		destFlag,
+		"",
+		"The destination for the source file to be copied to",
+	)
+
+	cmd.MarkFlagsRequiredTogether(srcFlag, destFlag)
 
 	return cmd
 }

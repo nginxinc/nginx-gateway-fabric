@@ -23,6 +23,7 @@ func main() {
 	rootCmd.AddCommand(
 		createStaticModeCommand(),
 		createProvisionerModeCommand(),
+		createCopyCommand(),
 		createSleepCommand(),
 	)
 
