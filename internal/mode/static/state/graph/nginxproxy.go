@@ -172,23 +172,33 @@ func validateRewriteClientIP(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 		}
 
 		for _, addr := range rewriteClientIP.TrustedAddresses {
+			valuePath := trustedAddressesPath.Child("value")
+
 			switch addr.Type {
-			case ngfAPI.AddressTypeCIDR:
-				if err := k8svalidation.IsValidCIDR(trustedAddressesPath, addr.Value); err != nil {
-					allErrs = append(
-						allErrs,
-						field.Invalid(trustedAddressesPath.Child(addr.Value),
-							addr,
-							err.ToAggregate().Error(),
-						),
-					)
+			case ngfAPI.CIDRAddressType:
+				if err := k8svalidation.IsValidCIDR(valuePath, addr.Value); err != nil {
+					allErrs = append(allErrs, err...)
+				}
+			case ngfAPI.IPAddressType:
+				if err := k8svalidation.IsValidIP(valuePath, addr.Value); err != nil {
+					allErrs = append(allErrs, err...)
+				}
+			case ngfAPI.HostnameAddressType:
+				if errs := k8svalidation.IsDNS1123Subdomain(addr.Value); len(errs) > 0 {
+					for _, e := range errs {
+						allErrs = append(allErrs, field.Invalid(valuePath, addr.Value, e))
+					}
 				}
 			default:
 				allErrs = append(
 					allErrs,
 					field.NotSupported(trustedAddressesPath.Child("type"),
 						addr.Type,
-						[]string{string(ngfAPI.AddressTypeCIDR)},
+						[]string{
+							string(ngfAPI.CIDRAddressType),
+							string(ngfAPI.IPAddressType),
+							string(ngfAPI.HostnameAddressType),
+						},
 					),
 				)
 			}
