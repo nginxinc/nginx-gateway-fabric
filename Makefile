@@ -37,6 +37,8 @@ CONTROLLER_TOOLS_VERSION = v0.16.3
 NODE_VERSION = 20
 # renovate: datasource=docker depName=quay.io/helmpack/chart-testing
 CHART_TESTING_VERSION = v3.11.0
+# renovate: datasource=github-tags depName=dadav/helm-schema
+HELM_SCHEMA_VERSION = 0.14.1
 
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
@@ -142,8 +144,12 @@ generate-api-docs: ## Generate API docs
 generate-helm-docs: ## Generate the Helm chart documentation
 	go run github.com/norwoodj/helm-docs/cmd/helm-docs@$(HELM_DOCS_VERSION) --chart-search-root=charts --template-files _templates.gotmpl --template-files README.md.gotmpl
 
+.PHONY: generate-helm-schema
+generate-helm-schema: ## Generate the Helm chart schema
+	go run github.com/dadav/helm-schema/cmd/helm-schema@$(HELM_SCHEMA_VERSION) --chart-search-root=charts --add-schema-reference "--skip-auto-generation=required,additionalProperties" --append-newline
+
 .PHONY: generate-all
-generate-all: generate generate-crds generate-manifests generate-api-docs generate-helm-docs ## Generate all the necessary files
+generate-all: generate generate-crds generate-helm-schema generate-manifests generate-api-docs generate-helm-docs ## Generate all the necessary files
 
 .PHONY: clean
 clean: ## Clean the build

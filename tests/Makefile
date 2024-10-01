@@ -166,7 +166,7 @@ delete-gke-cluster: ## Delete the GKE cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
 	./scripts/add-local-ip-auth-networks.sh
 
-HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false
+HELM_PARAMETERS += --set nameOverride=nginx-gateway --set nginxGateway.kind=skip --set service.create=false --skip-schema-validation
 
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster

@@ -27,20 +27,6 @@ type NginxProxyList struct {
 	Items           []NginxProxy `json:"items"`
 }
 
-// IPFamilyType specifies the IP family to be used by NGINX.
-//
-// +kubebuilder:validation:Enum=dual;ipv4;ipv6
-type IPFamilyType string
-
-const (
-	// Dual specifies that NGINX will use both IPv4 and IPv6.
-	Dual IPFamilyType = "dual"
-	// IPv4 specifies that NGINX will use only IPv4.
-	IPv4 IPFamilyType = "ipv4"
-	// IPv6 specifies that NGINX will use only IPv6.
-	IPv6 IPFamilyType = "ipv6"
-)
-
 // NginxProxySpec defines the desired state of the NginxProxy.
 type NginxProxySpec struct {
 	// IPFamily specifies the IP family to be used by the NGINX.
@@ -154,11 +140,11 @@ type RewriteClientIP struct {
 	// If no addresses are provided, NGINX will not rewrite the client IP information.
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
 	// This field is required if mode is set.
-	// +kubebuilder:validation:MaxItems=16
-	// +listType=map
-	// +listMapKey=type
 	//
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=16
 	TrustedAddresses []Address `json:"trustedAddresses,omitempty"`
 }
 
@@ -179,27 +165,40 @@ const (
 	RewriteClientIPModeXForwardedFor RewriteClientIPModeType = "XForwardedFor"
 )
 
+// IPFamilyType specifies the IP family to be used by NGINX.
+//
+// +kubebuilder:validation:Enum=dual;ipv4;ipv6
+type IPFamilyType string
+
+const (
+	// Dual specifies that NGINX will use both IPv4 and IPv6.
+	Dual IPFamilyType = "dual"
+	// IPv4 specifies that NGINX will use only IPv4.
+	IPv4 IPFamilyType = "ipv4"
+	// IPv6 specifies that NGINX will use only IPv6.
+	IPv6 IPFamilyType = "ipv6"
+)
+
 // Address is a struct that specifies address type and value.
 type Address struct {
 	// Type specifies the type of address.
-	// Default is "cidr" which specifies that the address is a CIDR block.
-	//
-	// +optional
-	// +kubebuilder:default:=cidr
-	Type AddressType `json:"type,omitempty"`
+	Type AddressType `json:"type"`
 
 	// Value specifies the address value.
-	//
-	// +optional
-	Value string `json:"value,omitempty"`
+	Value string `json:"value"`
 }
 
 // AddressType specifies the type of address.
-// +kubebuilder:validation:Enum=cidr
+// +kubebuilder:validation:Enum=CIDR;IPAddress;Hostname
 type AddressType string
 
 const (
-	// AddressTypeCIDR specifies that the address is a CIDR block.
-	// kubebuilder:validation:Pattern=`^[\.a-zA-Z0-9:]*(\/([0-9]?[0-9]?[0-9]))$`
-	AddressTypeCIDR AddressType = "cidr"
+	// CIDRAddressType specifies that the address is a CIDR block.
+	CIDRAddressType AddressType = "CIDR"
+
+	// IPAddressType specifies that the address is an IP address.
+	IPAddressType AddressType = "IPAddress"
+
+	// HostnameAddressType specifies that the address is a Hostname.
+	HostnameAddressType AddressType = "Hostname"
 )
