@@ -62,7 +62,7 @@ func getExpectedConfiguration() Configuration {
 		},
 		CertBundles: map[CertBundleID]CertBundle{},
 		Logging: Logging{
-			ErrorLevel: "info",
+			ErrorLevel: defaultErrorLogLevel,
 		},
 	}
 }
@@ -1496,7 +1496,7 @@ func TestBuildConfiguration(t *testing.T) {
 				}
 				return g
 			}),
-			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
+			expConf: Configuration{Logging: Logging{ErrorLevel: defaultErrorLogLevel}},
 			msg:     "invalid gatewayclass",
 		},
 		{
@@ -1515,7 +1515,7 @@ func TestBuildConfiguration(t *testing.T) {
 				}
 				return g
 			}),
-			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
+			expConf: Configuration{Logging: Logging{ErrorLevel: defaultErrorLogLevel}},
 			msg:     "missing gatewayclass",
 		},
 		{
@@ -1523,7 +1523,7 @@ func TestBuildConfiguration(t *testing.T) {
 				g.Gateway = nil
 				return g
 			}),
-			expConf: Configuration{Logging: Logging{ErrorLevel: "info"}},
+			expConf: Configuration{Logging: Logging{ErrorLevel: defaultErrorLogLevel}},
 			msg:     "missing gateway",
 		},
 		{
@@ -3831,7 +3831,7 @@ func TestBuildLogging(t *testing.T) {
 					},
 				},
 			},
-			expLoggingSettings: Logging{ErrorLevel: "info"},
+			expLoggingSettings: Logging{ErrorLevel: defaultErrorLogLevel},
 		},
 		{
 			msg: "NginxProxy log level set to notice",

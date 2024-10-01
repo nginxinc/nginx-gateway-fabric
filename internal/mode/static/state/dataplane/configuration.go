@@ -910,6 +910,6 @@ func buildLogging(g *graph.Graph) Logging {
 func GetDefaultConfiguration(configVersion int) Configuration {
 	return Configuration{
 		Version: configVersion,
-		Logging: Logging{ErrorLevel: "info"},
+		Logging: Logging{ErrorLevel: defaultErrorLogLevel},
 	}
 }
