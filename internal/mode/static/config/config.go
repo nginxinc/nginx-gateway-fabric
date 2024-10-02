@@ -12,7 +12,7 @@ type Config struct {
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
 	// UsageReportConfig specifies the NGINX Plus usage reporting config.
-	UsageReportConfig *UsageReportConfig
+	UsageReportConfig UsageReportConfig
 	// Version is the running NGF version.
 	Version string
 	// ImageSource is the source of the NGINX Gateway image.
@@ -104,14 +104,18 @@ type ProductTelemetryConfig struct {
 
 // UsageReportConfig contains the configuration for NGINX Plus usage reporting.
 type UsageReportConfig struct {
-	// SecretNsName is the namespaced name of the Secret containing the server credentials.
-	SecretNsName types.NamespacedName
-	// ServerURL is the base URL of the reporting server.
-	ServerURL string
-	// ClusterDisplayName is the display name of the cluster. Optional.
-	ClusterDisplayName string
-	// InsecureSkipVerify controls whether the client verifies the server cert.
-	InsecureSkipVerify bool
+	// SecretName is the name of the Secret containing the server credentials.
+	SecretName string
+	// ClientSSLSecretName is the name of the Secret containing client cert/key.
+	ClientSSLSecretName string
+	// CASecretName is the name of the Secret containing the CA certificate.
+	CASecretName string
+	// Endpoint is the endpoint of the reporting server.
+	Endpoint string
+	// Resolver is the nameserver for resolving the Endpoint.
+	Resolver string
+	// SkipVerify controls whether the nginx verifies the server cert.
+	SkipVerify bool
 }
 
 // Flags contains the NGF command-line flag names and values.

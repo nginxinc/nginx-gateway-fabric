@@ -33,9 +33,8 @@ func TestBuildGraph(t *testing.T) {
 	const (
 		gcName         = "my-class"
 		controllerName = "my.controller"
+		testNS         = "test"
 	)
-
-	testNs := "test"
 
 	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",

@@ -9,16 +9,37 @@ docs: "DOCS-1430"
 
 Learn how to install, upgrade, and uninstall NGINX Gateway Fabric in a Kubernetes cluster using Helm.
 
+{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret. If you use a different name than the default `nplus-license` name, specify the Secret name by setting `--set nginx.usage.secretName=<secret-name>` when running `helm upgrade`.{{</important>}}
+
 ## Before you begin
 
 To complete this guide, you'll need to install:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line tool for managing Kubernetes clusters.
 - [Helm 3.0 or later](https://helm.sh/docs/intro/install/), for deploying and managing applications on Kubernetes.
-- If you’d like to use NGINX Plus:
-  1. To pull from the F5 Container registry, configure a docker registry secret using your JWT token from the MyF5 portal by following the instructions from [here]({{<relref "installation/ngf-images/jwt-token-docker-secret.md">}}). Make sure to specify the secret using `nginxGateway.serviceAccount.imagePullSecret` or `nginxGateway.serviceAccount.imagePullSecrets` parameter.
-  1. Alternatively, pull an NGINX Gateway Fabric image with NGINX Plus and push it to your private registry by following the instructions from [here]({{<relref "installation/ngf-images/pulling-ngf-image.md">}}).
-  1. Update the `nginxGateway.image.repository` field of the `values.yaml` accordingly.
+
+{{< important >}}If you’d like to use NGINX Plus, some additional setup is also required:{{</ important >}}
+<details closed>
+<summary>NGINX Plus JWT setup</summary>
+
+{{<include "installation/jwt-password-note.md" >}}
+
+### 1. Download the JWT from MyF5
+
+{{<include "installation/nginx-plus/download-jwt.md" >}}
+
+### 2. Create the Docker Registry Secret
+
+{{<include "installation/nginx-plus/docker-registry-secret.md" >}}
+
+### 3. Create the NGINX Plus Secret
+
+{{<include "installation/nginx-plus/nginx-plus-secret.md" >}}
+
+{{<note>}}For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document.{{</note>}}
+
+</details>
 
 ## Deploy NGINX Gateway Fabric
 
@@ -28,7 +49,7 @@ To complete this guide, you'll need to install:
 
 ### Install from the OCI registry
 
-{{<tabs name="install-helm">}}
+{{<tabs name="install-helm-oci">}}
 
 {{%tab name="NGINX"%}}
 
@@ -42,32 +63,21 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 
 {{%tab name="NGINX Plus"%}}
 
-{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
+{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag.{{< /note >}}
 
-{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
+To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
 ```shell
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
 ```
 
-`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
-
-If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
-
-You can also use the certificate and key from the MyF5 portal and the Docker registry API to list the available image tags for NGINX Plus, for example:
-
-```shell
-   $ curl https://private-registry.nginx.com/v2/nginx-gateway-fabric/nginx-plus/tags/list --key <path-to-client.key> --cert <path-to-client.cert> | jq
-
-   {
-   "name": "nginx-gateway-fabric/nginx-plus",
-   "tags": ["edge"]
-   }
-```
-
 {{% /tab %}}
 
 {{</tabs>}}
+
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
 
 To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
@@ -77,13 +87,34 @@ kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric -
 
 ### Install from sources {#install-from-sources}
 
-1. {{<include "installation/helm/pulling-the-chart.md" >}}
 
-2. To install the chart into the **nginx-gateway** namespace, run the following command.
+{{<include "installation/helm/pulling-the-chart.md" >}}
 
-   ```shell
-   helm install ngf . --create-namespace -n nginx-gateway
-   ```
+{{<tabs name="install-helm-src">}}
+
+{{%tab name="NGINX"%}}
+
+To install the chart into the **nginx-gateway** namespace, run the following command:
+
+```shell
+helm install ngf . --create-namespace -n nginx-gateway
+```
+
+{{% /tab %}}
+
+{{%tab name="NGINX Plus"%}}
+
+{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag.{{< /note >}}
+
+To install the chart into the **nginx-gateway** namespace, run the following command:
+
+```shell
+helm install ngf . --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
+```
+
+{{% /tab %}}
+
+{{</tabs>}}
 
    `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
 
@@ -178,6 +209,9 @@ To upgrade the CRDs, take the following steps:
 
 ### Upgrade NGINX Gateway Fabric release
 
+{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret. If you use a different name than the default `nplus-license` name, specify the Secret name by setting `--set nginx.usage.secretName=<secret-name>` when running `helm upgrade`.{{</important>}}
+
 #### Upgrade from the OCI registry
 
 - To upgrade to the latest stable release of NGINX Gateway Fabric, run:
@@ -206,7 +240,7 @@ To upgrade the CRDs, take the following steps:
 
   {{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
-  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
+  {{< important >}}Ensure that you [Create the required JWT Secrets]({{< relref "installation/nginx-plus-jwt.md" >}}) before installing.{{< /important >}}
 
   ```shell
   helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway

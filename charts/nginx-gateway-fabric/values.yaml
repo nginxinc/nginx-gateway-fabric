@@ -134,6 +134,29 @@ nginx:
   # -- Is NGINX Plus image being used
   plus: false
 
+  # Configuration for NGINX Plus usage reporting.
+  usage:
+    # -- The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace
+    # that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+    secretName: "nplus-license"
+
+    # -- The endpoint of the NGINX Plus usage reporting server. Default: product.connect.nginx.com
+    endpoint: ""
+
+    # -- The resolver domain name or IP address with optional port for resolving the endpoint.
+    resolver: ""
+
+    # -- Disable client verification of the NGINX Plus usage reporting server certificate.
+    skipVerify: false
+
+    # -- The name of the Secret containing the CA cert for verifying the NGINX Plus usage reporting
+    # server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+    caSecretName: ""
+
+    # -- The name of the Secret containing the client cert/key for communicating with the NGINX Plus usage reporting
+    # server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+    clientSSLSecretName: ""
+
   # @schema
   # type: object
   # properties:
@@ -227,20 +250,6 @@ nginx:
 
   # -- Enable debugging for NGINX. Uses the nginx-debug binary. The NGINX error log level should be set to debug in the NginxProxy resource.
   debug: false
-
-  # Configuration for NGINX Plus usage reporting.
-  usage:
-    # -- The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.
-    secretName: ""
-
-    # -- The base server URL of the NGINX Plus usage reporting server.
-    serverURL: ""
-
-    # -- The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.
-    clusterName: ""
-
-    # -- Disable client verification of the NGINX Plus usage reporting server certificate.
-    insecureSkipVerify: false
 
   # -- The lifecycle of the nginx container.
   lifecycle: {}

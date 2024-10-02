@@ -327,70 +327,6 @@ func TestValidateQualifiedName(t *testing.T) {
 	}
 }
 
-func TestValidateURL(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		url    string
-		expErr bool
-	}{
-		{
-			name:   "valid",
-			url:    "http://server.com",
-			expErr: false,
-		},
-		{
-			name:   "valid https",
-			url:    "https://server.com",
-			expErr: false,
-		},
-		{
-			name:   "valid with port",
-			url:    "http://server.com:8080",
-			expErr: false,
-		},
-		{
-			name:   "valid with ip address",
-			url:    "http://10.0.0.1",
-			expErr: false,
-		},
-		{
-			name:   "valid with ip address and port",
-			url:    "http://10.0.0.1:8080",
-			expErr: false,
-		},
-		{
-			name:   "invalid scheme",
-			url:    "http//server.com",
-			expErr: true,
-		},
-		{
-			name:   "no scheme",
-			url:    "server.com",
-			expErr: true,
-		},
-		{
-			name:   "no domain",
-			url:    "http://",
-			expErr: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			g := NewWithT(t)
-
-			err := validateURL(tc.url)
-			if !tc.expErr {
-				g.Expect(err).ToNot(HaveOccurred())
-			} else {
-				g.Expect(err).To(HaveOccurred())
-			}
-		})
-	}
-}
-
 func TestValidateIP(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -493,6 +429,75 @@ func TestValidateEndpoint(t *testing.T) {
 			g := NewWithT(t)
 
 			err := validateEndpoint(tc.endp)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}
+
+func TestValidateEndpointOptionalPort(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		endp   string
+		expErr bool
+	}{
+		{
+			name:   "valid endpoint with hostname",
+			endp:   "localhost:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv4",
+			endp:   "1.2.3.4:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv6",
+			endp:   "[::1]:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with hostname, no port",
+			endp:   "localhost",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv4, no port",
+			endp:   "1.2.3.4",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv6, no port",
+			endp:   "2041:0000:140F::875B:131B",
+			expErr: false,
+		},
+		{
+			name:   "invalid port - 1",
+			endp:   "localhost:0",
+			expErr: true,
+		},
+		{
+			name:   "invalid port - 2",
+			endp:   "localhost:65536",
+			expErr: true,
+		},
+		{
+			name:   "invalid hostname or IP",
+			endp:   "loc@lhost:8080",
+			expErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			err := validateEndpointOptionalPort(tc.endp)
 			if !tc.expErr {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {

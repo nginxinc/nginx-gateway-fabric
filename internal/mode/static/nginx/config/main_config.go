@@ -8,7 +8,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
-var mainConfigTemplate = gotemplate.Must(gotemplate.New("main").Parse(mainConfigTemplateText))
+var (
+	mainConfigTemplate = gotemplate.Must(gotemplate.New("main").Parse(mainConfigTemplateText))
+	mgmtConfigTemplate = gotemplate.Must(gotemplate.New("mgmt").Parse(mgmtConfigTemplateText))
+)
 
 type mainConfig struct {
 	Includes []shared.Include
@@ -31,4 +34,8 @@ func executeMainConfig(conf dataplane.Configuration) []executeResult {
 	results = append(results, createIncludeExecuteResults(includes)...)
 
 	return results
+}
+
+func executeMgmtIncludesConfig(conf mgmtConf) []byte {
+	return helpers.MustExecuteTemplate(mgmtConfigTemplate, conf)
 }

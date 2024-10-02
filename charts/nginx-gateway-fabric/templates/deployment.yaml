@@ -42,8 +42,12 @@ spec:
         - copy
         - --source
         - /includes/main.conf
+        {{- if .Values.nginx.plus }}
+        - --source
+        - /includes/mgmt.conf
+        {{- end }}
         - --destination
-        - /etc/nginx/main-includes/main.conf
+        - /etc/nginx/main-includes
         securityContext:
           seccompProfile:
             type: RuntimeDefault
@@ -56,7 +60,7 @@ spec:
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
-        - name: nginx-includes-configmap
+        - name: nginx-includes-bootstrap
           mountPath: /includes
         - name: nginx-main-includes
           mountPath: /etc/nginx/main-includes
@@ -69,6 +73,24 @@ spec:
         - --service={{ include "nginx-gateway.fullname" . }}
         {{- if .Values.nginx.plus }}
         - --nginx-plus
+          {{- if .Values.nginx.usage.secretName }}
+        - --usage-report-secret={{ .Values.nginx.usage.secretName }}
+          {{- end }}
+          {{- if .Values.nginx.usage.endpoint }}
+        - --usage-report-endpoint={{ .Values.nginx.usage.endpoint }}
+          {{- end }}
+          {{- if .Values.nginx.usage.resolver }}
+        - --usage-report-resolver={{ .Values.nginx.usage.resolver }}
+          {{- end }}
+          {{- if .Values.nginx.usage.skipVerify }}
+        - --usage-report-skip-verify
+          {{- end }}
+          {{- if .Values.nginx.usage.caSecretName }}
+        - --usage-report-ca-secret={{ .Values.nginx.usage.caSecretName }}
+          {{- end }}
+          {{- if .Values.nginx.usage.clientSSLSecretName }}
+        - --usage-report-client-ssl-secret={{ .Values.nginx.usage.clientSSLSecretName }}
+          {{- end }}
         {{- end }}
         {{- if .Values.metrics.enable }}
         - --metrics-port={{ .Values.metrics.port }}
@@ -93,18 +115,6 @@ spec:
         {{- end }}
         {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
         - --gateway-api-experimental-features
-        {{- end }}
-        {{- if .Values.nginx.usage.secretName }}
-        - --usage-report-secret={{ .Values.nginx.usage.secretName }}
-        {{- end }}
-        {{- if .Values.nginx.usage.serverURL }}
-        - --usage-report-server-url={{ .Values.nginx.usage.serverURL }}
-        {{- end }}
-        {{- if .Values.nginx.usage.clusterName }}
-        - --usage-report-cluster-name={{ .Values.nginx.usage.clusterName }}
-        {{- end }}
-        {{- if .Values.nginx.usage.insecureSkipVerify }}
-        - --usage-report-skip-verify
         {{- end }}
         {{- if .Values.nginxGateway.snippetsFilters.enable }}
         - --snippets-filters
@@ -212,8 +222,24 @@ spec:
           mountPath: /var/run/nginx
         - name: nginx-cache
           mountPath: /var/cache/nginx
+        - name: nginx-lib
+          mountPath: /var/lib/nginx
         - name: nginx-includes
           mountPath: /etc/nginx/includes
+        {{- if .Values.nginx.plus }}
+          {{- if .Values.nginx.usage.secretName }}
+        - name: nginx-plus-license
+          mountPath: /etc/nginx/license
+          {{- end }}
+          {{- if .Values.nginx.usage.clientSSLSecretName }}
+        - name: usage-client-ssl-secret
+          mountPath: /etc/nginx/usage-certs/client
+          {{- end }}
+          {{- if .Values.nginx.usage.caSecretName }}
+        - name: usage-ca-secret
+          mountPath: /etc/nginx/usage-certs/ca
+          {{- end }}
+        {{- end }}
         {{- with .Values.nginx.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
@@ -255,11 +281,30 @@ spec:
         emptyDir: {}
       - name: nginx-cache
         emptyDir: {}
+      - name: nginx-lib
+        emptyDir: {}
       - name: nginx-includes
         emptyDir: {}
-      - name: nginx-includes-configmap
+      - name: nginx-includes-bootstrap
         configMap:
-          name: nginx-includes
+          name: nginx-includes-bootstrap
+      {{- if .Values.nginx.plus }}
+        {{- if .Values.nginx.usage.secretName }}
+      - name: nginx-plus-license
+        secret:
+          secretName: {{ .Values.nginx.usage.secretName }}
+        {{- end }}
+        {{- if .Values.nginx.usage.clientSSLSecretName }}
+      - name: usage-client-ssl-secret
+        secret:
+          secretName: {{ .Values.nginx.usage.clientSSLSecretName }}
+        {{- end }}
+        {{- if .Values.nginx.usage.caSecretName }}
+      - name: usage-ca-secret
+        secret:
+          secretName: {{ .Values.nginx.usage.caSecretName }}
+        {{- end }}
+      {{- end }}
       {{- with .Values.extraVolumes -}}
       {{ toYaml . | nindent 6 }}
       {{- end }}

@@ -32,7 +32,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/statefakes"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/staticfakes"
 )
 
 var _ = Describe("eventHandler", func() {
@@ -401,95 +400,6 @@ var _ = Describe("eventHandler", func() {
 			_, name, reqs := fakeStatusUpdater.UpdateGroupArgsForCall(0)
 			Expect(name).To(Equal(groupGateways))
 			Expect(reqs).To(BeEmpty())
-		})
-	})
-
-	When("receiving usage Secret updates", func() {
-		var fakeSecretStore *staticfakes.FakeSecretStorer
-		var usageSecret *v1.Secret
-
-		BeforeEach(func() {
-			fakeSecretStore = &staticfakes.FakeSecretStorer{}
-			usageSecret = &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "usage",
-					Namespace: "nginx-gateway",
-				},
-			}
-		})
-
-		It("should not set the N+ usage secret if not initialized", func() {
-			handler.cfg.usageSecret = fakeSecretStore
-
-			e := &events.UpsertEvent{
-				Resource: usageSecret,
-			}
-			batch := []interface{}{e}
-
-			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-			Expect(fakeSecretStore.SetCallCount()).To(Equal(0))
-			Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-		})
-
-		Context("usage secret is initialized", func() {
-			var usageSecretHandler *eventHandlerImpl
-			BeforeEach(func() {
-				usageCfg := &config.UsageReportConfig{
-					SecretNsName: client.ObjectKeyFromObject(usageSecret),
-				}
-				usageSecretHandler = newEventHandlerImpl(eventHandlerConfig{
-					k8sClient:                     fake.NewFakeClient(),
-					processor:                     fakeProcessor,
-					nginxConfiguredOnStartChecker: newNginxConfiguredOnStartChecker(),
-					controlConfigNSName:           types.NamespacedName{Namespace: namespace, Name: configName},
-					usageReportConfig:             usageCfg,
-					usageSecret:                   fakeSecretStore,
-					gatewayPodConfig: config.GatewayPodConfig{
-						ServiceName: "nginx-gateway",
-						Namespace:   "nginx-gateway",
-					},
-					metricsCollector: collectors.NewControllerNoopCollector(),
-				})
-			})
-
-			It("should not set the N+ usage secret if processing a normal secret", func() {
-				e := &events.UpsertEvent{
-					Resource: &v1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "not-usage",
-							Namespace: "nginx-gateway",
-						},
-					},
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.SetCallCount()).To(Equal(0))
-				Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-			})
-
-			It("should set the N+ usage secret when upserted", func() {
-				e := &events.UpsertEvent{
-					Resource: usageSecret,
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.SetCallCount()).To(Equal(1))
-				Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-			})
-
-			It("should remove the N+ usage secret when deleted", func() {
-				e := &events.DeleteEvent{
-					Type:           &v1.Secret{},
-					NamespacedName: client.ObjectKeyFromObject(usageSecret),
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.DeleteCallCount()).To(Equal(1))
-				Expect(fakeProcessor.CaptureDeleteChangeCallCount()).To(Equal(1))
-			})
 		})
 	})
 
