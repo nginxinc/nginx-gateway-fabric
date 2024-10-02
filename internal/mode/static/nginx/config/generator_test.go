@@ -6,8 +6,15 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -119,12 +126,68 @@ func TestGenerate(t *testing.T) {
 	}
 	g := NewWithT(t)
 
-	var plus bool
-	generator := config.NewGeneratorImpl(plus)
+	// setup for Generating NGINX Plus mgmt files
+
+	plus := true
+
+	var (
+		ngfPod = &v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pod1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind: "ReplicaSet",
+						Name: "replicaset1",
+					},
+				},
+			},
+		}
+
+		ngfReplicaSet = &appsv1.ReplicaSet{
+			Spec: appsv1.ReplicaSetSpec{
+				Replicas: helpers.GetPointer[int32](1),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "replicaset1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind: "Deployment",
+						Name: "Deployment1",
+						UID:  "test-uid-replicaSet",
+					},
+				},
+			},
+		}
+
+		kubeNamespace = &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: metav1.NamespaceSystem,
+				UID:  "test-uid",
+			},
+		}
+
+		nodeList = &v1.NodeList{
+			Items: []v1.Node{{}},
+		}
+	)
+
+	generator := config.NewGeneratorImpl(
+		plus,
+		&ngfConfig.UsageReportConfig{
+			Endpoint:            "test-endpoint",
+			ClientSSLSecretName: "client-ssl",
+			CASecretName:        "ca-secret",
+		},
+		&ngfConfig.GatewayPodConfig{
+			Name: "pod1",
+		},
+		fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
+		ctlrZap.New(),
+	)
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(11))
+	g.Expect(files).To(HaveLen(13))
 	arrange := func(i, j int) bool {
 		return files[i].Path < files[j].Path
 	}
@@ -139,6 +202,8 @@ func TestGenerate(t *testing.T) {
 		/etc/nginx/includes/http_snippet2.conf
 		/etc/nginx/includes/main_snippet1.conf
 		/etc/nginx/includes/main_snippet2.conf
+		/etc/nginx/main-includes/deployment_ctx.json
+		/etc/nginx/main-includes/mgmt.conf
 		/etc/nginx/main-includes/main.conf
 		/etc/nginx/secrets/test-certbundle.crt
 		/etc/nginx/secrets/test-keypair.pem
@@ -182,25 +247,41 @@ func TestGenerate(t *testing.T) {
 	g.Expect(files[5].Path).To(Equal("/etc/nginx/includes/main_snippet1.conf"))
 	g.Expect(files[6].Path).To(Equal("/etc/nginx/includes/main_snippet2.conf"))
 
-	g.Expect(files[7].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
-	mainConfStr := string(files[7].Content)
+	g.Expect(files[7].Path).To(Equal("/etc/nginx/main-includes/deployment_ctx.json"))
+	deploymentCtx := string(files[7].Content)
+	g.Expect(deploymentCtx).To(ContainSubstring("\"integration\":\"ngf\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"cluster_id\":\"test-uid\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"installation_id\":\"test-uid-replicaSet\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"cluster_node_count\":1"))
+
+	g.Expect(files[8].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
+	mainConfStr := string(files[8].Content)
 	g.Expect(mainConfStr).To(ContainSubstring("load_module modules/ngx_otel_module.so;"))
 	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet1.conf;"))
 	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet2.conf;"))
 
-	g.Expect(files[8].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
-	certBundle := string(files[8].Content)
+	g.Expect(files[9].Path).To(Equal("/etc/nginx/main-includes/mgmt.conf"))
+	mgmtConf := string(files[9].Content)
+	g.Expect(mgmtConf).To(ContainSubstring("usage_report endpoint=test-endpoint"))
+	g.Expect(mgmtConf).To(ContainSubstring("license_token /etc/nginx/license/license.jwt"))
+	g.Expect(mgmtConf).To(ContainSubstring("deployment_context /etc/nginx/main-includes/deployment_ctx.json"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_trusted_certificate /etc/nginx/usage-certs/ca/ca.crt"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_certificate /etc/nginx/usage-certs/client/tls.crt"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_certificate_key /etc/nginx/usage-certs/client/tls.key"))
+
+	g.Expect(files[10].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[10].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 
-	g.Expect(files[9]).To(Equal(file.File{
+	g.Expect(files[11]).To(Equal(file.File{
 		Type:    file.TypeSecret,
 		Path:    "/etc/nginx/secrets/test-keypair.pem",
 		Content: []byte("test-cert\ntest-key"),
 	}))
 
-	g.Expect(files[10].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
-	g.Expect(files[10].Type).To(Equal(file.TypeRegular))
-	streamCfg := string(files[10].Content)
+	g.Expect(files[12].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
+	g.Expect(files[12].Type).To(Equal(file.TypeRegular))
+	streamCfg := string(files[12].Content)
 	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com-443.sock"))
 	g.Expect(streamCfg).To(ContainSubstring("listen 443"))
 	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com-443.sock"))

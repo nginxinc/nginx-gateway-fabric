@@ -35,17 +35,6 @@ type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-//counterfeiter:generate . secretStorer
-
-// secretStorer should store the usage Secret that contains the credentials for NGINX Plus usage reporting.
-type secretStorer interface {
-	// Set stores the updated Secret.
-	Set(*v1.Secret)
-	// Delete nullifies the Secret value.
-	Delete()
-}
-
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
 	// nginxFileMgr is the file Manager for nginx.
@@ -56,8 +45,6 @@ type eventHandlerConfig struct {
 	nginxRuntimeMgr runtime.Manager
 	// statusUpdater updates statuses on Kubernetes resources.
 	statusUpdater frameworkStatus.GroupUpdater
-	// usageSecret contains the Secret for the NGINX Plus reporting credentials.
-	usageSecret secretStorer
 	// processor is the state ChangeProcessor.
 	processor state.ChangeProcessor
 	// serviceResolver resolves Services to Endpoints.
@@ -70,8 +57,6 @@ type eventHandlerConfig struct {
 	logLevelSetter logLevelSetter
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
-	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
-	usageReportConfig *ngfConfig.UsageReportConfig
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// gatewayPodConfig contains information about this Pod.
@@ -133,9 +118,8 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 	handler.objectFilters = map[filterKey]objectFilter{
 		// NginxGateway CRD
 		objectFilterKey(&ngfAPI.NginxGateway{}, handler.cfg.controlConfigNSName): {
-			upsert:               handler.nginxGatewayCRDUpsert,
-			delete:               handler.nginxGatewayCRDDelete,
-			captureChangeInGraph: false,
+			upsert: handler.nginxGatewayCRDUpsert,
+			delete: handler.nginxGatewayCRDDelete,
 		},
 		// NGF-fronting Service
 		objectFilterKey(
@@ -149,16 +133,6 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 			delete:               handler.nginxGatewayServiceDelete,
 			captureChangeInGraph: true,
 		},
-	}
-
-	if handler.cfg.usageReportConfig != nil {
-		// N+ usage reporting Secret
-		nsName := handler.cfg.usageReportConfig.SecretNsName
-		handler.objectFilters[objectFilterKey(&v1.Secret{}, nsName)] = objectFilter{
-			upsert:               handler.nginxPlusUsageSecretUpsert,
-			delete:               handler.nginxPlusUsageSecretDelete,
-			captureChangeInGraph: true,
-		}
 	}
 
 	return handler
@@ -608,21 +582,4 @@ func (h *eventHandlerImpl) nginxGatewayServiceDelete(
 		h.latestReloadResult,
 	)
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gatewayStatuses...)
-}
-
-func (h *eventHandlerImpl) nginxPlusUsageSecretUpsert(_ context.Context, _ logr.Logger, obj client.Object) {
-	secret, ok := obj.(*v1.Secret)
-	if !ok {
-		panic(fmt.Errorf("obj type mismatch: got %T, expected %T", obj, &v1.Secret{}))
-	}
-
-	h.cfg.usageSecret.Set(secret)
-}
-
-func (h *eventHandlerImpl) nginxPlusUsageSecretDelete(
-	_ context.Context,
-	_ logr.Logger,
-	_ types.NamespacedName,
-) {
-	h.cfg.usageSecret.Delete()
 }

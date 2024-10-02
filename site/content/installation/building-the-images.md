@@ -1,6 +1,6 @@
 ---
 title: "Build NGINX Gateway Fabric and NGINX images"
-weight: 300
+weight: 500
 toc: true
 docs: "DOCS-1431"
 ---

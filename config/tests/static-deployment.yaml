@@ -31,7 +31,7 @@ spec:
         - --source
         - /includes/main.conf
         - --destination
-        - /etc/nginx/main-includes/main.conf
+        - /etc/nginx/main-includes
         securityContext:
           seccompProfile:
             type: RuntimeDefault
@@ -44,7 +44,7 @@ spec:
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
-        - name: nginx-includes-configmap
+        - name: nginx-includes-bootstrap
           mountPath: /includes
         - name: nginx-main-includes
           mountPath: /etc/nginx/main-includes
@@ -141,6 +141,8 @@ spec:
           mountPath: /var/run/nginx
         - name: nginx-cache
           mountPath: /var/cache/nginx
+        - name: nginx-lib
+          mountPath: /var/lib/nginx
         - name: nginx-includes
           mountPath: /etc/nginx/includes
       terminationGracePeriodSeconds: 30
@@ -162,8 +164,10 @@ spec:
         emptyDir: {}
       - name: nginx-cache
         emptyDir: {}
+      - name: nginx-lib
+        emptyDir: {}
       - name: nginx-includes
         emptyDir: {}
-      - name: nginx-includes-configmap
+      - name: nginx-includes-bootstrap
         configMap:
-          name: nginx-includes
+          name: nginx-includes-bootstrap

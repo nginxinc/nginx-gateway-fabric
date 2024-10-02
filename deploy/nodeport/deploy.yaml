@@ -152,7 +152,7 @@ metadata:
     app.kubernetes.io/instance: nginx-gateway
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/version: edge
-  name: nginx-includes
+  name: nginx-includes-bootstrap
   namespace: nginx-gateway
 ---
 apiVersion: v1
@@ -298,6 +298,8 @@ spec:
           name: nginx-run
         - mountPath: /var/cache/nginx
           name: nginx-cache
+        - mountPath: /var/lib/nginx
+          name: nginx-lib
         - mountPath: /etc/nginx/includes
           name: nginx-includes
       initContainers:
@@ -307,7 +309,7 @@ spec:
         - --source
         - /includes/main.conf
         - --destination
-        - /etc/nginx/main-includes/main.conf
+        - /etc/nginx/main-includes
         image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: copy-nginx-config
@@ -324,7 +326,7 @@ spec:
             type: RuntimeDefault
         volumeMounts:
         - mountPath: /includes
-          name: nginx-includes-configmap
+          name: nginx-includes-bootstrap
         - mountPath: /etc/nginx/main-includes
           name: nginx-main-includes
       securityContext:
@@ -347,10 +349,12 @@ spec:
       - emptyDir: {}
         name: nginx-cache
       - emptyDir: {}
+        name: nginx-lib
+      - emptyDir: {}
         name: nginx-includes
       - configMap:
-          name: nginx-includes
-        name: nginx-includes-configmap
+          name: nginx-includes-bootstrap
+        name: nginx-includes-bootstrap
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

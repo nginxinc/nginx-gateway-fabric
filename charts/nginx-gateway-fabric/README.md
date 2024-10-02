@@ -268,10 +268,12 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginx.image.tag` |  | string | `"edge"` |
 | `nginx.lifecycle` | The lifecycle of the nginx container. | object | `{}` |
 | `nginx.plus` | Is NGINX Plus image being used | bool | `false` |
-| `nginx.usage.clusterName` | The display name of the Kubernetes cluster in the NGINX Plus usage reporting server. | string | `""` |
-| `nginx.usage.insecureSkipVerify` | Disable client verification of the NGINX Plus usage reporting server certificate. | bool | `false` |
-| `nginx.usage.secretName` | The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting. | string | `""` |
-| `nginx.usage.serverURL` | The base server URL of the NGINX Plus usage reporting server. | string | `""` |
+| `nginx.usage.caSecretName` | The name of the Secret containing the CA cert for verifying the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.clientSSLSecretName` | The name of the Secret containing the client cert/key for communicating with the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.endpoint` | The endpoint of the NGINX Plus usage reporting server. Default: product.connect.nginx.com | string | `""` |
+| `nginx.usage.resolver` | The resolver domain name or IP address with optional port for resolving the endpoint. | string | `""` |
+| `nginx.usage.secretName` | The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `"nplus-license"` |
+| `nginx.usage.skipVerify` | Disable client verification of the NGINX Plus usage reporting server certificate. | bool | `false` |
 | `nginxGateway.config.logging.level` | Log level. | string | `"info"` |
 | `nginxGateway.configAnnotations` | Set of custom annotations for NginxGateway objects. | object | `{}` |
 | `nginxGateway.extraVolumeMounts` | extraVolumeMounts are the additional volume mounts for the nginx-gateway container. | list | `[]` |

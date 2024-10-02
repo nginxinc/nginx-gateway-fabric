@@ -9,20 +9,40 @@ docs: "DOCS-1429"
 
 Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Kubernetes manifests.
 
+{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version.{{</important>}}
+
 ## Before you begin
 
 To complete this guide, you'll need to install:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
 
+{{< important >}}If you’d like to use NGINX Plus, some additional setup is also required:{{</ important >}}
+<details closed>
+<summary>NGINX Plus JWT setup</summary>
+
+{{<include "installation/jwt-password-note.md" >}}
+
+### 1. Download the JWT from MyF5
+
+{{<include "installation/nginx-plus/download-jwt.md" >}}
+
+### 2. Create the Docker Registry Secret
+
+{{<include "installation/nginx-plus/docker-registry-secret.md" >}}
+
+### 3. Create the NGINX Plus Secret
+
+{{<include "installation/nginx-plus/nginx-plus-secret.md" >}}
+
+{{<note>}}For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document.{{</note>}}
+
+</details>
+
 ## Deploy NGINX Gateway Fabric
 
 Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
-
-- If you’d like to use NGINX Plus:
-  1. To pull from the F5 Container registry, configure a docker registry secret using your JWT token from the MyF5 portal by following the instructions from [here](https://docs.nginx.com/nginx-gateway-fabric/installation/ngf-images/jwt-token-docker-secret). Make sure to specify the secret in the `imagePullSecrets` field of the `nginx-gateway` ServiceAccount.
-  1. Alternatively, pull an NGINX Gateway Fabric image with NGINX Plus and push it to your private registry by following the instructions from [here]({{<relref "installation/ngf-images/pulling-ngf-image.md">}}).
-  1. Update the nginx container's `image` field of the `nginx-gateway` Deployment accordingly.
 
 ### 1. Install the Gateway API resources
 
@@ -81,10 +101,8 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 {{%tab name="NGINX Plus"%}}
 
 Deploys NGINX Gateway Fabric with NGINX Plus. The image is pulled from the
-NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the secret to use to pull the image.
-The secret must be created in the same namespace as the NGINX Gateway Fabric deployment.
-
-{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) and update the necessary fields before applying.{{< /important >}}
+NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the Secret to use to pull the image.
+The NGINX Plus JWT Secret used to run NGINX Plus is also specified in a volume mount and the `--usage-report-secret` parameter. These Secrets are created as part of the [Before you begin](#before-you-begin) section.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/nginx-plus/deploy.yaml
@@ -106,9 +124,9 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 {{%tab name="NGINX Plus Experimental"%}}
 
-Deploys NGINX Gateway Fabric with NGINX Plus and experimental features. The image is pulled from the NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the secret to use to pull the image. The secret must be created in the same namespace as the NGINX Gateway Fabric deployment.
-
-{{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) and update the necessary fields before applying.{{< /important >}}
+Deploys NGINX Gateway Fabric with NGINX Plus and experimental features. The image is pulled from the
+NGINX Plus Docker registry, and the `imagePullSecretName` is the name of the Secret to use to pull the image.
+The NGINX Plus JWT Secret used to run NGINX Plus is also specified in a volume mount and the `--usage-report-secret` parameter. These Secrets are created as part of the [Before you begin](#before-you-begin) section.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/nginx-plus-experimental/deploy.yaml
@@ -160,6 +178,9 @@ nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
 {{<include "installation/expose-nginx-gateway-fabric.md" >}}
 
 ## Upgrade NGINX Gateway Fabric
+
+{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version.{{</important>}}
 
 {{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
 
