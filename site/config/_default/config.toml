@@ -1,5 +1,5 @@
 title = "NGINX Gateway Fabric"
-enableGitInfo = false
+enableGitInfo = true
 baseURL = "/"
 staticDir = ["static"]
 languageCode = "en-us"
