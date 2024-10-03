@@ -65,7 +65,7 @@ spec:
               logging:
                 description: Logging defines logging related settings for NGINX.
                 properties:
-                  errorlevel:
+                  errorLevel:
                     default: info
                     description: |-
                       ErrorLevel defines the error log level. Possible log levels listed in order of increasing severity are

@@ -75,7 +75,7 @@
             "logging": {
               "description": "Logging defines logging related settings for NGINX.",
               "properties": {
-                "errorlevel": {
+                "errorLevel": {
                   "enum": [
                     "debug",
                     "info",

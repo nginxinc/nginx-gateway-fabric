@@ -216,7 +216,7 @@ type NginxLogging struct {
 	//
 	// +optional
 	// +kubebuilder:default=info
-	ErrorLevel *NginxErrorLogLevel `json:"errorlevel,omitempty"`
+	ErrorLevel *NginxErrorLogLevel `json:"errorLevel,omitempty"`
 }
 
 // NginxErrorLogLevel type defines the log level of error logs for NGINX.

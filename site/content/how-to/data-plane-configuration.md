@@ -127,7 +127,7 @@ metadata:
   name: ngf-proxy-config
 spec:
   logging:
-    errorlevel: warn
+    errorLevel: warn
 EOF
 ```
 

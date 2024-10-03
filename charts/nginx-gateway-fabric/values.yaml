@@ -205,7 +205,7 @@ nginx:
   #     type: object
   #     description: Logging defines logging related settings for NGINX.
   #     properties:
-  #       errorlevel:
+  #       errorLevel:
   #         type: string
   #         enum:
   #           - debug

@@ -744,7 +744,7 @@ func TestValidateLogging(t *testing.T) {
 				},
 			},
 			name: "invalid log level",
-			errorString: "spec.logging.errorlevel: Unsupported value: \"invalid-log-level\": supported values:" +
+			errorString: "spec.logging.errorLevel: Unsupported value: \"invalid-log-level\": supported values:" +
 				" \"debug\", \"info\", \"notice\", \"warn\", \"error\", \"crit\", \"alert\", \"emerg\"",
 			expectErrCount: 1,
 		},

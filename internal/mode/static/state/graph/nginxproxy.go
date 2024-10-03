@@ -162,7 +162,7 @@ func validateLogging(npCfg *ngfAPI.NginxProxy) field.ErrorList {
 				allErrs = append(
 					allErrs,
 					field.NotSupported(
-						loggingPath.Child("errorlevel"),
+						loggingPath.Child("errorLevel"),
 						logging.ErrorLevel,
 						validLogLevels,
 					))

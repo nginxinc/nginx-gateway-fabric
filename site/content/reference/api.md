@@ -1066,7 +1066,7 @@ Logging
 <tbody>
 <tr>
 <td>
-<code>errorlevel</code><br/>
+<code>errorLevel</code><br/>
 <em>
 <a href="#gateway.nginx.org/v1alpha1.NginxErrorLogLevel">
 NginxErrorLogLevel
