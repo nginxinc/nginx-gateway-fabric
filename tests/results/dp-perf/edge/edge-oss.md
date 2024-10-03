@@ -6,16 +6,16 @@ NGINX Plus: false
 
 NGINX Gateway Fabric:
 
-- Commit: bf8ea47203eb4695af0d359243c73de2d1badbbf
-- Date: 2024-09-13T20:33:11Z
+- Commit: d7d6b0af0d56721b28aba24c1541d650ef6bc5a9
+- Date: 2024-09-30T23:47:54Z
 - Dirty: false
 
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.30.3-gke.1639000
+- k8s version: v1.30.3-gke.1969001
 - vCPUs per node: 16
-- RAM per node: 65853968Ki
+- RAM per node: 65853964Ki
 - Max pods per node: 110
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
@@ -23,23 +23,24 @@ GKE Cluster:
 ## Test1: Running latte path based routing
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.02, 1000.00
-Duration      [total, attack, wait]             30s, 29.999s, 674.086µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  504.902µs, 690.958µs, 671.389µs, 776.467µs, 814.84µs, 920.64µs, 11.923ms
-Bytes In      [total, mean]                     4800000, 160.00
+Requests      [total, rate, throughput]         30000, 1000.03, 999.50
+Duration      [total, attack, wait]             30s, 29.999s, 779.26µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  401.546µs, 729.594µs, 696.171µs, 808.825µs, 853.548µs, 993.26µs, 12.557ms
+Bytes In      [total, mean]                     4769865, 159.00
 Bytes Out     [total, mean]                     0, 0.00
-Success       [ratio]                           100.00%
-Status Codes  [code:count]                      200:30000  
+Success       [ratio]                           99.95%
+Status Codes  [code:count]                      200:29985  502:15  
 Error Set:
+502 Bad Gateway
 ```
 
 ## Test2: Running coffee header based routing
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.01, 999.99
-Duration      [total, attack, wait]             30s, 30s, 727.772µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  544.595µs, 724.644µs, 711.056µs, 815.628µs, 855.662µs, 971.898µs, 12.671ms
-Bytes In      [total, mean]                     4830000, 161.00
+Requests      [total, rate, throughput]         30000, 1000.03, 1000.00
+Duration      [total, attack, wait]             30s, 29.999s, 707.055µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  535.388µs, 765.759µs, 741.731µs, 856.44µs, 900.22µs, 1.028ms, 12.624ms
+Bytes In      [total, mean]                     4800000, 160.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:30000  
@@ -49,10 +50,10 @@ Error Set:
 ## Test3: Running coffee query based routing
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.03, 1000.01
-Duration      [total, attack, wait]             30s, 29.999s, 680.019µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  549.132µs, 745.892µs, 717.999µs, 829.205µs, 873.444µs, 1.024ms, 16.671ms
-Bytes In      [total, mean]                     5070000, 169.00
+Requests      [total, rate, throughput]         30000, 1000.01, 999.98
+Duration      [total, attack, wait]             30.001s, 30s, 825.751µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  562.053µs, 766.667µs, 744.972µs, 859.534µs, 901.417µs, 1.02ms, 11.739ms
+Bytes In      [total, mean]                     5040000, 168.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:30000  
@@ -62,10 +63,10 @@ Error Set:
 ## Test4: Running tea GET method based routing
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.03, 1000.01
-Duration      [total, attack, wait]             30s, 29.999s, 641.483µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  537.369µs, 718.158µs, 698.151µs, 811.422µs, 855.477µs, 967.85µs, 19.633ms
-Bytes In      [total, mean]                     4740000, 158.00
+Requests      [total, rate, throughput]         30000, 1000.02, 999.99
+Duration      [total, attack, wait]             30s, 29.999s, 794.715µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  550.188µs, 749.652µs, 735.445µs, 851.278µs, 896.326µs, 1.024ms, 5.942ms
+Bytes In      [total, mean]                     4710000, 157.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:30000  
@@ -75,10 +76,10 @@ Error Set:
 ## Test5: Running tea POST method based routing
 
 ```text
-Requests      [total, rate, throughput]         30000, 1000.04, 1000.01
-Duration      [total, attack, wait]             30s, 29.999s, 798.923µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  536.667µs, 719.1µs, 707.001µs, 811.278µs, 849.968µs, 956.036µs, 11.637ms
-Bytes In      [total, mean]                     4740000, 158.00
+Requests      [total, rate, throughput]         30000, 1000.03, 1000.01
+Duration      [total, attack, wait]             30s, 29.999s, 776.178µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  555.668µs, 750.151µs, 736.996µs, 847.199µs, 890.538µs, 1.003ms, 9.982ms
+Bytes In      [total, mean]                     4710000, 157.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:30000  
