@@ -72,6 +72,27 @@
               "required": [],
               "type": "string"
             },
+            "logging": {
+              "description": "Logging defines logging related settings for NGINX.",
+              "properties": {
+                "errorLevel": {
+                  "enum": [
+                    "debug",
+                    "info",
+                    "notice",
+                    "warn",
+                    "error",
+                    "crit",
+                    "alert",
+                    "emerg"
+                  ],
+                  "required": [],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
             "rewriteClientIP": {
               "description": "RewriteClientIP defines configuration for rewriting the client IP to the original client's IP.",
               "properties": {
@@ -178,6 +199,13 @@
           "required": [],
           "title": "config",
           "type": "object"
+        },
+        "debug": {
+          "default": false,
+          "description": "Enable debugging for NGINX. Uses the nginx-debug binary. The NGINX error log level should be set to debug in the NginxProxy resource.",
+          "required": [],
+          "title": "debug",
+          "type": "boolean"
         },
         "extraVolumeMounts": {
           "description": "extraVolumeMounts are the additional volume mounts for the nginx container.",

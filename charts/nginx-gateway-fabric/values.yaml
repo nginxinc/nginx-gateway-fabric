@@ -201,9 +201,27 @@ nginx:
   #               pattern: ^([^"$\\]|\\[^$])*$
   #               minLength: 1
   #               maxLength: 255
+  #   logging:
+  #     type: object
+  #     description: Logging defines logging related settings for NGINX.
+  #     properties:
+  #       errorLevel:
+  #         type: string
+  #         enum:
+  #           - debug
+  #           - info
+  #           - notice
+  #           - warn
+  #           - error
+  #           - crit
+  #           - alert
+  #           - emerg
   # @schema
   # -- The configuration for the data plane that is contained in the NginxProxy resource.
   config: {}
+
+  # -- Enable debugging for NGINX. Uses the nginx-debug binary. The NGINX error log level should be set to debug in the NginxProxy resource.
+  debug: false
 
   # Configuration for NGINX Plus usage reporting.
   usage:

@@ -155,11 +155,11 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := &dataplane.Configuration{Version: 1}
+				dcfg := dataplane.GetDefaultConfiguration(1)
 
 				checkUpsertEventExpectations(e)
-				expectReconfig(*dcfg, fakeCfgFiles)
-				Expect(helpers.Diff(handler.GetLatestConfiguration(), dcfg)).To(BeEmpty())
+				expectReconfig(dcfg, fakeCfgFiles)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 			})
 
 			It("should process Delete", func() {
@@ -171,11 +171,11 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-				dcfg := &dataplane.Configuration{Version: 1}
+				dcfg := dataplane.GetDefaultConfiguration(1)
 
 				checkDeleteEventExpectations(e)
-				expectReconfig(*dcfg, fakeCfgFiles)
-				Expect(helpers.Diff(handler.GetLatestConfiguration(), dcfg)).To(BeEmpty())
+				expectReconfig(dcfg, fakeCfgFiles)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 			})
 		})
 
@@ -194,7 +194,9 @@ var _ = Describe("eventHandler", func() {
 				checkDeleteEventExpectations(deleteEvent)
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
+
+				dcfg := dataplane.GetDefaultConfiguration(2)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 			})
 		})
 	})
@@ -517,7 +519,9 @@ var _ = Describe("eventHandler", func() {
 				fakeNginxRuntimeMgr.IsPlusReturns(true)
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+
+				dcfg := dataplane.GetDefaultConfiguration(1)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
 				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
@@ -528,7 +532,9 @@ var _ = Describe("eventHandler", func() {
 		When("not running NGINX Plus", func() {
 			It("should not call the NGINX Plus API", func() {
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+
+				dcfg := dataplane.GetDefaultConfiguration(1)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
 				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
@@ -623,7 +629,8 @@ var _ = Describe("eventHandler", func() {
 		Expect(handler.cfg.nginxConfiguredOnStartChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+		dcfg := dataplane.GetDefaultConfiguration(1)
+		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 		Expect(readyChannel).To(BeClosed())
 
@@ -670,7 +677,8 @@ var _ = Describe("eventHandler", func() {
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
-		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
+		dcfg := dataplane.GetDefaultConfiguration(2)
+		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 		Expect(readyChannel).To(BeClosed())
 

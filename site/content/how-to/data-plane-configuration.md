@@ -9,7 +9,7 @@ Learn how to dynamically update the NGINX Gateway Fabric global data plane confi
 
 ## Overview
 
-NGINX Gateway Fabric can dynamically update the global data plane configuration without restarting. The data plane configuration is a global configuration for NGINX that has options that are not available using the standard Gateway API resources. This includes such things as setting an OpenTelemetry collector config, disabling http2, or changing the IP family.
+NGINX Gateway Fabric can dynamically update the global data plane configuration without restarting. The data plane configuration is a global configuration for NGINX that has options that are not available using the standard Gateway API resources. This includes such things as setting an OpenTelemetry collector config, disabling http2, changing the IP family, or setting the NGINX error log level.
 
 The data plane configuration is stored in the NginxProxy custom resource, which is a cluster-scoped resource that is attached to the `nginx` GatewayClass.
 
@@ -112,3 +112,48 @@ Status:
 ```
 
 If everything is valid, the `ResolvedRefs` condition should be `True`. Otherwise, you will see an `InvalidParameters` condition in the status.
+
+## Configure the Data Plane Log Level
+
+You can use the `NginxProxy` resource to dynamically configure the Data Plane Log Level.
+
+The following command creates a basic `NginxProxy` configuration that sets the log level to `warn` instead of the default value of `info`:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: ngf-proxy-config
+spec:
+  logging:
+    errorLevel: warn
+EOF
+```
+
+After attaching the NginxProxy to the GatewayClass, the log level of the data plane will be updated to `warn`.
+
+To view the full list of supported log levels, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
+
+{{< note >}}For `debug` logging to work, NGINX needs to be built with `--with-debug` or "in debug mode". NGINX Gateway Fabric can easily
+be [run with NGINX in debug mode](#run-nginx-gateway-fabric-with-nginx-in-debug-mode) upon startup through the addition
+of a few arguments. {{</ note >}}
+
+### Run NGINX Gateway Fabric with NGINX in debug mode
+
+To run NGINX Gateway Fabric with NGINX in debug mode, follow the [installation document]({{< relref "installation/installing-ngf" >}}) with these additional steps:
+
+Using Helm: Set `nginx.debug` to true.
+
+Using Kubernetes Manifests: Under the `nginx` container of the deployment manifest, add `-c` and `rm -rf /var/run/nginx/*.sock && nginx-debug -g 'daemon off;'`
+as arguments and add `/bin/sh` as the command. The deployment manifest should look something like this:
+
+```text
+...
+- args:
+  - -c
+  - rm -rf /var/run/nginx/*.sock && nginx-debug -g 'daemon off;'
+  command:
+  - /bin/sh
+...
+```

@@ -15,14 +15,15 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	policies "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 const (
-	wildcardHostname    = "~^"
-	alpineSSLRootCAPath = "/etc/ssl/cert.pem"
+	wildcardHostname     = "~^"
+	alpineSSLRootCAPath  = "/etc/ssl/cert.pem"
+	defaultErrorLogLevel = "info"
 )
 
 // BuildConfiguration builds the Configuration from the Graph.
@@ -32,37 +33,28 @@ func BuildConfiguration(
 	serviceResolver resolver.ServiceResolver,
 	configVersion int,
 ) Configuration {
-	if g.GatewayClass == nil || !g.GatewayClass.Valid {
-		return Configuration{Version: configVersion}
-	}
-
-	if g.Gateway == nil {
-		return Configuration{Version: configVersion}
+	if g.GatewayClass == nil || !g.GatewayClass.Valid || g.Gateway == nil {
+		return GetDefaultConfiguration(configVersion)
 	}
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
 
-	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	httpServers, sslServers := buildServers(g)
-	passthroughServers := buildPassthroughServers(g)
-	streamUpstreams := buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
-	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
-	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
-	telemetry := buildTelemetry(g)
 
 	config := Configuration{
 		HTTPServers:           httpServers,
 		SSLServers:            sslServers,
-		TLSPassthroughServers: passthroughServers,
-		Upstreams:             upstreams,
-		StreamUpstreams:       streamUpstreams,
+		TLSPassthroughServers: buildPassthroughServers(g),
+		Upstreams:             buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
+		StreamUpstreams:       buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
 		BackendGroups:         backendGroups,
-		SSLKeyPairs:           keyPairs,
+		SSLKeyPairs:           buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners),
 		Version:               configVersion,
-		CertBundles:           certBundles,
-		Telemetry:             telemetry,
+		CertBundles:           buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups),
+		Telemetry:             buildTelemetry(g),
 		BaseHTTPConfig:        baseHTTPConfig,
+		Logging:               buildLogging(g),
 	}
 
 	return config
@@ -900,4 +892,24 @@ func convertAddresses(addresses []ngfAPI.Address) []string {
 		trustedAddresses[i] = addr.Value
 	}
 	return trustedAddresses
+}
+
+func buildLogging(g *graph.Graph) Logging {
+	logSettings := Logging{ErrorLevel: defaultErrorLogLevel}
+
+	ngfProxy := g.NginxProxy
+	if ngfProxy != nil && ngfProxy.Source.Spec.Logging != nil {
+		if ngfProxy.Source.Spec.Logging.ErrorLevel != nil {
+			logSettings.ErrorLevel = string(*ngfProxy.Source.Spec.Logging.ErrorLevel)
+		}
+	}
+
+	return logSettings
+}
+
+func GetDefaultConfiguration(configVersion int) Configuration {
+	return Configuration{
+		Version: configVersion,
+		Logging: Logging{ErrorLevel: defaultErrorLogLevel},
+	}
 }

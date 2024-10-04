@@ -90,6 +90,9 @@ func TestGenerate(t *testing.T) {
 			BatchSize:   512,
 			BatchCount:  4,
 		},
+		Logging: dataplane.Logging{
+			ErrorLevel: "debug",
+		},
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
 			HTTP2: true,
 		},
@@ -135,8 +138,11 @@ func TestGenerate(t *testing.T) {
 	expString := "{}"
 	g.Expect(string(files[2].Content)).To(Equal(expString))
 
-	g.Expect(files[3].Path).To(Equal("/etc/nginx/module-includes/load-modules.conf"))
-	g.Expect(files[3].Content).To(Equal([]byte("load_module modules/ngx_otel_module.so;")))
+	g.Expect(files[3].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
+
+	mainCfg := string(files[3].Content)
+	g.Expect(mainCfg).To(ContainSubstring("load_module modules/ngx_otel_module.so;"))
+	g.Expect(mainCfg).To(ContainSubstring("error_log stderr debug;"))
 
 	g.Expect(files[4].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
 	certBundle := string(files[4].Content)

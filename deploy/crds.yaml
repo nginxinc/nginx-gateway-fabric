@@ -647,6 +647,27 @@ spec:
                 - ipv4
                 - ipv6
                 type: string
+              logging:
+                description: Logging defines logging related settings for NGINX.
+                properties:
+                  errorLevel:
+                    default: info
+                    description: |-
+                      ErrorLevel defines the error log level. Possible log levels listed in order of increasing severity are
+                      debug, info, notice, warn, error, crit, alert, and emerg. Setting a certain log level will cause all messages
+                      of the specified and more severe log levels to be logged. For example, the log level 'error' will cause error,
+                      crit, alert, and emerg messages to be logged. https://nginx.org/en/docs/ngx_core_module.html#error_log
+                    enum:
+                    - debug
+                    - info
+                    - notice
+                    - warn
+                    - error
+                    - crit
+                    - alert
+                    - emerg
+                    type: string
+                type: object
               rewriteClientIP:
                 description: RewriteClientIP defines configuration for rewriting the
                   client IP to the original client's IP.
