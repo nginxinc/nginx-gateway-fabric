@@ -328,6 +328,11 @@ var _ = Describe("Collector", Ordered, func() {
 						}: {},
 					},
 					NginxProxy: &graph.NginxProxy{},
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: {},
+						{Namespace: "test", Name: "sf-2"}: {},
+						{Namespace: "test", Name: "sf-3"}: {},
+					},
 				}
 
 				config := &dataplane.Configuration{
@@ -379,6 +384,7 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   2,
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
+					SnippetsFilterCount:                      3,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
@@ -549,6 +555,9 @@ var _ = Describe("Collector", Ordered, func() {
 					}: {},
 				},
 				NginxProxy: &graph.NginxProxy{},
+				SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+					{Namespace: "test", Name: "sf-1"}: {},
+				},
 			}
 
 			config1 = &dataplane.Configuration{
@@ -622,6 +631,7 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   1,
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
+					SnippetsFilterCount:                      1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -647,6 +657,7 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   0,
 					ObservabilityPolicyCount:                 0,
 					NginxProxyCount:                          0,
+					SnippetsFilterCount:                      0,
 				}
 
 				data, err := dataCollector.Collect(ctx)
