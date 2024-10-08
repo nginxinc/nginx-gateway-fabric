@@ -67,6 +67,7 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 		"--namespace", cfg.Namespace,
 		"--wait",
 		"--set", "nginxGateway.productTelemetry.enable=false",
+		"--set", "nginxGateway.snippetsFilters.enable=true",
 	}
 	if cfg.ChartVersion != "" {
 		args = append(args, "--version", cfg.ChartVersion)
@@ -96,6 +97,7 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 		"--wait",
 		"--set", "nginxGateway.productTelemetry.enable=false",
 		"--set", "nginxGateway.config.logging.level=debug",
+		"--set", "nginxGateway.snippetsFilter.enable=true",
 	}
 	if cfg.ChartVersion != "" {
 		args = append(args, "--version", cfg.ChartVersion)

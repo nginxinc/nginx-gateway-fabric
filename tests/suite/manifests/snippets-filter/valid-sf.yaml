@@ -1,0 +1,77 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: all-contexts
+spec:
+  snippets:
+    - context: main
+      value: worker_priority 0;
+    - context: http
+      value: aio on;
+    - context: http.server
+      value: auth_delay 10s;
+    - context: http.server.location
+      value: keepalive_time 10s;
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: grpc-all-contexts
+spec:
+  snippets:
+    - context: main
+      value: worker_shutdown_timeout 120s;
+    - context: http
+      value: types_hash_bucket_size 64;
+    - context: http.server
+      value: server_tokens on;
+    - context: http.server.location
+      value: tcp_nodelay on;
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coffee
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  hostnames:
+    - "cafe.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /coffee
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.nginx.org
+            kind: SnippetsFilter
+            name: all-contexts
+      backendRefs:
+        - name: coffee
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-route
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  rules:
+    - matches:
+        - method:
+            service: helloworld.Greeter
+            method: SayHello
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.nginx.org
+            kind: SnippetsFilter
+            name: grpc-all-contexts
+      backendRefs:
+        - name: grpc-backend
+          port: 8080
