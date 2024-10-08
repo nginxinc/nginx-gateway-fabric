@@ -137,16 +137,6 @@ func StartManager(cfg config.Config) error {
 		ProtectedPorts: protectedPorts,
 	})
 
-	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
-	// (this assumes the folders are in a shared volume).
-	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
-	for _, path := range removedPaths {
-		cfg.Logger.Info("removed configuration file", "path", path)
-	}
-	if err != nil {
-		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
-	}
-
 	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
 
 	// Ensure NGINX is running before registering metrics & starting the manager.

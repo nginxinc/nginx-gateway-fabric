@@ -34,7 +34,7 @@ func BuildConfiguration(
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid || g.Gateway == nil {
-		return GetDefaultConfiguration(configVersion)
+		return GetDefaultConfiguration(g, configVersion)
 	}
 
 	baseHTTPConfig := buildBaseHTTPConfig(g)
@@ -907,9 +907,9 @@ func buildLogging(g *graph.Graph) Logging {
 	return logSettings
 }
 
-func GetDefaultConfiguration(configVersion int) Configuration {
+func GetDefaultConfiguration(g *graph.Graph, configVersion int) Configuration {
 	return Configuration{
 		Version: configVersion,
-		Logging: Logging{ErrorLevel: defaultErrorLogLevel},
+		Logging: buildLogging(g),
 	}
 }
