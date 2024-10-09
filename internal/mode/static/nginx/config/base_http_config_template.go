@@ -23,4 +23,8 @@ map $http_upgrade $connection_upgrade {
 map $request_uri $request_uri_path {
   "~^(?P<path>[^?]*)(\?.*)?$"  $path;
 }
+
+{{ range $i := .Includes -}}
+include {{ $i.Name }};
+{{ end -}}
 `

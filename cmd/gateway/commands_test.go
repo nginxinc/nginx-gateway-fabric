@@ -151,6 +151,7 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--usage-report-secret=default/my-secret",
 				"--usage-report-server-url=https://my-api.com",
 				"--usage-report-cluster-name=my-cluster",
+				"--snippets-filters",
 			},
 			wantErr: false,
 		},
@@ -365,6 +366,15 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr:           true,
 			expectedErrPrefix: `invalid argument "$invalid*(#)" for "--usage-report-cluster-name" flag: invalid format`,
+		},
+		{
+			name: "snippets-filters is not a bool",
+			expectedErrPrefix: `invalid argument "not-a-bool" for "--snippets-filters" flag: strconv.ParseBool:` +
+				` parsing "not-a-bool": invalid syntax`,
+			args: []string{
+				"--snippets-filters=not-a-bool",
+			},
+			wantErr: true,
 		},
 	}
 

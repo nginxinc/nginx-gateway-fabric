@@ -566,8 +566,11 @@ var _ = Describe("ChangeProcessor", func() {
 										Weight:    1,
 									},
 								},
-								ValidMatches:     true,
-								ValidFilters:     true,
+								ValidMatches: true,
+								Filters: graph.RouteRuleFilters{
+									Filters: []graph.Filter{},
+									Valid:   true,
+								},
 								Matches:          hr1.Spec.Rules[0].Matches,
 								RouteBackendRefs: createRouteBackendRefs(hr1.Spec.Rules[0].BackendRefs),
 							},
@@ -610,8 +613,11 @@ var _ = Describe("ChangeProcessor", func() {
 						Hostnames: hr2.Spec.Hostnames,
 						Rules: []graph.RouteRule{
 							{
-								ValidMatches:     true,
-								ValidFilters:     true,
+								ValidMatches: true,
+								Filters: graph.RouteRuleFilters{
+									Valid:   true,
+									Filters: []graph.Filter{},
+								},
 								Matches:          hr2.Spec.Rules[0].Matches,
 								RouteBackendRefs: []graph.RouteBackendRef{},
 							},
@@ -1938,7 +1944,7 @@ var _ = Describe("ChangeProcessor", func() {
 			paramGC := gc.DeepCopy()
 			paramGC.Spec.ParametersRef = &v1beta1.ParametersReference{
 				Group: ngfAPI.GroupName,
-				Kind:  v1beta1.Kind(kinds.NginxProxy),
+				Kind:  kinds.NginxProxy,
 				Name:  "np",
 			}
 
@@ -2122,6 +2128,76 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(graph.NGFPolicies).To(BeEmpty())
 				})
+			})
+		})
+
+		Describe("SnippetsFilter resource changed", Ordered, func() {
+			sfNsName := types.NamespacedName{
+				Name:      "sf",
+				Namespace: "test",
+			}
+
+			sf := &ngfAPI.SnippetsFilter{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      sfNsName.Name,
+					Namespace: sfNsName.Namespace,
+				},
+				Spec: ngfAPI.SnippetsFilterSpec{
+					Snippets: []ngfAPI.Snippet{
+						{
+							Context: ngfAPI.NginxContextMain,
+							Value:   "main snippet",
+						},
+					},
+				},
+			}
+
+			sfUpdated := &ngfAPI.SnippetsFilter{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      sfNsName.Name,
+					Namespace: sfNsName.Namespace,
+				},
+				Spec: ngfAPI.SnippetsFilterSpec{
+					Snippets: []ngfAPI.Snippet{
+						{
+							Context: ngfAPI.NginxContextMain,
+							Value:   "main snippet",
+						},
+						{
+							Context: ngfAPI.NginxContextHTTP,
+							Value:   "http snippet",
+						},
+					},
+				},
+			}
+			It("handles upserts for a SnippetsFilter", func() {
+				processor.CaptureUpsertChange(sf)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+
+				processedSf, exists := graph.SnippetsFilters[sfNsName]
+				Expect(exists).To(BeTrue())
+				Expect(processedSf.Source).To(Equal(sf))
+				Expect(processedSf.Valid).To(BeTrue())
+			})
+			It("captures changes for a SnippetsFilter", func() {
+				processor.CaptureUpsertChange(sfUpdated)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+
+				processedSf, exists := graph.SnippetsFilters[sfNsName]
+				Expect(exists).To(BeTrue())
+				Expect(processedSf.Source).To(Equal(sfUpdated))
+				Expect(processedSf.Valid).To(BeTrue())
+			})
+			It("handles deletes for a SnippetsFilter", func() {
+				processor.CaptureDeleteChange(sfUpdated, sfNsName)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.SnippetsFilters).To(BeEmpty())
 			})
 		})
 	})

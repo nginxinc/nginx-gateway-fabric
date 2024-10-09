@@ -95,6 +95,26 @@ func TestGenerate(t *testing.T) {
 		},
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
 			HTTP2: true,
+			Snippets: []dataplane.Snippet{
+				{
+					Name:     "http_snippet1",
+					Contents: "http snippet 1 contents",
+				},
+				{
+					Name:     "http_snippet2",
+					Contents: "http 2 contents",
+				},
+			},
+		},
+		MainSnippets: []dataplane.Snippet{
+			{
+				Name:     "main_snippet1",
+				Contents: "main snippet 1 contents",
+			},
+			{
+				Name:     "main_snippet2",
+				Contents: "main 2 contents",
+			},
 		},
 	}
 	g := NewWithT(t)
@@ -104,11 +124,26 @@ func TestGenerate(t *testing.T) {
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(7))
+	g.Expect(files).To(HaveLen(11))
 	arrange := func(i, j int) bool {
 		return files[i].Path < files[j].Path
 	}
 	sort.Slice(files, arrange)
+
+	/*
+		Order of files:
+		/etc/nginx/conf.d/config-version.conf
+		/etc/nginx/conf.d/http.conf
+		/etc/nginx/conf.d/matches.json
+		/etc/nginx/includes/http_snippet1.conf
+		/etc/nginx/includes/http_snippet2.conf
+		/etc/nginx/includes/main_snippet1.conf
+		/etc/nginx/includes/main_snippet2.conf
+		/etc/nginx/main-includes/main.conf
+		/etc/nginx/secrets/test-certbundle.crt
+		/etc/nginx/secrets/test-keypair.pem
+		/etc/nginx/stream-conf.d/stream.conf
+	*/
 
 	g.Expect(files[0].Type).To(Equal(file.TypeRegular))
 	g.Expect(files[0].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
@@ -131,6 +166,8 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("batch_count 4;"))
 	g.Expect(httpCfg).To(ContainSubstring("otel_service_name ngf:gw-ns:gw-name:my-name;"))
 	g.Expect(httpCfg).To(ContainSubstring("http2 on;"))
+	g.Expect(httpCfg).To(ContainSubstring("include /etc/nginx/includes/http_snippet1.conf;"))
+	g.Expect(httpCfg).To(ContainSubstring("include /etc/nginx/includes/http_snippet2.conf;"))
 
 	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/matches.json"))
 
@@ -138,25 +175,32 @@ func TestGenerate(t *testing.T) {
 	expString := "{}"
 	g.Expect(string(files[2].Content)).To(Equal(expString))
 
-	g.Expect(files[3].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
+	// snippet include files
+	// content is not checked in this test.
+	g.Expect(files[3].Path).To(Equal("/etc/nginx/includes/http_snippet1.conf"))
+	g.Expect(files[4].Path).To(Equal("/etc/nginx/includes/http_snippet2.conf"))
+	g.Expect(files[5].Path).To(Equal("/etc/nginx/includes/main_snippet1.conf"))
+	g.Expect(files[6].Path).To(Equal("/etc/nginx/includes/main_snippet2.conf"))
 
-	mainCfg := string(files[3].Content)
-	g.Expect(mainCfg).To(ContainSubstring("load_module modules/ngx_otel_module.so;"))
-	g.Expect(mainCfg).To(ContainSubstring("error_log stderr debug;"))
+	g.Expect(files[7].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
+	mainConfStr := string(files[7].Content)
+	g.Expect(mainConfStr).To(ContainSubstring("load_module modules/ngx_otel_module.so;"))
+	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet1.conf;"))
+	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet2.conf;"))
 
-	g.Expect(files[4].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
-	certBundle := string(files[4].Content)
+	g.Expect(files[8].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[8].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 
-	g.Expect(files[5]).To(Equal(file.File{
+	g.Expect(files[9]).To(Equal(file.File{
 		Type:    file.TypeSecret,
 		Path:    "/etc/nginx/secrets/test-keypair.pem",
 		Content: []byte("test-cert\ntest-key"),
 	}))
 
-	g.Expect(files[6].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
-	g.Expect(files[6].Type).To(Equal(file.TypeRegular))
-	streamCfg := string(files[6].Content)
+	g.Expect(files[10].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
+	g.Expect(files[10].Type).To(Equal(file.TypeRegular))
+	streamCfg := string(files[10].Content)
 	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com-443.sock"))
 	g.Expect(streamCfg).To(ContainSubstring("listen 443"))
 	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com-443.sock"))

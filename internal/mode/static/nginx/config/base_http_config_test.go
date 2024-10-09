@@ -1,6 +1,7 @@
 package config
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
-func TestExecuteBaseHttp(t *testing.T) {
+func TestExecuteBaseHttp_HTTP2(t *testing.T) {
 	t.Parallel()
 	confOn := dataplane.Configuration{
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
@@ -55,4 +56,54 @@ func TestExecuteBaseHttp(t *testing.T) {
 			g.Expect(strings.Count(string(res[0].data), "map $request_uri $request_uri_path {")).To(Equal(1))
 		})
 	}
+}
+
+func TestExecuteBaseHttp_Snippets(t *testing.T) {
+	t.Parallel()
+
+	conf := dataplane.Configuration{
+		BaseHTTPConfig: dataplane.BaseHTTPConfig{
+			Snippets: []dataplane.Snippet{
+				{
+					Name:     "snippet1",
+					Contents: "contents1",
+				},
+				{
+					Name:     "snippet2",
+					Contents: "contents2",
+				},
+			},
+		},
+	}
+
+	g := NewWithT(t)
+
+	res := executeBaseHTTPConfig(conf)
+	g.Expect(res).To(HaveLen(3))
+
+	sort.Slice(
+		res, func(i, j int) bool {
+			return res[i].dest < res[j].dest
+		},
+	)
+
+	/*
+		Order of files:
+		/etc/nginx/conf.d/http.conf
+		/etc/nginx/includes/snippet1.conf
+		/etc/nginx/includes/snippet2.conf
+	*/
+
+	httpRes := string(res[0].data)
+	g.Expect(httpRes).To(ContainSubstring("map $http_host $gw_api_compliant_host {"))
+	g.Expect(httpRes).To(ContainSubstring("map $http_upgrade $connection_upgrade {"))
+	g.Expect(httpRes).To(ContainSubstring("map $request_uri $request_uri_path {"))
+	g.Expect(httpRes).To(ContainSubstring("include /etc/nginx/includes/snippet1.conf;"))
+	g.Expect(httpRes).To(ContainSubstring("include /etc/nginx/includes/snippet2.conf;"))
+
+	snippet1IncludeRes := string(res[1].data)
+	g.Expect(snippet1IncludeRes).To(ContainSubstring("contents1"))
+
+	snippet2IncludeRes := string(res[2].data)
+	g.Expect(snippet2IncludeRes).To(ContainSubstring("contents2"))
 }

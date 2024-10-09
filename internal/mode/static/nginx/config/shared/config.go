@@ -20,7 +20,7 @@ type IPFamily struct {
 	IPv6 bool
 }
 
-// RewriteClientIP holds the configuration for the rewrite client IP settings.
+// RewriteClientIPSettings holds the configuration for the rewrite client IP settings.
 type RewriteClientIPSettings struct {
 	RealIPHeader  string
 	ProxyProtocol string
@@ -31,3 +31,9 @@ type RewriteClientIPSettings struct {
 const (
 	ProxyProtocolDirective = " proxy_protocol"
 )
+
+// Include defines a file that's included via the include directive.
+type Include struct {
+	Name    string
+	Content []byte
+}

@@ -127,16 +127,14 @@ type L7RouteSpec struct {
 type RouteRule struct {
 	// Matches define the predicate used to match requests to a given action.
 	Matches []v1.HTTPRouteMatch
-	// Filters define processing steps that must be completed during the request or response lifecycle.
-	Filters []v1.HTTPRouteFilter
 	// RouteBackendRefs are a wrapper for v1.BackendRef and any BackendRef filters from the HTTPRoute or GRPCRoute.
 	RouteBackendRefs []RouteBackendRef
 	// BackendRefs is an internal representation of a backendRef in a Route.
 	BackendRefs []BackendRef
+	// Filters define processing steps that must be completed during the request or response lifecycle.
+	Filters RouteRuleFilters
 	// ValidMatches indicates if the matches are valid and accepted by the Route.
 	ValidMatches bool
-	// ValidFilters indicates if the filters are valid and accepted by the Route.
-	ValidFilters bool
 }
 
 // RouteBackendRef is a wrapper for v1.BackendRef and any BackendRef filters from the HTTPRoute or GRPCRoute.
@@ -170,6 +168,18 @@ func CreateRouteKey(obj client.Object) RouteKey {
 func CreateRouteKeyL4(obj client.Object) L4RouteKey {
 	return L4RouteKey{
 		NamespacedName: client.ObjectKeyFromObject(obj),
+	}
+}
+
+type routeRuleErrors struct {
+	invalid field.ErrorList
+	resolve field.ErrorList
+}
+
+func (e routeRuleErrors) append(newErrors routeRuleErrors) routeRuleErrors {
+	return routeRuleErrors{
+		invalid: append(e.invalid, newErrors.invalid...),
+		resolve: append(e.resolve, newErrors.resolve...),
 	}
 }
 
@@ -207,6 +217,7 @@ func buildRoutesForGateways(
 	grpcRoutes map[types.NamespacedName]*v1.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
 	npCfg *NginxProxy,
+	snippetsFilters map[types.NamespacedName]*SnippetsFilter,
 ) map[RouteKey]*L7Route {
 	if len(gatewayNsNames) == 0 {
 		return nil
@@ -217,14 +228,14 @@ func buildRoutesForGateways(
 	http2disabled := isHTTP2Disabled(npCfg)
 
 	for _, route := range httpRoutes {
-		r := buildHTTPRoute(validator, route, gatewayNsNames)
+		r := buildHTTPRoute(validator, route, gatewayNsNames, snippetsFilters)
 		if r != nil {
 			routes[CreateRouteKey(route)] = r
 		}
 	}
 
 	for _, route := range grpcRoutes {
-		r := buildGRPCRoute(validator, route, gatewayNsNames, http2disabled)
+		r := buildGRPCRoute(validator, route, gatewayNsNames, http2disabled, snippetsFilters)
 		if r != nil {
 			routes[CreateRouteKey(route)] = r
 		}
@@ -458,7 +469,7 @@ func tryToAttachL4RouteToListeners(
 		allowed, attached, hostnamesUnique bool
 	)
 
-	// Sorting the listeners from most specific hostname to least specific hostname
+	// Sorting the listeners from most specific hostname to the least specific hostname
 	sort.Slice(attachableListeners, func(i, j int) bool {
 		h1 := ""
 		h2 := ""
@@ -865,166 +876,6 @@ func validateHeaderMatch(
 	if err := validator.ValidateHeaderValueInMatch(headerValue); err != nil {
 		valErr := field.Invalid(headerPath.Child("value"), headerValue, err.Error())
 		allErrs = append(allErrs, valErr)
-	}
-
-	return allErrs
-}
-
-func validateFilterHeaderModifier(
-	validator validation.HTTPFieldsValidator,
-	headerModifier *v1.HTTPHeaderFilter,
-	filterPath *field.Path,
-) field.ErrorList {
-	if headerModifier == nil {
-		return field.ErrorList{field.Required(filterPath, "cannot be nil")}
-	}
-
-	return validateFilterHeaderModifierFields(validator, headerModifier, filterPath)
-}
-
-func validateFilterHeaderModifierFields(
-	validator validation.HTTPFieldsValidator,
-	headerModifier *v1.HTTPHeaderFilter,
-	headerModifierPath *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	// Ensure that the header names are case-insensitive unique
-	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
-		headerModifier.Add,
-		headerModifierPath.Child(add))...,
-	)
-	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
-		headerModifier.Set,
-		headerModifierPath.Child(set))...,
-	)
-	allErrs = append(allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
-		headerModifier.Remove,
-		headerModifierPath.Child(remove))...,
-	)
-
-	for _, h := range headerModifier.Add {
-		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child(add), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child(add), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-	for _, h := range headerModifier.Set {
-		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child(set), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child(set), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-	for _, h := range headerModifier.Remove {
-		if err := validator.ValidateFilterHeaderName(h); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child(remove), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-
-	return allErrs
-}
-
-func validateFilterResponseHeaderModifier(
-	validator validation.HTTPFieldsValidator,
-	responseHeaderModifier *v1.HTTPHeaderFilter,
-	filterPath *field.Path,
-) field.ErrorList {
-	if errList := validateFilterHeaderModifier(validator, responseHeaderModifier, filterPath); errList != nil {
-		return errList
-	}
-	var allErrs field.ErrorList
-
-	allErrs = append(allErrs, validateResponseHeaders(
-		responseHeaderModifier.Add,
-		filterPath.Child(add))...,
-	)
-
-	allErrs = append(allErrs, validateResponseHeaders(
-		responseHeaderModifier.Set,
-		filterPath.Child(set))...,
-	)
-
-	var removeHeaders []v1.HTTPHeader
-	for _, h := range responseHeaderModifier.Remove {
-		removeHeaders = append(removeHeaders, v1.HTTPHeader{Name: v1.HTTPHeaderName(h)})
-	}
-
-	allErrs = append(allErrs, validateResponseHeaders(
-		removeHeaders,
-		filterPath.Child(remove))...,
-	)
-
-	return allErrs
-}
-
-func validateResponseHeaders(
-	headers []v1.HTTPHeader,
-	path *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-	disallowedResponseHeaderSet := map[string]struct{}{
-		"server":         {},
-		"date":           {},
-		"x-pad":          {},
-		"content-type":   {},
-		"content-length": {},
-		"connection":     {},
-	}
-	invalidPrefix := "x-accel"
-
-	for _, h := range headers {
-		valErr := field.Invalid(path, h, "header name is not allowed")
-		name := strings.ToLower(string(h.Name))
-		if _, exists := disallowedResponseHeaderSet[name]; exists ||
-			strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
-			allErrs = append(allErrs, valErr)
-		}
-	}
-
-	return allErrs
-}
-
-func validateRequestHeadersCaseInsensitiveUnique(
-	headers []v1.HTTPHeader,
-	path *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	seen := make(map[string]struct{})
-
-	for _, h := range headers {
-		name := strings.ToLower(string(h.Name))
-		if _, exists := seen[name]; exists {
-			valErr := field.Invalid(path, h, "header name is not unique")
-			allErrs = append(allErrs, valErr)
-		}
-		seen[name] = struct{}{}
-	}
-
-	return allErrs
-}
-
-func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-
-	seen := make(map[string]struct{})
-
-	for _, h := range headers {
-		name := strings.ToLower(h)
-		if _, exists := seen[name]; exists {
-			valErr := field.Invalid(path, h, "header name is not unique")
-			allErrs = append(allErrs, valErr)
-		}
-		seen[name] = struct{}{}
 	}
 
 	return allErrs

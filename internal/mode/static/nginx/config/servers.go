@@ -124,7 +124,7 @@ func (g GeneratorImpl) executeServers(conf dataplane.Configuration, generator po
 		data: httpMatchConf,
 	}
 
-	includeFileResults := createIncludeFileResults(servers)
+	includeFileResults := createIncludeExecuteResultsFromServers(servers)
 
 	allResults := make([]executeResult, 0, len(includeFileResults)+2)
 	allResults = append(allResults, includeFileResults...)
@@ -143,33 +143,6 @@ func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) shared.IPFamily {
 	}
 
 	return shared.IPFamily{IPv4: true, IPv6: true}
-}
-
-func createIncludeFileResults(servers []http.Server) []executeResult {
-	uniqueIncludes := make(map[string][]byte)
-
-	for _, server := range servers {
-		for _, include := range server.Includes {
-			uniqueIncludes[include.Name] = include.Content
-		}
-
-		for _, loc := range server.Locations {
-			for _, include := range loc.Includes {
-				uniqueIncludes[include.Name] = include.Content
-			}
-		}
-	}
-
-	results := make([]executeResult, 0, len(uniqueIncludes))
-
-	for filename, contents := range uniqueIncludes {
-		results = append(results, executeResult{
-			dest: filename,
-			data: contents,
-		})
-	}
-
-	return results
 }
 
 func createServers(conf dataplane.Configuration, generator policies.Generator) ([]http.Server, httpMatchPairs) {
@@ -229,9 +202,15 @@ func createSSLServer(
 		Listen:    listen,
 	}
 
-	server.Includes = createIncludesFromPolicyGenerateResult(
+	policyIncludes := createIncludesFromPolicyGenerateResult(
 		generator.GenerateForServer(virtualServer.Policies, server),
 	)
+	snippetIncludes := createIncludesFromServerSnippetsFilters(virtualServer)
+
+	server.Includes = make([]shared.Include, 0, len(policyIncludes)+len(snippetIncludes))
+	server.Includes = append(server.Includes, policyIncludes...)
+	server.Includes = append(server.Includes, snippetIncludes...)
+
 	return server, matchPairs
 }
 
@@ -258,9 +237,14 @@ func createServer(
 		GRPC:       grpc,
 	}
 
-	server.Includes = createIncludesFromPolicyGenerateResult(
+	policyIncludes := createIncludesFromPolicyGenerateResult(
 		generator.GenerateForServer(virtualServer.Policies, server),
 	)
+	snippetIncludes := createIncludesFromServerSnippetsFilters(virtualServer)
+
+	server.Includes = make([]shared.Include, 0, len(policyIncludes)+len(snippetIncludes))
+	server.Includes = append(server.Includes, policyIncludes...)
+	server.Includes = append(server.Includes, snippetIncludes...)
 
 	return server, matchPairs
 }
@@ -361,22 +345,6 @@ func needsInternalLocations(rule dataplane.PathRule) bool {
 		return true
 	}
 	return len(rule.MatchRules) == 1 && !isPathOnlyMatch(rule.MatchRules[0].Match)
-}
-
-func createIncludesFromPolicyGenerateResult(resFiles []policies.File) []http.Include {
-	if len(resFiles) == 0 {
-		return nil
-	}
-
-	includes := make([]http.Include, 0, len(resFiles))
-	for _, file := range resFiles {
-		includes = append(includes, http.Include{
-			Name:    includesFolder + "/" + file.Name,
-			Content: file.Content,
-		})
-	}
-
-	return includes
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
@@ -487,6 +455,8 @@ func updateLocation(
 		location.Return = &http.Return{Code: http.StatusInternalServerError}
 		return location
 	}
+
+	location.Includes = append(location.Includes, createIncludesFromLocationSnippetsFilters(filters.SnippetsFilters)...)
 
 	if filters.RequestRedirect != nil {
 		ret := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort)

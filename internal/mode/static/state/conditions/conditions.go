@@ -49,6 +49,10 @@ const (
 	// Used with ResolvedRefs (false).
 	RouteReasonInvalidIPFamily v1.RouteConditionReason = "InvalidServiceIPFamily"
 
+	// RouteReasonInvalidFilter is used when an extension ref filter referenced by a Route cannot be resolved, or is
+	// invalid. Used with ResolvedRefs (false).
+	RouteReasonInvalidFilter v1.RouteConditionReason = "InvalidFilter"
+
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
 	// This reason is used with GatewayConditionAccepted (false).
@@ -307,6 +311,17 @@ func NewRouteInvalidIPFamily(msg string) conditions.Condition {
 		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidIPFamily),
+		Message: msg,
+	}
+}
+
+// NewRouteResolvedRefsInvalidFilter returns a Condition that indicates that the Route has a filter that
+// cannot be resolved or is invalid.
+func NewRouteResolvedRefsInvalidFilter(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonInvalidFilter),
 		Message: msg,
 	}
 }
@@ -724,12 +739,34 @@ func NewPolicyNotAcceptedTargetConflict(msg string) conditions.Condition {
 }
 
 // NewPolicyNotAcceptedNginxProxyNotSet returns a Condition that indicates that the Policy is not accepted
-// because it relies in the NginxProxy configuration which is missing or invalid.
+// because it relies on the NginxProxy configuration which is missing or invalid.
 func NewPolicyNotAcceptedNginxProxyNotSet(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(PolicyReasonNginxProxyConfigNotSet),
 		Message: msg,
+	}
+}
+
+// NewSnippetsFilterInvalid returns a Condition that indicates that the SnippetsFilter is not accepted because it is
+// syntactically or semantically invalid.
+func NewSnippetsFilterInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(ngfAPI.SnippetsFilterConditionReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewSnippetsFilterAccepted returns a Condition that indicates that the SnippetsFilter is accepted because it is
+// valid.
+func NewSnippetsFilterAccepted() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.SnippetsFilterConditionTypeAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.SnippetsFilterConditionReasonAccepted),
+		Message: "SnippetsFilter is accepted",
 	}
 }

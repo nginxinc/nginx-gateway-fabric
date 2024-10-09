@@ -333,3 +333,75 @@ func ancestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
 
 	return frameworkStatus.ConditionsEqual(p1.Conditions, p2.Conditions)
 }
+
+func newSnippetsFilterStatusSetter(
+	snippetsFilterStatus ngfAPI.SnippetsFilterStatus,
+	gatewayCtlrName string,
+) frameworkStatus.Setter {
+	return func(obj client.Object) (wasSet bool) {
+		sf := helpers.MustCastObject[*ngfAPI.SnippetsFilter](obj)
+
+		// maxControllerStatus is the max number of controller statuses which is the sum of all new controller statuses
+		// and all old controller statuses.
+		maxControllerStatus := 1 + len(sf.Status.Controllers)
+		controllerStatuses := make([]ngfAPI.ControllerStatus, 0, maxControllerStatus)
+
+		for _, status := range sf.Status.Controllers {
+			if string(status.ControllerName) != gatewayCtlrName {
+				controllerStatuses = append(controllerStatuses, status)
+			}
+		}
+
+		controllerStatuses = append(controllerStatuses, snippetsFilterStatus.Controllers...)
+		snippetsFilterStatus.Controllers = controllerStatuses
+
+		if snippetsFilterStatusEqual(gatewayCtlrName, snippetsFilterStatus.Controllers, sf.Status.Controllers) {
+			return false
+		}
+
+		sf.Status = snippetsFilterStatus
+		return true
+	}
+}
+
+func snippetsFilterStatusEqual(gatewayCtlrName string, currStatus, prevStatus []ngfAPI.ControllerStatus) bool {
+	// Since other controllers may update snippetsFilter status we can't assume anything about the order of the statuses,
+	// and we have to ignore statuses written by other controllers when checking for equality.
+	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
+
+	// First, we check if the prevStatus has any ControllerStatuses that are no longer present in the currStatus.
+	for _, prev := range prevStatus {
+		if prev.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
+			continue
+		}
+
+		exists := slices.ContainsFunc(currStatus, func(currStatus ngfAPI.ControllerStatus) bool {
+			return snippetsStatusEqual(currStatus, prev)
+		})
+
+		if !exists {
+			return false
+		}
+	}
+
+	// Then, we check if the currStatus has any ControllerStatuses that are no longer present in the prevStatus.
+	for _, curr := range currStatus {
+		exists := slices.ContainsFunc(prevStatus, func(prevStatus ngfAPI.ControllerStatus) bool {
+			return snippetsStatusEqual(curr, prevStatus)
+		})
+
+		if !exists {
+			return false
+		}
+	}
+
+	return true
+}
+
+func snippetsStatusEqual(status1, status2 ngfAPI.ControllerStatus) bool {
+	if status1.ControllerName != status2.ControllerName {
+		return false
+	}
+
+	return frameworkStatus.ConditionsEqual(status1.Conditions, status2.Conditions)
+}

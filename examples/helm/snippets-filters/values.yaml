@@ -1,0 +1,4 @@
+nginxGateway:
+  name: nginx-gateway
+  snippetsFilters:
+    enable: true

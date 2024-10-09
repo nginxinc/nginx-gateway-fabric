@@ -55,6 +55,7 @@ func BuildConfiguration(
 		Telemetry:             buildTelemetry(g),
 		BaseHTTPConfig:        baseHTTPConfig,
 		Logging:               buildLogging(g),
+		MainSnippets:          buildSnippetsForContext(g.SnippetsFilters, ngfAPI.NginxContextMain),
 	}
 
 	return config
@@ -248,7 +249,7 @@ func buildCertBundles(
 				if err != nil {
 					data = cm.CACert
 				}
-				bundles[id] = CertBundle(data)
+				bundles[id] = data
 			}
 		}
 	}
@@ -469,8 +470,8 @@ func (hpr *hostPathRules) upsertRoute(
 		}
 
 		var filters HTTPFilters
-		if rule.ValidFilters {
-			filters = createHTTPFilters(rule.Filters)
+		if rule.Filters.Valid {
+			filters = createHTTPFilters(rule.Filters.Filters)
 		} else {
 			filters = HTTPFilters{
 				InvalidFilter: &InvalidHTTPFilter{},
@@ -620,7 +621,7 @@ func buildUpstreams(
 			}
 
 			for _, rule := range route.Spec.Rules {
-				if !rule.ValidMatches || !rule.ValidFilters {
+				if !rule.ValidMatches || !rule.Filters.Valid {
 					// don't generate upstreams for rules that have invalid matches or filters
 					continue
 				}
@@ -691,33 +692,41 @@ func getPath(path *v1.HTTPPathMatch) string {
 	return *path.Value
 }
 
-func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
+func createHTTPFilters(filters []graph.Filter) HTTPFilters {
 	var result HTTPFilters
 
 	for _, f := range filters {
-		switch f.Type {
-		case v1.HTTPRouteFilterRequestRedirect:
+		switch f.FilterType {
+		case graph.FilterRequestRedirect:
 			if result.RequestRedirect == nil {
 				// using the first filter
 				result.RequestRedirect = convertHTTPRequestRedirectFilter(f.RequestRedirect)
 			}
-		case v1.HTTPRouteFilterURLRewrite:
+		case graph.FilterURLRewrite:
 			if result.RequestURLRewrite == nil {
 				// using the first filter
 				result.RequestURLRewrite = convertHTTPURLRewriteFilter(f.URLRewrite)
 			}
-		case v1.HTTPRouteFilterRequestHeaderModifier:
+		case graph.FilterRequestHeaderModifier:
 			if result.RequestHeaderModifiers == nil {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
 			}
-		case v1.HTTPRouteFilterResponseHeaderModifier:
+		case graph.FilterResponseHeaderModifier:
 			if result.ResponseHeaderModifiers == nil {
 				// using the first filter
 				result.ResponseHeaderModifiers = convertHTTPHeaderFilter(f.ResponseHeaderModifier)
 			}
+		case graph.FilterExtensionRef:
+			if f.ResolvedExtensionRef != nil && f.ResolvedExtensionRef.SnippetsFilter != nil {
+				result.SnippetsFilters = append(
+					result.SnippetsFilters,
+					convertSnippetsFilter(f.ResolvedExtensionRef.SnippetsFilter),
+				)
+			}
 		}
 	}
+
 	return result
 }
 
@@ -826,6 +835,7 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		// HTTP2 should be enabled by default
 		HTTP2:    true,
 		IPFamily: Dual,
+		Snippets: buildSnippetsForContext(g.SnippetsFilters, ngfAPI.NginxContextHTTP),
 	}
 	if g.NginxProxy == nil || !g.NginxProxy.Valid {
 		return baseConfig
@@ -866,6 +876,45 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	}
 
 	return baseConfig
+}
+
+func createSnippetName(nc ngfAPI.NginxContext, nsname types.NamespacedName) string {
+	return fmt.Sprintf(
+		"SnippetsFilter_%s_%s_%s",
+		nc,
+		nsname.Namespace,
+		nsname.Name,
+	)
+}
+
+func buildSnippetsForContext(
+	snippetFilters map[types.NamespacedName]*graph.SnippetsFilter,
+	nc ngfAPI.NginxContext,
+) []Snippet {
+	if len(snippetFilters) == 0 {
+		return nil
+	}
+
+	snippetsForContext := make([]Snippet, 0)
+
+	for _, filter := range snippetFilters {
+		if !filter.Valid || !filter.Referenced {
+			continue
+		}
+
+		snippetValue, ok := filter.Snippets[nc]
+
+		if !ok {
+			continue
+		}
+
+		snippetsForContext = append(snippetsForContext, Snippet{
+			Name:     createSnippetName(nc, client.ObjectKeyFromObject(filter.Source)),
+			Contents: snippetValue,
+		})
+	}
+
+	return snippetsForContext
 }
 
 func buildPolicies(graphPolicies []*graph.Policy) []policies.Policy {

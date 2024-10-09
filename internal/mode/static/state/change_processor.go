@@ -110,6 +110,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		GRPCRoutes:         make(map[types.NamespacedName]*v1.GRPCRoute),
 		TLSRoutes:          make(map[types.NamespacedName]*v1alpha2.TLSRoute),
 		NGFPolicies:        make(map[graph.PolicyKey]policies.Policy),
+		SnippetsFilters:    make(map[types.NamespacedName]*ngfAPI.SnippetsFilter),
 	}
 
 	processor := &ChangeProcessorImpl{
@@ -217,6 +218,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       cfg.MustExtractGVK(&v1alpha2.TLSRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.TLSRoutes),
 				predicate: nil,
+			},
+			{
+				gvk:       cfg.MustExtractGVK(&ngfAPI.SnippetsFilter{}),
+				store:     newObjectStoreMapAdapter(clusterStore.SnippetsFilters),
+				predicate: nil, // we always want to write status to SnippetsFilters so we don't filter them out
 			},
 		},
 	)

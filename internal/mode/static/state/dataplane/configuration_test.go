@@ -21,6 +21,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/policiesfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -163,9 +164,12 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
-	addFilters := func(hr *graph.L7Route, filters []v1.HTTPRouteFilter) {
+	addFilters := func(hr *graph.L7Route, filters []graph.Filter) {
 		for i := range hr.Spec.Rules {
-			hr.Spec.Rules[i].Filters = filters
+			hr.Spec.Rules[i].Filters = graph.RouteRuleFilters{
+				Filters: filters,
+				Valid:   *hr.Spec.Rules[i].Matches[0].Path.Value != invalidFiltersPath,
+			}
 		}
 	}
 
@@ -220,10 +224,12 @@ func TestBuildConfiguration(t *testing.T) {
 			}
 
 			rules[i] = graph.RouteRule{
-				ValidMatches: validMatches,
-				ValidFilters: validFilters,
+				Matches: m,
+				Filters: graph.RouteRuleFilters{
+					Valid: validFilters,
+				},
 				BackendRefs:  createBackendRefs(validRule),
-				Matches:      m,
+				ValidMatches: validMatches,
 			}
 		}
 
@@ -262,7 +268,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 		for idx, r := range route.Spec.Rules {
 			var backends []Backend
-			if r.ValidFilters && r.ValidMatches {
+			if r.Filters.Valid && r.ValidMatches {
 				backends = []Backend{expValidBackend}
 			}
 
@@ -329,15 +335,75 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: invalidFiltersPath, pathType: prefix},
 	)
 
-	redirect := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestRedirect,
+	sf1 := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sf",
+				Namespace: "test",
+			},
+		},
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServerLocation: "location snippet",
+			ngfAPI.NginxContextHTTPServer:         "server snippet",
+			ngfAPI.NginxContextMain:               "main snippet",
+			ngfAPI.NginxContextHTTP:               "http snippet",
+		},
+	}
+
+	sfNotReferenced := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sf-not-referenced",
+				Namespace: "test",
+			},
+		},
+		Valid:      true,
+		Referenced: false,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextMain: "main snippet no ref",
+			ngfAPI.NginxContextHTTP: "http snippet no ref",
+		},
+	}
+
+	redirect := graph.Filter{
+		FilterType: graph.FilterRequestRedirect,
 		RequestRedirect: &v1.HTTPRequestRedirectFilter{
 			Hostname: (*v1.PreciseHostname)(helpers.GetPointer("foo.example.com")),
 		},
 	}
-	addFilters(routeHR5, []v1.HTTPRouteFilter{redirect})
+	extRefFilter := graph.Filter{
+		FilterType: graph.FilterExtensionRef,
+		ExtensionRef: &v1.LocalObjectReference{
+			Group: ngfAPI.GroupName,
+			Kind:  kinds.SnippetsFilter,
+			Name:  "sf",
+		},
+		ResolvedExtensionRef: &graph.ExtensionRefFilter{
+			Valid:          true,
+			SnippetsFilter: sf1,
+		},
+	}
+	addFilters(routeHR5, []graph.Filter{redirect, extRefFilter})
 	expRedirect := HTTPRequestRedirectFilter{
 		Hostname: helpers.GetPointer("foo.example.com"),
+	}
+	expExtRefFilter := SnippetsFilter{
+		LocationSnippet: &Snippet{
+			Name: createSnippetName(
+				ngfAPI.NginxContextHTTPServerLocation,
+				client.ObjectKeyFromObject(extRefFilter.ResolvedExtensionRef.SnippetsFilter.Source),
+			),
+			Contents: "location snippet",
+		},
+		ServerSnippet: &Snippet{
+			Name: createSnippetName(
+				ngfAPI.NginxContextHTTPServer,
+				client.ObjectKeyFromObject(extRefFilter.ResolvedExtensionRef.SnippetsFilter.Source),
+			),
+			Contents: "server snippet",
+		},
 	}
 
 	hr6, expHR6Groups, routeHR6 := createTestResources(
@@ -1555,6 +1621,7 @@ func TestBuildConfiguration(t *testing.T) {
 										BackendGroup: expHR5Groups[0],
 										Filters: HTTPFilters{
 											RequestRedirect: &expRedirect,
+											SnippetsFilters: []SnippetsFilter{expExtRefFilter},
 										},
 									},
 								},
@@ -2261,6 +2328,42 @@ func TestBuildConfiguration(t *testing.T) {
 			}),
 			msg: "NginxProxy with error log level set to debug",
 		},
+		{
+			graph: getModifiedGraph(func(g *graph.Graph) *graph.Graph {
+				g.SnippetsFilters = map[types.NamespacedName]*graph.SnippetsFilter{
+					client.ObjectKeyFromObject(sf1.Source):             sf1,
+					client.ObjectKeyFromObject(sfNotReferenced.Source): sfNotReferenced,
+				}
+
+				return g
+			}),
+			expConf: getModifiedExpectedConfiguration(func(conf Configuration) Configuration {
+				conf.MainSnippets = []Snippet{
+					{
+						Name: createSnippetName(
+							ngfAPI.NginxContextMain,
+							client.ObjectKeyFromObject(sf1.Source),
+						),
+						Contents: "main snippet",
+					},
+				}
+				conf.BaseHTTPConfig.Snippets = []Snippet{
+					{
+						Name: createSnippetName(
+							ngfAPI.NginxContextHTTP,
+							client.ObjectKeyFromObject(sf1.Source),
+						),
+						Contents: "http snippet",
+					},
+				}
+				conf.HTTPServers = []VirtualServer{}
+				conf.SSLServers = []VirtualServer{}
+				conf.SSLKeyPairs = map[SSLKeyPairID]SSLKeyPair{}
+
+				return conf
+			}),
+			msg: "SnippetsFilters with main and http snippet",
+		},
 	}
 
 	for _, test := range tests {
@@ -2331,32 +2434,33 @@ func TestGetPath(t *testing.T) {
 
 func TestCreateFilters(t *testing.T) {
 	t.Parallel()
-	redirect1 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestRedirect,
+
+	redirect1 := graph.Filter{
+		FilterType: graph.FilterRequestRedirect,
 		RequestRedirect: &v1.HTTPRequestRedirectFilter{
 			Hostname: helpers.GetPointer[v1.PreciseHostname]("foo.example.com"),
 		},
 	}
-	redirect2 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestRedirect,
+	redirect2 := graph.Filter{
+		FilterType: graph.FilterRequestRedirect,
 		RequestRedirect: &v1.HTTPRequestRedirectFilter{
 			Hostname: helpers.GetPointer[v1.PreciseHostname]("bar.example.com"),
 		},
 	}
-	rewrite1 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterURLRewrite,
+	rewrite1 := graph.Filter{
+		FilterType: graph.FilterURLRewrite,
 		URLRewrite: &v1.HTTPURLRewriteFilter{
 			Hostname: helpers.GetPointer[v1.PreciseHostname]("foo.example.com"),
 		},
 	}
-	rewrite2 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterURLRewrite,
+	rewrite2 := graph.Filter{
+		FilterType: graph.FilterURLRewrite,
 		URLRewrite: &v1.HTTPURLRewriteFilter{
 			Hostname: helpers.GetPointer[v1.PreciseHostname]("bar.example.com"),
 		},
 	}
-	requestHeaderModifiers1 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestHeaderModifier,
+	requestHeaderModifiers1 := graph.Filter{
+		FilterType: graph.FilterRequestHeaderModifier,
 		RequestHeaderModifier: &v1.HTTPHeaderFilter{
 			Set: []v1.HTTPHeader{
 				{
@@ -2366,8 +2470,8 @@ func TestCreateFilters(t *testing.T) {
 			},
 		},
 	}
-	requestHeaderModifiers2 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestHeaderModifier,
+	requestHeaderModifiers2 := graph.Filter{
+		FilterType: graph.FilterRequestHeaderModifier,
 		RequestHeaderModifier: &v1.HTTPHeaderFilter{
 			Add: []v1.HTTPHeader{
 				{
@@ -2378,8 +2482,8 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
-	responseHeaderModifiers1 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterResponseHeaderModifier,
+	responseHeaderModifiers1 := graph.Filter{
+		FilterType: graph.FilterResponseHeaderModifier,
 		ResponseHeaderModifier: &v1.HTTPHeaderFilter{
 			Add: []v1.HTTPHeader{
 				{
@@ -2390,8 +2494,8 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
-	responseHeaderModifiers2 := v1.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterResponseHeaderModifier,
+	responseHeaderModifiers2 := graph.Filter{
+		FilterType: graph.FilterResponseHeaderModifier,
 		ResponseHeaderModifier: &v1.HTTPHeaderFilter{
 			Set: []v1.HTTPHeader{
 				{
@@ -2426,49 +2530,83 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
+	snippetsFilter1 := graph.Filter{
+		FilterType: graph.FilterExtensionRef,
+		ExtensionRef: &v1.LocalObjectReference{
+			Group: ngfAPI.GroupName,
+			Kind:  kinds.SnippetsFilter,
+			Name:  "sf1",
+		},
+		ResolvedExtensionRef: &graph.ExtensionRefFilter{
+			Valid: true,
+			SnippetsFilter: &graph.SnippetsFilter{
+				Source: &ngfAPI.SnippetsFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sf1",
+						Namespace: "default",
+					},
+				},
+				Valid:      true,
+				Referenced: true,
+				Snippets: map[ngfAPI.NginxContext]string{
+					ngfAPI.NginxContextHTTPServerLocation: "location snippet 1",
+					ngfAPI.NginxContextMain:               "main snippet 1",
+					ngfAPI.NginxContextHTTPServer:         "server snippet 1",
+					ngfAPI.NginxContextHTTP:               "http snippet 1",
+				},
+			},
+		},
+	}
+
+	snippetsFilter2 := graph.Filter{
+		FilterType: graph.FilterExtensionRef,
+		ExtensionRef: &v1.LocalObjectReference{
+			Group: ngfAPI.GroupName,
+			Kind:  kinds.SnippetsFilter,
+			Name:  "sf2",
+		},
+		ResolvedExtensionRef: &graph.ExtensionRefFilter{
+			Valid: true,
+			SnippetsFilter: &graph.SnippetsFilter{
+				Source: &ngfAPI.SnippetsFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sf2",
+						Namespace: "default",
+					},
+				},
+				Valid:      true,
+				Referenced: true,
+				Snippets: map[ngfAPI.NginxContext]string{
+					ngfAPI.NginxContextHTTPServerLocation: "location snippet 2",
+					ngfAPI.NginxContextMain:               "main snippet 2",
+					ngfAPI.NginxContextHTTPServer:         "server snippet 2",
+					ngfAPI.NginxContextHTTP:               "http snippet 2",
+				},
+			},
+		},
+	}
+
 	tests := []struct {
 		expected HTTPFilters
 		msg      string
-		filters  []v1.HTTPRouteFilter
+		filters  []graph.Filter
 	}{
 		{
-			filters:  []v1.HTTPRouteFilter{},
+			filters:  []graph.Filter{},
 			expected: HTTPFilters{},
 			msg:      "no filters",
 		},
 		{
-			filters: []v1.HTTPRouteFilter{
+			filters: []graph.Filter{
 				redirect1,
 			},
 			expected: HTTPFilters{
 				RequestRedirect: &expectedRedirect1,
 			},
-			msg: "one filter",
+			msg: "one request redirect filter",
 		},
 		{
-			filters: []v1.HTTPRouteFilter{
-				redirect1,
-				redirect2,
-			},
-			expected: HTTPFilters{
-				RequestRedirect: &expectedRedirect1,
-			},
-			msg: "two filters, first wins",
-		},
-		{
-			filters: []v1.HTTPRouteFilter{
-				redirect1,
-				redirect2,
-				requestHeaderModifiers1,
-			},
-			expected: HTTPFilters{
-				RequestRedirect:        &expectedRedirect1,
-				RequestHeaderModifiers: &expectedHeaderModifier1,
-			},
-			msg: "two redirect filters, one request header modifier, first redirect wins",
-		},
-		{
-			filters: []v1.HTTPRouteFilter{
+			filters: []graph.Filter{
 				redirect1,
 				redirect2,
 				rewrite1,
@@ -2477,14 +2615,50 @@ func TestCreateFilters(t *testing.T) {
 				requestHeaderModifiers2,
 				responseHeaderModifiers1,
 				responseHeaderModifiers2,
+				snippetsFilter1,
+				snippetsFilter2,
 			},
 			expected: HTTPFilters{
 				RequestRedirect:         &expectedRedirect1,
 				RequestURLRewrite:       &expectedRewrite1,
 				RequestHeaderModifiers:  &expectedHeaderModifier1,
 				ResponseHeaderModifiers: &expectedresponseHeaderModifier,
+				SnippetsFilters: []SnippetsFilter{
+					{
+						LocationSnippet: &Snippet{
+							Name: createSnippetName(
+								ngfAPI.NginxContextHTTPServerLocation,
+								types.NamespacedName{Namespace: "default", Name: "sf1"},
+							),
+							Contents: "location snippet 1",
+						},
+						ServerSnippet: &Snippet{
+							Name: createSnippetName(
+								ngfAPI.NginxContextHTTPServer,
+								types.NamespacedName{Namespace: "default", Name: "sf1"},
+							),
+							Contents: "server snippet 1",
+						},
+					},
+					{
+						LocationSnippet: &Snippet{
+							Name: createSnippetName(
+								ngfAPI.NginxContextHTTPServerLocation,
+								types.NamespacedName{Namespace: "default", Name: "sf2"},
+							),
+							Contents: "location snippet 2",
+						},
+						ServerSnippet: &Snippet{
+							Name: createSnippetName(
+								ngfAPI.NginxContextHTTPServer,
+								types.NamespacedName{Namespace: "default", Name: "sf2"},
+							),
+							Contents: "server snippet 2",
+						},
+					},
+				},
 			},
-			msg: "two of each filter, first value for each wins",
+			msg: "two of each filter, first value for each standard filter wins, all ext ref filters added",
 		},
 	}
 
@@ -2542,7 +2716,7 @@ func refsToValidRules(refs ...[]graph.BackendRef) []graph.RouteRule {
 	for _, ref := range refs {
 		rules = append(rules, graph.RouteRule{
 			ValidMatches: true,
-			ValidFilters: true,
+			Filters:      graph.RouteRuleFilters{Valid: true},
 			BackendRefs:  ref,
 		})
 	}
@@ -3025,7 +3199,6 @@ func TestConvertBackendTLS(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
-
 			g.Expect(convertBackendTLS(tc.btp)).To(Equal(tc.expected))
 		})
 	}
@@ -3925,6 +4098,177 @@ func TestBuildLogging(t *testing.T) {
 			g := NewWithT(t)
 
 			g.Expect(buildLogging(tc.g)).To(Equal(tc.expLoggingSettings))
+		})
+	}
+}
+
+func TestCreateSnippetName(t *testing.T) {
+	t.Parallel()
+
+	g := NewWithT(t)
+
+	name := createSnippetName(
+		ngfAPI.NginxContextHTTPServerLocation,
+		types.NamespacedName{Namespace: "some-ns", Name: "some-name"},
+	)
+	g.Expect(name).To(Equal("SnippetsFilter_http.server.location_some-ns_some-name"))
+}
+
+func TestBuildSnippetForContext(t *testing.T) {
+	t.Parallel()
+
+	validUnreferenced := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "valid-unreferenced",
+				Namespace: "default",
+			},
+		},
+		Valid:      true,
+		Referenced: false,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServerLocation: "valid unreferenced",
+		},
+	}
+
+	invalidUnreferenced := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid-unreferenced",
+				Namespace: "default",
+			},
+		},
+		Valid:      false,
+		Referenced: false,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServerLocation: "invalid unreferenced",
+		},
+	}
+
+	invalidReferenced := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid-referenced",
+				Namespace: "default",
+			},
+		},
+		Valid:      false,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServerLocation: "invalid referenced",
+		},
+	}
+
+	validReferenced1 := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "valid-referenced1",
+				Namespace: "default",
+			},
+		},
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTP: "http valid referenced 1",
+			ngfAPI.NginxContextMain: "main valid referenced 1",
+		},
+	}
+
+	validReferenced2 := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "valid-referenced2",
+				Namespace: "other-ns",
+			},
+		},
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextMain: "main valid referenced 2",
+			ngfAPI.NginxContextHTTP: "http valid referenced 2",
+		},
+	}
+
+	validReferenced3 := &graph.SnippetsFilter{
+		Source: &ngfAPI.SnippetsFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "valid-referenced3",
+				Namespace: "other-ns",
+			},
+		},
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServerLocation: "location valid referenced 2",
+		},
+	}
+
+	expMainSnippets := []Snippet{
+		{
+			Name:     createSnippetName(ngfAPI.NginxContextMain, client.ObjectKeyFromObject(validReferenced1.Source)),
+			Contents: "main valid referenced 1",
+		},
+		{
+			Name:     createSnippetName(ngfAPI.NginxContextMain, client.ObjectKeyFromObject(validReferenced2.Source)),
+			Contents: "main valid referenced 2",
+		},
+	}
+
+	expHTTPSnippets := []Snippet{
+		{
+			Name:     createSnippetName(ngfAPI.NginxContextHTTP, client.ObjectKeyFromObject(validReferenced1.Source)),
+			Contents: "http valid referenced 1",
+		},
+		{
+			Name:     createSnippetName(ngfAPI.NginxContextHTTP, client.ObjectKeyFromObject(validReferenced2.Source)),
+			Contents: "http valid referenced 2",
+		},
+	}
+
+	getSnippetsFilters := func() map[types.NamespacedName]*graph.SnippetsFilter {
+		return map[types.NamespacedName]*graph.SnippetsFilter{
+			client.ObjectKeyFromObject(validUnreferenced.Source):   validUnreferenced,
+			client.ObjectKeyFromObject(invalidUnreferenced.Source): invalidUnreferenced,
+			client.ObjectKeyFromObject(invalidReferenced.Source):   invalidReferenced,
+			client.ObjectKeyFromObject(validReferenced1.Source):    validReferenced1,
+			client.ObjectKeyFromObject(validReferenced2.Source):    validReferenced2,
+			client.ObjectKeyFromObject(validReferenced3.Source):    validReferenced3,
+		}
+	}
+
+	tests := []struct {
+		name            string
+		snippetsFilters map[types.NamespacedName]*graph.SnippetsFilter
+		ctx             ngfAPI.NginxContext
+		expSnippets     []Snippet
+	}{
+		{
+			name:            "no snippets filters",
+			snippetsFilters: nil,
+			ctx:             ngfAPI.NginxContextMain,
+			expSnippets:     nil,
+		},
+		{
+			name:            "main context: mix of invalid, unreferenced, and valid, referenced snippets filters",
+			snippetsFilters: getSnippetsFilters(),
+			ctx:             ngfAPI.NginxContextMain,
+			expSnippets:     expMainSnippets,
+		},
+		{
+			name:            "http context: mix of invalid, unreferenced, and valid, referenced snippets filters",
+			snippetsFilters: getSnippetsFilters(),
+			ctx:             ngfAPI.NginxContextHTTP,
+			expSnippets:     expHTTPSnippets,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			g := NewWithT(t)
+			snippets := buildSnippetsForContext(test.snippetsFilters, test.ctx)
+			g.Expect(snippets).To(ConsistOf(test.expSnippets))
 		})
 	}
 }

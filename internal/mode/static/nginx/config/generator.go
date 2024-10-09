@@ -24,6 +24,7 @@ const (
 	streamFolder = configFolder + "/stream-conf.d"
 
 	// mainIncludesFolder is the folder where NGINX main context configuration files are stored.
+	// For example, these files include load_module directives and snippets that target the main context.
 	mainIncludesFolder = configFolder + "/main-includes"
 
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
@@ -61,9 +62,7 @@ type Generator interface {
 
 // GeneratorImpl is an implementation of Generator.
 //
-// It generates files to be written to the following locations, which must exist and available for writing:
-// - httpFolder, for HTTP configuration files.
-// - secretsFolder, for secrets.
+// It generates files to be written to the ConfigFolders locations, which must exist and available for writing.
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
 // includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from httpFolder.
@@ -100,13 +99,54 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		observability.NewGenerator(conf.Telemetry),
 	)
 
-	files = append(files, g.runExecuteFuncs(conf, policyGenerator)...)
+	files = append(files, g.executeConfigTemplates(conf, policyGenerator)...)
 
 	for id, bundle := range conf.CertBundles {
 		files = append(files, generateCertBundle(id, bundle))
 	}
 
 	return files
+}
+
+func (g GeneratorImpl) executeConfigTemplates(
+	conf dataplane.Configuration,
+	generator policies.Generator,
+) []file.File {
+	fileBytes := make(map[string][]byte)
+
+	for _, execute := range g.getExecuteFuncs(generator) {
+		results := execute(conf)
+		for _, res := range results {
+			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
+		}
+	}
+
+	files := make([]file.File, 0, len(fileBytes))
+	for fp, bytes := range fileBytes {
+		files = append(files, file.File{
+			Path:    fp,
+			Content: bytes,
+			Type:    file.TypeRegular,
+		})
+	}
+
+	return files
+}
+
+func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
+	return []executeFunc{
+		executeMainConfig,
+		executeBaseHTTPConfig,
+		g.newExecuteServersFunc(generator),
+		g.executeUpstreams,
+		executeSplitClients,
+		executeMaps,
+		executeTelemetry,
+		g.executeStreamServers,
+		g.executeStreamUpstreams,
+		executeStreamMaps,
+		executeVersion,
+	}
 }
 
 func generatePEM(id dataplane.SSLKeyPairID, cert []byte, key []byte) file.File {
@@ -136,45 +176,4 @@ func generateCertBundle(id dataplane.CertBundleID, cert []byte) file.File {
 
 func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
-}
-
-func (g GeneratorImpl) runExecuteFuncs(
-	conf dataplane.Configuration,
-	generator policies.Generator,
-) []file.File {
-	fileBytes := make(map[string][]byte)
-
-	for _, execute := range g.getExecuteFuncs(generator) {
-		results := execute(conf)
-		for _, res := range results {
-			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
-		}
-	}
-
-	files := make([]file.File, 0, len(fileBytes))
-	for fp, bytes := range fileBytes {
-		files = append(files, file.File{
-			Path:    fp,
-			Content: bytes,
-			Type:    file.TypeRegular,
-		})
-	}
-
-	return files
-}
-
-func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
-	return []executeFunc{
-		executeBaseHTTPConfig,
-		g.newExecuteServersFunc(generator),
-		g.executeUpstreams,
-		executeSplitClients,
-		executeMaps,
-		executeTelemetry,
-		g.executeStreamServers,
-		g.executeStreamUpstreams,
-		executeStreamMaps,
-		executeVersion,
-		executeMainIncludesConfig,
-	}
 }

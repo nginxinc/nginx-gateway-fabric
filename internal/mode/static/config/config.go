@@ -46,6 +46,8 @@ type Config struct {
 	Plus bool
 	// ExperimentalFeatures indicates if experimental features are enabled.
 	ExperimentalFeatures bool
+	// SnippetsFilters indicates if SnippetsFilters are enabled.
+	SnippetsFilters bool
 }
 
 // GatewayPodConfig contains information about this Pod.

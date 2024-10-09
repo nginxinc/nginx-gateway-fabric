@@ -111,6 +111,60 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	refSnippetsFilterExtensionRef := &gatewayv1.LocalObjectReference{
+		Group: ngfAPI.GroupName,
+		Kind:  kinds.SnippetsFilter,
+		Name:  "ref-snippets-filter",
+	}
+
+	unreferencedSnippetsFilter := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "unref-snippets-filter",
+			Namespace: testNs,
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextMain,
+					Value:   "main snippet",
+				},
+			},
+		},
+	}
+
+	referencedSnippetsFilter := &ngfAPI.SnippetsFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ref-snippets-filter",
+			Namespace: testNs,
+		},
+		Spec: ngfAPI.SnippetsFilterSpec{
+			Snippets: []ngfAPI.Snippet{
+				{
+					Context: ngfAPI.NginxContextHTTPServer,
+					Value:   "server snippet",
+				},
+			},
+		},
+	}
+
+	processedUnrefSnippetsFilter := &SnippetsFilter{
+		Source:     unreferencedSnippetsFilter,
+		Valid:      true,
+		Referenced: false,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextMain: "main snippet",
+		},
+	}
+
+	processedRefSnippetsFilter := &SnippetsFilter{
+		Source:     referencedSnippetsFilter,
+		Valid:      true,
+		Referenced: true,
+		Snippets: map[ngfAPI.NginxContext]string{
+			ngfAPI.NginxContextHTTPServer: "server snippet",
+		},
+	}
+
 	createValidRuleWithBackendRefs := func(matches []gatewayv1.HTTPRouteMatch) RouteRule {
 		refs := []BackendRef{
 			{
@@ -127,12 +181,38 @@ func TestBuildGraph(t *testing.T) {
 			},
 		}
 		return RouteRule{
-			ValidMatches:     true,
-			ValidFilters:     true,
+			ValidMatches: true,
+			Filters: RouteRuleFilters{
+				Filters: []Filter{},
+				Valid:   true,
+			},
 			BackendRefs:      refs,
 			Matches:          matches,
 			RouteBackendRefs: rbrs,
 		}
+	}
+
+	createValidRuleWithBackendRefsAndFilters := func(
+		matches []gatewayv1.HTTPRouteMatch,
+		routeType RouteType,
+	) RouteRule {
+		rule := createValidRuleWithBackendRefs(matches)
+		rule.Filters = RouteRuleFilters{
+			Filters: []Filter{
+				{
+					RouteType:    routeType,
+					FilterType:   FilterExtensionRef,
+					ExtensionRef: refSnippetsFilterExtensionRef,
+					ResolvedExtensionRef: &ExtensionRefFilter{
+						SnippetsFilter: processedRefSnippetsFilter,
+						Valid:          true,
+					},
+				},
+			},
+			Valid: true,
+		}
+
+		return rule
 	}
 
 	routeMatches := []gatewayv1.HTTPRouteMatch{
@@ -207,6 +287,15 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
+	addFilterToPath(
+		hr1,
+		"/",
+		gatewayv1.HTTPRouteFilter{
+			Type:         gatewayv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: refSnippetsFilterExtensionRef,
+		},
+	)
+
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
@@ -237,6 +326,12 @@ func TestBuildGraph(t *testing.T) {
 					BackendRefs: []gatewayv1.GRPCBackendRef{
 						{
 							BackendRef: commonGWBackendRef,
+						},
+					},
+					Filters: []gatewayv1.GRPCRouteFilter{
+						{
+							Type:         gatewayv1.GRPCRouteFilterExtensionRef,
+							ExtensionRef: refSnippetsFilterExtensionRef,
 						},
 					},
 				},
@@ -564,6 +659,10 @@ func TestBuildGraph(t *testing.T) {
 				hrPolicyKey: hrPolicy,
 				gwPolicyKey: gwPolicy,
 			},
+			SnippetsFilters: map[types.NamespacedName]*ngfAPI.SnippetsFilter{
+				client.ObjectKeyFromObject(unreferencedSnippetsFilter): unreferencedSnippetsFilter,
+				client.ObjectKeyFromObject(referencedSnippetsFilter):   referencedSnippetsFilter,
+			},
 		}
 	}
 
@@ -586,7 +685,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		Spec: L7RouteSpec{
 			Hostnames: hr1.Spec.Hostnames,
-			Rules:     []RouteRule{createValidRuleWithBackendRefs(routeMatches)},
+			Rules:     []RouteRule{createValidRuleWithBackendRefsAndFilters(routeMatches, RouteTypeHTTP)},
 		},
 		Policies: []*Policy{processedRoutePolicy},
 	}
@@ -673,7 +772,7 @@ func TestBuildGraph(t *testing.T) {
 		Spec: L7RouteSpec{
 			Hostnames: gr.Spec.Hostnames,
 			Rules: []RouteRule{
-				createValidRuleWithBackendRefs(routeMatches),
+				createValidRuleWithBackendRefsAndFilters(routeMatches, RouteTypeGRPC),
 			},
 		},
 	}
@@ -809,6 +908,10 @@ func TestBuildGraph(t *testing.T) {
 			GlobalSettings: &policies.GlobalSettings{
 				NginxProxyValid:  true,
 				TelemetryEnabled: true,
+			},
+			SnippetsFilters: map[types.NamespacedName]*SnippetsFilter{
+				client.ObjectKeyFromObject(unreferencedSnippetsFilter): processedUnrefSnippetsFilter,
+				client.ObjectKeyFromObject(referencedSnippetsFilter):   processedRefSnippetsFilter,
 			},
 		}
 	}

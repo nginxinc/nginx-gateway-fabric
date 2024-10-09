@@ -409,6 +409,44 @@ func PrepareBackendTLSPolicyRequests(
 	return reqs
 }
 
+// PrepareSnippetsFilterRequests prepares status UpdateRequests for the given SnippetsFilters.
+func PrepareSnippetsFilterRequests(
+	snippetsFilters map[types.NamespacedName]*graph.SnippetsFilter,
+	transitionTime metav1.Time,
+	gatewayCtlrName string,
+) []frameworkStatus.UpdateRequest {
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(snippetsFilters))
+
+	for nsname, snippetsFilter := range snippetsFilters {
+		allConds := make([]conditions.Condition, 0, len(snippetsFilter.Conditions)+1)
+
+		// The order of conditions matters here.
+		// We add the default condition first, followed by the snippetsFilter conditions.
+		// DeduplicateConditions will ensure the last condition wins.
+		allConds = append(allConds, staticConds.NewSnippetsFilterAccepted())
+		allConds = append(allConds, snippetsFilter.Conditions...)
+
+		conds := conditions.DeduplicateConditions(allConds)
+		apiConds := conditions.ConvertConditions(conds, snippetsFilter.Source.GetGeneration(), transitionTime)
+		status := ngfAPI.SnippetsFilterStatus{
+			Controllers: []ngfAPI.ControllerStatus{
+				{
+					Conditions:     apiConds,
+					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+				},
+			},
+		}
+
+		reqs = append(reqs, frameworkStatus.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: snippetsFilter.Source,
+			Setter:       newSnippetsFilterStatusSetter(status, gatewayCtlrName),
+		})
+	}
+
+	return reqs
+}
+
 // ControlPlaneUpdateResult describes the result of a control plane update.
 type ControlPlaneUpdateResult struct {
 	// Error is the error that occurred during the update.

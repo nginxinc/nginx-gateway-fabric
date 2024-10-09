@@ -10,7 +10,7 @@ import (
 type Generator interface {
 	// GenerateForServer generates policy configuration for the server block.
 	GenerateForServer(policies []Policy, server http.Server) GenerateResultFiles
-	// GenerateForServer generates policy configuration for a normal location block.
+	// GenerateForLocation generates policy configuration for a normal location block.
 	GenerateForLocation(policies []Policy, location http.Location) GenerateResultFiles
 	// GenerateForInternalLocation generates policy configuration for an internal location block.
 	GenerateForInternalLocation(policies []Policy) GenerateResultFiles
