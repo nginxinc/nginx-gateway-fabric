@@ -56,6 +56,24 @@ func TestExecuteMainConfig_Telemetry(t *testing.T) {
 	}
 }
 
+func TestExecuteMainConfig_Logging(t *testing.T) {
+	t.Parallel()
+
+	conf := dataplane.Configuration{
+		Logging: dataplane.Logging{
+			ErrorLevel: "info",
+		},
+	}
+
+	g := NewWithT(t)
+
+	res := executeMainConfig(conf)
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].dest).To(Equal(mainIncludesConfigFile))
+
+	g.Expect(string(res[0].data)).To(ContainSubstring("error_log stderr info"))
+}
+
 func TestExecuteMainConfig_Snippets(t *testing.T) {
 	t.Parallel()
 
