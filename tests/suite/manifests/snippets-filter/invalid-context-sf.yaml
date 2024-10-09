@@ -1,0 +1,37 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: invalid-context
+spec:
+  snippets:
+    - context: http
+      value: aio on;
+    - context: http.server
+      value: worker_priority 0;  # wrong context for the directive, should be main.
+    - context: http.server.location
+      value: keepalive_time 10s;
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: soda
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  hostnames:
+    - "cafe.example.com"
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /soda
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.nginx.org
+            kind: SnippetsFilter
+            name: invalid-context
+      backendRefs:
+        - name: soda
+          port: 80
