@@ -146,7 +146,6 @@ func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFu
 		g.executeStreamUpstreams,
 		executeStreamMaps,
 		executeVersion,
-		executeMainIncludesConfig,
 	}
 }
 

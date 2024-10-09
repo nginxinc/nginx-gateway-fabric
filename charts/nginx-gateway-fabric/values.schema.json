@@ -519,6 +519,20 @@
           "required": [],
           "title": "securityContext",
           "type": "object"
+        },
+        "snippetsFilters": {
+          "properties": {
+            "enable": {
+              "default": false,
+              "description": "Enable SnippetsFilters feature. SnippetsFilters allow inserting NGINX configuration into the generated NGINX\nconfig for HTTPRoute and GRPCRoute resources.",
+              "required": [],
+              "title": "enable",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "title": "snippetsFilters",
+          "type": "object"
         }
       },
       "required": [

@@ -11,16 +11,16 @@ import (
 var mainConfigTemplate = gotemplate.Must(gotemplate.New("main").Parse(mainConfigTemplateText))
 
 type mainConfig struct {
-	Includes         []shared.Include
-	TelemetryEnabled bool
+	Includes []shared.Include
+	Conf     dataplane.Configuration
 }
 
 func executeMainConfig(conf dataplane.Configuration) []executeResult {
 	includes := createIncludesFromSnippets(conf.MainSnippets)
 
 	mc := mainConfig{
-		TelemetryEnabled: conf.Telemetry.Endpoint != "",
-		Includes:         includes,
+		Conf:     conf,
+		Includes: includes,
 	}
 
 	results := make([]executeResult, 0, len(includes)+1)
