@@ -1,7 +1,7 @@
 # Enhancement Proposal-2335: Rewrite Client IP
 
 - Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/2325
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 
