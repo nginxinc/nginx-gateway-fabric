@@ -45,6 +45,15 @@ at the same index.
 Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags. */
 		union {null, array<string>} FlagValues = null;
 		
+		/** SnippetsFiltersContextDirectives contains the context-directive strings of all applied SnippetsFilters.
+Both lists are ordered first by count, then by lexicographical order on the context-directive string. */
+		union {null, array<string>} SnippetsFiltersContextDirectives = null;
+		
+		/** SnippetsFiltersContextDirectivesCount contains the count of the context-directive strings, where each count
+corresponds to the string from SnippetsFiltersContextDirectives at the same index. Both lists are ordered
+first by count, then by lexicographical order on the context-directive string. */
+		union {null, array<long>} SnippetsFiltersContextDirectivesCount = null;
+		
 		/** GatewayCount is the number of relevant Gateways. */
 		long? GatewayCount = null;
 		
@@ -90,15 +99,6 @@ attached at the Gateway level. */
 		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
-		
-		/** SnippetsFiltersContextDirectives contains the context-directive strings of all applied SnippetsFilters.
-Both lists are ordered first by count, then by lexicographical order on the context-directive string. */
-		union {null, array<string>} SnippetsFiltersContextDirectives = null;
-		
-		/** SnippetsFiltersContextDirectivesCount contains the count of the context-directive strings, where each count
-corresponds to the string from SnippetsFiltersContextDirectives at the same index. Both lists are ordered
-first by count, then by lexicographical order on the context-directive string. */
-		union {null, array<long>} SnippetsFiltersContextDirectivesCount = null;
 		
 	}
 }
