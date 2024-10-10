@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -168,11 +169,13 @@ var _ = Describe("Collector", Ordered, func() {
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 				ClusterNodeCount:    1,
 			},
-			NGFResourceCounts: telemetry.NGFResourceCounts{},
-			NGFReplicaCount:   1,
-			ImageSource:       "local",
-			FlagNames:         flags.Names,
-			FlagValues:        flags.Values,
+			NGFResourceCounts:                     telemetry.NGFResourceCounts{},
+			NGFReplicaCount:                       1,
+			ImageSource:                           "local",
+			FlagNames:                             flags.Names,
+			FlagValues:                            flags.Values,
+			SnippetsFiltersContextDirectives:      []string{},
+			SnippetsFiltersContextDirectivesCount: []int64{},
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -329,8 +332,26 @@ var _ = Describe("Collector", Ordered, func() {
 					},
 					NginxProxy: &graph.NginxProxy{},
 					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
-						{Namespace: "test", Name: "sf-1"}: {},
-						{Namespace: "test", Name: "sf-2"}: {},
+						{Namespace: "test", Name: "sf-1"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								ngfAPI.NginxContextMain:               "worker_priority 0;",
+								ngfAPI.NginxContextHTTP:               "aio on;",
+								ngfAPI.NginxContextHTTPServer:         "auth_delay 10s;",
+								ngfAPI.NginxContextHTTPServerLocation: "keepalive_time 10s;",
+							},
+						},
+						{Namespace: "test", Name: "sf-2"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								// String representation of multi-line yaml value using > character
+								ngfAPI.NginxContextMain: "worker_priority 1; worker_rlimit_nofile 50;\n",
+								// String representation of NGINX values on same line
+								ngfAPI.NginxContextHTTP: "aio off; client_body_timeout 70s;",
+								// String representation of multi-line yaml using no special character besides a new line
+								ngfAPI.NginxContextHTTPServer: "auth_delay 100s; ignore_invalid_headers off;",
+								// String representation of multi-line yaml value using | character
+								ngfAPI.NginxContextHTTPServerLocation: "keepalive_time 100s;\nallow 10.0.0.0/8;\n",
+							},
+						},
 						{Namespace: "test", Name: "sf-3"}: {},
 					},
 				}
@@ -389,10 +410,38 @@ var _ = Describe("Collector", Ordered, func() {
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
-				data, err := dataCollector.Collect(ctx)
+				expData.SnippetsFiltersContextDirectives = []string{
+					"http-aio",
+					"location-keepalive_time",
+					"main-worker_priority",
+					"server-auth_delay",
+					"http-client_body_timeout",
+					"location-allow",
+					"main-worker_rlimit_nofile",
+					"server-ignore_invalid_headers",
+				}
+				expData.SnippetsFiltersContextDirectivesCount = []int64{
+					2,
+					2,
+					2,
+					2,
+					1,
+					1,
+					1,
+					1,
+				}
 
+				data, err := dataCollector.Collect(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(expData).To(Equal(data))
+
+				Expect(data.Data).To(Equal(expData.Data))
+				Expect(data.NGFResourceCounts).To(Equal(expData.NGFResourceCounts))
+				Expect(data.ImageSource).To(Equal(expData.ImageSource))
+				Expect(data.FlagNames).To(Equal(expData.FlagNames))
+				Expect(data.FlagValues).To(Equal(expData.FlagValues))
+				Expect(data.NGFReplicaCount).To(Equal(expData.NGFReplicaCount))
+				Expect(data.SnippetsFiltersContextDirectives).To(Equal(expData.SnippetsFiltersContextDirectives))
+				Expect(data.SnippetsFiltersContextDirectivesCount).To(Equal(expData.SnippetsFiltersContextDirectivesCount))
 			})
 		})
 	})

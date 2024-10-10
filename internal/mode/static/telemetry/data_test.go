@@ -40,7 +40,9 @@ func TestDataAttributes(t *testing.T) {
 			NginxProxyCount:                          12,
 			SnippetsFilterCount:                      13,
 		},
-		NGFReplicaCount: 3,
+		NGFReplicaCount:                       3,
+		SnippetsFiltersContextDirectives:      []string{"main-three-count", "http-two-count", "server-one-count"},
+		SnippetsFiltersContextDirectivesCount: []int64{3, 2, 1},
 	}
 
 	expected := []attribute.KeyValue{
@@ -71,6 +73,11 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("NginxProxyCount", 12),
 		attribute.Int64("SnippetsFilterCount", 13),
 		attribute.Int64("NGFReplicaCount", 3),
+		attribute.StringSlice(
+			"SnippetsFiltersContextDirectives",
+			[]string{"main-three-count", "http-two-count", "server-one-count"},
+		),
+		attribute.IntSlice("SnippetsFiltersContextDirectivesCount", []int{3, 2, 1}),
 	}
 
 	result := data.Attributes()
@@ -111,6 +118,8 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("NginxProxyCount", 0),
 		attribute.Int64("SnippetsFilterCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
+		attribute.StringSlice("SnippetsFiltersContextDirectives", nil),
+		attribute.IntSlice("SnippetsFiltersContextDirectivesCount", nil),
 	}
 
 	result := data.Attributes()
