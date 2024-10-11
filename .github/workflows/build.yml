@@ -27,7 +27,7 @@ jobs:
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       packages: write # for docker/build-push-action to push to GHCR
       id-token: write # for docker/login to login to NGINX registry
-    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'kic-plus' || 'ubuntu-22.04' }}
+    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'kic-plus' || 'ubuntu-24.04' }}
     services:
       registry:
         image: registry:2
@@ -101,6 +101,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
+          context: ${{ inputs.tag != '' && 'git' || 'workflow' }}
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric,enable=${{ inputs.image == 'ngf' && github.event_name != 'pull_request' }}
             name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx,enable=${{ inputs.image == 'nginx' && github.event_name != 'pull_request' }}
