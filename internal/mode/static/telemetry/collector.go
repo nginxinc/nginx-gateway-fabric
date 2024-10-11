@@ -50,13 +50,15 @@ type Data struct {
 	// at the same index.
 	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
 	FlagValues []string
-	// SnippetsFiltersContextDirectives contains the context-directive strings of all applied SnippetsFilters.
-	// Both lists are ordered first by count, then by lexicographical order on the context-directive string.
-	SnippetsFiltersContextDirectives []string
-	// SnippetsFiltersContextDirectivesCount contains the count of the context-directive strings, where each count
-	// corresponds to the string from SnippetsFiltersContextDirectives at the same index. Both lists are ordered
-	// first by count, then by lexicographical order on the context-directive string.
-	SnippetsFiltersContextDirectivesCount []int64
+	// SnippetsFiltersDirectiveContexts contains the context-directive strings of all applied SnippetsFilters.
+	// Both lists are ordered first by count, then by lexicographical order of the context string,
+	// then lastly by directive string.
+	SnippetsFiltersDirectiveContexts []string
+	// SnippetsFiltersDirectiveContextsCount contains the count of the directive-context strings, where each count
+	// corresponds to the string from SnippetsFiltersDirectiveContexts at the same index.
+	// Both lists are ordered first by count, then by lexicographical order of the context string,
+	// then lastly by directive string.
+	SnippetsFiltersDirectiveContextsCount []int64
 	NGFResourceCounts                     // embedding is required by the generator.
 	// NGFReplicaCount is the number of replicas of the NGF Pod.
 	NGFReplicaCount int64
@@ -156,8 +158,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
-	snippetsFiltersContextDirectives,
-		snippetsFiltersContextDirectivesCount,
+	snippetsFiltersDirectiveContexts,
+		snippetsFiltersDirectiveContextsCount,
 		err := collectSnippetsFilterSnippetsInfo(c.cfg.GraphGetter)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect snippet filter directive info: %w", err)
@@ -180,8 +182,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		FlagValues:        c.cfg.Flags.Values,
 		NGFReplicaCount:   int64(replicaCount),
 		// maybe SnippetValues?
-		SnippetsFiltersContextDirectives:      snippetsFiltersContextDirectives,
-		SnippetsFiltersContextDirectivesCount: snippetsFiltersContextDirectivesCount,
+		SnippetsFiltersDirectiveContexts:      snippetsFiltersDirectiveContexts,
+		SnippetsFiltersDirectiveContextsCount: snippetsFiltersDirectiveContextsCount,
 	}
 
 	return data, nil
@@ -403,7 +405,7 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	return clusterInfo, nil
 }
 
-type sfContextDirective struct {
+type sfDirectiveContext struct {
 	context   string
 	directive string
 }
@@ -414,7 +416,7 @@ func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int
 		return nil, nil, errors.New("latest graph cannot be nil")
 	}
 
-	contextDirectiveMap := make(map[sfContextDirective]int)
+	directiveContextMap := make(map[sfDirectiveContext]int)
 
 	for _, sf := range g.SnippetsFilters {
 		if sf == nil {
@@ -439,18 +441,18 @@ func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int
 
 			directives := parseSnippetValueIntoDirectives(snippetValue)
 			for _, directive := range directives {
-				contextDirective := sfContextDirective{
+				directiveContext := sfDirectiveContext{
 					context:   parsedContext,
 					directive: directive,
 				}
-				contextDirectiveMap[contextDirective]++
+				directiveContextMap[directiveContext]++
 			}
 		}
 	}
 
-	contextDirectiveList, countList := parseContextDirectiveMapIntoLists(contextDirectiveMap)
+	directiveContextList, countList := parseDirectiveContextMapIntoLists(directiveContextMap)
 
-	return contextDirectiveList, countList, nil
+	return directiveContextList, countList, nil
 }
 
 func parseSnippetValueIntoDirectives(snippetValue string) []string {
@@ -471,37 +473,41 @@ func parseSnippetValueIntoDirectives(snippetValue string) []string {
 	return directives
 }
 
-// parseContextDirectiveMapIntoLists returns two same-length lists where the elements at each corresponding index
+// parseDirectiveContextMapIntoLists returns two same-length lists where the elements at each corresponding index
 // are paired together.
-// The first list contains strings which are the NGINX context and directive of a Snippet joined with a hyphen.
-// The second list contains ints which are the count of total same context-directive values of the first list.
-// Both lists are ordered based off of count first, then lexicographically on the context-directive string.
-func parseContextDirectiveMapIntoLists(contextDirectiveMap map[sfContextDirective]int) ([]string, []int64) {
-	type sfContextDirectiveCount struct {
-		contextDirective string
-		count            int64
+// The first list contains strings which are the NGINX directive and context of a Snippet joined with a hyphen.
+// The second list contains ints which are the count of total same directive-context values of the first list.
+// Both lists are ordered first by count, then by lexicographical order of the context string,
+// then lastly by directive string.
+func parseDirectiveContextMapIntoLists(directiveContextMap map[sfDirectiveContext]int) ([]string, []int64) {
+	type sfDirectiveContextCount struct {
+		directive, context string
+		count              int64
 	}
 
-	kvPairs := make([]sfContextDirectiveCount, 0, len(contextDirectiveMap))
+	kvPairs := make([]sfDirectiveContextCount, 0, len(directiveContextMap))
 
-	for k, v := range contextDirectiveMap {
-		kvPairs = append(kvPairs, sfContextDirectiveCount{k.context + "-" + k.directive, int64(v)})
+	for k, v := range directiveContextMap {
+		kvPairs = append(kvPairs, sfDirectiveContextCount{k.directive, k.context, int64(v)})
 	}
 
 	sort.Slice(kvPairs, func(i, j int) bool {
 		if kvPairs[i].count == kvPairs[j].count {
-			return kvPairs[i].contextDirective < kvPairs[j].contextDirective
+			if kvPairs[i].context == kvPairs[j].context {
+				return kvPairs[i].directive < kvPairs[j].directive
+			}
+			return kvPairs[i].context < kvPairs[j].context
 		}
 		return kvPairs[i].count > kvPairs[j].count
 	})
 
-	contextDirectiveList := make([]string, len(kvPairs))
+	directiveContextList := make([]string, len(kvPairs))
 	countList := make([]int64, len(kvPairs))
 
 	for i, pair := range kvPairs {
-		contextDirectiveList[i] = pair.contextDirective
+		directiveContextList[i] = pair.directive + "-" + pair.context
 		countList[i] = pair.count
 	}
 
-	return contextDirectiveList, countList
+	return directiveContextList, countList
 }

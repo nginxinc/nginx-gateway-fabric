@@ -17,8 +17,8 @@ func (d *Data) Attributes() []attribute.KeyValue {
 	attrs = append(attrs, d.Data.Attributes()...)
 	attrs = append(attrs, attribute.StringSlice("FlagNames", d.FlagNames))
 	attrs = append(attrs, attribute.StringSlice("FlagValues", d.FlagValues))
-	attrs = append(attrs, attribute.StringSlice("SnippetsFiltersContextDirectives", d.SnippetsFiltersContextDirectives))
-	attrs = append(attrs, attribute.Int64Slice("SnippetsFiltersContextDirectivesCount", d.SnippetsFiltersContextDirectivesCount))
+	attrs = append(attrs, attribute.StringSlice("SnippetsFiltersDirectiveContexts", d.SnippetsFiltersDirectiveContexts))
+	attrs = append(attrs, attribute.Int64Slice("SnippetsFiltersDirectiveContextsCount", d.SnippetsFiltersDirectiveContextsCount))
 	attrs = append(attrs, d.NGFResourceCounts.Attributes()...)
 	attrs = append(attrs, attribute.Int64("NGFReplicaCount", d.NGFReplicaCount))
 

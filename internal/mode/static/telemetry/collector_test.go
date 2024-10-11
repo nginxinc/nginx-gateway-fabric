@@ -174,8 +174,8 @@ var _ = Describe("Collector", Ordered, func() {
 			ImageSource:                           "local",
 			FlagNames:                             flags.Names,
 			FlagValues:                            flags.Values,
-			SnippetsFiltersContextDirectives:      []string{},
-			SnippetsFiltersContextDirectivesCount: []int64{},
+			SnippetsFiltersDirectiveContexts:      []string{},
+			SnippetsFiltersDirectiveContextsCount: []int64{},
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -354,6 +354,8 @@ var _ = Describe("Collector", Ordered, func() {
 						},
 						{Namespace: "test", Name: "sf-3"}: {
 							Snippets: map[ngfAPI.NginxContext]string{
+								// Tests lexicographical ordering when count and context is the same
+								ngfAPI.NginxContextMain:       "worker_rlimit_core 1m;",
 								ngfAPI.NginxContextHTTPServer: "auth_delay 10s;",
 							},
 						},
@@ -414,21 +416,23 @@ var _ = Describe("Collector", Ordered, func() {
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
-				expData.SnippetsFiltersContextDirectives = []string{
-					"server-auth_delay",
-					"http-aio",
-					"location-keepalive_time",
-					"main-worker_priority",
-					"http-client_body_timeout",
-					"location-allow",
-					"main-worker_rlimit_nofile",
-					"server-ignore_invalid_headers",
+				expData.SnippetsFiltersDirectiveContexts = []string{
+					"auth_delay-server",
+					"aio-http",
+					"keepalive_time-location",
+					"worker_priority-main",
+					"client_body_timeout-http",
+					"allow-location",
+					"worker_rlimit_core-main",
+					"worker_rlimit_nofile-main",
+					"ignore_invalid_headers-server",
 				}
-				expData.SnippetsFiltersContextDirectivesCount = []int64{
+				expData.SnippetsFiltersDirectiveContextsCount = []int64{
 					3,
 					2,
 					2,
 					2,
+					1,
 					1,
 					1,
 					1,
