@@ -3,6 +3,7 @@ name: Update Docker Images
 on:
   schedule:
     - cron: "0 2 * * *" # run every day at 02:00 UTC
+  workflow_dispatch:  # yamllint disable-line rule:empty-values
 
 defaults:
   run:
