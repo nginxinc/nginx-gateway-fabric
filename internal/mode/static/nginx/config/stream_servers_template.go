@@ -13,7 +13,7 @@ server {
     {{- range $address := $s.RewriteClientIP.RealIPFrom }}
     set_real_ip_from {{ $address }};
     {{- end}}
-	{{- if $.Plus }}
+	{{- if and $.Plus $s.StatusZone }}
     status_zone {{ $s.StatusZone }};
     {{- end }}
 
