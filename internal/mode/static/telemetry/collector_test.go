@@ -352,7 +352,11 @@ var _ = Describe("Collector", Ordered, func() {
 								ngfAPI.NginxContextHTTPServerLocation: "keepalive_time 100s;\nallow 10.0.0.0/8;\n",
 							},
 						},
-						{Namespace: "test", Name: "sf-3"}: {},
+						{Namespace: "test", Name: "sf-3"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								ngfAPI.NginxContextHTTPServer: "auth_delay 10s;",
+							},
+						},
 					},
 				}
 
@@ -411,17 +415,17 @@ var _ = Describe("Collector", Ordered, func() {
 				expData.ClusterPlatform = "kind"
 
 				expData.SnippetsFiltersContextDirectives = []string{
+					"server-auth_delay",
 					"http-aio",
 					"location-keepalive_time",
 					"main-worker_priority",
-					"server-auth_delay",
 					"http-client_body_timeout",
 					"location-allow",
 					"main-worker_rlimit_nofile",
 					"server-ignore_invalid_headers",
 				}
 				expData.SnippetsFiltersContextDirectivesCount = []int64{
-					2,
+					3,
 					2,
 					2,
 					2,
@@ -434,14 +438,7 @@ var _ = Describe("Collector", Ordered, func() {
 				data, err := dataCollector.Collect(ctx)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(data.Data).To(Equal(expData.Data))
-				Expect(data.NGFResourceCounts).To(Equal(expData.NGFResourceCounts))
-				Expect(data.ImageSource).To(Equal(expData.ImageSource))
-				Expect(data.FlagNames).To(Equal(expData.FlagNames))
-				Expect(data.FlagValues).To(Equal(expData.FlagValues))
-				Expect(data.NGFReplicaCount).To(Equal(expData.NGFReplicaCount))
-				Expect(data.SnippetsFiltersContextDirectives).To(Equal(expData.SnippetsFiltersContextDirectives))
-				Expect(data.SnippetsFiltersContextDirectivesCount).To(Equal(expData.SnippetsFiltersContextDirectivesCount))
+				Expect(data).To(Equal(expData))
 			})
 		})
 	})
