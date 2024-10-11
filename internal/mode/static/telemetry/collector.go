@@ -133,12 +133,17 @@ func NewDataCollectorImpl(
 
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
+	g := c.cfg.GraphGetter.GetLatestGraph()
+	if g == nil {
+		return Data{}, errors.New("failed to collect telemetry data: latest graph cannot be nil")
+	}
+
 	clusterInfo, err := collectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
+	graphResourceCount, err := collectGraphResourceCount(g, c.cfg.ConfigurationGetter)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
@@ -158,12 +163,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
-	snippetsFiltersDirectiveContexts,
-		snippetsFiltersDirectiveContextsCount,
-		err := collectSnippetsFilterSnippetsInfo(c.cfg.GraphGetter)
-	if err != nil {
-		return Data{}, fmt.Errorf("failed to collect snippet filter directive info: %w", err)
-	}
+	snippetsFiltersDirectiveContexts, snippetsFiltersDirectiveContextsCount := collectSnippetsFilterSnippetsInfo(g)
 
 	data := Data{
 		Data: tel.Data{
@@ -190,16 +190,12 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 }
 
 func collectGraphResourceCount(
-	graphGetter GraphGetter,
+	g *graph.Graph,
 	configurationGetter ConfigurationGetter,
 ) (NGFResourceCounts, error) {
 	ngfResourceCounts := NGFResourceCounts{}
-	g := graphGetter.GetLatestGraph()
 	cfg := configurationGetter.GetLatestConfiguration()
 
-	if g == nil {
-		return ngfResourceCounts, errors.New("latest graph cannot be nil")
-	}
 	if cfg == nil {
 		return ngfResourceCounts, errors.New("latest configuration cannot be nil")
 	}
@@ -406,16 +402,11 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 }
 
 type sfDirectiveContext struct {
-	context   string
 	directive string
+	context   string
 }
 
-func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int64, error) {
-	g := graphGetter.GetLatestGraph()
-	if g == nil {
-		return nil, nil, errors.New("latest graph cannot be nil")
-	}
-
+func collectSnippetsFilterSnippetsInfo(g *graph.Graph) ([]string, []int64) {
 	directiveContextMap := make(map[sfDirectiveContext]int)
 
 	for _, sf := range g.SnippetsFilters {
@@ -442,17 +433,15 @@ func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int
 			directives := parseSnippetValueIntoDirectives(snippetValue)
 			for _, directive := range directives {
 				directiveContext := sfDirectiveContext{
-					context:   parsedContext,
 					directive: directive,
+					context:   parsedContext,
 				}
 				directiveContextMap[directiveContext]++
 			}
 		}
 	}
 
-	directiveContextList, countList := parseDirectiveContextMapIntoLists(directiveContextMap)
-
-	return directiveContextList, countList, nil
+	return parseDirectiveContextMapIntoLists(directiveContextMap)
 }
 
 func parseSnippetValueIntoDirectives(snippetValue string) []string {

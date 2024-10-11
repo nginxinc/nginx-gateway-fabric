@@ -722,7 +722,7 @@ var _ = Describe("Collector", Ordered, func() {
 					fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
 				})
 				It("should error on nil latest graph", func(ctx SpecContext) {
-					expectedError := errors.New("latest graph cannot be nil")
+					expectedError := errors.New("failed to collect telemetry data: latest graph cannot be nil")
 					fakeGraphGetter.GetLatestGraphReturns(nil)
 
 					_, err := dataCollector.Collect(ctx)
