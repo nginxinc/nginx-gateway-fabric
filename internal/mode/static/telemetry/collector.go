@@ -50,7 +50,7 @@ type Data struct {
 	// at the same index.
 	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
 	FlagValues []string
-	// SnippetsFiltersDirectiveContexts contains the context-directive strings of all applied SnippetsFilters.
+	// SnippetsFiltersDirectiveContexts contains the directive-context strings of all applied SnippetsFilters.
 	// Both lists are ordered first by count, then by lexicographical order of the context string,
 	// then lastly by directive string.
 	SnippetsFiltersDirectiveContexts []string
