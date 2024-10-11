@@ -416,16 +416,14 @@ func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int
 
 	contextDirectiveMap := make(map[sfContextDirective]int)
 
-	for name := range g.SnippetsFilters {
-		sf := g.SnippetsFilters[name]
+	for _, sf := range g.SnippetsFilters {
 		if sf == nil {
 			continue
 		}
 
-		for nginxContext := range sf.Snippets {
-			snippetValue := sf.Snippets[nginxContext]
-
+		for nginxContext, snippetValue := range sf.Snippets {
 			var parsedContext string
+
 			switch nginxContext {
 			case ngfAPI.NginxContextMain:
 				parsedContext = "main"
@@ -440,13 +438,11 @@ func collectSnippetsFilterSnippetsInfo(graphGetter GraphGetter) ([]string, []int
 			}
 
 			directives := parseSnippetValueIntoDirectives(snippetValue)
-
 			for _, directive := range directives {
 				contextDirective := sfContextDirective{
 					context:   parsedContext,
 					directive: directive,
 				}
-
 				contextDirectiveMap[contextDirective]++
 			}
 		}
