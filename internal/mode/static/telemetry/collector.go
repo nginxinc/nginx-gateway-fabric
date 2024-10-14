@@ -50,16 +50,16 @@ type Data struct {
 	// at the same index.
 	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
 	FlagValues []string
-	// SnippetsFiltersDirectiveContexts contains the directive-context strings of all applied SnippetsFilters.
+	// SnippetsFiltersDirectives contains the directive-context strings of all applied SnippetsFilters.
 	// Both lists are ordered first by count, then by lexicographical order of the context string,
 	// then lastly by directive string.
-	SnippetsFiltersDirectiveContexts []string
-	// SnippetsFiltersDirectiveContextsCount contains the count of the directive-context strings, where each count
-	// corresponds to the string from SnippetsFiltersDirectiveContexts at the same index.
+	SnippetsFiltersDirectives []string
+	// SnippetsFiltersDirectivesCount contains the count of the directive-context strings, where each count
+	// corresponds to the string from SnippetsFiltersDirectives at the same index.
 	// Both lists are ordered first by count, then by lexicographical order of the context string,
 	// then lastly by directive string.
-	SnippetsFiltersDirectiveContextsCount []int64
-	NGFResourceCounts                     // embedding is required by the generator.
+	SnippetsFiltersDirectivesCount []int64
+	NGFResourceCounts              // embedding is required by the generator.
 	// NGFReplicaCount is the number of replicas of the NGF Pod.
 	NGFReplicaCount int64
 }
@@ -163,7 +163,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
-	snippetsFiltersDirectiveContexts, snippetsFiltersDirectiveContextsCount := collectSnippetsFilterSnippetsInfo(g)
+	snippetsFiltersDirectives, snippetsFiltersDirectivesCount := collectSnippetsFilterDirectives(g)
 
 	data := Data{
 		Data: tel.Data{
@@ -176,14 +176,13 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			InstallationID:      deploymentID,
 			ClusterNodeCount:    int64(clusterInfo.NodeCount),
 		},
-		NGFResourceCounts: graphResourceCount,
-		ImageSource:       c.cfg.ImageSource,
-		FlagNames:         c.cfg.Flags.Names,
-		FlagValues:        c.cfg.Flags.Values,
-		NGFReplicaCount:   int64(replicaCount),
-		// maybe SnippetValues?
-		SnippetsFiltersDirectiveContexts:      snippetsFiltersDirectiveContexts,
-		SnippetsFiltersDirectiveContextsCount: snippetsFiltersDirectiveContextsCount,
+		NGFResourceCounts:              graphResourceCount,
+		ImageSource:                    c.cfg.ImageSource,
+		FlagNames:                      c.cfg.Flags.Names,
+		FlagValues:                     c.cfg.Flags.Values,
+		NGFReplicaCount:                int64(replicaCount),
+		SnippetsFiltersDirectives:      snippetsFiltersDirectives,
+		SnippetsFiltersDirectivesCount: snippetsFiltersDirectivesCount,
 	}
 
 	return data, nil
@@ -406,7 +405,7 @@ type sfDirectiveContext struct {
 	context   string
 }
 
-func collectSnippetsFilterSnippetsInfo(g *graph.Graph) ([]string, []int64) {
+func collectSnippetsFilterDirectives(g *graph.Graph) ([]string, []int64) {
 	directiveContextMap := make(map[sfDirectiveContext]int)
 
 	for _, sf := range g.SnippetsFilters {

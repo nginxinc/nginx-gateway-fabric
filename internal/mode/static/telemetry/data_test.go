@@ -40,9 +40,9 @@ func TestDataAttributes(t *testing.T) {
 			NginxProxyCount:                          12,
 			SnippetsFilterCount:                      13,
 		},
-		NGFReplicaCount:                       3,
-		SnippetsFiltersDirectiveContexts:      []string{"main-three-count", "http-two-count", "server-one-count"},
-		SnippetsFiltersDirectiveContextsCount: []int64{3, 2, 1},
+		NGFReplicaCount:                3,
+		SnippetsFiltersDirectives:      []string{"main-three-count", "http-two-count", "server-one-count"},
+		SnippetsFiltersDirectivesCount: []int64{3, 2, 1},
 	}
 
 	expected := []attribute.KeyValue{
@@ -59,10 +59,10 @@ func TestDataAttributes(t *testing.T) {
 		attribute.StringSlice("FlagNames", []string{"test-flag"}),
 		attribute.StringSlice("FlagValues", []string{"test-value"}),
 		attribute.StringSlice(
-			"SnippetsFiltersDirectiveContexts",
+			"SnippetsFiltersDirectives",
 			[]string{"main-three-count", "http-two-count", "server-one-count"},
 		),
-		attribute.IntSlice("SnippetsFiltersDirectiveContextsCount", []int{3, 2, 1}),
+		attribute.IntSlice("SnippetsFiltersDirectivesCount", []int{3, 2, 1}),
 		attribute.Int64("GatewayCount", 1),
 		attribute.Int64("GatewayClassCount", 2),
 		attribute.Int64("HTTPRouteCount", 3),
@@ -103,8 +103,8 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("ClusterNodeCount", 0),
 		attribute.StringSlice("FlagNames", nil),
 		attribute.StringSlice("FlagValues", nil),
-		attribute.StringSlice("SnippetsFiltersDirectiveContexts", nil),
-		attribute.IntSlice("SnippetsFiltersDirectiveContextsCount", nil),
+		attribute.StringSlice("SnippetsFiltersDirectives", nil),
+		attribute.IntSlice("SnippetsFiltersDirectivesCount", nil),
 		attribute.Int64("GatewayCount", 0),
 		attribute.Int64("GatewayClassCount", 0),
 		attribute.Int64("HTTPRouteCount", 0),

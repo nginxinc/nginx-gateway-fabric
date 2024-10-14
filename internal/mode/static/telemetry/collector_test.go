@@ -169,13 +169,13 @@ var _ = Describe("Collector", Ordered, func() {
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 				ClusterNodeCount:    1,
 			},
-			NGFResourceCounts:                     telemetry.NGFResourceCounts{},
-			NGFReplicaCount:                       1,
-			ImageSource:                           "local",
-			FlagNames:                             flags.Names,
-			FlagValues:                            flags.Values,
-			SnippetsFiltersDirectiveContexts:      []string{},
-			SnippetsFiltersDirectiveContextsCount: []int64{},
+			NGFResourceCounts:              telemetry.NGFResourceCounts{},
+			NGFReplicaCount:                1,
+			ImageSource:                    "local",
+			FlagNames:                      flags.Names,
+			FlagValues:                     flags.Values,
+			SnippetsFiltersDirectives:      []string{},
+			SnippetsFiltersDirectivesCount: []int64{},
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -416,7 +416,7 @@ var _ = Describe("Collector", Ordered, func() {
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
-				expData.SnippetsFiltersDirectiveContexts = []string{
+				expData.SnippetsFiltersDirectives = []string{
 					"auth_delay-server",
 					"aio-http",
 					"keepalive_time-location",
@@ -427,7 +427,7 @@ var _ = Describe("Collector", Ordered, func() {
 					"worker_rlimit_nofile-main",
 					"ignore_invalid_headers-server",
 				}
-				expData.SnippetsFiltersDirectiveContextsCount = []int64{
+				expData.SnippetsFiltersDirectivesCount = []int64{
 					3,
 					2,
 					2,
