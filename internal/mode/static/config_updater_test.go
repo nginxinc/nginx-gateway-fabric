@@ -34,7 +34,6 @@ func TestUpdateControlPlane(t *testing.T) {
 	}
 
 	logger := zap.New()
-	fakeEventRecorder := record.NewFakeRecorder(1)
 	nsname := types.NamespacedName{Namespace: "test", Name: "test"}
 
 	tests := []struct {
@@ -81,6 +80,8 @@ func TestUpdateControlPlane(t *testing.T) {
 					return test.setLevelErr
 				},
 			}
+
+			fakeEventRecorder := record.NewFakeRecorder(1)
 
 			err := updateControlPlane(test.nginxGateway, logger, fakeEventRecorder, nsname, fakeLogSetter)
 
