@@ -918,4 +918,44 @@ var _ = Describe("Collector", Ordered, func() {
 			})
 		})
 	})
+
+	Describe("snippetsFilters collector", func() {
+		When("collecting snippetsFilters data", func() {
+			It("collects correct data for nil snippetsFilters", func(ctx SpecContext) {
+				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: nil,
+					},
+				})
+
+				expData.SnippetsFilterCount = 1
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).To(Equal(expData))
+			})
+
+			It("collects correct data when snippetsFilters context is not supported", func(ctx SpecContext) {
+				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								"unsupportedContext": "worker_priority 0;",
+							},
+						},
+					},
+				})
+
+				expData.SnippetsFilterCount = 1
+				expData.SnippetsFiltersDirectives = []string{"worker_priority-unknown"}
+				expData.SnippetsFiltersDirectivesCount = []int64{1}
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).To(Equal(expData))
+			})
+		})
+	})
 })
