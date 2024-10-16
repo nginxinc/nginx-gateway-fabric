@@ -59,7 +59,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		httpsListenerCount      = 64
 		httpRouteCount          = 1000
 		ossUpstreamServerCount  = 648
-		plusUpstreamServerCount = 556
+		plusUpstreamServerCount = 545
 	)
 
 	BeforeAll(func() {
@@ -441,7 +441,7 @@ The logs are attached only if there are errors.
 
 			Eventually(
 				framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
-			).WithTimeout(30 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+			).WithTimeout(5 * timeoutConfig.RequestTimeout).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 			ttr := time.Since(startCheck)
 
@@ -475,7 +475,7 @@ The logs are attached only if there are errors.
 
 		Eventually(
 			framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
-		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+		).WithTimeout(5 * timeoutConfig.RequestTimeout).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 		Expect(
 			resourceManager.ScaleDeployment(namespace, "backend", upstreamServerCount),
@@ -488,7 +488,7 @@ The logs are attached only if there are errors.
 
 		Eventually(
 			framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
-		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+		).WithTimeout(5 * timeoutConfig.RequestTimeout).WithPolling(100 * time.Millisecond).Should(Succeed())
 	}
 
 	setNamespace := func(objects framework.ScaleObjects) {
