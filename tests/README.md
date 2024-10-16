@@ -276,7 +276,7 @@ required env vars. `GKE_SVC_ACCOUNT` needs to be the name of a service account t
 
 In order to run the tests in GCP, you need a few things:
 
-- GKE router to allow egress traffic (used by upgrade tests for pulling images from Github)
+- GKE router to allow egress traffic (used by upgrade tests for pulling images from Github, and scale/reconfig tests for installing prometheus)
   - this assumes that your GKE cluster is using private nodes. If using public nodes, you don't need this.
 - GCP VM and firewall rule to send ingress traffic to GKE
 
@@ -284,6 +284,12 @@ To just set up the VM with no router (this will not run the tests):
 
 ```makefile
 make create-and-setup-vm
+```
+
+To set up just the router:
+
+```makefile
+make create-gke-router
 ```
 
 Otherwise, you can set up the VM, router, and run the tests with a single command. See the options below.
