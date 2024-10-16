@@ -232,7 +232,7 @@ func validateGRPCMatch(
 
 	for j, h := range match.Headers {
 		headerPath := matchPath.Child("headers").Index(j)
-		allErrs = append(allErrs, validateHeaderMatch(validator, h.Type, string(h.Name), h.Value, headerPath)...)
+		allErrs = append(allErrs, validateGRPCHeaderMatch(validator, h.Type, string(h.Name), h.Value, headerPath)...)
 	}
 
 	return allErrs
@@ -275,5 +275,29 @@ func validateGRPCMethodMatch(
 			}
 		}
 	}
+	return allErrs
+}
+
+func validateGRPCHeaderMatch(
+	validator validation.HTTPFieldsValidator,
+	headerType *v1.GRPCHeaderMatchType,
+	headerName, headerValue string,
+	headerPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if headerType == nil {
+		allErrs = append(allErrs, field.Required(headerPath.Child("type"), "cannot be empty"))
+	} else if *headerType != v1.GRPCHeaderMatchExact {
+		valErr := field.NotSupported(
+			headerPath.Child("type"),
+			*headerType,
+			[]string{string(v1.GRPCHeaderMatchExact)},
+		)
+		allErrs = append(allErrs, valErr)
+	}
+
+	allErrs = append(allErrs, validateHeaderMatchNameAndValue(validator, headerName, headerValue, headerPath)...)
+
 	return allErrs
 }
