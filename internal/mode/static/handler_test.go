@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/v2/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
