@@ -868,6 +868,17 @@ func validateHeaderMatch(
 		allErrs = append(allErrs, valErr)
 	}
 
+	allErrs = append(allErrs, validateHeaderMatchNameAndValue(validator, headerName, headerValue, headerPath)...)
+
+	return allErrs
+}
+
+func validateHeaderMatchNameAndValue(
+	validator validation.HTTPFieldsValidator,
+	headerName, headerValue string,
+	headerPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
 	if err := validator.ValidateHeaderNameInMatch(headerName); err != nil {
 		valErr := field.Invalid(headerPath.Child("name"), headerName, err.Error())
 		allErrs = append(allErrs, valErr)
@@ -877,7 +888,6 @@ func validateHeaderMatch(
 		valErr := field.Invalid(headerPath.Child("value"), headerValue, err.Error())
 		allErrs = append(allErrs, valErr)
 	}
-
 	return allErrs
 }
 
