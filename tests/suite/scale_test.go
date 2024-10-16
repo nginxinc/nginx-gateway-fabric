@@ -441,7 +441,7 @@ The logs are attached only if there are errors.
 
 			Eventually(
 				framework.CreateResponseChecker(url, address, timeoutConfig.RequestTimeout),
-			).WithTimeout(30 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+			).WithTimeout(5 * timeoutConfig.RequestTimeout).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 			ttr := time.Since(startCheck)
 
