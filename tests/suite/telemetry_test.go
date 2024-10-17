@@ -72,6 +72,8 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 				fmt.Sprintf("ClusterNodeCount: Int(%d)", info.NodeCount),
 				"FlagNames: Slice",
 				"FlagValues: Slice",
+				"SnippetsFiltersDirectives: Slice",
+				"SnippetsFiltersDirectivesCount: Slice",
 				"GatewayCount: Int(0)",
 				"GatewayClassCount: Int(1)",
 				"HTTPRouteCount: Int(0)",
@@ -85,6 +87,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 				"RouteAttachedClientSettingsPolicyCount: Int(0)",
 				"ObservabilityPolicyCount: Int(0)",
 				"NginxProxyCount: Int(0)",
+				"SnippetsFilterCount: Int(0)",
 				"NGFReplicaCount: Int(1)",
 			},
 		)

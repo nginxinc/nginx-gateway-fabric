@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -168,11 +169,13 @@ var _ = Describe("Collector", Ordered, func() {
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 				ClusterNodeCount:    1,
 			},
-			NGFResourceCounts: telemetry.NGFResourceCounts{},
-			NGFReplicaCount:   1,
-			ImageSource:       "local",
-			FlagNames:         flags.Names,
-			FlagValues:        flags.Values,
+			NGFResourceCounts:              telemetry.NGFResourceCounts{},
+			NGFReplicaCount:                1,
+			ImageSource:                    "local",
+			FlagNames:                      flags.Names,
+			FlagValues:                     flags.Values,
+			SnippetsFiltersDirectives:      []string{},
+			SnippetsFiltersDirectivesCount: []int64{},
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -328,6 +331,35 @@ var _ = Describe("Collector", Ordered, func() {
 						}: {},
 					},
 					NginxProxy: &graph.NginxProxy{},
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								ngfAPI.NginxContextMain:               "worker_priority 0;",
+								ngfAPI.NginxContextHTTP:               "aio on;",
+								ngfAPI.NginxContextHTTPServer:         "auth_delay 10s;",
+								ngfAPI.NginxContextHTTPServerLocation: "keepalive_time 10s;",
+							},
+						},
+						{Namespace: "test", Name: "sf-2"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								// String representation of multi-line yaml value using > character
+								ngfAPI.NginxContextMain: "worker_priority 1; worker_rlimit_nofile 50;\n",
+								// String representation of NGINX values on same line
+								ngfAPI.NginxContextHTTP: "aio off; client_body_timeout 70s;",
+								// String representation of multi-line yaml using no special character besides a new line
+								ngfAPI.NginxContextHTTPServer: "auth_delay 100s; ignore_invalid_headers off;",
+								// String representation of multi-line yaml value using | character
+								ngfAPI.NginxContextHTTPServerLocation: "keepalive_time 100s;\nallow 10.0.0.0/8;\n",
+							},
+						},
+						{Namespace: "test", Name: "sf-3"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								// Tests lexicographical ordering when count and context is the same
+								ngfAPI.NginxContextMain:       "worker_rlimit_core 1m;",
+								ngfAPI.NginxContextHTTPServer: "auth_delay 10s;",
+							},
+						},
+					},
 				}
 
 				config := &dataplane.Configuration{
@@ -379,14 +411,38 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   2,
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
+					SnippetsFilterCount:                      3,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
-				data, err := dataCollector.Collect(ctx)
+				expData.SnippetsFiltersDirectives = []string{
+					"auth_delay-server",
+					"aio-http",
+					"keepalive_time-location",
+					"worker_priority-main",
+					"client_body_timeout-http",
+					"allow-location",
+					"worker_rlimit_core-main",
+					"worker_rlimit_nofile-main",
+					"ignore_invalid_headers-server",
+				}
+				expData.SnippetsFiltersDirectivesCount = []int64{
+					3,
+					2,
+					2,
+					2,
+					1,
+					1,
+					1,
+					1,
+					1,
+				}
 
+				data, err := dataCollector.Collect(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(expData).To(Equal(data))
+
+				Expect(data).To(Equal(expData))
 			})
 		})
 	})
@@ -549,6 +605,9 @@ var _ = Describe("Collector", Ordered, func() {
 					}: {},
 				},
 				NginxProxy: &graph.NginxProxy{},
+				SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+					{Namespace: "test", Name: "sf-1"}: {},
+				},
 			}
 
 			config1 = &dataplane.Configuration{
@@ -622,6 +681,7 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   1,
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
+					SnippetsFilterCount:                      1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -647,6 +707,7 @@ var _ = Describe("Collector", Ordered, func() {
 					RouteAttachedClientSettingsPolicyCount:   0,
 					ObservabilityPolicyCount:                 0,
 					NginxProxyCount:                          0,
+					SnippetsFilterCount:                      0,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -661,7 +722,7 @@ var _ = Describe("Collector", Ordered, func() {
 					fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
 				})
 				It("should error on nil latest graph", func(ctx SpecContext) {
-					expectedError := errors.New("latest graph cannot be nil")
+					expectedError := errors.New("failed to collect telemetry data: latest graph cannot be nil")
 					fakeGraphGetter.GetLatestGraphReturns(nil)
 
 					_, err := dataCollector.Collect(ctx)
@@ -854,6 +915,46 @@ var _ = Describe("Collector", Ordered, func() {
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
 				})
+			})
+		})
+	})
+
+	Describe("snippetsFilters collector", func() {
+		When("collecting snippetsFilters data", func() {
+			It("collects correct data for nil snippetsFilters", func(ctx SpecContext) {
+				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: nil,
+					},
+				})
+
+				expData.SnippetsFilterCount = 1
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).To(Equal(expData))
+			})
+
+			It("collects correct data when snippetsFilters context is not supported", func(ctx SpecContext) {
+				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{
+					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
+						{Namespace: "test", Name: "sf-1"}: {
+							Snippets: map[ngfAPI.NginxContext]string{
+								"unsupportedContext": "worker_priority 0;",
+							},
+						},
+					},
+				})
+
+				expData.SnippetsFilterCount = 1
+				expData.SnippetsFiltersDirectives = []string{"worker_priority-unknown"}
+				expData.SnippetsFiltersDirectivesCount = []int64{1}
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).To(Equal(expData))
 			})
 		})
 	})
