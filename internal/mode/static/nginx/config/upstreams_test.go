@@ -58,7 +58,7 @@ func TestExecuteUpstreams(t *testing.T) {
 		"server 10.0.0.0:80;",
 		"server 11.0.0.0:80;",
 		"server [2001:db8::1]:80",
-		"server unix:/var/run/nginx/nginx-502-server.sock;",
+		"server unix:/var/run/nginx/nginx-503-server.sock;",
 	}
 
 	upstreamResults := gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams})
@@ -148,7 +148,7 @@ func TestCreateUpstreams(t *testing.T) {
 			ZoneSize: ossZoneSize,
 			Servers: []http.UpstreamServer{
 				{
-					Address: nginx502Server,
+					Address: nginx503Server,
 				},
 			},
 		},
@@ -194,7 +194,7 @@ func TestCreateUpstream(t *testing.T) {
 				ZoneSize: ossZoneSize,
 				Servers: []http.UpstreamServer{
 					{
-						Address: nginx502Server,
+						Address: nginx503Server,
 					},
 				},
 			},
@@ -210,7 +210,7 @@ func TestCreateUpstream(t *testing.T) {
 				ZoneSize: ossZoneSize,
 				Servers: []http.UpstreamServer{
 					{
-						Address: nginx502Server,
+						Address: nginx503Server,
 					},
 				},
 			},

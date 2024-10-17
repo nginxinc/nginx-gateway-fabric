@@ -149,10 +149,10 @@ server {
     {{- end }}
 {{ end }}
 server {
-    listen unix:/var/run/nginx/nginx-502-server.sock;
+    listen unix:/var/run/nginx/nginx-503-server.sock;
     access_log off;
 
-    return 502;
+    return 503;
 }
 
 server {
