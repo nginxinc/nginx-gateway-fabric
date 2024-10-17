@@ -10,11 +10,11 @@ import (
 )
 
 type FakeOSFileManager struct {
-	ChmodStub        func(*os.File, fs.FileMode) error
+	ChmodStub        func(*os.File, os.FileMode) error
 	chmodMutex       sync.RWMutex
 	chmodArgsForCall []struct {
 		arg1 *os.File
-		arg2 fs.FileMode
+		arg2 os.FileMode
 	}
 	chmodReturns struct {
 		result1 error
@@ -75,12 +75,12 @@ type FakeOSFileManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeOSFileManager) Chmod(arg1 *os.File, arg2 fs.FileMode) error {
+func (fake *FakeOSFileManager) Chmod(arg1 *os.File, arg2 os.FileMode) error {
 	fake.chmodMutex.Lock()
 	ret, specificReturn := fake.chmodReturnsOnCall[len(fake.chmodArgsForCall)]
 	fake.chmodArgsForCall = append(fake.chmodArgsForCall, struct {
 		arg1 *os.File
-		arg2 fs.FileMode
+		arg2 os.FileMode
 	}{arg1, arg2})
 	stub := fake.ChmodStub
 	fakeReturns := fake.chmodReturns
@@ -101,13 +101,13 @@ func (fake *FakeOSFileManager) ChmodCallCount() int {
 	return len(fake.chmodArgsForCall)
 }
 
-func (fake *FakeOSFileManager) ChmodCalls(stub func(*os.File, fs.FileMode) error) {
+func (fake *FakeOSFileManager) ChmodCalls(stub func(*os.File, os.FileMode) error) {
 	fake.chmodMutex.Lock()
 	defer fake.chmodMutex.Unlock()
 	fake.ChmodStub = stub
 }
 
-func (fake *FakeOSFileManager) ChmodArgsForCall(i int) (*os.File, fs.FileMode) {
+func (fake *FakeOSFileManager) ChmodArgsForCall(i int) (*os.File, os.FileMode) {
 	fake.chmodMutex.RLock()
 	defer fake.chmodMutex.RUnlock()
 	argsForCall := fake.chmodArgsForCall[i]
