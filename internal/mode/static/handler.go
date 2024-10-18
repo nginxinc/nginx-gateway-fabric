@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/v2/client"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -359,7 +359,7 @@ func (h *eventHandlerImpl) updateUpstreamServers(
 		}
 		var upstreams []upstream
 
-		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
+		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams(context.TODO())
 		if err != nil {
 			logger.Error(err, "failed to get upstreams from API, reloading configuration instead")
 			return reload()
