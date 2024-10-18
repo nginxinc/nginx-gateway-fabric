@@ -157,3 +157,43 @@ as arguments and add `/bin/sh` as the command. The deployment manifest should lo
   - /bin/sh
 ...
 ```
+
+### Configure Rewrite Client IP Settings
+
+When the request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in `NginxProxy` resource. `RewriteClientIP` has three fields *mode*, *trustedAddresses* and *setIPRecursively*. It is important to understand these fields to configure them according to your requirements.
+
+**Mode** determines how the original client IP is passed through multiple proxies and the way load balancer is set to receive it. It can have two values:
+
+  1. `ProxyProtocol` is a protocol that carries connection information  from the source requesting the connection to the destination for which the connection was requested.
+  2. `XForwardedFor` is a multi-value HTTP header that is used by proxies to append IP addresses of the hosts that passed the request.
+
+The choice of mode depends on how the load balancer fronting NGINX Gateway Fabric receives information.
+
+**TrustedAddresses** are used to specify the IP addresses of the trusted proxies that pass the request. These can be in the form of CIDRs, IPs, or hostnames. For example, if a load balancer is forwarding the request to NGINX Gateway Fabric, the IP address of the load balancer should be specified in the `trustedAddresses` list to inform NGINX that the forwarded request is from a known source.
+
+**SetIPRecursively** is a boolean field used to enable recursive search when selecting the client's address from a multi-value header. It is applicable in cases where we have a multi-value header containing client IPs to select from, i.e., when using `XForwardedFor` mode.
+
+The following command creates a `NginxProxy` resource with `RewriteClientIP` settings that set the mode to XForwardedFor, enables recursive search for finding the client IP and sets a CIDR, IPAddress and Hostname in the list of trusted addresses to find the original client IP address.
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: ngf-proxy-config
+spec:
+  config:
+    rewriteClientIP:
+      mode: XForwardedFor
+      setIPRecursively: true
+      trustedAddresses: [
+        { type: CIDR, value: ":1/128" },
+        { type: IPAddress, value: "192.68.74.32"},
+        { type: Hostname, value: "cafe.com"},
+        ]
+EOF
+```
+
+For more information, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
+
+{{<note>}}When sending curl request to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{</ note >}}
