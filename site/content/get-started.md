@@ -48,7 +48,7 @@ nodes:
 Take note of the two _containerPort_ values. They are necessary for later configuring a _NodePort_.
 {{< /warning >}}
 
-Run the following command: 
+Run the following command:
 
 ```shell
 kind create cluster --config cluster-config.yaml
@@ -56,11 +56,11 @@ kind create cluster --config cluster-config.yaml
 ```text
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.31.0) 🖼
- ✓ Preparing nodes 📦  
- ✓ Writing configuration 📜 
- ✓ Starting control-plane 🕹️ 
- ✓ Installing CNI 🔌 
- ✓ Installing StorageClass 💾 
+ ✓ Preparing nodes 📦
+ ✓ Writing configuration 📜
+ ✓ Starting control-plane 🕹️
+ ✓ Installing CNI 🔌
+ ✓ Installing StorageClass 💾
 Set kubectl context to "kind-kind"
 You can now use your cluster with:
 
@@ -180,7 +180,7 @@ service/nginx-gateway created
 ```
 
 {{< warning >}}
-The NodePort resource must be deployed in the same namespace as NGINX Gateway Fabric. 
+The NodePort resource must be deployed in the same namespace as NGINX Gateway Fabric.
 
 If you are making customizations, ensure your `labels:` and `selectors:` also match.
 {{< /warning >}}
