@@ -38,8 +38,11 @@ func TestDataAttributes(t *testing.T) {
 			RouteAttachedClientSettingsPolicyCount:   10,
 			ObservabilityPolicyCount:                 11,
 			NginxProxyCount:                          12,
+			SnippetsFilterCount:                      13,
 		},
-		NGFReplicaCount: 3,
+		NGFReplicaCount:                3,
+		SnippetsFiltersDirectives:      []string{"main-three-count", "http-two-count", "server-one-count"},
+		SnippetsFiltersDirectivesCount: []int64{3, 2, 1},
 	}
 
 	expected := []attribute.KeyValue{
@@ -55,6 +58,11 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("ClusterNodeCount", 3),
 		attribute.StringSlice("FlagNames", []string{"test-flag"}),
 		attribute.StringSlice("FlagValues", []string{"test-value"}),
+		attribute.StringSlice(
+			"SnippetsFiltersDirectives",
+			[]string{"main-three-count", "http-two-count", "server-one-count"},
+		),
+		attribute.IntSlice("SnippetsFiltersDirectivesCount", []int{3, 2, 1}),
 		attribute.Int64("GatewayCount", 1),
 		attribute.Int64("GatewayClassCount", 2),
 		attribute.Int64("HTTPRouteCount", 3),
@@ -68,6 +76,7 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 10),
 		attribute.Int64("ObservabilityPolicyCount", 11),
 		attribute.Int64("NginxProxyCount", 12),
+		attribute.Int64("SnippetsFilterCount", 13),
 		attribute.Int64("NGFReplicaCount", 3),
 	}
 
@@ -94,6 +103,8 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("ClusterNodeCount", 0),
 		attribute.StringSlice("FlagNames", nil),
 		attribute.StringSlice("FlagValues", nil),
+		attribute.StringSlice("SnippetsFiltersDirectives", nil),
+		attribute.IntSlice("SnippetsFiltersDirectivesCount", nil),
 		attribute.Int64("GatewayCount", 0),
 		attribute.Int64("GatewayClassCount", 0),
 		attribute.Int64("HTTPRouteCount", 0),
@@ -107,6 +118,7 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("RouteAttachedClientSettingsPolicyCount", 0),
 		attribute.Int64("ObservabilityPolicyCount", 0),
 		attribute.Int64("NginxProxyCount", 0),
+		attribute.Int64("SnippetsFilterCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
 	}
 

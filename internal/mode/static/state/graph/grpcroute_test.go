@@ -42,7 +42,7 @@ func createGRPCHeadersMatch(headerType, headerName, headerValue string) v1.GRPCR
 			{
 				Headers: []v1.GRPCHeaderMatch{
 					{
-						Type:  (*v1.HeaderMatchType)(&headerType),
+						Type:  (*v1.GRPCHeaderMatchType)(&headerType),
 						Name:  v1.GRPCHeaderName(headerName),
 						Value: headerValue,
 					},
@@ -242,6 +242,19 @@ func TestBuildGRPCRoute(t *testing.T) {
 	methodMatchNilType := createGRPCMethodMatch("myService", "myMethod", "nilType")
 	headersMatchInvalid := createGRPCHeadersMatch("", "MyHeader", "SomeValue")
 
+	headersMatchEmptyType := v1.GRPCRouteRule{
+		Matches: []v1.GRPCRouteMatch{
+			{
+				Headers: []v1.GRPCHeaderMatch{
+					{
+						Name:  v1.GRPCHeaderName("MyHeader"),
+						Value: "SomeValue",
+					},
+				},
+			},
+		},
+	}
+
 	grBoth := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
@@ -290,11 +303,18 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"example.com",
 		[]v1.GRPCRouteRule{methodMatchNilType},
 	)
-	grInvalidHeadersEmptyType := createGRPCRoute(
+	grInvalidHeadersInvalidType := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1.GRPCRouteRule{headersMatchInvalid},
+	)
+
+	grInvalidHeadersEmptyType := createGRPCRoute(
+		"gr-1",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1.GRPCRouteRule{headersMatchEmptyType},
 	)
 	grOneInvalid := createGRPCRoute(
 		"gr-1",
@@ -738,6 +758,44 @@ func TestBuildGRPCRoute(t *testing.T) {
 		},
 		{
 			validator: createAllValidValidator(),
+			gr:        grInvalidHeadersInvalidType,
+			expected: &L7Route{
+				Source:     grInvalidHeadersInvalidType,
+				RouteType:  RouteTypeGRPC,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grInvalidHeadersInvalidType.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						`All rules are invalid: spec.rules[0].matches[0].headers[0].type: ` +
+							`Unsupported value: "": supported values: "Exact"`,
+					),
+				},
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidHeadersInvalidType.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches: false,
+							Filters: RouteRuleFilters{
+								Valid:   true,
+								Filters: []Filter{},
+							},
+							Matches:          convertGRPCMatches(grInvalidHeadersInvalidType.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+					},
+				},
+			},
+			name: "invalid headers with invalid type",
+		},
+		{
+			validator: createAllValidValidator(),
 			gr:        grInvalidHeadersEmptyType,
 			expected: &L7Route{
 				Source:     grInvalidHeadersEmptyType,
@@ -754,7 +812,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].matches[0].headers[0].type: ` +
-							`Unsupported value: "": supported values: "Exact"`,
+							`Required value: cannot be empty`,
 					),
 				},
 				Spec: L7RouteSpec{
@@ -772,7 +830,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 					},
 				},
 			},
-			name: "invalid headers with empty type",
+			name: "invalid headers with no header type specified",
 		},
 		{
 			validator: createAllValidValidator(),
