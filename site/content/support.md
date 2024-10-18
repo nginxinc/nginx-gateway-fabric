@@ -16,3 +16,5 @@ NGINX Gateway Fabric adheres to the support policy detailed in the following kno
 - If you have any suggestions or enhancement requests, please [open an idea](https://github.com/nginxinc/nginx-gateway-fabric/discussions/categories/ideas) on GitHub discussions.
 
 - You can contact us directly, by sending an email to [kubernetes@nginx.com](mailto:kubernetes@nginx.com) or on the [NGINX Community Slack](https://nginxcommunity.slack.com/channels/nginx-gateway-fabric), in the #nginx-gateway-fabric channel.
+  
+- If your team needs dedicated support for NGINX Gateway Fabric in your environment, or you would like to leverage our [advanced NGINX Plus features](https://docs.nginx.com/nginx-gateway-fabric/overview/nginx-plus/), you can reach out [here](https://www.f5.com/content/f5-com/en_us/products/get-f5).
