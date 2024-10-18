@@ -45,6 +45,17 @@ at the same index.
 Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags. */
 		union {null, array<string>} FlagValues = null;
 		
+		/** SnippetsFiltersDirectives contains the directive-context strings of all applied SnippetsFilters.
+Both lists are ordered first by count, then by lexicographical order of the context string,
+then lastly by directive string. */
+		union {null, array<string>} SnippetsFiltersDirectives = null;
+		
+		/** SnippetsFiltersDirectivesCount contains the count of the directive-context strings, where each count
+corresponds to the string from SnippetsFiltersDirectives at the same index.
+Both lists are ordered first by count, then by lexicographical order of the context string,
+then lastly by directive string. */
+		union {null, array<long>} SnippetsFiltersDirectivesCount = null;
+		
 		/** GatewayCount is the number of relevant Gateways. */
 		long? GatewayCount = null;
 		
@@ -84,6 +95,9 @@ attached at the Gateway level. */
 		
 		/** NginxProxyCount is the number of NginxProxies. */
 		long? NginxProxyCount = null;
+		
+		/** SnippetsFilterCount is the number of SnippetsFilters. */
+		long? SnippetsFilterCount = null;
 		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;

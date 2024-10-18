@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sort"
+	"strings"
 
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,6 +16,7 @@ import (
 	k8sversion "k8s.io/apimachinery/pkg/util/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -46,8 +49,17 @@ type Data struct {
 	// FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
 	// at the same index.
 	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
-	FlagValues        []string
-	NGFResourceCounts // embedding is required by the generator.
+	FlagValues []string
+	// SnippetsFiltersDirectives contains the directive-context strings of all applied SnippetsFilters.
+	// Both lists are ordered first by count, then by lexicographical order of the context string,
+	// then lastly by directive string.
+	SnippetsFiltersDirectives []string
+	// SnippetsFiltersDirectivesCount contains the count of the directive-context strings, where each count
+	// corresponds to the string from SnippetsFiltersDirectives at the same index.
+	// Both lists are ordered first by count, then by lexicographical order of the context string,
+	// then lastly by directive string.
+	SnippetsFiltersDirectivesCount []int64
+	NGFResourceCounts              // embedding is required by the generator.
 	// NGFReplicaCount is the number of replicas of the NGF Pod.
 	NGFReplicaCount int64
 }
@@ -83,6 +95,8 @@ type NGFResourceCounts struct {
 	ObservabilityPolicyCount int64
 	// NginxProxyCount is the number of NginxProxies.
 	NginxProxyCount int64
+	// SnippetsFilterCount is the number of SnippetsFilters.
+	SnippetsFilterCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -119,12 +133,17 @@ func NewDataCollectorImpl(
 
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
+	g := c.cfg.GraphGetter.GetLatestGraph()
+	if g == nil {
+		return Data{}, errors.New("failed to collect telemetry data: latest graph cannot be nil")
+	}
+
 	clusterInfo, err := collectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
+	graphResourceCount, err := collectGraphResourceCount(g, c.cfg.ConfigurationGetter)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
@@ -144,6 +163,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
+	snippetsFiltersDirectives, snippetsFiltersDirectivesCount := collectSnippetsFilterDirectives(g)
+
 	data := Data{
 		Data: tel.Data{
 			ProjectName:         "NGF",
@@ -155,27 +176,25 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			InstallationID:      deploymentID,
 			ClusterNodeCount:    int64(clusterInfo.NodeCount),
 		},
-		NGFResourceCounts: graphResourceCount,
-		ImageSource:       c.cfg.ImageSource,
-		FlagNames:         c.cfg.Flags.Names,
-		FlagValues:        c.cfg.Flags.Values,
-		NGFReplicaCount:   int64(replicaCount),
+		NGFResourceCounts:              graphResourceCount,
+		ImageSource:                    c.cfg.ImageSource,
+		FlagNames:                      c.cfg.Flags.Names,
+		FlagValues:                     c.cfg.Flags.Values,
+		NGFReplicaCount:                int64(replicaCount),
+		SnippetsFiltersDirectives:      snippetsFiltersDirectives,
+		SnippetsFiltersDirectivesCount: snippetsFiltersDirectivesCount,
 	}
 
 	return data, nil
 }
 
 func collectGraphResourceCount(
-	graphGetter GraphGetter,
+	g *graph.Graph,
 	configurationGetter ConfigurationGetter,
 ) (NGFResourceCounts, error) {
 	ngfResourceCounts := NGFResourceCounts{}
-	g := graphGetter.GetLatestGraph()
 	cfg := configurationGetter.GetLatestConfiguration()
 
-	if g == nil {
-		return ngfResourceCounts, errors.New("latest graph cannot be nil")
-	}
 	if cfg == nil {
 		return ngfResourceCounts, errors.New("latest configuration cannot be nil")
 	}
@@ -226,6 +245,8 @@ func collectGraphResourceCount(
 	if g.NginxProxy != nil {
 		ngfResourceCounts.NginxProxyCount = 1
 	}
+
+	ngfResourceCounts.SnippetsFilterCount = int64(len(g.SnippetsFilters))
 
 	return ngfResourceCounts, nil
 }
@@ -377,4 +398,104 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	clusterInfo.ClusterID = clusterID
 
 	return clusterInfo, nil
+}
+
+type sfDirectiveContext struct {
+	directive string
+	context   string
+}
+
+func collectSnippetsFilterDirectives(g *graph.Graph) ([]string, []int64) {
+	directiveContextMap := make(map[sfDirectiveContext]int)
+
+	for _, sf := range g.SnippetsFilters {
+		if sf == nil {
+			continue
+		}
+
+		for nginxContext, snippetValue := range sf.Snippets {
+			var parsedContext string
+
+			switch nginxContext {
+			case ngfAPI.NginxContextMain:
+				parsedContext = "main"
+			case ngfAPI.NginxContextHTTP:
+				parsedContext = "http"
+			case ngfAPI.NginxContextHTTPServer:
+				parsedContext = "server"
+			case ngfAPI.NginxContextHTTPServerLocation:
+				parsedContext = "location"
+			default:
+				parsedContext = "unknown"
+			}
+
+			directives := parseSnippetValueIntoDirectives(snippetValue)
+			for _, directive := range directives {
+				directiveContext := sfDirectiveContext{
+					directive: directive,
+					context:   parsedContext,
+				}
+				directiveContextMap[directiveContext]++
+			}
+		}
+	}
+
+	return parseDirectiveContextMapIntoLists(directiveContextMap)
+}
+
+func parseSnippetValueIntoDirectives(snippetValue string) []string {
+	separatedDirectives := strings.Split(snippetValue, ";")
+	directives := make([]string, 0, len(separatedDirectives))
+
+	for _, directive := range separatedDirectives {
+		// the strings.TrimSpace is needed in the case of multi-line NGINX Snippet values
+		directive = strings.Split(strings.TrimSpace(directive), " ")[0]
+
+		// splitting on the delimiting character can result in a directive being empty or a space/newline character,
+		// so we check here to ensure it's not
+		if directive != "" {
+			directives = append(directives, directive)
+		}
+	}
+
+	return directives
+}
+
+// parseDirectiveContextMapIntoLists returns two same-length lists where the elements at each corresponding index
+// are paired together.
+// The first list contains strings which are the NGINX directive and context of a Snippet joined with a hyphen.
+// The second list contains ints which are the count of total same directive-context values of the first list.
+// Both lists are ordered first by count, then by lexicographical order of the context string,
+// then lastly by directive string.
+func parseDirectiveContextMapIntoLists(directiveContextMap map[sfDirectiveContext]int) ([]string, []int64) {
+	type sfDirectiveContextCount struct {
+		directive, context string
+		count              int64
+	}
+
+	kvPairs := make([]sfDirectiveContextCount, 0, len(directiveContextMap))
+
+	for k, v := range directiveContextMap {
+		kvPairs = append(kvPairs, sfDirectiveContextCount{k.directive, k.context, int64(v)})
+	}
+
+	sort.Slice(kvPairs, func(i, j int) bool {
+		if kvPairs[i].count == kvPairs[j].count {
+			if kvPairs[i].context == kvPairs[j].context {
+				return kvPairs[i].directive < kvPairs[j].directive
+			}
+			return kvPairs[i].context < kvPairs[j].context
+		}
+		return kvPairs[i].count > kvPairs[j].count
+	})
+
+	directiveContextList := make([]string, len(kvPairs))
+	countList := make([]int64, len(kvPairs))
+
+	for i, pair := range kvPairs {
+		directiveContextList[i] = pair.directive + "-" + pair.context
+		countList[i] = pair.count
+	}
+
+	return directiveContextList, countList
 }
