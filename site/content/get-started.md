@@ -13,7 +13,7 @@ This is a guide for getting started with NGINX Gateway Fabric. It explains how t
 
 By following the steps in order, you will finish with a functional NGINX Gateway Fabric cluster.
 
---- 
+---
 
 ## Before you begin
 
@@ -77,7 +77,7 @@ make create-kind-cluster
 ```
 {{< /note >}}
 
---- 
+---
 
 ## Install NGINX Gateway Fabric
 
@@ -186,7 +186,6 @@ If you are making customizations, ensure your `labels:` and `selectors:` also ma
 {{< /warning >}}
 
 ---
-
 
 ## Create an example application
 
