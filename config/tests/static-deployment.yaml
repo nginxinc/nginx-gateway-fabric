@@ -20,7 +20,7 @@ spec:
       labels:
         app.kubernetes.io/name: nginx-gateway
         app.kubernetes.io/instance: nginx-gateway
-    spec:    
+    spec:
       initContainers:
       - name: copy-nginx-config
         image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
