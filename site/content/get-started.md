@@ -305,7 +305,8 @@ Request ID: 2dfc85564dd5b5dad7e62b980bb60ee1
 
 ---
 
-## Additional reading
+## See also
 
-- [Install NGINX Gateway Fabric](http://localhost:1313/nginx-gateway-fabric/installation/installing-ngf/), for additional ways to install NGINX Gateway Fabric
-- [How-to guides](http://localhost:1313/nginx-gateway-fabric/how-to/), for configuring your cluster
+- [Install NGINX Gateway Fabric]({{< ref "/installation/installing-ngf/" >}}), for additional ways to install NGINX Gateway Fabric
+- [How-to guides]({{< ref "/how-to/" >}}), for configuring your cluster
+- [Traffic management]({{< ref "/how-to/traffic-management/" >}}), for more in-depth traffic management configuration
