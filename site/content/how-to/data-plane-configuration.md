@@ -196,4 +196,4 @@ EOF
 
 For more information, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
 
-{{<note>}}When sending curl request to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{</ note >}}
+{{< note >}} When sending curl request to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{< /note >}}
