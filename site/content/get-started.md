@@ -182,7 +182,7 @@ service/nginx-gateway created
 {{< warning >}}
 The NodePort resource must be deployed in the same namespace as NGINX Gateway Fabric.
 
-If you are making customizations, ensure your `labels:` and `selectors:` also match.
+If you are making customizations, ensure your `labels:` and `selectors:` also match the labels on the NGINX Gateway Fabric Deployment.
 {{< /warning >}}
 
 ---
@@ -192,7 +192,7 @@ If you are making customizations, ensure your `labels:` and `selectors:` also ma
 In the previous section, you deployed NGINX Gateway Fabric to a local cluster. This section shows you how to deploy a simple web application to test that NGINX Gateway Fabric works.
 
 {{< note >}}
-The YAML code in the following sections can be founded in the [cafe-example folder](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples/cafe-example) of the GitHub repository.
+The YAML code in the following sections can be found in the [cafe-example folder](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples/cafe-example) of the GitHub repository.
 {{< /note >}}
 
 ---
