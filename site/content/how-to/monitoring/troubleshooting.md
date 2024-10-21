@@ -139,7 +139,7 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
 Understanding the NGINX configuration is key for fixing issues because it shows how NGINX handles requests. This helps tweak settings to make sure NGINX behaves the way you want it to for your application. To see your current configuration, you can open a shell in the _nginx_ container by following these [steps](#get-shell-access-to-nginx-container) and run `nginx -T`. To understand the usage of NGINX directives in the configuration file, consult this list of [NGINX directives](https://nginx.org/en/docs/dirindex.html).
 
 In this section, we will see how the configuration gets updated as we configure different Services, Deployments and HTTPRoutes with NGINX Gateway Fabric. In the configuration file, you'll often find several server blocks, each assigned to specific ports and server names. NGINX selects the appropriate server for a request and evaluates the URI against the location directives within that block.
-When only a Gateway resource is defined, but no Services or HTTPRoutes are configured, NGINX generates a basic configuration. This includes a default server listening on the ports specified in the Gateway listeners, handling all incoming requests. Additionally, there are blocks to manage errors with status codes 500 or 502.
+When only a Gateway resource is defined, but no Services or HTTPRoutes are configured, NGINX generates a basic configuration. This includes a default server listening on the ports specified in the Gateway listeners, handling all incoming requests. Additionally, there are blocks to manage errors with status codes 500 or 503.
 
 This is a default `server` block listening on port 80:
 
