@@ -158,7 +158,7 @@ as arguments and add `/bin/sh` as the command. The deployment manifest should lo
 ...
 ```
 
-### Configure Rewrite Client IP Settings
+### Configure RewriteClientIP settings
 
 When the request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in `NginxProxy` resource. `RewriteClientIP` has three fields *mode*, *trustedAddresses* and *setIPRecursively*. It is important to understand these fields to configure them according to your requirements.
 
