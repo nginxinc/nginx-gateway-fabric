@@ -8,7 +8,7 @@ docs: DOCS-000
 This is a guide for getting started with NGINX Gateway Fabric. It explains how to:
 
 - Set up a [kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/) cluster
-- Install [NGINX Gateway Fabric](https://blog.nginx.org/blog/5-things-to-know-about-nginx-gateway-fabric) with [NGINX](https://nginx.org/)
+- Install [NGINX Gateway Fabric](https://github.com/nginxinc/nginx-gateway-fabric) with [NGINX](https://nginx.org/)
 - Test NGINX Gateway Fabric with an example application
 
 By following the steps in order, you will finish with a functional NGINX Gateway Fabric cluster.
@@ -56,17 +56,17 @@ kind create cluster --config cluster-config.yaml
 ```text
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.31.0) 🖼
- ✓ Preparing nodes 📦
- ✓ Writing configuration 📜
- ✓ Starting control-plane 🕹️
- ✓ Installing CNI 🔌
- ✓ Installing StorageClass 💾
+ ✓ Preparing nodes 📦  
+ ✓ Writing configuration 📜 
+ ✓ Starting control-plane 🕹️ 
+ ✓ Installing CNI 🔌 
+ ✓ Installing StorageClass 💾 
 Set kubectl context to "kind-kind"
 You can now use your cluster with:
 
 kubectl cluster-info --context kind-kind
 
-Have a question, bug, or feature request? Let us know! https://kind.sigs.k8s.io/#community 🙂
+Thanks for using kind! 😊
 ```
 
 {{< note >}}
@@ -117,7 +117,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 Pulled: ghcr.io/nginxinc/charts/nginx-gateway-fabric:1.4.0
 Digest: sha256:9bbd1a2fcbfd5407ad6be39f796f582e6263512f1f3a8969b427d39063cc6fee
 NAME: ngf
-LAST DEPLOYED: Fri Oct 11 16:57:20 2024
+LAST DEPLOYED: Mon Oct 21 14:45:14 2024
 NAMESPACE: nginx-gateway
 STATUS: deployed
 REVISION: 1
@@ -182,7 +182,7 @@ service/nginx-gateway created
 {{< warning >}}
 The NodePort resource must be deployed in the same namespace as NGINX Gateway Fabric.
 
-If you are making customizations, ensure your `labels:` and `selectors:` also match the labels on the NGINX Gateway Fabric Deployment.
+If you are making customizations, ensure your `labels:` and `selectors:` also match the labels of the NGINX Gateway Fabric Deployment.
 {{< /warning >}}
 
 ---
@@ -222,8 +222,8 @@ kubectl -n default get pods
 ```
 ```text
 NAME                      READY   STATUS    RESTARTS   AGE
-coffee-6db967495b-dvg5w   1/1     Running   0          80s
-tea-7b7d6c947d-8xmhm      1/1     Running   0          80s
+coffee-6db967495b-wk2mm   1/1     Running   0          10s
+tea-7b7d6c947d-d4qcf      1/1     Running   0          10s
 ```
 
 ---
@@ -257,6 +257,10 @@ httproute.gateway.networking.k8s.io/coffee created
 httproute.gateway.networking.k8s.io/tea created
 ```
 
+---
+
+### Verify the configuration
+
 You can check that all of the expected services are available using `kubectl get`:
 
 ```shell
@@ -271,13 +275,207 @@ kube-system     kube-dns        ClusterIP   10.96.0.10      <none>        53/UDP
 nginx-gateway   nginx-gateway   NodePort    10.96.186.45    <none>        80:31437/TCP,443:31438/TCP   3m6s
 ```
 
+You can also use `kubectl describe` on the new resources to check their status:
+
+```shell
+kubectl describe httproutes
+```
+```text
+Name:         coffee
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  gateway.networking.k8s.io/v1
+Kind:         HTTPRoute
+Metadata:
+  Creation Timestamp:  2024-10-21T13:46:51Z
+  Generation:          1
+  Resource Version:    821
+  UID:                 cc591089-d3aa-44d3-a851-e2bbfa285029
+Spec:
+  Hostnames:
+    cafe.example.com
+  Parent Refs:
+    Group:         gateway.networking.k8s.io
+    Kind:          Gateway
+    Name:          gateway
+    Section Name:  http
+  Rules:
+    Backend Refs:
+      Group:   
+      Kind:    Service
+      Name:    coffee
+      Port:    80
+      Weight:  1
+    Matches:
+      Path:
+        Type:   PathPrefix
+        Value:  /coffee
+Status:
+  Parents:
+    Conditions:
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               The route is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               All references are resolved
+      Observed Generation:   1
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+    Parent Ref:
+      Group:         gateway.networking.k8s.io
+      Kind:          Gateway
+      Name:          gateway
+      Namespace:     default
+      Section Name:  http
+Events:              <none>
+
+
+Name:         tea
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  gateway.networking.k8s.io/v1
+Kind:         HTTPRoute
+Metadata:
+  Creation Timestamp:  2024-10-21T13:46:51Z
+  Generation:          1
+  Resource Version:    823
+  UID:                 d72d2a19-1c4d-48c4-9808-5678cff6c331
+Spec:
+  Hostnames:
+    cafe.example.com
+  Parent Refs:
+    Group:         gateway.networking.k8s.io
+    Kind:          Gateway
+    Name:          gateway
+    Section Name:  http
+  Rules:
+    Backend Refs:
+      Group:   
+      Kind:    Service
+      Name:    tea
+      Port:    80
+      Weight:  1
+    Matches:
+      Path:
+        Type:   Exact
+        Value:  /tea
+Status:
+  Parents:
+    Conditions:
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               The route is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               All references are resolved
+      Observed Generation:   1
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+    Parent Ref:
+      Group:         gateway.networking.k8s.io
+      Kind:          Gateway
+      Name:          gateway
+      Namespace:     default
+      Section Name:  http
+Events:              <none>
+```
+
+```shell
+kubectl describe gateways
+```
+```text     
+Name:         gateway
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  gateway.networking.k8s.io/v1
+Kind:         Gateway
+Metadata:
+  Creation Timestamp:  2024-10-21T13:46:36Z
+  Generation:          1
+  Resource Version:    824
+  UID:                 2ae8ec42-70eb-41a4-b249-3e47177aea48
+Spec:
+  Gateway Class Name:  nginx
+  Listeners:
+    Allowed Routes:
+      Namespaces:
+        From:  Same
+    Hostname:  *.example.com
+    Name:      http
+    Port:      80
+    Protocol:  HTTP
+Status:
+  Addresses:
+    Type:   IPAddress
+    Value:  10.244.0.5
+  Conditions:
+    Last Transition Time:  2024-10-21T13:46:51Z
+    Message:               Gateway is accepted
+    Observed Generation:   1
+    Reason:                Accepted
+    Status:                True
+    Type:                  Accepted
+    Last Transition Time:  2024-10-21T13:46:51Z
+    Message:               Gateway is programmed
+    Observed Generation:   1
+    Reason:                Programmed
+    Status:                True
+    Type:                  Programmed
+  Listeners:
+    Attached Routes:  2
+    Conditions:
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               Listener is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               Listener is programmed
+      Observed Generation:   1
+      Reason:                Programmed
+      Status:                True
+      Type:                  Programmed
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               All references are resolved
+      Observed Generation:   1
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+      Last Transition Time:  2024-10-21T13:46:51Z
+      Message:               No conflicts
+      Observed Generation:   1
+      Reason:                NoConflicts
+      Status:                False
+      Type:                  Conflicted
+    Name:                    http
+    Supported Kinds:
+      Group:  gateway.networking.k8s.io
+      Kind:   HTTPRoute
+      Group:  gateway.networking.k8s.io
+      Kind:   GRPCRoute
+Events:       <none>
+```
+
 ---
 
 ## Test NGINX Gateway Fabric
 
 The cluster was configured with port `8080` as the `containerPort` value, alongside the `nodePort` value of the NodePort service.
 
-Since the NodePort `targetPort` values match the _tea_ and _coffee_ service `port` values, no port forwarding is required.
+Traffic flows through NGINX Gateway Fabric: setting the _tea_ and _coffee_ service `port` values to match the NodePort ports makes them accessible.
 
 You can use `curl` to test the new services by targeting the hostname (_cafe.example.com_) with the _/coffee_ and _/tea_ paths:
 
@@ -286,21 +484,21 @@ curl --resolve cafe.example.com:8080:127.0.0.1 http://cafe.example.com:8080/coff
 ```
 ```text
 Server address: 10.244.0.6:8080
-Server name: coffee-6db967495b-984mx
-Date: 17/Oct/2024:15:50:22 +0000
+Server name: coffee-6db967495b-wk2mm
+Date: 21/Oct/2024:13:52:13 +0000
 URI: /coffee
-Request ID: 8ad83b06ea42b996ad6bd28032b38e28
+Request ID: fb226a54fd94f927b484dd31fb30e747
 ```
 
 ```shell
-curl --resolve cafe.example.com:8080:127.0.0.1 http://cafe.example.com:8080/coffee
+curl --resolve cafe.example.com:8080:127.0.0.1 http://cafe.example.com:8080/tea
 ```
 ```text
-Server address: 10.244.0.6:8080
-Server name: coffee-6db967495b-984mx
-Date: 17/Oct/2024:15:50:29 +0000
-URI: /coffee
-Request ID: 2dfc85564dd5b5dad7e62b980bb60ee1
+Server address: 10.244.0.7:8080
+Server name: tea-7b7d6c947d-d4qcf
+Date: 21/Oct/2024:13:52:17 +0000
+URI: /tea
+Request ID: 43882f2f5794a1ee05d2ea017a035ce3
 ```
 
 ---
