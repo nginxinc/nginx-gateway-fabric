@@ -173,7 +173,7 @@ The choice of mode depends on how the load balancer fronting NGINX Gateway Fabri
 
 **SetIPRecursively** is a boolean field used to enable recursive search when selecting the client's address from a multi-value header. It is applicable in cases where we have a multi-value header containing client IPs to select from, i.e., when using `XForwardedFor` mode.
 
-The following command creates a `NginxProxy` resource with `RewriteClientIP` settings that set the mode to XForwardedFor, enables recursive search for finding the client IP and sets a CIDR, IPAddress and Hostname in the list of trusted addresses to find the original client IP address.
+The following command creates an `NginxProxy` resource with `RewriteClientIP` settings that set the mode to XForwardedFor, enables recursive search for finding the client IP and sets a CIDR, IPAddress and Hostname in the list of trusted addresses to find the original client IP address.
 
 ```yaml
 kubectl apply -f - <<EOF
