@@ -158,13 +158,13 @@ as arguments and add `/bin/sh` as the command. The deployment manifest should lo
 ...
 ```
 
-### Configure RewriteClientIP settings
+## Configure PROXY protocol and RewriteClientIP settings
 
-When the request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in `NginxProxy` resource. `RewriteClientIP` has the fields: _mode_, _trustedAddresses_ and _setIPRecursively_.
+When the request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in the `NginxProxy` resource. `RewriteClientIP` has the fields: _mode_, _trustedAddresses_ and _setIPRecursively_.
 
 **Mode** determines how the original client IP is passed through multiple proxies and the way load balancer is set to receive it. It can have two values:
 
-  1. `ProxyProtocol` is a protocol that carries connection information  from the source requesting the connection to the destination for which the connection was requested.
+  1. `ProxyProtocol` is a protocol that carries connection information from the source requesting the connection to the destination for which the connection was requested.
   2. `XForwardedFor` is a multi-value HTTP header that is used by proxies to append IP addresses of the hosts that passed the request.
 
 The choice of mode depends on how the load balancer fronting NGINX Gateway Fabric receives information.
@@ -186,14 +186,16 @@ spec:
     rewriteClientIP:
       mode: XForwardedFor
       setIPRecursively: true
-      trustedAddresses: [
-        { type: CIDR, value: ":1/128" },
-        { type: IPAddress, value: "192.68.74.32"},
-        { type: Hostname, value: "cafe.com"},
-        ]
+      trustedAddresses:
+      - type: CIDR
+        value: ":1/28"
+      - type: IPAddress
+        value: "192.68.74.28"
+      - type: Hostname
+        value: "cafe.com"
 EOF
 ```
 
 For more information, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
 
-{{< note >}} When sending curl request to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{< /note >}}
+{{< note >}} When sending curl requests to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{< /note >}}
