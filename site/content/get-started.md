@@ -56,11 +56,11 @@ kind create cluster --config cluster-config.yaml
 ```text
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.31.0) 🖼
- ✓ Preparing nodes 📦  
- ✓ Writing configuration 📜 
- ✓ Starting control-plane 🕹️ 
- ✓ Installing CNI 🔌 
- ✓ Installing StorageClass 💾 
+ ✓ Preparing nodes 📦
+ ✓ Writing configuration 📜
+ ✓ Starting control-plane 🕹️
+ ✓ Installing CNI 🔌
+ ✓ Installing StorageClass 💾
 Set kubectl context to "kind-kind"
 You can now use your cluster with:
 
@@ -302,7 +302,7 @@ Spec:
     Section Name:  http
   Rules:
     Backend Refs:
-      Group:   
+      Group:
       Kind:    Service
       Name:    coffee
       Port:    80
@@ -357,7 +357,7 @@ Spec:
     Section Name:  http
   Rules:
     Backend Refs:
-      Group:   
+      Group:
       Kind:    Service
       Name:    tea
       Port:    80
@@ -394,7 +394,7 @@ Events:              <none>
 ```shell
 kubectl describe gateways
 ```
-```text     
+```text
 Name:         gateway
 Namespace:    default
 Labels:       <none>
