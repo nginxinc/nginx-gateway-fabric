@@ -1,8 +1,8 @@
 module github.com/nginxinc/nginx-gateway-fabric/tests
 
-go 1.23
+go 1.23.0
 
-toolchain go1.23.2
+replace github.com/nginxinc/nginx-gateway-fabric => ../
 
 require (
 	github.com/nginxinc/nginx-gateway-fabric v0.0.0
@@ -85,5 +85,3 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
-
-replace github.com/nginxinc/nginx-gateway-fabric => ../
