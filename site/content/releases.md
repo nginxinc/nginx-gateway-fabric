@@ -1,10 +1,8 @@
 ---
 title: "Releases"
-draft: false
 description: "NGINX Gateway Fabric releases."
-weight: 1200
 toc: true
-tags: [ "docs" ]
+weight: 700
 docs: "DOCS-1359"
 ---
 
