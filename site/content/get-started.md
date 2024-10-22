@@ -473,11 +473,7 @@ Events:       <none>
 
 ## Test NGINX Gateway Fabric
 
-The cluster was configured with port `8080` as the `containerPort` value, alongside the `nodePort` value of the NodePort service.
-
 By configuring the cluster with the ports `31437` and `31438`, there is implicit port forwarding from your local machine to NodePort, allowing for direct communication to the NGINX Gateway Fabric service.
-
-Traffic flows through NGINX Gateway Fabric: setting the _tea_ and _coffee_ service `port` values to match the NodePort ports makes them accessible.
 
 You can use `curl` to test the new services by targeting the hostname (_cafe.example.com_) with the _/coffee_ and _/tea_ paths:
 
