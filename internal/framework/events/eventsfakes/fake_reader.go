@@ -6,16 +6,15 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FakeReader struct {
-	GetStub        func(context.Context, types.NamespacedName, client.Object, ...client.GetOption) error
+	GetStub        func(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		arg1 context.Context
-		arg2 types.NamespacedName
+		arg2 client.ObjectKey
 		arg3 client.Object
 		arg4 []client.GetOption
 	}
@@ -42,12 +41,12 @@ type FakeReader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeReader) Get(arg1 context.Context, arg2 types.NamespacedName, arg3 client.Object, arg4 ...client.GetOption) error {
+func (fake *FakeReader) Get(arg1 context.Context, arg2 client.ObjectKey, arg3 client.Object, arg4 ...client.GetOption) error {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		arg1 context.Context
-		arg2 types.NamespacedName
+		arg2 client.ObjectKey
 		arg3 client.Object
 		arg4 []client.GetOption
 	}{arg1, arg2, arg3, arg4})
@@ -70,13 +69,13 @@ func (fake *FakeReader) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeReader) GetCalls(stub func(context.Context, types.NamespacedName, client.Object, ...client.GetOption) error) {
+func (fake *FakeReader) GetCalls(stub func(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = stub
 }
 
-func (fake *FakeReader) GetArgsForCall(i int) (context.Context, types.NamespacedName, client.Object, []client.GetOption) {
+func (fake *FakeReader) GetArgsForCall(i int) (context.Context, client.ObjectKey, client.Object, []client.GetOption) {
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
 	argsForCall := fake.getArgsForCall[i]
