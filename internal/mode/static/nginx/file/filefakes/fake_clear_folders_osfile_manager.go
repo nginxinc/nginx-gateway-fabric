@@ -2,24 +2,24 @@
 package filefakes
 
 import (
-	"io/fs"
+	"os"
 	"sync"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
 type FakeClearFoldersOSFileManager struct {
-	ReadDirStub        func(string) ([]fs.DirEntry, error)
+	ReadDirStub        func(string) ([]os.DirEntry, error)
 	readDirMutex       sync.RWMutex
 	readDirArgsForCall []struct {
 		arg1 string
 	}
 	readDirReturns struct {
-		result1 []fs.DirEntry
+		result1 []os.DirEntry
 		result2 error
 	}
 	readDirReturnsOnCall map[int]struct {
-		result1 []fs.DirEntry
+		result1 []os.DirEntry
 		result2 error
 	}
 	RemoveStub        func(string) error
@@ -37,7 +37,7 @@ type FakeClearFoldersOSFileManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClearFoldersOSFileManager) ReadDir(arg1 string) ([]fs.DirEntry, error) {
+func (fake *FakeClearFoldersOSFileManager) ReadDir(arg1 string) ([]os.DirEntry, error) {
 	fake.readDirMutex.Lock()
 	ret, specificReturn := fake.readDirReturnsOnCall[len(fake.readDirArgsForCall)]
 	fake.readDirArgsForCall = append(fake.readDirArgsForCall, struct {
@@ -62,7 +62,7 @@ func (fake *FakeClearFoldersOSFileManager) ReadDirCallCount() int {
 	return len(fake.readDirArgsForCall)
 }
 
-func (fake *FakeClearFoldersOSFileManager) ReadDirCalls(stub func(string) ([]fs.DirEntry, error)) {
+func (fake *FakeClearFoldersOSFileManager) ReadDirCalls(stub func(string) ([]os.DirEntry, error)) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = stub
@@ -75,28 +75,28 @@ func (fake *FakeClearFoldersOSFileManager) ReadDirArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeClearFoldersOSFileManager) ReadDirReturns(result1 []fs.DirEntry, result2 error) {
+func (fake *FakeClearFoldersOSFileManager) ReadDirReturns(result1 []os.DirEntry, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	fake.readDirReturns = struct {
-		result1 []fs.DirEntry
+		result1 []os.DirEntry
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeClearFoldersOSFileManager) ReadDirReturnsOnCall(i int, result1 []fs.DirEntry, result2 error) {
+func (fake *FakeClearFoldersOSFileManager) ReadDirReturnsOnCall(i int, result1 []os.DirEntry, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	if fake.readDirReturnsOnCall == nil {
 		fake.readDirReturnsOnCall = make(map[int]struct {
-			result1 []fs.DirEntry
+			result1 []os.DirEntry
 			result2 error
 		})
 	}
 	fake.readDirReturnsOnCall[i] = struct {
-		result1 []fs.DirEntry
+		result1 []os.DirEntry
 		result2 error
 	}{result1, result2}
 }
