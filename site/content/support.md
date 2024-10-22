@@ -1,9 +1,7 @@
 ---
 title: "Support"
-draft: false
-weight: 1100
 toc: true
-tags: [ "docs" ]
+weight: 600
 docs: "DOCS-1411"
 ---
 
