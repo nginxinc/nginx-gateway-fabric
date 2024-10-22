@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>nginxinc/k8s-common"
+    "github>nginxinc/k8s-common",
+    "schedule:daily"
   ],
   "kubernetes": {
     "fileMatch": [
