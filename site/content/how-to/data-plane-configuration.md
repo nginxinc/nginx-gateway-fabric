@@ -160,7 +160,7 @@ as arguments and add `/bin/sh` as the command. The deployment manifest should lo
 
 ## Configure PROXY protocol and RewriteClientIP settings
 
-When the request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in the `NginxProxy` resource. `RewriteClientIP` has the fields: _mode_, _trustedAddresses_ and _setIPRecursively_.
+When a request is passed through multiple proxies or load balancers, the client IP is set to the IP address of the server that last handled the request. To preserve the original client IP address, you can configure `RewriteClientIP` settings in the `NginxProxy` resource. `RewriteClientIP` has the fields: _mode_, _trustedAddresses_ and _setIPRecursively_.
 
 **Mode** determines how the original client IP is passed through multiple proxies and the way the load balancer is set to receive it. It can have two values:
 
@@ -173,7 +173,7 @@ The choice of mode depends on how the load balancer fronting NGINX Gateway Fabri
 
 **SetIPRecursively** is a boolean field used to enable recursive search when selecting the client's address from a multi-value header. It is applicable in cases where we have a multi-value header containing client IPs to select from, i.e., when using `XForwardedFor` mode.
 
-The following command creates an `NginxProxy` resource with `RewriteClientIP` settings that set the mode to XForwardedFor, enables recursive search for finding the client IP and sets a CIDR, IPAddress and Hostname in the list of trusted addresses to find the original client IP address.
+The following command creates an `NginxProxy` resource with `RewriteClientIP` settings that set the mode to ProxyProtocol and sets a CIDR in the list of trusted addresses to find the original client IP address.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -184,18 +184,13 @@ metadata:
 spec:
   config:
     rewriteClientIP:
-      mode: XForwardedFor
-      setIPRecursively: true
+      mode: ProxyProtocol
       trustedAddresses:
       - type: CIDR
-        value: ":1/28"
-      - type: IPAddress
-        value: "192.68.74.28"
-      - type: Hostname
-        value: "cafe.com"
+        value "76.89.90.11/24"
 EOF
 ```
 
-For more information, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
+For the full configuration API, see the `NginxProxy spec` in the [API reference]({{< relref "reference/api.md" >}}).
 
-{{< note >}} When sending curl requests to a server expecting proxy information, use the flag `--harproxy-protocol` to avoid broken header errors. {{< /note >}}
+{{< note >}} When sending curl requests to a server expecting proxy information, use the flag `--haproxy-protocol` to avoid broken header errors. {{< /note >}}
