@@ -33,8 +33,6 @@ jobs:
       min_k8s_version: ${{ steps.vars.outputs.min_k8s_version }}
       k8s_latest: ${{ steps.vars.outputs.k8s_latest }}
       helm_changes: ${{ steps.filter.outputs.charts }}
-    permissions:
-      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -57,24 +55,6 @@ jobs:
           filters: |
             charts:
             - charts/nginx-gateway-fabric/**/*
-            generate:
-            - go.mod
-            - go.sum
-            - Makefile
-
-      # go mod tidy can be removed once https://github.com/renovatebot/renovate/issues/12999 is implemented
-      - name: Update files for renovate
-        run: |
-          make generate-all
-          cd tests && go mod tidy && go mod verify
-        if: ${{ github.actor == 'renovate[bot]' && steps.filter.outputs.generate == 'true' }}
-
-      - name: Commit changes
-        id: commit
-        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
-        with:
-          commit_message: "Update files for renovate"
-        if: ${{ github.actor == 'renovate[bot]' && steps.filter.outputs.generate == 'true' }}
 
       - name: Output Variables
         id: vars
