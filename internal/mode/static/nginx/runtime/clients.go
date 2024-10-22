@@ -6,7 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/nginxinc/nginx-plus-go-client/client"
+	"github.com/nginxinc/nginx-plus-go-client/v2/client"
 )
 
 const (
