@@ -187,7 +187,7 @@ Begin by configuring an application with custom headers and a simple HTTPRoute. 
 
 ### Deploy the Headers application
 
-Begin by deploying the example application `headers`. It is a simple application that adds response headers which we'll later tweak and customize.
+Begin by deploying the example application `headers`. It is a simple application that adds response headers, will be modified later.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-response-header-filter/headers.yaml
