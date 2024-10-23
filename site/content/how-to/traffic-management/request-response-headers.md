@@ -66,7 +66,6 @@ This will create the headers Service and a Deployment with one Pod. Run the foll
 ```shell
 kubectl get pods,svc
 ```
-
 ```text
 pod/headers-545698447b-z52kj   1/1     Running   0          23s
 
