@@ -131,8 +131,8 @@ This HTTPRoute has a few important properties:
 - It has a `RequestHeaderModifier` filter defined for the path prefix `/headers`. This filter:
 
     1. Sets the value for header `My-Overwrite-Header` to `this-is-the-only-value`.
-    2. Appends the value `compress` to the `Accept-Encoding` header and `this-is-an-appended-value` to the `My-Cool-header`.
-    3. Removes `User-Agent` header.
+    1. Appends the value `compress` to the `Accept-Encoding` header and `this-is-an-appended-value` to the `My-Cool-header`.
+    1. Removes `User-Agent` header.
 
 ### Send traffic to the Headers application
 
