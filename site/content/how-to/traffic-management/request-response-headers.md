@@ -49,6 +49,8 @@ spec:
 EOF
 ```
 
+---
+
 ## RequestHeaderModifier example
 
 This examples demonstrates how to configure traffic routing for a simple echo server. A HTTPRoute resource is used to route traffic to the headers application, using the `RequestHeaderModifier` filter to modify headers in the request. You can then verify that the server responds with the modified request headers.
