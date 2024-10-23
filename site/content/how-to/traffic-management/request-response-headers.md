@@ -49,7 +49,7 @@ EOF
 
 ## RequestHeaderModifier example
 
-In this example we will deploy NGINX Gateway Fabric and configure traffic routing for a simple echo server. We will use HTTPRoute resources to route traffic to the headers application, using the `RequestHeaderModifier` filter to modify headers in the request. Our aim will be to verify whether the server responds with the modified request headers.
+In this example we will configure traffic routing for a simple echo server. We will use a simple HTTPRoute resources to route traffic to the headers application, using the `RequestHeaderModifier` filter to modify headers in the request. Our aim will be to verify whether the server responds with the modified request headers.
 
 ### Deploy the Headers application
 
@@ -117,8 +117,11 @@ This HTTPRoute has a few important properties:
 - The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `echo.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
-- The filter used here is `RequestHeaderModifier`, which sets the header `My-Overwrite-Header`, adds new headers `Accept-Encoding` and `My-cool-header`, and removes `User-Agent` header.
+- It has a `RequestHeaderModifier` filter defined for the path prefix `/headers`. This filter:
 
+    1. Sets the value for header `My-Overwrite-Header` to `this-is-the-only-value`.
+    2. Appends the value `compress` to the `Accept-Encoding` header and `this-is-an-appended-value` to the `My-Cool-header`.
+    3. Removes `User-Agent` header.
 
 ### Send traffic to the Headers application
 
@@ -146,15 +149,17 @@ curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_P
 
 In the output above, you can see that the headers application modifies the following custom headers:
 
-The request headers are modified above as `Accept-Encoding` remains unchanged as we did not modify it in the curl request and `User-Agent` header is absent. The header `My-Cool-header` gets appended with the new value and `My-Overwrite-Header` gets overwritten from `dont-see-this` to `this-is-the-only-value` as defined in the _HTTPRoute_.
-
+- `User-Agent` header is absent.
+- The header `My-Cool-header` gets appended with the new value `my-client-value`.
+- The header `My-Overwrite-Header` gets overwritten from `dont-see-this` to `this-is-the-only-value`.
+- The header `Accept-encoding` remains unchanged as we did not modify it in the curl request sent.
 
 ### Delete the resources
 
 Delete the headers application and HTTPRoute since we will be configuring a different version of this for the examples below.
 
 ```shell
-  kubectl delete httproutes.gateway.networking.k8s.io headers
+kubectl delete httproutes.gateway.networking.k8s.io headers
 ```
 
 ```shell
