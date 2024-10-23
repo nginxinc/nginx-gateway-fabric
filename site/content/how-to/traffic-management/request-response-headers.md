@@ -117,7 +117,7 @@ This HTTPRoute has a few important properties:
 - The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `echo.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
-- The filter used here is `RequestHeaderModifier` and it sets a new header `My-Overwrite-Header`, adds new headers `Accept-Encoding` and `My-cool-header` and removes `User-Agent` header.
+- The filter used here is `RequestHeaderModifier`, which sets the header `My-Overwrite-Header`, adds new headers `Accept-Encoding` and `My-cool-header`, and removes `User-Agent` header.
 
 
 ### Send traffic to the Headers application
