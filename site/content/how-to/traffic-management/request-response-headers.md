@@ -127,7 +127,7 @@ This HTTPRoute has a few important properties:
 
 ### Send traffic to the Headers application
 
-To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with our request.
+To access the application, use `curl` to send requests to the `headers` Service, which includes headers within the request.
 
 ```shell
 curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "My-Cool-Header:my-client-value" -H "My-Overwrite-Header:dont-see-this"
