@@ -1,5 +1,5 @@
 ---
-title: "HTTP Request and Response headers"
+title: "Modify HTTP request and response headers"
 weight: 500
 toc: true
 ---
