@@ -28,7 +28,9 @@ This guide describes how to configure the headers application to modify the head
 
 We will configure a common gateway for the `RequestHeaderModifier` and `ResponseHeaderModifier` examples mentioned below.
 
-### Deploy the Gateway API Resources for the Header Application
+---
+
+### Deploy the Gateway API resources for the Header application
 
 The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [Cluster Operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames. To deploy the Gateway:
 
