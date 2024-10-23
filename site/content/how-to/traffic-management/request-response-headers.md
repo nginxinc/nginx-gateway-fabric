@@ -55,7 +55,7 @@ This examples demonstrates how to configure traffic routing for a simple echo se
 
 ### Deploy the Headers application
 
-Begin by deploying the example application `headers`. It is a simple application that returns the request headers which we'll later tweak and customize.
+Begin by deploying the example application `headers`. It is a simple application that returns the request headers which will be modified later.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-request-header-filter/headers.yaml
