@@ -1,5 +1,7 @@
 # Separation of control and data plane
 
+**Archived; Superseded by [Proposal 1508](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/docs/proposals/control-data-plane-split/README.md)**
+
 This document proposes a design for separating the control and data planes.
 
 Issue #292: https://github.com/nginxinc/nginx-gateway-fabric/issues/292
