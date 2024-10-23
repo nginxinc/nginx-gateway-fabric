@@ -12,6 +12,8 @@ Learn how to modify the request and response headers of your application using N
 
 This guide describes how to configure the headers application to modify the headers in the request. Another version of the headers application is then used to modify response headers when client requests are made. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
+---
+
 ## Before you begin
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
