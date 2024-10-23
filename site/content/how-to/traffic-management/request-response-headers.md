@@ -167,6 +167,8 @@ In the output above, you can see that the headers application modifies the follo
 - The header `My-Overwrite-Header` gets overwritten from `dont-see-this` to `this-is-the-only-value`.
 - The header `Accept-encoding` remains unchanged as we did not modify it in the curl request sent.
 
+---
+
 ### Delete the resources
 
 Delete the headers application and HTTPRoute: another instance will be used for the next examples.
