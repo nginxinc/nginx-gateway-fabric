@@ -169,7 +169,7 @@ In the output above, you can see that the headers application modifies the follo
 
 ### Delete the resources
 
-Delete the headers application and HTTPRoute since we will be configuring a different version of this for the examples below.
+Delete the headers application and HTTPRoute: another instance will be used for the next examples.
 
 ```shell
 kubectl delete httproutes.gateway.networking.k8s.io headers
