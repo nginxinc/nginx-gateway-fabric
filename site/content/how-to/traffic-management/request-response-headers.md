@@ -134,6 +134,8 @@ This HTTPRoute has a few important properties:
     1. Appends the value `compress` to the `Accept-Encoding` header and `this-is-an-appended-value` to the `My-Cool-header`.
     1. Removes `User-Agent` header.
 
+---
+
 ### Send traffic to the Headers application
 
 To access the application, use `curl` to send requests to the `headers` Service, which includes headers within the request.
