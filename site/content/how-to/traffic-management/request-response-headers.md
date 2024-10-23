@@ -73,6 +73,8 @@ NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/headers      ClusterIP   10.96.26.161   <none>        80/TCP    23s
 ```
 
+---
+
 ### Configure the HTTPRoute with RequestHeaderModifier filter
 
 Next, let's create a simple HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section. To do this, create the following HTTPRoute:
