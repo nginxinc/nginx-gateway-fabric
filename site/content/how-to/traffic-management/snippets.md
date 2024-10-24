@@ -352,6 +352,8 @@ You should see all successful responses from the tea Pod, but they should be spa
 expected through the rate limiting configuration.
 
 You've now used the `SnippetFilter` resource to configure two distinct rate limiting rules to different backend applications through the use of Snippets.
+For an alternative method of modifying the NGINX configuration NGINX Gateway Fabric generates through Gateway API resources, check out
+our supported [first-class policies]({{< relref "overview/custom-policies.md" >}}) which don't carry many of the aforementioned disadvantages of Snippets.
 
 ---
 
