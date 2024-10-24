@@ -1,0 +1,10 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: coffee-rate-limiting-sf
+spec:
+  snippets:
+    - context: http
+      value: limit_req_zone $binary_remote_addr zone=coffeezone:10m rate=1r/s;
+    - context: http.server.location
+      value: limit_req zone=coffeezone burst=3 nodelay;
