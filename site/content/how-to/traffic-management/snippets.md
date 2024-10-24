@@ -351,6 +351,8 @@ for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://c
 You should see all successful responses from the tea Pod, but they should be spaced apart roughly one second each as
 expected through the rate limiting configuration.
 
+You've now used the `SnippetFilter` resource to configure two distinct rate limiting rules to different backend applications through the use of Snippets.
+
 ---
 
 ## Further reading
