@@ -1,11 +1,13 @@
 ---
-title: "Snippets Filters"
+title: "Use the SnippetsFilter API"
 weight: 800
 toc: true
 docs: "DOCS-000"
 ---
 
-Learn how to use Snippets with the `SnippetsFilter` API.
+This topic introduces Snippets and how to implement them using the `SnippetsFilter` API. It provides an example of how to use a Snippet for rate limiting, and how to investigate errors caused by misconfiguration.
+
+---
 
 ## Overview
 
@@ -15,6 +17,8 @@ NGINX configurations that NGINX Gateway Fabric generates.
 Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
 and can be used in cases where Gateway API resources or NGINX extensions don't apply.
 
+---
+
 ## Disadvantages of Snippets
 
 Snippets are configured using the `SnippetsFilter` API, but are disabled by default due to their complexity and security implications.
@@ -23,11 +27,11 @@ To use Snippets, set the `nginxGateway.snippetsFilters.enable` command line argu
 
 Snippets have the following disadvantages:
 
-- *Complexity*. Snippets require you to:
-  - Understand NGINX Configuration primitives and implement a correct NGINX configuration.
+- _Complexity_. Snippets require you to:
+  - Understand NGINX configuration primitives to implement correct NGINX configuration.
   - Understand how NGINX Gateway Fabric generates NGINX configuration so that a Snippet doesn’t interfere with the other features in the configuration.
-- *Decreased robustness*. An incorrect Snippet can invalidate NGINX configuration, causing reload failures. Until the snippet is fixed, it will prevent any new configuration updates, including updates for the other Gateway resources.
-- *Security implications*. Snippets give access to NGINX configuration primitives, which are not validated by NGINX Gateway Fabric. For example, a Snippet can configure NGINX to serve the TLS certificates and keys used for TLS termination for Gateway resources.
+- _Decreased robustness_. An incorrect Snippet can invalidate NGINX configuration, causing reload failures. Until the snippet is fixed, it will prevent any new configuration updates, including updates for the other Gateway resources.
+- _Security implications_. Snippets give access to NGINX configuration primitives, which are not validated by NGINX Gateway Fabric. For example, a Snippet can configure NGINX to serve the TLS certificates and keys used for TLS termination for Gateway resources.
 
 {{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. {{< /note >}}
 
@@ -47,7 +51,7 @@ Due to the described disadvantages of Snippets, we recommend exhausting all othe
   GW_PORT=<port number>
   ```
 
-  {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
+  {{< note >}} In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for. {{< /note >}}
 
 - Create the coffee and tea example applications:
 
@@ -77,7 +81,7 @@ Due to the described disadvantages of Snippets, we recommend exhausting all othe
   curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
   ```
 
-  Send a request to tea
+  Send a request to tea:
 
   ```shell
   curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
@@ -95,7 +99,7 @@ Due to the described disadvantages of Snippets, we recommend exhausting all othe
   </html>
   ```
 
-  Lets check out our HTTPRoutes to see what's causing this error:
+  Use `kubectl describe` to investigate HTTPRoutes for the error:
 
   ```shell
   kubectl describe httproutes.gateway.networking.k8s.io
@@ -135,13 +139,15 @@ Due to the described disadvantages of Snippets, we recommend exhausting all othe
       Type:                  ResolvedRefs
   ```
 
-  This is because in the HTTPRoutes we created earlier, they both reference `SnippetsFilter` resources that do not currently
-  exist, and thus a 500 error code response will be returned on requests that are processed by these HTTPRoutes.
-  We will solve this in the next section when we add SnippetsFilters.
+  The HTTPRoutes created earlier both reference `SnippetsFilter` resources that do not currently
+  exist, creating a 500 error code response returned on requests that are processed by these HTTPRoutes.
+  This issue will be resolved using SnippetsFilters.
+
+---
 
 ## Configure rate limiting to the coffee application
 
-Lets configure rate limiting to our coffee application by adding the following `SnippetsFilter`:
+Configure rate limiting to the coffee application by adding the following `SnippetsFilter`:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -158,7 +164,7 @@ spec:
 EOF
 ```
 
-This `SnippetsFilter` is already referenced by the HTTPRoute we created in the setup, so it will immediately apply
+This `SnippetsFilter` is already referenced by the HTTPRoute created during setup, so it will immediately apply
 to the HTTPRoute. The Snippet uses the NGINX `limit_req_module` to configure rate limiting for this HTTPRoute and the
 backend coffee application. This snippet will limit the request processing rate to 1 request per second, and if there
 are more than 3 requests in queue, it will throw a 503 error.
@@ -209,7 +215,7 @@ Conditions:
       Type:                  ResolvedRefs
 ```
 
-Next, test that the `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
+Test that the `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
 
 Send a request to coffee:
 
@@ -224,14 +230,14 @@ Server address: 10.244.0.9:8080
 Server name: coffee-76c7c85bbd-cf8nz
 ```
 
-When processing a single request, the rate limiting configuration has no noticeable effect. Now lets try to exceed the
-set rate limit by using a simple script to send multiple requests.
+When processing a single request, the rate limiting configuration has no noticeable effect. Try to exceed the
+set rate limit with a script that sends multiple requests.
 
 ```shell
 for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee; done
 ```
 
-You should see some successful responses from the coffee Pod, however you should see multiple responses like the following:
+You should see some successful responses from the coffee Pod, however there should be multiple `503` responses such as:
 
 ```text
 Request ID: 890c17df930ef1ef573feed3c6e81290
@@ -249,7 +255,7 @@ correctly applied our rate limiting NGINX configuration changes.
 
 ## Configure rate limiting to the tea application
 
-Now, lets configure a different set of rate limiting rules to our tea application by adding the following `SnippetsFilter`:
+Configure a different set of rate limiting rules to the tea application by adding the following `SnippetsFilter`:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -315,7 +321,7 @@ Conditions:
       Type:                  ResolvedRefs
 ```
 
-Next, test that the `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
+Test that the `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
 
 Send a request to tea:
 
@@ -330,7 +336,7 @@ Server address: 10.244.0.7:8080
 Server name: tea-76c7c85bbd-cf8nz
 ```
 
-When processing a single request, the rate limiting configuration has no noticeable effect. Now, lets try sending
+When processing a single request, the rate limiting configuration has no noticeable effect. Try sending
 multiple requests.
 
 ```shell
@@ -338,7 +344,9 @@ for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://c
 ```
 
 You should see all successful responses from the tea Pod, but they should be spaced apart roughly one second each as
-expected through our rate limiting configuration.
+expected through the rate limiting configuration.
+
+---
 
 ## Further reading
 
