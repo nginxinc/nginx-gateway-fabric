@@ -17,6 +17,9 @@ NGINX configurations that NGINX Gateway Fabric generates.
 Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
 and can be used in cases where Gateway API resources or NGINX extensions policies don't apply.
 
+Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` is an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter)
+that attaches to an HTTP/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule.
+
 ---
 
 ## Disadvantages of Snippets
