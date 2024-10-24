@@ -26,8 +26,6 @@ before using Snippets. {{< /warning >}}
 
 Snippets are configured using the `SnippetsFilter` API, but are disabled by default due to their complexity and security implications.
 
-To use Snippets, set the `nginxGateway.snippetsFilters.enable` command line argument to true.
-
 Snippets have the following disadvantages:
 
 - _Complexity_. Snippets require you to:
@@ -43,7 +41,11 @@ Snippets have the following disadvantages:
 
 ## Setup
 
-- [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
+- To enable Snippets, [install]({{< relref "/installation/" >}}) NGINX Gateway Fabric with these modifications:
+  - Using Helm: set the `nginxGateway.snippetsFilters.enable` command line argument to true.
+  - Using Kubernetes manifests: set the `--snippets-filters` flag in the nginx-gateway container argument, add `snippetsfilters` to the RBAC
+    rules with verbs `list` and `watch`, and add `snippetsfilters/status` to the RBAC rules with verb `update`. See this [example manifest](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/deploy/snippets-filters/deploy.yaml) for clarification.
+
 - Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
