@@ -260,6 +260,9 @@ nodeSelector: {}
 # -- The affinity of the NGINX Gateway Fabric pod.
 affinity: {}
 
+# -- The topology spread constraints for the NGINX Gateway Fabric pod.
+topologySpreadConstraints: []
+
 serviceAccount:
   # -- Set of custom annotations for the NGINX Gateway Fabric service account.
   annotations: {}

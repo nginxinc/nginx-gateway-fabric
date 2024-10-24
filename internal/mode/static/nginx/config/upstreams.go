@@ -13,8 +13,8 @@ import (
 var upstreamsTemplate = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))
 
 const (
-	// nginx502Server is used as a backend for services that cannot be resolved (have no IP address).
-	nginx502Server = "unix:/var/run/nginx/nginx-502-server.sock"
+	// nginx503Server is used as a backend for services that cannot be resolved (have no IP address).
+	nginx503Server = "unix:/var/run/nginx/nginx-503-server.sock"
 	// nginx500Server is used as a server for the invalid backend ref upstream.
 	nginx500Server = "unix:/var/run/nginx/nginx-500-server.sock"
 	// invalidBackendRef is used as an upstream name for invalid backend references.
@@ -112,7 +112,7 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 			ZoneSize: zoneSize,
 			Servers: []http.UpstreamServer{
 				{
-					Address: nginx502Server,
+					Address: nginx503Server,
 				},
 			},
 		}

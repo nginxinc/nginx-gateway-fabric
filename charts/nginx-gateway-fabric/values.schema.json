@@ -676,6 +676,15 @@
       "required": [],
       "title": "tolerations",
       "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "The topology spread constraints for the NGINX Gateway Fabric pod.",
+      "items": {
+        "required": []
+      },
+      "required": [],
+      "title": "topologySpreadConstraints",
+      "type": "array"
     }
   },
   "required": [],
