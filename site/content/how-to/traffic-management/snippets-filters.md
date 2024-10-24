@@ -21,7 +21,7 @@ and can be used in cases where Gateway API resources or NGINX extensions policie
 
 ## Disadvantages of Snippets
 
-{{< warning >}} We recommend managing NGINX configuration through Gateway API resources, [first-class policies]({{< relref "overview/custom-policies.md" >}}), and other existing NGINX extensions
+{{< warning >}} We recommend managing NGINX configuration through Gateway API resources, [first-class policies]({{< relref "overview/custom-policies.md" >}}), and other existing [NGINX extensions]({{< relref "data-plane-configuration.md" >}})
 before using Snippets. {{< /warning >}}
 
 Snippets are configured using the `SnippetsFilter` API, but are disabled by default due to their complexity and security implications.
