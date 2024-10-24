@@ -324,7 +324,6 @@ We will send a curl request to the modified `headers` application and verify the
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
-
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5
