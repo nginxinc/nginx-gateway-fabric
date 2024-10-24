@@ -81,8 +81,6 @@ service/headers      ClusterIP   10.96.26.161   <none>        80/TCP    23s
 
 ---
 
----
-
 ### Configure the HTTPRoute with RequestHeaderModifier filter
 
 Create a HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section. Use the following command:
@@ -159,7 +157,6 @@ curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_P
   header 'Accept' is '*/*'
 ```
 
-
 In the output above, you can see that the headers application modifies the following custom headers:
 
 - `User-Agent` header is absent.
@@ -198,7 +195,6 @@ This will create the headers Service and a Deployment with one Pod. Run the foll
 ```shell
 kubectl get pods,svc
 ```
-
 ```text
 NAME                          READY   STATUS    RESTARTS   AGE
 pod/headers-6f854c478-hd2jr   1/1     Running   0          95s
@@ -209,7 +205,7 @@ service/headers      ClusterIP   10.96.15.12   <none>        80/TCP    95s
 
 ### Configure the basic HTTPRoute
 
-Next, let's create a simple HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section. To do this, create the following HTTPRoute:
+Create a HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section. You can do this with the following command:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -242,12 +238,11 @@ This HTTPRoute has a few important properties:
 
 ### Send traffic to the Headers application
 
-We will use `curl` with the `-i` flag to access the application and include the response headers in the output:
+Use `curl` with the `-i` flag to access the application and include the response headers in the output:
 
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
-
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5
@@ -270,11 +265,11 @@ In the output above, you can see that the headers application adds the following
 - X-Header-Set: overwrite
 - X-Header-Remove: remove
 
-In the next section we will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute.
+The next section will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute.
 
 ### Update the HTTPRoute to modify the Response headers
 
-Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
+Update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -319,7 +314,7 @@ Notice that this HTTPRoute has a `ResponseHeaderModifier` filter defined for the
 
 ### Send traffic to the modified Headers application
 
-We will send a curl request to the modified `headers` application and verify the response headers are modified.
+Send a curl request to the modified `headers` application to verify the response headers are modified.
 
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
@@ -339,11 +334,11 @@ X-Header-Set: overwritten-value
 ok
 ```
 
-In the output above, you can see that the headers application modifies the following custom headers:
-
 In the output above you can notice the modified response headers as the `X-Header-Unmodified` remains unchanged as we did not include it in the filter and `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
 
-## Further Reading
+---
+
+## Further reading
 
 To learn more about the Gateway API and the resources we created in this guide, check out the following Kubernetes documentation resources:
 
