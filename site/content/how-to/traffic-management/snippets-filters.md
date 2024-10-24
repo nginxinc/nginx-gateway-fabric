@@ -11,15 +11,18 @@ This topic introduces Snippets and how to implement them using the `SnippetsFilt
 
 ## Overview
 
-Snippets allow Cluster Operators to insert NGINX configuration into different contexts of the
+Snippets allow users to insert NGINX configuration into different contexts of the
 NGINX configurations that NGINX Gateway Fabric generates.
 
 Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
-and can be used in cases where Gateway API resources or NGINX extensions don't apply.
+and can be used in cases where Gateway API resources or NGINX extensions policies don't apply.
 
 ---
 
 ## Disadvantages of Snippets
+
+{{< warning >}} We recommend managing NGINX configuration through Gateway API resources, [first-class policies]({{< relref "overview/custom-policies.md" >}}), and other existing NGINX extensions
+before using Snippets. {{< /warning >}}
 
 Snippets are configured using the `SnippetsFilter` API, but are disabled by default due to their complexity and security implications.
 
@@ -34,9 +37,6 @@ Snippets have the following disadvantages:
 - _Security implications_. Snippets give access to NGINX configuration primitives, which are not validated by NGINX Gateway Fabric. For example, a Snippet can configure NGINX to serve the TLS certificates and keys used for TLS termination for Gateway resources.
 
 {{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. {{< /note >}}
-
-Due to the described disadvantages of Snippets, we recommend exhausting all other means of NGINX configuration through Gateway API resources,
-[first-class policies]({{< relref "overview/custom-policies.md" >}}), and other NGINX extensions before using Snippets.
 
 {{< note >}} If you end up using Snippets and run into situations where an NGINX directive fails to be applied, please create an issue in the
 [NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
@@ -272,7 +272,7 @@ spec:
 EOF
 ```
 
-This `SnippetFilter` is the same as the one applied to the coffee HTTPRoute, however it removes the `nodelay` setting
+This `SnippetsFilter` is the same as the one applied to the coffee HTTPRoute, however it removes the `nodelay` setting
 on the `limit_req` directive. This forces a delay on the incoming requests to match the rate set in `limit_req_zone`.
 
 Verify that the `SnippetsFilter` is Accepted:
