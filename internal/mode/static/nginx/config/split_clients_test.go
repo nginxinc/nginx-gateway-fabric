@@ -52,8 +52,8 @@ func TestExecuteSplitClients(t *testing.T) {
 				bg3,
 			},
 			expStrings: []string{
-				"split_clients $request_id $test__hr_rule0",
-				"split_clients $request_id $test__hr_rule1",
+				"split_clients $request_id $group_test__hr_rule0",
+				"split_clients $request_id $group_test__hr_rule1",
 				"50.00% test1;",
 				"50.00% test2;",
 				"50.00% test3;",
@@ -74,7 +74,7 @@ func TestExecuteSplitClients(t *testing.T) {
 				},
 			},
 			expStrings: []string{
-				"split_clients $request_id $test__zero_percent_rule0",
+				"split_clients $request_id $group_test__zero_percent_rule0",
 				"100.00% non-zero;",
 				"# 0.00% zero;",
 			},
@@ -188,7 +188,7 @@ func TestCreateSplitClients(t *testing.T) {
 			},
 			expSplitClients: []http.SplitClient{
 				{
-					VariableName: "test__hr_one_split_rule0",
+					VariableName: "group_test__hr_one_split_rule0",
 					Distributions: []http.SplitClientDistribution{
 						{
 							Percent: "50.00",
@@ -201,7 +201,7 @@ func TestCreateSplitClients(t *testing.T) {
 					},
 				},
 				{
-					VariableName: "test__hr_two_splits_rule0",
+					VariableName: "group_test__hr_two_splits_rule0",
 					Distributions: []http.SplitClientDistribution{
 						{
 							Percent: "50.00",
@@ -214,7 +214,7 @@ func TestCreateSplitClients(t *testing.T) {
 					},
 				},
 				{
-					VariableName: "test__hr_two_splits_rule1",
+					VariableName: "group_test__hr_two_splits_rule1",
 					Distributions: []http.SplitClientDistribution{
 						{
 							Percent: "33.33",
@@ -661,7 +661,7 @@ func TestBackendGroupName(t *testing.T) {
 					Weight:       1,
 				},
 			},
-			expName: "test__hr_rule0",
+			expName: "group_test__hr_rule0",
 		},
 		{
 			msg: "multiple invalid backends",
@@ -677,7 +677,7 @@ func TestBackendGroupName(t *testing.T) {
 					Weight:       1,
 				},
 			},
-			expName: "test__hr_rule0",
+			expName: "group_test__hr_rule0",
 		},
 	}
 

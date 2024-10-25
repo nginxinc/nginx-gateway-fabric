@@ -1150,7 +1150,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:            "/_ngf-internal-rule1-route0",
-				ProxyPass:       "http://$test__route1_rule1$request_uri",
+				ProxyPass:       "http://$group_test__route1_rule1$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
 				Type:            http.InternalLocationType,
 				Includes:        internalIncludes,
@@ -2810,7 +2810,7 @@ func TestCreateProxyPass(t *testing.T) {
 			},
 		},
 		{
-			expected: "http://$ns1__bg_rule0$request_uri",
+			expected: "http://$group_ns1__bg_rule0$request_uri",
 			grp: dataplane.BackendGroup{
 				Source: types.NamespacedName{Namespace: "ns1", Name: "bg"},
 				Backends: []dataplane.Backend{

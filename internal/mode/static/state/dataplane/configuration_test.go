@@ -2992,20 +2992,21 @@ func TestBuildUpstreams(t *testing.T) {
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
 }
 
+func createBackendGroup(name string, ruleIdx int, backendNames ...string) BackendGroup {
+	backends := make([]Backend, len(backendNames))
+	for i, name := range backendNames {
+		backends[i] = Backend{UpstreamName: name}
+	}
+
+	return BackendGroup{
+		Source:   types.NamespacedName{Namespace: "test", Name: name},
+		RuleIdx:  ruleIdx,
+		Backends: backends,
+	}
+}
+
 func TestBuildBackendGroups(t *testing.T) {
 	t.Parallel()
-	createBackendGroup := func(name string, ruleIdx int, backendNames ...string) BackendGroup {
-		backends := make([]Backend, len(backendNames))
-		for i, name := range backendNames {
-			backends[i] = Backend{UpstreamName: name}
-		}
-
-		return BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: name},
-			RuleIdx:  ruleIdx,
-			Backends: backends,
-		}
-	}
 
 	hr1Group0 := createBackendGroup("hr1", 0, "foo", "bar")
 
@@ -3061,8 +3062,16 @@ func TestBuildBackendGroups(t *testing.T) {
 	g := NewWithT(t)
 
 	result := buildBackendGroups(servers)
-
 	g.Expect(result).To(ConsistOf(expGroups))
+}
+
+func TestBackendGroupName(t *testing.T) {
+	backendGroup := createBackendGroup("route1", 2, "foo", "bar")
+
+	expectedGroupName := "group_test__route1_rule2"
+
+	g := NewWithT(t)
+	g.Expect(backendGroup.Name()).To(Equal(expectedGroupName))
 }
 
 func TestHostnameMoreSpecific(t *testing.T) {

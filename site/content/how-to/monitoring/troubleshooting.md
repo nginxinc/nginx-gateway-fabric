@@ -203,7 +203,7 @@ server {
         proxy_set_header Upgrade "$http_upgrade";
         proxy_set_header Connection "$connection_upgrade";
         proxy_http_version 1.1;
-        proxy_pass http://default_coffee_80$request_uri;
+        proxy_pass http://group_default_coffee_80$request_uri;
     }
 
     location = /coffee {
@@ -212,7 +212,7 @@ server {
         proxy_set_header Upgrade "$http_upgrade";
         proxy_set_header Connection "$connection_upgrade";
         proxy_http_version 1.1;
-        proxy_pass http://default_coffee_80$request_uri;
+        proxy_pass http://group_default_coffee_80$request_uri;
     }
 
     location / {
@@ -220,9 +220,9 @@ server {
     }
 
 }
-upstream default_coffee_80 {
+upstream group_default_coffee_80 {
     random two least_conn;
-    zone default_coffee_80 512k;
+    zone group_default_coffee_80 512k;
 
     server 10.244.0.13:8080;
 }
@@ -294,6 +294,7 @@ Verify that the port number (for example, `8080`) matches the port number you ha
 ### Common errors
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
+
 | Problem Area | Symptom | Troubleshooting Method | Common Cause |
 |------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
 | Startup | NGINX Gateway Fabric fails to start. | Check logs for _nginx_ and _nginx-gateway_ containers. | Readiness probe failed. |
@@ -301,6 +302,7 @@ Verify that the port number (for example, `8080`) matches the port number you ha
 | NGINX errors | Reload failures on NGINX | Fix permissions for control plane. | Security context not configured. |
 | Usage reporting | Errors logs related to usage reporting | Enable usage reporting. Refer to [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) | Usage reporting disabled. |
 | Client Settings | Request entity too large error | Adjust client settings. Refer to [Client Settings Policy]({{< relref "../traffic-management/client-settings.md" >}}) | Payload is greater than the [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size) value.|
+
 {{< /bootstrap-table >}}
 
 ##### NGINX fails to reload

@@ -340,7 +340,7 @@ If you have any issues while testing the configuration, try the following to deb
 
     location / {
         ...
-        proxy_pass http://default_coffee_80$request_uri; # the upstream is named default_coffee_80
+        proxy_pass http://group_default_coffee_80$request_uri; # the upstream is named group_default_coffee_80
         ...
     }
   }
@@ -349,7 +349,7 @@ If you have any issues while testing the configuration, try the following to deb
   There should also be an upstream block with a name that matches the upstream in the **proxy_pass** directive. This upstream block should contain the pod IPs of the **coffee** pods:
 
   ```nginx configuration
-  upstream default_coffee_80 {
+  upstream group_default_coffee_80 {
     ...
     server 10.12.0.18:8080; # these should be the pod IPs of the coffee pods
     server 10.12.0.19:8080;
