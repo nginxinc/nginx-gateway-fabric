@@ -15,7 +15,7 @@ Snippets allow users to insert NGINX configuration into different contexts of th
 NGINX configurations that NGINX Gateway Fabric generates.
 
 Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
-and can be used in cases where Gateway API resources or NGINX extensions policies don't apply.
+and can be used in cases where Gateway API resources or NGINX extension policies don't apply.
 
 Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` is an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter)
 that attaches to an HTTP/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule.
@@ -45,7 +45,7 @@ Snippets have the following disadvantages:
 ## Setup
 
 - To enable Snippets, [install]({{< relref "/installation/" >}}) NGINX Gateway Fabric with these modifications:
-  - Using Helm: set the `nginxGateway.snippetsFilters.enable` command line argument to true.
+  - Using Helm: set the `nginxGateway.snippetsFilters.enable=true` Helm value.
   - Using Kubernetes manifests: set the `--snippets-filters` flag in the nginx-gateway container argument, add `snippetsfilters` to the RBAC
     rules with verbs `list` and `watch`, and add `snippetsfilters/status` to the RBAC rules with verb `update`. See this [example manifest](https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/deploy/snippets-filters/deploy.yaml) for clarification.
 
@@ -351,7 +351,7 @@ for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://c
 You should see all successful responses from the tea Pod, but they should be spaced apart roughly one second each as
 expected through the rate limiting configuration.
 
-You've now used the `SnippetFilter` resource to configure two distinct rate limiting rules to different backend applications through the use of Snippets.
+You've now used the `SnippetsFilter` resource to configure two distinct rate limiting rules to different backend applications through the use of Snippets.
 For an alternative method of modifying the NGINX configuration NGINX Gateway Fabric generates through Gateway API resources, check out
 our supported [first-class policies]({{< relref "overview/custom-policies.md" >}}) which don't carry many of the aforementioned disadvantages of Snippets.
 
