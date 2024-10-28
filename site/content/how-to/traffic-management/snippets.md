@@ -5,7 +5,7 @@ toc: true
 docs: "DOCS-000"
 ---
 
-This topic introduces Snippets and how to implement them using the `SnippetsFilter` API. It provides an example of how to use a Snippet for rate limiting, and how to investigate errors caused by misconfiguration.
+This topic introduces Snippets, how to implement them using the `SnippetsFilter` API, and provides an example of how to use `SnippetsFilter` for rate limiting.
 
 ---
 
@@ -86,67 +86,33 @@ Snippets have the following disadvantages:
   curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
   ```
 
+  This request should receive a response from the coffee Pod:
+
+  ```text
+  Server address: 10.244.0.7:8080
+  Server name: coffee-76c7c85bbd-cf8nz
+  ```
+
   Send a request to tea:
 
   ```shell
   curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
-  ```
+   ```
 
-  Both requests should receive this response from the backend Pod:
+  This request should receive a response from the tea Pod:
 
   ```text
-  <html>
-  <head><title>500 Internal Server Error</title></head>
-  <body>
-  <center><h1>500 Internal Server Error</h1></center>
-  <hr><center>nginx</center>
-  </body>
-  </html>
+  Server address: 10.244.0.6:8080
+  Server name: tea-76c7c85bbd-cf8nz
   ```
 
-  Use `kubectl describe` to investigate HTTPRoutes for the error:
+  Before we enable rate limiting, try sending multiple requests to coffee:
 
   ```shell
-  kubectl describe httproutes.gateway.networking.k8s.io
+  for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee; done
   ```
 
-  You should see the following conditions:
-
-  ```text
-   Conditions:
-      Last Transition Time:  2024-10-22T23:43:11Z
-      Message:               The route is accepted
-      Observed Generation:   1
-      Reason:                Accepted
-      Status:                True
-      Type:                  Accepted
-      Last Transition Time:  2024-10-22T23:43:11Z
-      Message:               spec.rules[0].filters[0].extensionRef: Not found: v1.LocalObjectReference{Group:"gateway.nginx.org", Kind:"SnippetsFilter", Name:"coffee-rate-limiting-sf"}
-      Observed Generation:   1
-      Reason:                InvalidFilter
-      Status:                False
-      Type:                  ResolvedRefs
-  .
-  .
-  .
-   Conditions:
-      Last Transition Time:  2024-10-22T23:43:14Z
-      Message:               The route is accepted
-      Observed Generation:   1
-      Reason:                Accepted
-      Status:                True
-      Type:                  Accepted
-      Last Transition Time:  2024-10-22T23:43:14Z
-      Message:               spec.rules[0].filters[0].extensionRef: Not found: v1.LocalObjectReference{Group:"gateway.nginx.org", Kind:"SnippetsFilter", Name:"tea-rate-limiting-sf"}
-      Observed Generation:   1
-      Reason:                InvalidFilter
-      Status:                False
-      Type:                  ResolvedRefs
-  ```
-
-  The HTTPRoutes created earlier both reference `SnippetsFilter` resources that do not currently
-  exist, creating a 500 error code response returned on requests that are processed by these HTTPRoutes.
-  This issue will be resolved using SnippetsFilters.
+  You should see all successful responses in quick succession as we configured any rate limiting rules yet.
 
 ---
 
@@ -163,14 +129,13 @@ metadata:
 spec:
   snippets:
     - context: http
-      value: limit_req_zone $binary_remote_addr zone=coffeezone:10m rate=1r/s;
+      value: limit_req_zone \$binary_remote_addr zone=coffeezone:10m rate=1r/s;
     - context: http.server.location
       value: limit_req zone=coffeezone burst=3 nodelay;
 EOF
 ```
 
-This `SnippetsFilter` is already referenced by the HTTPRoute created during setup, so it will immediately apply
-to the HTTPRoute. The Snippet uses the NGINX `limit_req_module` to configure rate limiting for this HTTPRoute and the
+The Snippet uses the NGINX `limit_req_module` to configure rate limiting for this HTTPRoute and the
 backend coffee application. This snippet will limit the request processing rate to 1 request per second, and if there
 are more than 3 requests in queue, it will throw a 503 error.
 
@@ -196,7 +161,38 @@ Status:
 Events:                      <none>
 ```
 
-Verify that the coffee `HTTPRoute` which had an `InvalidFilter` condition earlier, no longer has that condition.
+To use the `SnippetsFilter`, update the coffee HTTPRoute to reference it:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coffee
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  hostnames:
+    - "cafe.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /coffee
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.nginx.org
+            kind: SnippetsFilter
+            name: coffee-rate-limiting-sf
+      backendRefs:
+        - name: coffee
+          port: 80
+EOF
+```
+
+Verify that the coffee HTTPRoute's has been configured correctly:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
@@ -206,13 +202,13 @@ You should see the following conditions:
 
 ```text
 Conditions:
-      Last Transition Time:  2024-10-23T00:33:08Z
+      Last Transition Time:  2024-10-28T00:33:08Z
       Message:               The route is accepted
       Observed Generation:   2
       Reason:                Accepted
       Status:                True
       Type:                  Accepted
-      Last Transition Time:  2024-10-23T00:33:08Z
+      Last Transition Time:  2024-10-28T00:33:08Z
       Message:               All references are resolved
       Observed Generation:   2
       Reason:                ResolvedRefs
@@ -231,7 +227,7 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 This request should receive a response from the coffee Pod:
 
 ```text
-Server address: 10.244.0.9:8080
+Server address: 10.244.0.7:8080
 Server name: coffee-76c7c85bbd-cf8nz
 ```
 
@@ -271,7 +267,7 @@ metadata:
 spec:
   snippets:
     - context: http
-      value: limit_req_zone $binary_remote_addr zone=teazone:10m rate=1r/s;
+      value: limit_req_zone \$binary_remote_addr zone=teazone:10m rate=1r/s;
     - context: http.server.location
       value: limit_req zone=teazone burst=3;
 EOF
@@ -302,7 +298,39 @@ Status:
 Events:                      <none>
 ```
 
-Verify that the tea `HTTPRoute` which had an `InvalidFilter` condition earlier, no longer has that condition.
+
+Update the tea HTTPRoute to reference the `SnippetsFilter`:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tea
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  hostnames:
+    - "cafe.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /tea
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.nginx.org
+            kind: SnippetsFilter
+            name: tea-rate-limiting-sf
+      backendRefs:
+        - name: tea
+          port: 80
+EOF
+```
+
+Verify that the tea HTTPRoute's has been configured correctly:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io tea
@@ -312,13 +340,13 @@ You should see the following conditions:
 
 ```text
 Conditions:
-      Last Transition Time:  2024-10-23T00:33:08Z
+      Last Transition Time:  2024-10-28T00:33:08Z
       Message:               The route is accepted
       Observed Generation:   2
       Reason:                Accepted
       Status:                True
       Type:                  Accepted
-      Last Transition Time:  2024-10-23T00:33:08Z
+      Last Transition Time:  2024-10-28T00:33:08Z
       Message:               All references are resolved
       Observed Generation:   2
       Reason:                ResolvedRefs
@@ -337,7 +365,7 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 This request should receive a response from the tea Pod:
 
 ```text
-Server address: 10.244.0.7:8080
+Server address: 10.244.0.6:8080
 Server name: tea-76c7c85bbd-cf8nz
 ```
 

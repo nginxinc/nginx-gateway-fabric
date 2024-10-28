@@ -13,12 +13,6 @@ spec:
         - path:
             type: PathPrefix
             value: /coffee
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.nginx.org
-            kind: SnippetsFilter
-            name: coffee-rate-limiting-sf
       backendRefs:
         - name: coffee
           port: 80
@@ -38,12 +32,6 @@ spec:
         - path:
             type: PathPrefix
             value: /tea
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.nginx.org
-            kind: SnippetsFilter
-            name: tea-rate-limiting-sf
       backendRefs:
         - name: tea
           port: 80
