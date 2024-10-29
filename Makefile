@@ -34,7 +34,7 @@ GEN_CRD_API_REFERENCE_DOCS_VERSION = v0.3.0
 # renovate: datasource=go depName=sigs.k8s.io/controller-tools
 CONTROLLER_TOOLS_VERSION = v0.16.4
 # renovate: datasource=docker depName=node
-NODE_VERSION = 20
+NODE_VERSION = 22
 # renovate: datasource=docker depName=quay.io/helmpack/chart-testing
 CHART_TESTING_VERSION = v3.11.0
 # renovate: datasource=github-tags depName=dadav/helm-schema
