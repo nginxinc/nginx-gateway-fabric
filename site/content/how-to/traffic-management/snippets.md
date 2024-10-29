@@ -17,8 +17,8 @@ NGINX configurations that NGINX Gateway Fabric generates.
 Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
 and can be used in cases where Gateway API resources or NGINX extension policies don't apply.
 
-Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` is an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter)
-that attaches to an HTTP/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule.
+Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` can be an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) or [GRPCRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteFilter),
+that can be defined in an HTTP/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule. `SnippetsFilter` is an `extensionRef` type filter.
 
 ---
 
@@ -37,7 +37,7 @@ Snippets have the following disadvantages:
 - _Decreased robustness_. An incorrect Snippet can invalidate NGINX configuration, causing reload failures. Until the snippet is fixed, it will prevent any new configuration updates, including updates for the other Gateway resources.
 - _Security implications_. Snippets give access to NGINX configuration primitives, which are not validated by NGINX Gateway Fabric. For example, a Snippet can configure NGINX to serve the TLS certificates and keys used for TLS termination for Gateway resources.
 
-{{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. {{< /note >}}
+{{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. No new configuration will be applied until the invalid Snippet is fixed. {{< /note >}}
 
 {{< note >}} If you end up using Snippets and run into situations where an NGINX directive fails to be applied, please create an issue in the
 [NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
@@ -127,24 +127,26 @@ kubectl apply -f - <<EOF
 apiVersion: gateway.nginx.org/v1alpha1
 kind: SnippetsFilter
 metadata:
-  name: coffee-rate-limiting-sf
+  name: no-delay-rate-limiting-sf
 spec:
   snippets:
     - context: http
-      value: limit_req_zone \$binary_remote_addr zone=coffeezone:10m rate=1r/s;
+      value: limit_req_zone \$binary_remote_addr zone=no-delay-rate-limiting-sf:10m rate=1r/s;
     - context: http.server.location
-      value: limit_req zone=coffeezone burst=3 nodelay;
+      value: limit_req zone=no-delay-rate-limiting-sf burst=3 nodelay;
 EOF
 ```
 
-The Snippet uses the NGINX `limit_req_module` to configure rate limiting for this HTTPRoute and the
-backend coffee application. This snippet will limit the request processing rate to 1 request per second, and if there
+This `SnippetsFilter` defines two Snippets to configure rate limiting for this HTTPRoute and the
+backend coffee application. The first one injects the value: `limit_req_zone \$binary_remote_addr zone=no-delay-rate-limiting-sf:10m rate=1r/s;`
+into the `http` context. The second one injects the value: `limit_req zone=no-delay-rate-limiting-sf burst=3 nodelay;` into the location(s) for `/coffee`.
+This `SnippetsFilter` will limit the request processing rate to 1 request per second, and if there
 are more than 3 requests in queue, it will throw a 503 error.
 
 Verify that the `SnippetsFilter` is Accepted:
 
 ```shell
-kubectl describe snippetsfilters.gateway.nginx.org coffee-rate-limiting-sf
+kubectl describe snippetsfilters.gateway.nginx.org no-delay-rate-limiting-sf
 ```
 
 You should see the following status:
@@ -187,7 +189,7 @@ spec:
           extensionRef:
             group: gateway.nginx.org
             kind: SnippetsFilter
-            name: coffee-rate-limiting-sf
+            name: no-delay-rate-limiting-sf
       backendRefs:
         - name: coffee
           port: 80
@@ -265,13 +267,13 @@ kubectl apply -f - <<EOF
 apiVersion: gateway.nginx.org/v1alpha1
 kind: SnippetsFilter
 metadata:
-  name: tea-rate-limiting-sf
+  name: rate-limiting-sf
 spec:
   snippets:
     - context: http
-      value: limit_req_zone \$binary_remote_addr zone=teazone:10m rate=1r/s;
+      value: limit_req_zone \$binary_remote_addr zone=rate-limiting-sf:10m rate=1r/s;
     - context: http.server.location
-      value: limit_req zone=teazone burst=3;
+      value: limit_req zone=rate-limiting-sf burst=3;
 EOF
 ```
 
@@ -281,7 +283,7 @@ on the `limit_req` directive. This forces a delay on the incoming requests to ma
 Verify that the `SnippetsFilter` is Accepted:
 
 ```shell
-kubectl describe snippetsfilters.gateway.nginx.org tea-rate-limiting-sf
+kubectl describe snippetsfilters.gateway.nginx.org rate-limiting-sf
 ```
 
 You should see the following status:
@@ -324,7 +326,7 @@ spec:
           extensionRef:
             group: gateway.nginx.org
             kind: SnippetsFilter
-            name: tea-rate-limiting-sf
+            name: rate-limiting-sf
       backendRefs:
         - name: tea
           port: 80
