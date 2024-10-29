@@ -388,6 +388,62 @@ our supported [first-class policies]({{< relref "overview/custom-policies.md" >}
 
 ---
 
+## Troubleshooting
+
+If a `SnippetsFilter` is defined in a Route resource and contains a Snippet which includes an invalid NGINX configuration, NGINX will continue to operate
+with the last valid configuration and an event with the error will be outputted. No new configuration will be applied until the invalid Snippet is fixed.
+
+An example of an error from the NGINX Gateway Fabric `nginx-gateway` container logs:
+
+```text
+{"level":"error","ts":"2024-10-29T22:19:41Z","logger":"eventLoop.eventHandler","msg":"Failed to update NGINX configuration","batchID":156,"error":"failed to reload NGINX: reload unsuccessful: no new NGINX worker processes started for config version 141. Please check the NGINX container logs for possible configuration issues: context deadline exceeded","stacktrace":"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static.(*eventHandlerImpl).HandleEventBatch\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/handler.go:219\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events.(*EventLoop).Start.func1.1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events/loop.go:74"}
+```
+
+An example of an error from the NGINX Gateway Fabric `nginx` container logs:
+
+```text
+2024/10/29 22:18:41 [emerg] 40#40: invalid number of arguments in "limit_req_zone" directive in /etc/nginx/includes/SnippetsFilter_http_default_rate-limiting-sf.conf:1
+```
+
+The Route resource which references the `SnippetsFilter` may also contain information in its conditions describing the error:
+
+```text
+ Conditions:
+      Last Transition Time:  2024-10-29T22:19:41Z
+      Message:               All references are resolved
+      Observed Generation:   2
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+      Last Transition Time:  2024-10-29T22:19:41Z
+      Message:               The Gateway is not programmed due to a failure to reload nginx with the configuration. Please see the nginx container logs for any possible configuration issues. NGINX may still be configured for this Route. However, future updates to this resource will not be configured until the Gateway is programmed again
+      Observed Generation:   2
+      Reason:                GatewayNotProgrammed
+      Status:                False
+      Type:                  Accepted
+```
+
+If a Route resource references a `SnippetsFilter` which cannot be resolved, the route will return a 500 HTTP error response on all requests.
+The Route conditions will contain information describing the error:
+
+```text
+Conditions:
+      Last Transition Time:  2024-10-29T22:26:01Z
+      Message:               The route is accepted
+      Observed Generation:   2
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2024-10-29T22:26:01Z
+      Message:               spec.rules[0].filters[0].extensionRef: Not found: v1.LocalObjectReference{Group:"gateway.nginx.org", Kind:"SnippetsFilter", Name:"rate-limiting-sf"}
+      Observed Generation:   2
+      Reason:                InvalidFilter
+      Status:                False
+      Type:                  ResolvedRefs
+```
+
+---
+
 ## See also
 
 - [API reference]({{< relref "reference/api.md" >}}): all configuration fields for the `SnippetsFilter` API.
