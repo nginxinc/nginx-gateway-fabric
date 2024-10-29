@@ -42,6 +42,8 @@ Snippets have the following disadvantages:
 {{< note >}} If you end up using Snippets and run into situations where an NGINX directive fails to be applied, please create an issue in the
 [NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
 
+---
+
 ## Setup
 
 - To enable Snippets, [install]({{< relref "/installation/" >}}) NGINX Gateway Fabric with these modifications:
@@ -52,7 +54,7 @@ Snippets have the following disadvantages:
 - Save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
-  GW_IP=XXX.YYY.ZZZ.III
+  GW_IP=<ip address>
   GW_PORT=<port number>
   ```
 
@@ -192,7 +194,7 @@ spec:
 EOF
 ```
 
-Verify that the coffee HTTPRoute's has been configured correctly:
+Verify that the coffee HTTPRoute has been configured correctly:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
@@ -298,7 +300,6 @@ Status:
 Events:                      <none>
 ```
 
-
 Update the tea HTTPRoute to reference the `SnippetsFilter`:
 
 ```yaml
@@ -330,7 +331,7 @@ spec:
 EOF
 ```
 
-Verify that the tea HTTPRoute's has been configured correctly:
+Verify that the tea HTTPRoute has been configured correctly:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io tea
@@ -379,12 +380,12 @@ for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://c
 You should see all successful responses from the tea Pod, but they should be spaced apart roughly one second each as
 expected through the rate limiting configuration.
 
-You've now used the `SnippetsFilter` resource to configure two distinct rate limiting rules to different backend applications through the use of Snippets.
+This indicates that you've successfully used Snippets with the `SnippetsFilter` resource to configure two distinct rate limiting rules to different backend applications.
 For an alternative method of modifying the NGINX configuration NGINX Gateway Fabric generates through Gateway API resources, check out
 our supported [first-class policies]({{< relref "overview/custom-policies.md" >}}) which don't carry many of the aforementioned disadvantages of Snippets.
 
 ---
 
-## Further reading
+## See also
 
 - [API reference]({{< relref "reference/api.md" >}}): all configuration fields for the `SnippetsFilter` API.
