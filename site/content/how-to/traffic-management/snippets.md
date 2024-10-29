@@ -39,9 +39,6 @@ Snippets have the following disadvantages:
 
 {{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. No new configuration will be applied until the invalid Snippet is fixed. {{< /note >}}
 
-{{< note >}} If you end up using Snippets and run into situations where an NGINX directive fails to be applied, please create an issue in the
-[NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
-
 ---
 
 ## Setup
@@ -441,6 +438,9 @@ Conditions:
       Status:                False
       Type:                  ResolvedRefs
 ```
+
+{{< note >}} If you run into situations where an NGINX directive fails to be applied and the troubleshooting information here isn't sufficient, please create an issue in the
+[NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
 
 ---
 
