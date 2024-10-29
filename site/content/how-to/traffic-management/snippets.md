@@ -390,7 +390,7 @@ our supported [first-class policies]({{< relref "overview/custom-policies.md" >}
 
 ## Troubleshooting
 
-If a `SnippetsFilter` is defined in a Route resource and contains a Snippet which includes an invalid NGINX configuration, NGINX will continue to operate
+If a `SnippetsFilter` is defined in a Route and contains a Snippet which includes an invalid NGINX configuration, NGINX will continue to operate
 with the last valid configuration and an event with the error will be outputted. No new configuration will be applied until the invalid Snippet is fixed.
 
 An example of an error from the NGINX Gateway Fabric `nginx-gateway` container logs:
@@ -405,7 +405,7 @@ An example of an error from the NGINX Gateway Fabric `nginx` container logs:
 2024/10/29 22:18:41 [emerg] 40#40: invalid number of arguments in "limit_req_zone" directive in /etc/nginx/includes/SnippetsFilter_http_default_rate-limiting-sf.conf:1
 ```
 
-The Route resource which references the `SnippetsFilter` may also contain information in its conditions describing the error:
+The Route which references the `SnippetsFilter` may also contain information in its conditions describing the error:
 
 ```text
  Conditions:
@@ -423,7 +423,7 @@ The Route resource which references the `SnippetsFilter` may also contain inform
       Type:                  Accepted
 ```
 
-If a Route resource references a `SnippetsFilter` which cannot be resolved, the route will return a 500 HTTP error response on all requests.
+If a Route references a `SnippetsFilter` which cannot be resolved, the route will return a 500 HTTP error response on all requests.
 The Route conditions will contain information describing the error:
 
 ```text
