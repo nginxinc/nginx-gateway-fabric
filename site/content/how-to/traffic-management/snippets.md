@@ -18,7 +18,7 @@ Snippets are for advanced NGINX users who need more control over the generated N
 and can be used in cases where Gateway API resources or NGINX extension policies don't apply.
 
 Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` can be an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) or [GRPCRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteFilter),
-that can be defined in an HTTP/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule. `SnippetsFilter` is an `extensionRef` type filter.
+that can be defined in an HTTPRoute/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule. `SnippetsFilter` is an `extensionRef` type filter.
 
 ---
 
@@ -38,6 +38,19 @@ Snippets have the following disadvantages:
 - _Security implications_. Snippets give access to NGINX configuration primitives, which are not validated by NGINX Gateway Fabric. For example, a Snippet can configure NGINX to serve the TLS certificates and keys used for TLS termination for Gateway resources.
 
 {{< note >}} If the NGINX configuration includes an invalid Snippet, NGINX will continue to operate with the last valid configuration. No new configuration will be applied until the invalid Snippet is fixed. {{< /note >}}
+
+---
+
+## Best Practices when using SnippetsFilters
+
+There are endless ways to use `SnippetsFilters` to modify NGINX configuration, and thus there are many ways to generate invalid or undesired NGINX configuration.
+We have outlined a few best practices to keep in mind when using `SnippetsFilters` to keep NGINX Gateway Fabric functioning correctly:
+
+1. Using the [Roles and Personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/) defined in the Gateway API, `SnippetsFilter` access
+   should be limited to Cluster operators. Application developers should not be able to create, modify, or delete `SnippetsFilters` as they affect other applications.
+   `SnippetsFilter` creates a natural split of responsibilities between the Cluster operator and the Application developer: the Cluster operator creates a `SnippetsFilter`; the Application developer references the `SnippetsFilter` in an HTTPRoute/GRPCRoute to enable it.
+2. In a `SnippetsFilter`, only one Snippet per NGINX context is allowed, however multiple `SnippetsFilters` can be referenced in the same routing rule. As such, `SnippetsFilters` should not conflict with each other. If `SnippetsFilters` do conflict, they should not be referenced on the same routing rule.
+3. `SnippetsFilters` that define Snippets targeting NGINX contexts `main`, `http`, or `http.server`, can potentially affect more than the routing rule they are referenced by. Proceed with caution and verify the behavior of the NGINX configuration before creating those `SnippetsFilters` in a production scenario.
 
 ---
 
