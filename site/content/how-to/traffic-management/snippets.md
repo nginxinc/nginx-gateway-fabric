@@ -128,9 +128,52 @@ We have outlined a few best practices to keep in mind when using `SnippetsFilter
 
 ---
 
-## Configure rate limiting to the coffee application
+## Create Rate Limiting SnippetsFilters
 
-Configure rate limiting to the coffee application by adding the following `SnippetsFilter`:
+Configure a rate limiting `SnippetsFilter` named `rate-limiting-sf` by adding the following `SnippetsFilter`:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: rate-limiting-sf
+spec:
+  snippets:
+    - context: http
+      value: limit_req_zone \$binary_remote_addr zone=rate-limiting-sf:10m rate=1r/s;
+    - context: http.server.location
+      value: limit_req zone=rate-limiting-sf burst=3;
+EOF
+```
+
+This `SnippetsFilter` defines two Snippets to configure rate limiting. The first Snippet injects the value: `limit_req_zone \$binary_remote_addr zone=rate-limiting-sf:10m rate=1r/s;`
+into the `http` context. The second Snippet injects the value: `limit_req zone=rate-limiting-sf burst=3;` into the location(s) generated for whichever route(s) reference this `SnippetsFilter`.
+This `SnippetsFilter` will limit the request processing rate to 1 request per second.
+
+Verify that the `SnippetsFilter` is Accepted:
+
+```shell
+kubectl describe snippetsfilters.gateway.nginx.org rate-limiting-sf
+```
+
+You should see the following status:
+
+```text
+Status:
+  Controllers:
+    Conditions:
+      Last Transition Time:  2024-10-21T22:20:22Z
+      Message:               SnippetsFilter is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+Events:                      <none>
+```
+
+Configure another rate limiting `SnippetsFilter` named `no-delay-rate-limiting-sf` by adding the following `SnippetsFilter`:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -147,10 +190,9 @@ spec:
 EOF
 ```
 
-This `SnippetsFilter` defines two Snippets to configure rate limiting. The first Snippet injects the value: `limit_req_zone \$binary_remote_addr zone=no-delay-rate-limiting-sf:10m rate=1r/s;`
-into the `http` context. The second Snippet injects the value: `limit_req zone=no-delay-rate-limiting-sf burst=3 nodelay;` into the location(s) generated for the routing rule.
-This `SnippetsFilter` will limit the request processing rate to 1 request per second, and if there
-are more than 3 requests in queue, it will throw a 503 error.
+This `SnippetsFilter` is the same as the `rate-limiting-sf` `SnippetsFilter`, however it adds the `nodelay` setting to the
+`limit_req` directive in the Snippet targeting the `http.server.location` context. This will limit the request processing rate
+to 1 request per second, and if there are more than 3 requests in queue, it will throw a 503 error.
 
 Verify that the `SnippetsFilter` is Accepted:
 
@@ -174,7 +216,9 @@ Status:
 Events:                      <none>
 ```
 
-To use the `SnippetsFilter`, update the coffee HTTPRoute to reference it:
+## Configure coffee to reference rate-limiting-sf SnippetsFilter
+
+To use the `rate-limiting-sf` `SnippetsFilter`, update the coffee HTTPRoute to reference it:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -198,7 +242,7 @@ spec:
           extensionRef:
             group: gateway.nginx.org
             kind: SnippetsFilter
-            name: no-delay-rate-limiting-sf
+            name: rate-limiting-sf
       backendRefs:
         - name: coffee
           port: 80
@@ -229,7 +273,7 @@ Conditions:
       Type:                  ResolvedRefs
 ```
 
-Test that the `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
+Test that the `rate-limiting-sf` `SnippetsFilter` is configured and has successfully applied the rate limiting NGINX configuration changes.
 
 Send a request to coffee:
 
@@ -251,67 +295,12 @@ set rate limit with a script that sends multiple requests.
 for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee; done
 ```
 
-You should see some successful responses from the coffee Pod, however there should be multiple `503` responses such as:
+You should see all successful responses from the coffee Pod, but they should be spaced apart roughly one second each as
+expected through the rate limiting configuration.
 
-```text
-Request ID: 890c17df930ef1ef573feed3c6e81290
-<html>
-<head><title>503 Service Temporarily Unavailable</title></head>
-<body>
-<center><h1>503 Service Temporarily Unavailable</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-```
+## Configure tea to reference no-delay-rate-limiting-sf SnippetsFilter
 
-This is the default error response given by NGINX when the rate limit burst is exceeded, meaning our `SnippetsFilter`
-correctly applied our rate limiting NGINX configuration changes.
-
-## Configure rate limiting to the tea application
-
-Configure a different set of rate limiting rules to the tea application by adding the following `SnippetsFilter`:
-
-```yaml
-kubectl apply -f - <<EOF
-apiVersion: gateway.nginx.org/v1alpha1
-kind: SnippetsFilter
-metadata:
-  name: rate-limiting-sf
-spec:
-  snippets:
-    - context: http
-      value: limit_req_zone \$binary_remote_addr zone=rate-limiting-sf:10m rate=1r/s;
-    - context: http.server.location
-      value: limit_req zone=rate-limiting-sf burst=3;
-EOF
-```
-
-This `SnippetsFilter` is the same as the one applied to the coffee HTTPRoute, however it removes the `nodelay` setting
-on the `limit_req` directive. This forces a delay on the incoming requests to match the rate set in `limit_req_zone`.
-
-Verify that the `SnippetsFilter` is Accepted:
-
-```shell
-kubectl describe snippetsfilters.gateway.nginx.org rate-limiting-sf
-```
-
-You should see the following status:
-
-```text
-Status:
-  Controllers:
-    Conditions:
-      Last Transition Time:  2024-10-21T22:20:24Z
-      Message:               SnippetsFilter is accepted
-      Observed Generation:   1
-      Reason:                Accepted
-      Status:                True
-      Type:                  Accepted
-    Controller Name:         gateway.nginx.org/nginx-gateway-controller
-Events:                      <none>
-```
-
-Update the tea HTTPRoute to reference the `SnippetsFilter`:
+Update the tea HTTPRoute to reference the `no-delay-rate-limting-sf` `SnippetsFilter`:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -335,7 +324,7 @@ spec:
           extensionRef:
             group: gateway.nginx.org
             kind: SnippetsFilter
-            name: rate-limiting-sf
+            name: no-delay-rate-limiting-sf
       backendRefs:
         - name: tea
           port: 80
@@ -388,10 +377,33 @@ multiple requests.
 for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea; done
 ```
 
-You should see all successful responses from the tea Pod, but they should be spaced apart roughly one second each as
-expected through the rate limiting configuration.
+You should see some successful responses from the tea Pod, however there should be multiple `503` responses such as:
 
-This indicates that you've successfully used Snippets with the `SnippetsFilter` resource to configure two distinct rate limiting rules to different backend applications.
+```text
+Request ID: 890c17df930ef1ef573feed3c6e81290
+<html>
+<head><title>503 Service Temporarily Unavailable</title></head>
+<body>
+<center><h1>503 Service Temporarily Unavailable</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+```
+
+This is the default error response given by NGINX when the rate limit burst is exceeded, meaning our `SnippetsFilter`
+correctly applied our rate limiting NGINX configuration changes.
+
+---
+
+## Conclusion
+
+You've successfully used Snippets with the `SnippetsFilter` resource to configure two distinct rate limiting rules to different backend applications.
+
+In this example guide, the Cluster Operator would have played the role in creating and applying the `SnippetsFilter` resources shown in [Create Rate Limiting SnippetsFilters](#create-rate-limiting-snippetsfilters)
+while the Application Developers for coffee and tea would have played the role in modifying their application to reference whichever `SnippetsFilter` they want shown in
+[Configure coffee to reference rate-limiting-sf SnippetsFilter](#configure-coffee-to-reference-rate-limiting-sf-snippetsfilter) and [Configure tea to reference no-delay-rate-limiting-sf SnippetsFilter](#configure-tea-to-reference-no-delay-rate-limiting-sf-snippetsfilter).
+This follows our recommended Role and Persona separation described in the [Best Practices when using SnippetsFilters](#best-practices-when-using-snippetsfilters).
+
 For an alternative method of modifying the NGINX configuration NGINX Gateway Fabric generates through Gateway API resources, check out
 our supported [first-class policies]({{< relref "overview/custom-policies.md" >}}) which don't carry many of the aforementioned disadvantages of Snippets.
 
