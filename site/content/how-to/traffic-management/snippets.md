@@ -147,9 +147,8 @@ spec:
 EOF
 ```
 
-This `SnippetsFilter` defines two Snippets to configure rate limiting for this HTTPRoute and the
-backend coffee application. The first one injects the value: `limit_req_zone \$binary_remote_addr zone=no-delay-rate-limiting-sf:10m rate=1r/s;`
-into the `http` context. The second one injects the value: `limit_req zone=no-delay-rate-limiting-sf burst=3 nodelay;` into the location(s) for `/coffee`.
+This `SnippetsFilter` defines two Snippets to configure rate limiting. The first Snippet injects the value: `limit_req_zone \$binary_remote_addr zone=no-delay-rate-limiting-sf:10m rate=1r/s;`
+into the `http` context. The second Snippet injects the value: `limit_req zone=no-delay-rate-limiting-sf burst=3 nodelay;` into the location(s) generated for the routing rule.
 This `SnippetsFilter` will limit the request processing rate to 1 request per second, and if there
 are more than 3 requests in queue, it will throw a 503 error.
 
