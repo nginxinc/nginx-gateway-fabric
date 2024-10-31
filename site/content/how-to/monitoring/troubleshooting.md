@@ -203,7 +203,7 @@ server {
         proxy_set_header Upgrade "$http_upgrade";
         proxy_set_header Connection "$connection_upgrade";
         proxy_http_version 1.1;
-        proxy_pass http://group_default_coffee_80$request_uri;
+        proxy_pass http://default_coffee_80$request_uri;
     }
 
     location = /coffee {
@@ -212,7 +212,7 @@ server {
         proxy_set_header Upgrade "$http_upgrade";
         proxy_set_header Connection "$connection_upgrade";
         proxy_http_version 1.1;
-        proxy_pass http://group_default_coffee_80$request_uri;
+        proxy_pass http://default_coffee_80$request_uri;
     }
 
     location / {
@@ -220,9 +220,9 @@ server {
     }
 
 }
-upstream group_default_coffee_80 {
+upstream default_coffee_80 {
     random two least_conn;
-    zone group_default_coffee_80 512k;
+    zone default_coffee_80 512k;
 
     server 10.244.0.13:8080;
 }
