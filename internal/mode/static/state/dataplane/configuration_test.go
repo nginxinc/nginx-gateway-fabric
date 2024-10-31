@@ -3066,6 +3066,7 @@ func TestBuildBackendGroups(t *testing.T) {
 }
 
 func TestBackendGroupName(t *testing.T) {
+	t.Parallel()
 	backendGroup := createBackendGroup("route1", 2, "foo", "bar")
 
 	expectedGroupName := "group_test__route1_rule2"
