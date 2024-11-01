@@ -6,14 +6,14 @@ NGINX Plus: false
 
 NGINX Gateway Fabric:
 
-- Commit: 3a08fdafadfe0fb4a9c25679da1a1fcd6b181474
-- Date: 2024-10-15T13:45:52Z
+- Commit: fed4239ecb35f937b66bba7bd68d6894ca0762b3
+- Date: 2024-11-01T00:13:12Z
 - Dirty: false
 
 GKE Cluster:
 
 - Node count: 12
-- k8s version: v1.30.5-gke.1014001
+- k8s version: v1.30.5-gke.1355000
 - vCPUs per node: 16
 - RAM per node: 65853972Ki
 - Max pods per node: 110
@@ -24,9 +24,9 @@ GKE Cluster:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.991s, 59.99s, 879.857µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  472.733µs, 846.68µs, 831.757µs, 948.108µs, 989.426µs, 1.13ms, 12.461ms
-Bytes In      [total, mean]                     968005, 161.33
+Duration      [total, attack, wait]             59.992s, 59.991s, 832.388µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  661.038µs, 925.153µs, 872.029µs, 1.004ms, 1.066ms, 1.531ms, 23.456ms
+Bytes In      [total, mean]                     954000, 159.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -39,9 +39,9 @@ Error Set:
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.991s, 59.99s, 802.597µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  646.501µs, 872.011µs, 851.784µs, 961.79µs, 1.006ms, 1.137ms, 12.519ms
-Bytes In      [total, mean]                     930000, 155.00
+Duration      [total, attack, wait]             59.992s, 59.991s, 837.87µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  670.993µs, 954.813µs, 897.366µs, 1.024ms, 1.09ms, 1.547ms, 13.77ms
+Bytes In      [total, mean]                     919960, 153.33
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
