@@ -267,11 +267,13 @@ type BackendGroup struct {
 
 // Name returns the name of the backend group.
 // This name must be unique across all HTTPRoutes and all rules within the same HTTPRoute.
+// It is prefixed with `group_` for cases when namespace name starts with a digit. Variable names
+// in nginx configuration cannot start with a digit.
 // The RuleIdx is used to make the name unique across all rules within the same HTTPRoute.
 // The RuleIdx may change for a given rule if an update is made to the HTTPRoute, but it will always match the index
 // of the rule in the stored HTTPRoute.
 func (bg *BackendGroup) Name() string {
-	return fmt.Sprintf("%s__%s_rule%d", bg.Source.Namespace, bg.Source.Name, bg.RuleIdx)
+	return fmt.Sprintf("group_%s__%s_rule%d", bg.Source.Namespace, bg.Source.Name, bg.RuleIdx)
 }
 
 // Backend represents a Backend for a routing rule.
