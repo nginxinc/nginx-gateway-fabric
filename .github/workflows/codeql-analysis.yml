@@ -6,7 +6,6 @@ on:
       - main
       - release-*
   pull_request:
-    # The branches below must be a subset of the branches above
     branches:
       - main
       - release-*
@@ -38,14 +37,7 @@ jobs:
             build-mode: autobuild
           - language: javascript-typescript
             build-mode: none
-            # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
-            # Use `c-cpp` to analyze code written in C, C++ or both
-            # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
-            # Use 'javascript-typescript' to analyze code written in JavaScript, TypeScript or both
-            # To learn more about changing the languages that are analyzed or customizing the build mode for your analysis,
-            # see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning.
-            # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
-            # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages.
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -56,12 +48,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-          # If you wish to specify custom queries, you can do so here or in a config file.
-          # By default, queries listed here will override any specified in a config file.
-          # Prefix the list here with "+" to use these queries and those in the config file.
-
-          # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-          # queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
