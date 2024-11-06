@@ -268,10 +268,10 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginx.image.tag` |  | string | `"edge"` |
 | `nginx.lifecycle` | The lifecycle of the nginx container. | object | `{}` |
 | `nginx.plus` | Is NGINX Plus image being used | bool | `false` |
-| `nginx.usage.caSecretName` | The name of the Secret containing the CA cert for verifying the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
-| `nginx.usage.clientSSLSecretName` | The name of the Secret containing the client cert/key for communicating with the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.caSecretName` | The name of the Secret containing the CA certificate for verifying the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.clientSSLSecretName` | The name of the Secret containing the client certificate/key for communicating with the NGINX Plus usage reporting server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
 | `nginx.usage.endpoint` | The endpoint of the NGINX Plus usage reporting server. Default: product.connect.nginx.com | string | `""` |
-| `nginx.usage.resolver` | The resolver domain name or IP address with optional port for resolving the endpoint. | string | `""` |
+| `nginx.usage.resolver` | The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager. | string | `""` |
 | `nginx.usage.secretName` | The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `"nplus-license"` |
 | `nginx.usage.skipVerify` | Disable client verification of the NGINX Plus usage reporting server certificate. | bool | `false` |
 | `nginxGateway.config.logging.level` | Log level. | string | `"info"` |

@@ -14,25 +14,25 @@ include {{ $i.Name }};
 
 const mgmtConfigTemplateText = `
 mgmt {
-	license_token /etc/nginx/license/license.jwt;
 	{{- if .Endpoint }}
 	usage_report endpoint={{ .Endpoint }};
 	{{- end }}
 	{{- if .Resolver }}
 	resolver {{ .Resolver }};
 	{{- end }}
+	license_token {{ .LicenseTokenFile }};
 	{{- if .DeploymentCtxFile }}
 	deployment_context {{ .DeploymentCtxFile }};
 	{{- end }}
 	{{- if .SkipVerify }}
 	ssl_verify off;
 	{{- end }}
-	{{- if .CACertExists }}
-	ssl_trusted_certificate /etc/nginx/usage-certs/ca/ca.crt;
+	{{- if .CACertFile }}
+	ssl_trusted_certificate {{ .CACertFile }};
 	{{- end }}
-	{{- if .ClientSSLCertExists }}
-	ssl_certificate /etc/nginx/usage-certs/client/tls.crt;
-	ssl_certificate_key /etc/nginx/usage-certs/client/tls.key;
+	{{- if and .ClientSSLCertFile .ClientSSLKeyFile }}
+	ssl_certificate {{ .ClientSSLCertFile }};
+	ssl_certificate_key {{ .ClientSSLKeyFile }};
 	{{- end }}
 }
 `

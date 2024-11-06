@@ -9,8 +9,8 @@ docs: "DOCS-1429"
 
 Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Kubernetes manifests.
 
-{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
-Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version.{{</important>}}
+{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version. {{< /important >}}
 
 ## Before you begin
 
@@ -18,7 +18,7 @@ To complete this guide, you'll need to install:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
 
-{{< important >}}If you’d like to use NGINX Plus, some additional setup is also required:{{</ important >}}
+{{< important >}} If you’d like to use NGINX Plus, some additional setup is also required: {{</ important >}}
 <details closed>
 <summary>NGINX Plus JWT setup</summary>
 
@@ -36,7 +36,7 @@ To complete this guide, you'll need to install:
 
 {{<include "installation/nginx-plus/nginx-plus-secret.md" >}}
 
-{{<note>}}For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document.{{</note>}}
+{{< note >}} For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document. {{< /note >}}
 
 </details>
 
@@ -64,7 +64,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 ### 3. Deploy NGINX Gateway Fabric
 
-{{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
+{{< note >}} By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files. {{< /note >}}
 
 {{<tabs name="install-manifests">}}
 
@@ -118,7 +118,7 @@ Deploys NGINX Gateway Fabric with NGINX OSS and experimental features.
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/experimental/deploy.yaml
 ```
 
-{{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+{{< note >}} Requires the Gateway APIs installed from the experimental channel. {{< /note >}}
 
 {{% /tab %}}
 
@@ -132,7 +132,7 @@ The NGINX Plus JWT Secret used to run NGINX Plus is also specified in a volume m
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/nginx-plus-experimental/deploy.yaml
 ```
 
-{{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+{{< note >}} Requires the Gateway APIs installed from the experimental channel. {{< /note >}}
 
 {{% /tab %}}
 
@@ -179,8 +179,8 @@ nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
 
 ## Upgrade NGINX Gateway Fabric
 
-{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
-Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version.{{</important>}}
+{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version. {{< /important >}}
 
 {{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
 

@@ -29,6 +29,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 type handlerMetricsCollector interface {
@@ -51,8 +52,10 @@ type eventHandlerConfig struct {
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
 	generator ngxConfig.Generator
-	// k8sClient is a Kubernetes API client
+	// k8sClient is a Kubernetes API client.
 	k8sClient client.Client
+	// k8sReader is a Kubernets API reader.
+	k8sReader client.Reader
 	// logLevelSetter is used to update the logging level.
 	logLevelSetter logLevelSetter
 	// eventRecorder records events for Kubernetes resources.
@@ -67,6 +70,8 @@ type eventHandlerConfig struct {
 	gatewayCtlrName string
 	// updateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	updateGatewayClassStatus bool
+	// plus is whether or not we are running NGINX Plus.
+	plus bool
 }
 
 const (
@@ -168,6 +173,9 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
+		if err := h.setDeploymentCtx(ctx, &cfg); err != nil {
+			logger.Error(err, "error setting deployment context for usage reporting")
+		}
 
 		h.setLatestConfiguration(&cfg)
 
@@ -179,6 +187,9 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
+		if err := h.setDeploymentCtx(ctx, &cfg); err != nil {
+			logger.Error(err, "error setting deployment context for usage reporting")
+		}
 
 		h.setLatestConfiguration(&cfg)
 
@@ -483,6 +494,42 @@ func getGatewayAddresses(
 	}
 
 	return gwAddresses, nil
+}
+
+// setDeploymentCtx sets the deployment context metadata for nginx plus reporting.
+func (h *eventHandlerImpl) setDeploymentCtx(ctx context.Context, cfg *dataplane.Configuration) error {
+	if !h.cfg.plus {
+		return nil
+	}
+
+	podNSName := types.NamespacedName{
+		Name:      h.cfg.gatewayPodConfig.Name,
+		Namespace: h.cfg.gatewayPodConfig.Namespace,
+	}
+
+	clusterInfo, err := telemetry.CollectClusterInformation(ctx, h.cfg.k8sReader)
+	if err != nil {
+		return fmt.Errorf("error getting cluster information")
+	}
+
+	replicaSet, err := telemetry.GetPodReplicaSet(ctx, h.cfg.k8sReader, podNSName)
+	if err != nil {
+		return fmt.Errorf("failed to get replica set for pod %v: %w", podNSName, err)
+	}
+
+	deploymentID, err := telemetry.GetDeploymentID(replicaSet)
+	if err != nil {
+		return fmt.Errorf("failed to get NGF deploymentID: %w", err)
+	}
+
+	cfg.DeploymentContext = dataplane.DeploymentContext{
+		Integration:      "ngf",
+		ClusterID:        clusterInfo.ClusterID,
+		ClusterNodeCount: clusterInfo.NodeCount,
+		InstallationID:   deploymentID,
+	}
+
+	return nil
 }
 
 // GetLatestConfiguration gets the latest configuration.

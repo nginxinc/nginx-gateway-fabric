@@ -161,7 +161,6 @@ data:
     error_log stderr info;
   mgmt.conf: |
     mgmt {
-        license_token /etc/nginx/license/license.jwt;
         enforce_initial_report off;
     }
 kind: ConfigMap
@@ -323,8 +322,9 @@ spec:
           name: nginx-lib
         - mountPath: /etc/nginx/includes
           name: nginx-includes
-        - mountPath: /etc/nginx/license
+        - mountPath: /etc/nginx/license.jwt
           name: nginx-plus-license
+          subPath: license.jwt
       initContainers:
       - command:
         - /usr/bin/gateway

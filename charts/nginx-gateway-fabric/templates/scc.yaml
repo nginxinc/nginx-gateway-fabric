@@ -33,6 +33,7 @@ volumes:
 - emptyDir
 - secret
 - configMap
+- projected
 users:
 - {{ printf "system:serviceaccount:%s:%s" .Release.Namespace (include "nginx-gateway.serviceAccountName" .) }}
 allowedCapabilities:

@@ -1,15 +1,9 @@
 package config
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
@@ -17,12 +11,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 //counterfeiter:generate . Generator
 
+// Volumes here also need to be added to our crossplane ephemeral test container.
 const (
 	// configFolder is the folder where NGINX configuration files are stored.
 	configFolder = "/etc/nginx"
@@ -62,10 +56,6 @@ const (
 	mgmtIncludesFile = mainIncludesFolder + "/mgmt.conf"
 )
 
-// ConfigFolders is a list of folders where NGINX configuration files are stored.
-// Volumes here also need to be added to our crossplane ephemeral test container.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, mainIncludesFolder, streamFolder}
-
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
 type Generator interface {
@@ -75,14 +65,12 @@ type Generator interface {
 
 // GeneratorImpl is an implementation of Generator.
 //
-// It generates files to be written to the ConfigFolders locations, which must exist and available for writing.
+// It generates files to be written to the folders above, which must exist and available for writing.
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
 // includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from other folders.
 type GeneratorImpl struct {
-	k8sClientReader   client.Reader
 	usageReportConfig *ngfConfig.UsageReportConfig
-	podConfig         *ngfConfig.GatewayPodConfig
 	logger            logr.Logger
 	plus              bool
 }
@@ -91,15 +79,11 @@ type GeneratorImpl struct {
 func NewGeneratorImpl(
 	plus bool,
 	usageReportConfig *ngfConfig.UsageReportConfig,
-	podConfig *ngfConfig.GatewayPodConfig,
-	reader client.Reader,
 	logger logr.Logger,
 ) GeneratorImpl {
 	return GeneratorImpl{
 		plus:              plus,
 		usageReportConfig: usageReportConfig,
-		podConfig:         podConfig,
-		k8sClientReader:   reader,
 		logger:            logger,
 	}
 }
@@ -150,12 +134,12 @@ func (g GeneratorImpl) executeConfigTemplates(
 		}
 	}
 
-	var plusFileCount int
+	var mgmtFiles []file.File
 	if g.plus {
-		plusFileCount = 2 // mgmt.conf, deployment_ctx.json
+		mgmtFiles = g.generateMgmtFiles(conf)
 	}
 
-	files := make([]file.File, 0, len(fileBytes)+plusFileCount)
+	files := make([]file.File, 0, len(fileBytes)+len(mgmtFiles))
 	for fp, bytes := range fileBytes {
 		files = append(files, file.File{
 			Path:    fp,
@@ -163,10 +147,7 @@ func (g GeneratorImpl) executeConfigTemplates(
 			Type:    file.TypeRegular,
 		})
 	}
-
-	if g.plus {
-		files = append(files, g.generateMgmtFiles()...)
-	}
+	files = append(files, mgmtFiles...)
 
 	return files
 }
@@ -214,99 +195,4 @@ func generateCertBundle(id dataplane.CertBundleID, cert []byte) file.File {
 
 func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
-}
-
-type mgmtConf struct {
-	Endpoint            string
-	Resolver            string
-	DeploymentCtxFile   string
-	SkipVerify          bool
-	CACertExists        bool
-	ClientSSLCertExists bool
-}
-
-// generateMgmtFile generates the NGINX Plus configuration file for the mgmt block. As part of this,
-// it writes the deployment context file that is referenced in the mgmt block.
-func (g GeneratorImpl) generateMgmtFiles() []file.File {
-	var files []file.File
-
-	podNSName := types.NamespacedName{
-		Namespace: g.podConfig.Namespace,
-		Name:      g.podConfig.Name,
-	}
-
-	conf := mgmtConf{
-		Endpoint:            g.usageReportConfig.Endpoint,
-		Resolver:            g.usageReportConfig.Resolver,
-		SkipVerify:          g.usageReportConfig.SkipVerify,
-		CACertExists:        g.usageReportConfig.CASecretName != "",
-		ClientSSLCertExists: g.usageReportConfig.ClientSSLSecretName != "",
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	data, err := getDeploymentCtx(ctx, g.k8sClientReader, podNSName)
-	if err != nil {
-		g.logger.Error(err, "error building deployment context for mgmt block")
-	} else {
-		deploymentCtxFile := file.File{
-			Content: data,
-			Path:    mainIncludesFolder + "/deployment_ctx.json",
-			Type:    file.TypeRegular,
-		}
-
-		conf.DeploymentCtxFile = deploymentCtxFile.Path
-		files = []file.File{deploymentCtxFile}
-	}
-
-	mgmtBlockFile := file.File{
-		Content: executeMgmtIncludesConfig(conf),
-		Path:    mgmtIncludesFile,
-		Type:    file.TypeRegular,
-	}
-
-	return append(files, mgmtBlockFile)
-}
-
-type deploymentContext struct {
-	Integration      string `json:"integration"`
-	ClusterID        string `json:"cluster_id"`
-	InstallationID   string `json:"installation_id"`
-	ClusterNodeCount int    `json:"cluster_node_count"`
-}
-
-func getDeploymentCtx(
-	ctx context.Context,
-	reader client.Reader,
-	podNSName types.NamespacedName,
-) ([]byte, error) {
-	clusterInfo, err := telemetry.CollectClusterInformation(ctx, reader)
-	if err != nil {
-		return nil, fmt.Errorf("error getting cluster information")
-	}
-
-	replicaSet, err := telemetry.GetPodReplicaSet(ctx, reader, podNSName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get replica set for pod %v: %w", podNSName, err)
-	}
-
-	deploymentID, err := telemetry.GetDeploymentID(replicaSet)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get NGF deploymentID: %w", err)
-	}
-
-	depCtx := &deploymentContext{
-		Integration:      "ngf",
-		ClusterID:        clusterInfo.ClusterID,
-		ClusterNodeCount: clusterInfo.NodeCount,
-		InstallationID:   deploymentID,
-	}
-
-	b, err := json.Marshal(depCtx)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling json data: %w", err)
-	}
-
-	return b, nil
 }

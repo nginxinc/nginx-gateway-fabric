@@ -19,6 +19,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
 func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
@@ -251,6 +252,114 @@ func TestGetMetricsOptions(t *testing.T) {
 			metricsServerOptions := getMetricsOptions(test.metricsConfig)
 
 			g.Expect(metricsServerOptions).To(Equal(test.expectedOptions))
+		})
+	}
+}
+
+func TestCreatePlusSecretMetadata(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		expSecrets map[types.NamespacedName][]graph.PlusSecretFile
+		name       string
+		cfg        config.Config
+	}{
+		{
+			name: "plus not enabled",
+			cfg: config.Config{
+				Plus: false,
+			},
+			expSecrets: map[types.NamespacedName][]graph.PlusSecretFile{},
+		},
+		{
+			name: "only JWT token specified",
+			cfg: config.Config{
+				Plus:             true,
+				GatewayPodConfig: config.GatewayPodConfig{Namespace: "ngf"},
+				UsageReportConfig: config.UsageReportConfig{
+					SecretName: "nplus-license",
+				},
+			},
+			expSecrets: map[types.NamespacedName][]graph.PlusSecretFile{
+				{Name: "nplus-license", Namespace: "ngf"}: {
+					{
+						FieldName: "license.jwt",
+						Type:      graph.PlusReportJWTToken,
+					},
+				},
+			},
+		},
+		{
+			name: "JWT and CA specified",
+			cfg: config.Config{
+				Plus:             true,
+				GatewayPodConfig: config.GatewayPodConfig{Namespace: "ngf"},
+				UsageReportConfig: config.UsageReportConfig{
+					SecretName:   "nplus-license",
+					CASecretName: "ca",
+				},
+			},
+			expSecrets: map[types.NamespacedName][]graph.PlusSecretFile{
+				{Name: "nplus-license", Namespace: "ngf"}: {
+					{
+						FieldName: "license.jwt",
+						Type:      graph.PlusReportJWTToken,
+					},
+				},
+				{Name: "ca", Namespace: "ngf"}: {
+					{
+						FieldName: "ca.crt",
+						Type:      graph.PlusReportCACertificate,
+					},
+				},
+			},
+		},
+		{
+			name: "all Secrets specified",
+			cfg: config.Config{
+				Plus:             true,
+				GatewayPodConfig: config.GatewayPodConfig{Namespace: "ngf"},
+				UsageReportConfig: config.UsageReportConfig{
+					SecretName:          "nplus-license",
+					CASecretName:        "ca",
+					ClientSSLSecretName: "client",
+				},
+			},
+			expSecrets: map[types.NamespacedName][]graph.PlusSecretFile{
+				{Name: "nplus-license", Namespace: "ngf"}: {
+					{
+						FieldName: "license.jwt",
+						Type:      graph.PlusReportJWTToken,
+					},
+				},
+				{Name: "ca", Namespace: "ngf"}: {
+					{
+						FieldName: "ca.crt",
+						Type:      graph.PlusReportCACertificate,
+					},
+				},
+				{Name: "client", Namespace: "ngf"}: {
+					{
+						FieldName: "tls.crt",
+						Type:      graph.PlusReportClientSSLCertificate,
+					},
+					{
+						FieldName: "tls.key",
+						Type:      graph.PlusReportClientSSLKey,
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			plusSecrets := createPlusSecretMetadata(test.cfg)
+
+			g.Expect(plusSecrets).To(Equal(test.expSecrets))
 		})
 	}
 }

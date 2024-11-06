@@ -56,6 +56,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
@@ -133,6 +134,7 @@ func StartManager(cfg config.Config) error {
 		EventRecorder:  recorder,
 		MustExtractGVK: mustExtractGVK,
 		ProtectedPorts: protectedPorts,
+		PlusSecrets:    createPlusSecretMetadata(cfg),
 	})
 
 	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
@@ -195,13 +197,12 @@ func StartManager(cfg config.Config) error {
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		k8sClient:       mgr.GetClient(),
+		k8sReader:       mgr.GetAPIReader(),
 		processor:       processor,
 		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
 		generator: ngxcfg.NewGeneratorImpl(
 			cfg.Plus,
 			&cfg.UsageReportConfig,
-			&cfg.GatewayPodConfig,
-			mgr.GetAPIReader(),
 			cfg.Logger.WithName("generator"),
 		),
 		logLevelSetter: logLevelSetter,
@@ -224,6 +225,7 @@ func StartManager(cfg config.Config) error {
 		metricsCollector:              handlerCollector,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
+		plus:                          cfg.Plus,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg)
@@ -544,6 +546,58 @@ func registerControllers(
 		}
 	}
 	return nil
+}
+
+func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]graph.PlusSecretFile {
+	plusSecrets := make(map[types.NamespacedName][]graph.PlusSecretFile)
+	if cfg.Plus {
+		jwtSecretName := types.NamespacedName{
+			Namespace: cfg.GatewayPodConfig.Namespace,
+			Name:      cfg.UsageReportConfig.SecretName,
+		}
+
+		jwtSecretCfg := graph.PlusSecretFile{
+			FieldName: "license.jwt",
+			Type:      graph.PlusReportJWTToken,
+		}
+
+		plusSecrets[jwtSecretName] = []graph.PlusSecretFile{jwtSecretCfg}
+
+		if cfg.UsageReportConfig.CASecretName != "" {
+			caSecretName := types.NamespacedName{
+				Namespace: cfg.GatewayPodConfig.Namespace,
+				Name:      cfg.UsageReportConfig.CASecretName,
+			}
+
+			caSecretCfg := graph.PlusSecretFile{
+				FieldName: "ca.crt",
+				Type:      graph.PlusReportCACertificate,
+			}
+
+			plusSecrets[caSecretName] = []graph.PlusSecretFile{caSecretCfg}
+		}
+
+		if cfg.UsageReportConfig.ClientSSLSecretName != "" {
+			clientSSLSecretName := types.NamespacedName{
+				Namespace: cfg.GatewayPodConfig.Namespace,
+				Name:      cfg.UsageReportConfig.ClientSSLSecretName,
+			}
+
+			clientSSLCertCfg := graph.PlusSecretFile{
+				FieldName: "tls.crt",
+				Type:      graph.PlusReportClientSSLCertificate,
+			}
+
+			clientSSLKeyCfg := graph.PlusSecretFile{
+				FieldName: "tls.key",
+				Type:      graph.PlusReportClientSSLKey,
+			}
+
+			plusSecrets[clientSSLSecretName] = []graph.PlusSecretFile{clientSSLCertCfg, clientSSLKeyCfg}
+		}
+	}
+
+	return plusSecrets
 }
 
 // 10 min jitter is enough per telemetry destination recommendation

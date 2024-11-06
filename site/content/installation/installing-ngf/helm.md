@@ -9,8 +9,8 @@ docs: "DOCS-1430"
 
 Learn how to install, upgrade, and uninstall NGINX Gateway Fabric in a Kubernetes cluster using Helm.
 
-{{<important>}}NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
-Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret. If you use a different name than the default `nplus-license` name, specify the Secret name by setting `--set nginx.usage.secretName=<secret-name>` when running `helm upgrade`.{{</important>}}
+{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
+Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret. If you use a different name than the default `nplus-license` name, specify the Secret name by setting `--set nginx.usage.secretName=<secret-name>` when running `helm upgrade`. {{< /important >}}
 
 ## Before you begin
 
@@ -19,7 +19,7 @@ To complete this guide, you'll need to install:
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line tool for managing Kubernetes clusters.
 - [Helm 3.0 or later](https://helm.sh/docs/intro/install/), for deploying and managing applications on Kubernetes.
 
-{{< important >}}If you’d like to use NGINX Plus, some additional setup is also required:{{</ important >}}
+{{< important >}} If you’d like to use NGINX Plus, some additional setup is also required: {{</ important >}}
 <details closed>
 <summary>NGINX Plus JWT setup</summary>
 
@@ -37,7 +37,7 @@ To complete this guide, you'll need to install:
 
 {{<include "installation/nginx-plus/nginx-plus-secret.md" >}}
 
-{{<note>}}For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document.{{</note>}}
+{{< note >}} For more information on why this is needed and additional configuration options, including how to report to NGINX Instance Manager instead, see the [NGINX Plus Image and JWT Requirement]({{< relref "installation/nginx-plus-jwt.md" >}}) document. {{< /note >}}
 
 </details>
 
@@ -63,7 +63,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 
 {{%tab name="NGINX Plus"%}}
 
-{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag.{{< /note >}}
+{{< note >}} If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag. {{< /note >}}
 
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
@@ -104,7 +104,7 @@ helm install ngf . --create-namespace -n nginx-gateway
 
 {{%tab name="NGINX Plus"%}}
 
-{{< note >}}If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag.{{< /note >}}
+{{< note >}} If applicable, replace the F5 Container registry `private-registry.nginx.com` with your internal registry for your NGINX Plus image, and replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. If your NGINX Plus JWT Secret has a different name than the default `nplus-license`, then define that name using the `nginx.usage.secretName` flag. {{< /note >}}
 
 To install the chart into the **nginx-gateway** namespace, run the following command:
 

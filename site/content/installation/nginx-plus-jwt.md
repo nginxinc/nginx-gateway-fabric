@@ -21,11 +21,11 @@ The JWT needs to be configured before deploying NGINX Gateway Fabric. We'll stor
 
 ### Download the JWT from MyF5
 
-{{<include "installation/nginx-plus/download-jwt.md" >}}
+{{< include "installation/nginx-plus/download-jwt.md" >}}
 
 ### Docker Registry Secret
 
-{{<include "installation/nginx-plus/docker-registry-secret.md" >}}
+{{< include "installation/nginx-plus/docker-registry-secret.md" >}}
 
 Provide the name of this Secret when installing NGINX Gateway Fabric:
 
@@ -33,7 +33,7 @@ Provide the name of this Secret when installing NGINX Gateway Fabric:
 
 {{%tab name="Helm"%}}
 
-Specify the Secret name using the `nginxGateway.serviceAccount.imagePullSecret` or `nginxGateway.serviceAccount.imagePullSecrets` helm value.
+Specify the Secret name using the `serviceAccount.imagePullSecret` or `serviceAccount.imagePullSecrets` helm value.
 
 {{% /tab %}}
 
@@ -47,7 +47,7 @@ Specify the Secret name in the `imagePullSecrets` field of the `nginx-gateway` S
 
 ### NGINX Plus Secret
 
-{{<include "installation/nginx-plus/nginx-plus-secret.md" >}}
+{{< include "installation/nginx-plus/nginx-plus-secret.md" >}}
 
 If using a name other than the default `nplus-license`, provide the name of this Secret when installing NGINX Gateway Fabric:
 
@@ -74,8 +74,9 @@ You also need to define the proper volume mount to mount the Secret to the nginx
 and the following volume mount to the `nginx` container:
 
 ```yaml
-- mountPath: /etc/nginx/license
+- mountPath: /etc/nginx/license.jwt
   name: nginx-plus-license
+  subPath: license.jwt
 ```
 
 {{% /tab %}}
@@ -136,32 +137,31 @@ Specify the CA Secret name using the `nginx.usage.caSecretName` helm value. Spec
 
 Specify the CA Secret name in the `--usage-report-ca-secret` command-line flag on the `nginx-gateway` container. Specify the client Secret name in the `--usage-report-client-ssl-secret` command-line flag on the `nginx-gateway` container.
 
-You also need to define the proper volume mounts to mount the Secrets to the nginx container. Add the following volumes to the Deployment:
+You also need to define the proper volume mount to mount the Secrets to the nginx container. Add the following volume to the Deployment:
 
 ```yaml
-- name: usage-client-ssl-secret
-  secret:
-    secretName: nim-client
-- name: usage-ca-secret
-  secret:
-    secretName: nim-ca
+- name: nginx-plus-usage-certs
+  projected:
+    sources:
+    - secret:
+        name: nim-ca
+    - secret:
+        name: nim-client
 ```
 
 and the following volume mounts to the `nginx` container:
 
 ```yaml
-- mountPath: /etc/nginx/usage-certs/client
-  name: usage-client-ssl-secret
-- mountPath: /etc/nginx/usage-certs/ca
-  name: usage-ca-secret
+- mountPath: /etc/nginx/certs-bootstrap/
+  name: nginx-plus-usage-certs
 ```
 
 Finally, in the `nginx-includes-bootstrap` ConfigMap, add the following lines to the `mgmt` block:
 
 ```text
-ssl_trusted_certificate /etc/nginx/usage-certs/ca/ca.crt;
-ssl_certificate        /etc/nginx/usage-certs/client/tls.crt;
-ssl_certificate_key    /etc/nginx/usage-certs/client/tls.key;
+ssl_trusted_certificate /etc/nginx/certs-bootstrap/ca.crt;
+ssl_certificate        /etc/nginx/certs-bootstrap/tls.crt;
+ssl_certificate_key    /etc/nginx/certs-bootstrap/tls.key;
 ```
 
 {{% /tab %}}
@@ -180,7 +180,7 @@ If using Helm, the `nginx.usage` values should be set as necessary:
 
 - `secretName` should be the name of the JWT Secret you created. By default this field is set to `nplus-license`. This field is required.
 - `endpoint` is the endpoint to send the telemetry data to. This is optional, and by default is `product.connect.nginx.com`.
-- `resolver` is the resolver domain name or IP address with optional port for resolving the endpoint.
+- `resolver` is the nameserver used to resolve the NGINX Plus usage reporting endpoint. This is optional and used with NGINX Instance Manager.
 - `skipVerify` disables client verification of the NGINX Plus usage reporting server certificate.
 - `caSecretName` is the name of the Secret containing the NGINX Instance Manager CA certificate.
 - `clientSSLSecretName` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager.
@@ -189,7 +189,7 @@ If using manifests, the following command-line options should be set as necessar
 
 - `--usage-report-secret` should be the name of the JWT Secret you created. By default this field is set to `nplus-license`. A [volume mount](#nginx-plus-secret) for this Secret is required for installation.
 - `--usage-report-endpoint` is the endpoint to send the telemetry data to. This is optional, and by default is `product.connect.nginx.com`. Requires [extra configuration](#nim) if specified.
-- `--usage-report-resolver` is the resolver domain name or IP address with optional port for resolving the endpoint.
+- `--usage-report-resolver` is the nameserver used to resolve the NGINX Plus usage reporting endpoint. This is optional and used with NGINX Instance Manager.
 - `--usage-report-skip-verify` disables client verification of the NGINX Plus usage reporting server certificate.
 - `--usage-report-ca-secret` is the name of the Secret containing the NGINX Instance Manager CA certificate. Requires [extra configuration](#nim-cert) if specified.
 - `--usage-report-client-ssl-secret` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. Requires [extra configuration](#nim-cert) if specified.
