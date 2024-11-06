@@ -350,6 +350,16 @@ func TestBuildGraph(t *testing.T) {
 		Type: v1.SecretTypeTLS,
 	}
 
+	plusSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ngf",
+			Name:      "plus-secret",
+		},
+		Data: map[string][]byte{
+			"license.jwt": []byte("license"),
+		},
+	}
+
 	ns := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testNs,
@@ -643,7 +653,8 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(grToServiceNsRefGrant): grToServiceNsRefGrant,
 			},
 			Secrets: map[types.NamespacedName]*v1.Secret{
-				client.ObjectKeyFromObject(secret): secret,
+				client.ObjectKeyFromObject(secret):     secret,
+				client.ObjectKeyFromObject(plusSecret): plusSecret,
 			},
 			BackendTLSPolicies: map[types.NamespacedName]*v1alpha3.BackendTLSPolicy{
 				client.ObjectKeyFromObject(btp.Source): btp.Source,
@@ -912,6 +923,15 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(unreferencedSnippetsFilter): processedUnrefSnippetsFilter,
 				client.ObjectKeyFromObject(referencedSnippetsFilter):   processedRefSnippetsFilter,
 			},
+			PlusSecrets: map[types.NamespacedName][]PlusSecretFile{
+				client.ObjectKeyFromObject(plusSecret): {
+					{
+						Type:      PlusReportJWTToken,
+						Content:   []byte("license"),
+						FieldName: "license.jwt",
+					},
+				},
+			},
 		}
 	}
 
@@ -967,6 +987,14 @@ func TestBuildGraph(t *testing.T) {
 				test.store,
 				controllerName,
 				gcName,
+				map[types.NamespacedName][]PlusSecretFile{
+					client.ObjectKeyFromObject(plusSecret): {
+						{
+							Type:      PlusReportJWTToken,
+							FieldName: "license.jwt",
+						},
+					},
+				},
 				validation.Validators{
 					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
 					GenericValidator:    &validationfakes.FakeGenericValidator{},
@@ -997,6 +1025,12 @@ func TestIsReferenced(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test-different-namespace",
 			Name:      "secret",
+		},
+	}
+	plusSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ngf",
+			Name:      "plus-secret",
 		},
 	}
 
@@ -1167,6 +1201,18 @@ func TestIsReferenced(t *testing.T) {
 			name:     "Secret in graph's ReferencedSecrets is referenced",
 			resource: baseSecret,
 			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "NGINX Plus JWT Secret",
+			resource: plusSecret,
+			graph: &Graph{
+				PlusSecrets: map[types.NamespacedName][]PlusSecretFile{
+					client.ObjectKeyFromObject(plusSecret): {
+						{Type: PlusReportJWTToken},
+					},
+				},
+			},
 			expected: true,
 		},
 		{

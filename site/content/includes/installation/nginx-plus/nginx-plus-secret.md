@@ -10,4 +10,4 @@ kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gat
 
 You can now delete the `license.jwt` file.
 
-If you need to update the JWT at any time, update the `license.jwt` field in the Secret using `kubectl edit` and apply the changes. The volume mount containing the Secret will be updated by the kubelet when it syncs the Pod.
+If you need to update the JWT at any time, update the `license.jwt` field in the Secret using `kubectl edit` and apply the changes.

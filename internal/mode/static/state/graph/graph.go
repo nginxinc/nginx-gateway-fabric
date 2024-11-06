@@ -80,6 +80,8 @@ type Graph struct {
 	GlobalSettings *policies.GlobalSettings
 	// SnippetsFilters holds all the SnippetsFilters.
 	SnippetsFilters map[types.NamespacedName]*SnippetsFilter
+	// PlusSecrets holds the secrets related to NGINX Plus licensing.
+	PlusSecrets map[types.NamespacedName][]PlusSecretFile
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -89,8 +91,10 @@ type ProtectedPorts map[int32]string
 func (g *Graph) IsReferenced(resourceType ngftypes.ObjectType, nsname types.NamespacedName) bool {
 	switch obj := resourceType.(type) {
 	case *v1.Secret:
+		// Check if secret is a Gateway-referenced Secret, or if it's a Secret used for NGINX Plus reporting.
 		_, exists := g.ReferencedSecrets[nsname]
-		return exists
+		_, plusSecretExists := g.PlusSecrets[nsname]
+		return exists || plusSecretExists
 	case *v1.ConfigMap:
 		_, exists := g.ReferencedCaCertConfigMaps[nsname]
 		return exists
@@ -181,6 +185,7 @@ func BuildGraph(
 	state ClusterState,
 	controllerName string,
 	gcName string,
+	plusSecrets map[types.NamespacedName][]PlusSecretFile,
 	validators validation.Validators,
 	protectedPorts ProtectedPorts,
 ) *Graph {
@@ -269,6 +274,7 @@ func BuildGraph(
 		NGFPolicies:                processedPolicies,
 		GlobalSettings:             globalSettings,
 		SnippetsFilters:            processedSnippetsFilters,
+		PlusSecrets:                setPlusSecretContent(state.Secrets, plusSecrets),
 	}
 
 	g.attachPolicies(controllerName)
@@ -292,4 +298,47 @@ func gatewayExists(
 	_, exists := ignored[gwNsName]
 
 	return exists
+}
+
+// PlusSecretFileType describes the type of Secret file used for NGINX Plus.
+type PlusSecretFileType int
+
+const (
+	// PlusReportJWTToken is the file for the NGINX Plus JWT Token.
+	PlusReportJWTToken PlusSecretFileType = iota
+	// PlusReportCACertificate is the file for the NGINX Instance Manager CA certificate.
+	PlusReportCACertificate
+	// PlusReportClientSSLCertificate is the file for the NGINX Instance Manager client certificate.
+	PlusReportClientSSLCertificate
+	// PlusReportClientSSLKey is the file for the NGINX Instance Manager client key.
+	PlusReportClientSSLKey
+)
+
+// PlusSecretFile specifies the type and content of an NGINX Plus Secret file.
+// A user provides the names of the various Secrets on startup, and we store this info in a map to cross-reference with
+// the actual Secrets that exist in k8s.
+type PlusSecretFile struct {
+	// FieldName is the field name within the Secret that holds the data for this file.
+	FieldName string
+	// Content is the content of this file.
+	Content []byte
+	// Type is the type of Secret file.
+	Type PlusSecretFileType
+}
+
+// setPlusSecretContent finds the k8s Secret object associated with a PlusSecretFile object, and sets its contents.
+func setPlusSecretContent(
+	clusterSecrets map[types.NamespacedName]*v1.Secret,
+	plusSecrets map[types.NamespacedName][]PlusSecretFile,
+) map[types.NamespacedName][]PlusSecretFile {
+	for name, plusSecretFiles := range plusSecrets {
+		if secret, ok := clusterSecrets[name]; ok {
+			for idx, file := range plusSecretFiles {
+				file.Content = secret.Data[file.FieldName]
+				plusSecrets[name][idx] = file
+			}
+		}
+	}
+
+	return plusSecrets
 }

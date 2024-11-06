@@ -106,7 +106,7 @@ type ProductTelemetryConfig struct {
 type UsageReportConfig struct {
 	// SecretName is the name of the Secret containing the server credentials.
 	SecretName string
-	// ClientSSLSecretName is the name of the Secret containing client cert/key.
+	// ClientSSLSecretName is the name of the Secret containing client certificate/key.
 	ClientSSLSecretName string
 	// CASecretName is the name of the Secret containing the CA certificate.
 	CASecretName string
@@ -114,7 +114,7 @@ type UsageReportConfig struct {
 	Endpoint string
 	// Resolver is the nameserver for resolving the Endpoint.
 	Resolver string
-	// SkipVerify controls whether the nginx verifies the server cert.
+	// SkipVerify controls whether the nginx verifies the server certificate.
 	SkipVerify bool
 }
 

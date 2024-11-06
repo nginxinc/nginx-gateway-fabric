@@ -229,15 +229,12 @@ spec:
         {{- if .Values.nginx.plus }}
           {{- if .Values.nginx.usage.secretName }}
         - name: nginx-plus-license
-          mountPath: /etc/nginx/license
+          mountPath: /etc/nginx/license.jwt
+          subPath: license.jwt
           {{- end }}
-          {{- if .Values.nginx.usage.clientSSLSecretName }}
-        - name: usage-client-ssl-secret
-          mountPath: /etc/nginx/usage-certs/client
-          {{- end }}
-          {{- if .Values.nginx.usage.caSecretName }}
-        - name: usage-ca-secret
-          mountPath: /etc/nginx/usage-certs/ca
+          {{- if or .Values.nginx.usage.caSecretName .Values.nginx.usage.clientSSLSecretName }}
+        - name: nginx-plus-usage-certs
+          mountPath: /etc/nginx/certs-bootstrap/
           {{- end }}
         {{- end }}
         {{- with .Values.nginx.extraVolumeMounts -}}
@@ -294,15 +291,18 @@ spec:
         secret:
           secretName: {{ .Values.nginx.usage.secretName }}
         {{- end }}
-        {{- if .Values.nginx.usage.clientSSLSecretName }}
-      - name: usage-client-ssl-secret
-        secret:
-          secretName: {{ .Values.nginx.usage.clientSSLSecretName }}
-        {{- end }}
-        {{- if .Values.nginx.usage.caSecretName }}
-      - name: usage-ca-secret
-        secret:
-          secretName: {{ .Values.nginx.usage.caSecretName }}
+        {{- if or .Values.nginx.usage.caSecretName .Values.nginx.usage.clientSSLSecretName }}
+      - name: nginx-plus-usage-certs
+        projected:
+          sources:
+          {{- if .Values.nginx.usage.caSecretName }}
+          - secret:
+              name: {{ .Values.nginx.usage.caSecretName }}
+          {{- end }}
+          {{- if .Values.nginx.usage.clientSSLSecretName }}
+          - secret:
+              name: {{ .Values.nginx.usage.clientSSLSecretName }}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- with .Values.extraVolumes -}}

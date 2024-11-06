@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -694,5 +695,81 @@ var _ = Describe("getGatewayAddresses", func() {
 		Expect(addrs).To(HaveLen(2))
 		Expect(addrs[0].Value).To(Equal("34.35.36.37"))
 		Expect(addrs[1].Value).To(Equal("myhost"))
+	})
+})
+
+var _ = Describe("setDeploymentCtx", func() {
+	When("nginx plus is false", func() {
+		It("doesn't set the deployment context", func() {
+			handler := eventHandlerImpl{}
+			conf := &dataplane.Configuration{}
+
+			Expect(handler.setDeploymentCtx(context.Background(), conf)).To(Succeed())
+			Expect(conf.DeploymentContext).To(Equal(dataplane.DeploymentContext{}))
+		})
+	})
+
+	When("nginx plus is true", func() {
+		It("sets the deployment context", func() {
+			var (
+				ngfPod = &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pod1",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ReplicaSet",
+								Name: "replicaset1",
+							},
+						},
+					},
+				}
+
+				ngfReplicaSet = &appsv1.ReplicaSet{
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: helpers.GetPointer[int32](1),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "replicaset1",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "Deployment",
+								Name: "Deployment1",
+								UID:  "test-uid-replicaSet",
+							},
+						},
+					},
+				}
+
+				kubeNamespace = &v1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: metav1.NamespaceSystem,
+						UID:  "test-uid",
+					},
+				}
+
+				nodeList = &v1.NodeList{
+					Items: []v1.Node{{}},
+				}
+			)
+
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
+
+			conf := &dataplane.Configuration{}
+			Expect(handler.setDeploymentCtx(context.Background(), conf)).To(Succeed())
+
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        "test-uid",
+				InstallationID:   "test-uid-replicaSet",
+				ClusterNodeCount: 1,
+			}
+			Expect(conf.DeploymentContext).To(Equal(expCtx))
+		})
 	})
 })

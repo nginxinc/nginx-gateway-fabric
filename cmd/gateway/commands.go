@@ -392,6 +392,8 @@ func createStaticModeCommand() *cobra.Command {
 			"that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
 	)
 
+	cmd.MarkFlagsRequiredTogether(plusFlag, usageReportSecretFlag)
+
 	cmd.Flags().Var(
 		&usageReportEndpoint,
 		usageReportEndpointFlag,
@@ -401,7 +403,7 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&usageReportResolver,
 		usageReportResolverFlag,
-		"The nameserver used to resolve the NGINX Plus usage reporting server name.",
+		"The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager.",
 	)
 
 	cmd.Flags().BoolVar(

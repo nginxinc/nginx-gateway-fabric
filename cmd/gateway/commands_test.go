@@ -153,6 +153,7 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--nginx-plus",
 				"--usage-report-secret=my-secret",
 				"--usage-report-endpoint=example.com",
+				"--usage-report-resolver=resolver.com",
 				"--usage-report-ca-secret=ca-secret",
 				"--usage-report-client-ssl-secret=client-secret",
 				"--snippets-filters",
@@ -342,6 +343,23 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr: true,
 			expectedErrPrefix: `invalid argument "$*(invalid)" for "--usage-report-endpoint" flag: ` +
+				`"$*(invalid)" must be a domain name or IP address with optional port`,
+		},
+		{
+			name: "usage-report-resolver is set to empty string",
+			args: []string{
+				"--usage-report-resolver=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-resolver" flag: must be set`,
+		},
+		{
+			name: "usage-report-resolveris an invalid endpoint",
+			args: []string{
+				"--usage-report-resolver=$*(invalid)",
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "$*(invalid)" for "--usage-report-resolver" flag: ` +
 				`"$*(invalid)" must be a domain name or IP address with optional port`,
 		},
 		{

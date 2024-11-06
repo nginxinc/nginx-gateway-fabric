@@ -264,14 +264,14 @@
           "properties": {
             "caSecretName": {
               "default": "",
-              "description": "The name of the Secret containing the CA cert for verifying the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
+              "description": "The name of the Secret containing the CA certificate for verifying the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
               "title": "caSecretName",
               "type": "string"
             },
             "clientSSLSecretName": {
               "default": "",
-              "description": "The name of the Secret containing the client cert/key for communicating with the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
+              "description": "The name of the Secret containing the client certificate/key for communicating with the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
               "title": "clientSSLSecretName",
               "type": "string"
@@ -285,7 +285,7 @@
             },
             "resolver": {
               "default": "",
-              "description": "The resolver domain name or IP address with optional port for resolving the endpoint.",
+              "description": "The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager.",
               "required": [],
               "title": "resolver",
               "type": "string"

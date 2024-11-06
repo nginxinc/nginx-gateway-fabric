@@ -2,7 +2,7 @@
 docs: "DOCS-000"
 ---
 
-{{<note>}}If you would rather pull the NGINX Plus image and push to a private registry, you can skip this specific step and instead follow [this step]({{<relref "installation/nginx-plus-jwt.md#pulling-an-image-for-local-use">}}).{{</note>}}
+{{< note >}} If you would rather pull the NGINX Plus image and push to a private registry, you can skip this specific step and instead follow [this step]({{<relref "installation/nginx-plus-jwt.md#pulling-an-image-for-local-use">}}). {{< /note >}}
 
 If the `nginx-gateway` namespace does not yet exist, create it:
 

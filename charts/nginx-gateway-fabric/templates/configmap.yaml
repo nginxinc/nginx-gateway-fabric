@@ -15,7 +15,6 @@ data:
   {{- if .Values.nginx.plus }}
   mgmt.conf: |
     mgmt {
-        license_token /etc/nginx/license/license.jwt;
         {{- if .Values.nginx.usage.endpoint }}
         usage_report endpoint={{ .Values.nginx.usage.endpoint }};
         {{- end }}
@@ -23,11 +22,11 @@ data:
         ssl_verify off;
         {{- end }}
         {{- if .Values.nginx.usage.caSecretName }}
-        ssl_trusted_certificate /etc/nginx/usage-certs/ca/ca.crt;
+        ssl_trusted_certificate /etc/nginx/certs-bootstrap/ca.crt;
         {{- end }}
         {{- if .Values.nginx.usage.clientSSLSecretName }}
-        ssl_certificate        /etc/nginx/usage-certs/client/tls.crt;
-        ssl_certificate_key    /etc/nginx/usage-certs/client/tls.key;
+        ssl_certificate        /etc/nginx/certs-bootstrap/tls.crt;
+        ssl_certificate_key    /etc/nginx/certs-bootstrap/tls.key;
         {{- end }}
         enforce_initial_report off;
     }
