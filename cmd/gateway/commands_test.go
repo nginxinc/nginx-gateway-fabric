@@ -354,7 +354,7 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			expectedErrPrefix: `invalid argument "" for "--usage-report-resolver" flag: must be set`,
 		},
 		{
-			name: "usage-report-resolveris an invalid endpoint",
+			name: "usage-report-resolver is an invalid endpoint",
 			args: []string{
 				"--usage-report-resolver=$*(invalid)",
 			},
