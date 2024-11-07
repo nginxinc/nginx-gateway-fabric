@@ -553,3 +553,47 @@ func TestEnsureNoPortCollisions(t *testing.T) {
 	g.Expect(ensureNoPortCollisions(9113, 8081)).To(Succeed())
 	g.Expect(ensureNoPortCollisions(9113, 9113)).ToNot(Succeed())
 }
+
+func TestValidateSleepArgs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		dest     string
+		srcFiles []string
+		expErr   bool
+	}{
+		{
+			name:     "valid values",
+			dest:     "/dest/file",
+			srcFiles: []string{"/src/file"},
+			expErr:   false,
+		},
+		{
+			name:     "invalid dest",
+			dest:     "",
+			srcFiles: []string{"/src/file"},
+			expErr:   true,
+		},
+		{
+			name:     "invalid src",
+			dest:     "/dest/file",
+			srcFiles: []string{},
+			expErr:   true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			err := validateSleepArgs(tc.srcFiles, tc.dest)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}

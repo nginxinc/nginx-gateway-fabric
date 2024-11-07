@@ -57,8 +57,13 @@ func (g GeneratorImpl) generateMgmtFiles(conf dataplane.Configuration) []file.Fi
 		return nil
 	}
 
+	tokenContent, ok := conf.AuxiliarySecrets[graph.PlusReportJWTToken]
+	if !ok {
+		panic("nginx plus token not set in expected map")
+	}
+
 	tokenFile := file.File{
-		Content: conf.AuxiliarySecrets[graph.PlusReportJWTToken],
+		Content: tokenContent,
 		Path:    secretsFolder + "/license.jwt",
 		Type:    file.TypeSecret,
 	}

@@ -205,3 +205,15 @@ func ensureNoPortCollisions(ports ...int) error {
 
 	return nil
 }
+
+// validateSleepArgs ensures that arguments to the sleep command are set.
+func validateSleepArgs(srcFiles []string, dest string) error {
+	if len(srcFiles) == 0 {
+		return errors.New("source must not be empty")
+	}
+	if len(dest) == 0 {
+		return errors.New("destination must not be empty")
+	}
+
+	return nil
+}

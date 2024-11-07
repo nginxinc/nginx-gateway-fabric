@@ -264,14 +264,14 @@
           "properties": {
             "caSecretName": {
               "default": "",
-              "description": "The name of the Secret containing the CA certificate for verifying the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
+              "description": "The name of the Secret containing the NGINX Instance Manager CA certificate.\nMust exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
               "title": "caSecretName",
               "type": "string"
             },
             "clientSSLSecretName": {
               "default": "",
-              "description": "The name of the Secret containing the client certificate/key for communicating with the NGINX Plus usage reporting\nserver. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
+              "description": "The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager.\nMust exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
               "title": "clientSSLSecretName",
               "type": "string"

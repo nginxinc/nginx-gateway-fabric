@@ -182,17 +182,17 @@ If using Helm, the `nginx.usage` values should be set as necessary:
 - `endpoint` is the endpoint to send the telemetry data to. This is optional, and by default is `product.connect.nginx.com`.
 - `resolver` is the nameserver used to resolve the NGINX Plus usage reporting endpoint. This is optional and used with NGINX Instance Manager.
 - `skipVerify` disables client verification of the NGINX Plus usage reporting server certificate.
-- `caSecretName` is the name of the Secret containing the NGINX Instance Manager CA certificate.
-- `clientSSLSecretName` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager.
+- `caSecretName` is the name of the Secret containing the NGINX Instance Manager CA certificate. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+- `clientSSLSecretName` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
 
 If using manifests, the following command-line options should be set as necessary on the `nginx-gateway` container:
 
-- `--usage-report-secret` should be the name of the JWT Secret you created. By default this field is set to `nplus-license`. A [volume mount](#nginx-plus-secret) for this Secret is required for installation.
+- `--usage-report-secret` should be the name of the JWT Secret you created. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). By default this field is set to `nplus-license`. A [volume mount](#nginx-plus-secret) for this Secret is required for installation.
 - `--usage-report-endpoint` is the endpoint to send the telemetry data to. This is optional, and by default is `product.connect.nginx.com`. Requires [extra configuration](#nim) if specified.
 - `--usage-report-resolver` is the nameserver used to resolve the NGINX Plus usage reporting endpoint. This is optional and used with NGINX Instance Manager.
 - `--usage-report-skip-verify` disables client verification of the NGINX Plus usage reporting server certificate.
-- `--usage-report-ca-secret` is the name of the Secret containing the NGINX Instance Manager CA certificate. Requires [extra configuration](#nim-cert) if specified.
-- `--usage-report-client-ssl-secret` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. Requires [extra configuration](#nim-cert) if specified.
+- `--usage-report-ca-secret` is the name of the Secret containing the NGINX Instance Manager CA certificate. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). Requires [extra configuration](#nim-cert) if specified.
+- `--usage-report-client-ssl-secret` is the name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). Requires [extra configuration](#nim-cert) if specified.
 
 ## What’s reported and how it’s protected {#telemetry}
 

@@ -173,8 +173,10 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		if err := h.setDeploymentCtx(ctx, &cfg); err != nil {
+		if depCtx, err := h.setDeploymentCtx(ctx, logger); err != nil {
 			logger.Error(err, "error setting deployment context for usage reporting")
+		} else {
+			cfg.DeploymentContext = depCtx
 		}
 
 		h.setLatestConfiguration(&cfg)
@@ -187,8 +189,10 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		if err := h.setDeploymentCtx(ctx, &cfg); err != nil {
+		if depCtx, err := h.setDeploymentCtx(ctx, logger); err != nil {
 			logger.Error(err, "error setting deployment context for usage reporting")
+		} else {
+			cfg.DeploymentContext = depCtx
 		}
 
 		h.setLatestConfiguration(&cfg)
@@ -497,9 +501,12 @@ func getGatewayAddresses(
 }
 
 // setDeploymentCtx sets the deployment context metadata for nginx plus reporting.
-func (h *eventHandlerImpl) setDeploymentCtx(ctx context.Context, cfg *dataplane.Configuration) error {
+func (h *eventHandlerImpl) setDeploymentCtx(
+	ctx context.Context,
+	logger logr.Logger,
+) (dataplane.DeploymentContext, error) {
 	if !h.cfg.plus {
-		return nil
+		return dataplane.DeploymentContext{}, nil
 	}
 
 	podNSName := types.NamespacedName{
@@ -509,27 +516,29 @@ func (h *eventHandlerImpl) setDeploymentCtx(ctx context.Context, cfg *dataplane.
 
 	clusterInfo, err := telemetry.CollectClusterInformation(ctx, h.cfg.k8sReader)
 	if err != nil {
-		return fmt.Errorf("error getting cluster information")
+		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information")
 	}
 
+	var installationID string
+	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
 	replicaSet, err := telemetry.GetPodReplicaSet(ctx, h.cfg.k8sReader, podNSName)
 	if err != nil {
-		return fmt.Errorf("failed to get replica set for pod %v: %w", podNSName, err)
+		logger.Error(err, fmt.Sprintf("failed to get replica set for pod %v", podNSName))
+	} else {
+		installationID, err = telemetry.GetDeploymentID(replicaSet)
+		if err != nil {
+			logger.Error(err, "failed to get NGF installationID")
+		}
 	}
 
-	deploymentID, err := telemetry.GetDeploymentID(replicaSet)
-	if err != nil {
-		return fmt.Errorf("failed to get NGF deploymentID: %w", err)
-	}
-
-	cfg.DeploymentContext = dataplane.DeploymentContext{
+	depCtx := dataplane.DeploymentContext{
 		Integration:      "ngf",
 		ClusterID:        clusterInfo.ClusterID,
 		ClusterNodeCount: clusterInfo.NodeCount,
-		InstallationID:   deploymentID,
+		InstallationID:   installationID,
 	}
 
-	return nil
+	return depCtx, nil
 }
 
 // GetLatestConfiguration gets the latest configuration.

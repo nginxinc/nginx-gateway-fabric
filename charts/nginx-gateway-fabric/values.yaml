@@ -149,12 +149,12 @@ nginx:
     # -- Disable client verification of the NGINX Plus usage reporting server certificate.
     skipVerify: false
 
-    # -- The name of the Secret containing the CA certificate for verifying the NGINX Plus usage reporting
-    # server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+    # -- The name of the Secret containing the NGINX Instance Manager CA certificate.
+    # Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
     caSecretName: ""
 
-    # -- The name of the Secret containing the client certificate/key for communicating with the NGINX Plus usage reporting
-    # server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
+    # -- The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager.
+    # Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).
     clientSSLSecretName: ""
 
   # @schema

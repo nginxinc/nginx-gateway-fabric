@@ -959,8 +959,8 @@ func buildLogging(g *graph.Graph) Logging {
 
 func buildAuxiliarySecrets(
 	secrets map[types.NamespacedName][]graph.PlusSecretFile,
-) map[graph.PlusSecretFileType][]byte {
-	auxSecrets := make(map[graph.PlusSecretFileType][]byte)
+) map[graph.SecretFileType][]byte {
+	auxSecrets := make(map[graph.SecretFileType][]byte)
 
 	for _, secretFiles := range secrets {
 		for _, file := range secretFiles {
