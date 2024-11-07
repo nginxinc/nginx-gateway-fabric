@@ -47,7 +47,7 @@ jobs:
           echo "current_version=$(yq '.version' <charts/nginx-gateway-fabric/Chart.yaml)" >> $GITHUB_OUTPUT
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3.0.4
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
@@ -55,7 +55,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3.0.4
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: "edge"
           replace: ${{ inputs.version }}
@@ -63,7 +63,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3.0.4
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
@@ -71,7 +71,7 @@ jobs:
           regex: false
 
       - name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@1dcd8b008d15ef0862ae785c76d1419cca930e15 # v3.0.4
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: "Always"
           replace: "IfNotPresent"
