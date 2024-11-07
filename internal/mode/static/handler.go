@@ -173,11 +173,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		if depCtx, err := h.setDeploymentCtx(ctx, logger); err != nil {
-			logger.Error(err, "error setting deployment context for usage reporting")
-		} else {
-			cfg.DeploymentContext = depCtx
+		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
+		if setErr != nil {
+			logger.Error(setErr, "error setting deployment context for usage reporting")
 		}
+		cfg.DeploymentContext = depCtx
 
 		h.setLatestConfiguration(&cfg)
 
@@ -189,11 +189,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		if depCtx, err := h.setDeploymentCtx(ctx, logger); err != nil {
-			logger.Error(err, "error setting deployment context for usage reporting")
-		} else {
-			cfg.DeploymentContext = depCtx
+		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
+		if setErr != nil {
+			logger.Error(setErr, "error setting deployment context for usage reporting")
 		}
+		cfg.DeploymentContext = depCtx
 
 		h.setLatestConfiguration(&cfg)
 
@@ -516,14 +516,14 @@ func (h *eventHandlerImpl) setDeploymentCtx(
 
 	clusterInfo, err := telemetry.CollectClusterInformation(ctx, h.cfg.k8sReader)
 	if err != nil {
-		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information")
+		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information: %w", err)
 	}
 
 	var installationID string
 	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
 	replicaSet, err := telemetry.GetPodReplicaSet(ctx, h.cfg.k8sReader, podNSName)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("failed to get replica set for pod %v", podNSName))
+		logger.Error(err, "failed to get NGF installationID")
 	} else {
 		installationID, err = telemetry.GetDeploymentID(replicaSet)
 		if err != nil {
