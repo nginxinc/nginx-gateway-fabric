@@ -4310,7 +4310,7 @@ func TestBuildAuxiliarySecrets(t *testing.T) {
 			},
 		},
 	}
-	expSecrets := map[graph.PlusSecretFileType][]byte{
+	expSecrets := map[graph.SecretFileType][]byte{
 		graph.PlusReportJWTToken:             []byte("license"),
 		graph.PlusReportCACertificate:        []byte("ca"),
 		graph.PlusReportClientSSLCertificate: []byte("cert"),

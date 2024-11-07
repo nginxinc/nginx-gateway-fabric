@@ -47,6 +47,7 @@ func createRootCommand() *cobra.Command {
 	return rootCmd
 }
 
+//nolint:gocyclo
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
@@ -200,6 +201,10 @@ func createStaticModeCommand() *cobra.Command {
 			}
 
 			var usageReportConfig config.UsageReportConfig
+			if plus && usageReportSecretName.value == "" {
+				return errors.New("usage-report-secret is required when using NGINX Plus")
+			}
+
 			if plus {
 				usageReportConfig = config.UsageReportConfig{
 					SecretName:          usageReportSecretName.value,
@@ -392,8 +397,6 @@ func createStaticModeCommand() *cobra.Command {
 			"that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
 	)
 
-	cmd.MarkFlagsRequiredTogether(plusFlag, usageReportSecretFlag)
-
 	cmd.Flags().Var(
 		&usageReportEndpoint,
 		usageReportEndpointFlag,
@@ -416,16 +419,16 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&usageReportClientSSLSecretName,
 		usageReportClientSSLSecretFlag,
-		"The name of the Secret containing the client cert/key for communicating with the NGINX Plus usage reporting "+
-			"server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
+		"The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. "+
+			"Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
 			"(default namespace: nginx-gateway).",
 	)
 
 	cmd.Flags().Var(
 		&usageReportCASecretName,
 		usageReportCASecretFlag,
-		"The name of the Secret containing the CA cert for verifying the NGINX Plus usage reporting "+
-			"server. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
+		"The name of the Secret containing the NGINX Instance Manager CA certificate. "+
+			"Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
 			"(default namespace: nginx-gateway).",
 	)
 
@@ -533,11 +536,8 @@ func createCopyCommand() *cobra.Command {
 		Use:   "copy",
 		Short: "Copy files to another directory",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if len(srcFiles) == 0 {
-				return errors.New("source must not be empty")
-			}
-			if len(dest) == 0 {
-				return errors.New("destination must not be empty")
+			if err := validateSleepArgs(srcFiles, dest); err != nil {
+				return err
 			}
 
 			for _, src := range srcFiles {

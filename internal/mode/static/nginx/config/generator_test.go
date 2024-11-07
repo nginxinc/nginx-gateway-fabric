@@ -125,7 +125,7 @@ func TestGenerate(t *testing.T) {
 			InstallationID:   "test-uid-replicaSet",
 			ClusterNodeCount: 1,
 		},
-		AuxiliarySecrets: map[graph.PlusSecretFileType][]byte{
+		AuxiliarySecrets: map[graph.SecretFileType][]byte{
 			graph.PlusReportJWTToken:             []byte("license"),
 			graph.PlusReportCACertificate:        []byte("ca"),
 			graph.PlusReportClientSSLCertificate: []byte("cert"),

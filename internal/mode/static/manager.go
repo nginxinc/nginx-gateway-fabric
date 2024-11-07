@@ -65,6 +65,11 @@ import (
 const (
 	// clusterTimeout is a timeout for connections to the Kubernetes API.
 	clusterTimeout = 10 * time.Second
+	// the following are the names of data fields within NGINX Plus related Secrets.
+	plusLicenseField    = "license.jwt"
+	plusCAField         = "ca.crt"
+	plusClientCertField = "tls.crt"
+	plusClientKeyField  = "tls.key"
 )
 
 var scheme = runtime.NewScheme()
@@ -106,8 +111,7 @@ func StartManager(cfg config.Config) error {
 		Namespace: cfg.GatewayPodConfig.Namespace,
 		Name:      cfg.ConfigName,
 	}
-	err = registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName)
-	if err != nil {
+	if err := registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName); err != nil {
 		return err
 	}
 
@@ -122,6 +126,11 @@ func StartManager(cfg config.Config) error {
 	genericValidator := ngxvalidation.GenericValidator{}
 	policyManager := createPolicyManager(mustExtractGVK, genericValidator)
 
+	plusSecrets, err := createPlusSecretMetadata(cfg, mgr.GetAPIReader())
+	if err != nil {
+		return err
+	}
+
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
@@ -134,8 +143,18 @@ func StartManager(cfg config.Config) error {
 		EventRecorder:  recorder,
 		MustExtractGVK: mustExtractGVK,
 		ProtectedPorts: protectedPorts,
-		PlusSecrets:    createPlusSecretMetadata(cfg),
+		PlusSecrets:    plusSecrets,
 	})
+
+	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
+	// (this assumes the folders are in a shared volume).
+	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
+	for _, path := range removedPaths {
+		cfg.Logger.Info("removed configuration file", "path", path)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
+	}
 
 	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
 
@@ -548,7 +567,10 @@ func registerControllers(
 	return nil
 }
 
-func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]graph.PlusSecretFile {
+func createPlusSecretMetadata(
+	cfg config.Config,
+	reader client.Reader,
+) (map[types.NamespacedName][]graph.PlusSecretFile, error) {
 	plusSecrets := make(map[types.NamespacedName][]graph.PlusSecretFile)
 	if cfg.Plus {
 		jwtSecretName := types.NamespacedName{
@@ -556,8 +578,12 @@ func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]grap
 			Name:      cfg.UsageReportConfig.SecretName,
 		}
 
+		if err := validateSecret(reader, jwtSecretName, plusLicenseField); err != nil {
+			return nil, err
+		}
+
 		jwtSecretCfg := graph.PlusSecretFile{
-			FieldName: "license.jwt",
+			FieldName: plusLicenseField,
 			Type:      graph.PlusReportJWTToken,
 		}
 
@@ -569,8 +595,12 @@ func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]grap
 				Name:      cfg.UsageReportConfig.CASecretName,
 			}
 
+			if err := validateSecret(reader, caSecretName, plusCAField); err != nil {
+				return nil, err
+			}
+
 			caSecretCfg := graph.PlusSecretFile{
-				FieldName: "ca.crt",
+				FieldName: plusCAField,
 				Type:      graph.PlusReportCACertificate,
 			}
 
@@ -583,13 +613,17 @@ func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]grap
 				Name:      cfg.UsageReportConfig.ClientSSLSecretName,
 			}
 
+			if err := validateSecret(reader, clientSSLSecretName, plusClientCertField, plusClientKeyField); err != nil {
+				return nil, err
+			}
+
 			clientSSLCertCfg := graph.PlusSecretFile{
-				FieldName: "tls.crt",
+				FieldName: plusClientCertField,
 				Type:      graph.PlusReportClientSSLCertificate,
 			}
 
 			clientSSLKeyCfg := graph.PlusSecretFile{
-				FieldName: "tls.key",
+				FieldName: plusClientKeyField,
 				Type:      graph.PlusReportClientSSLKey,
 			}
 
@@ -597,7 +631,25 @@ func createPlusSecretMetadata(cfg config.Config) map[types.NamespacedName][]grap
 		}
 	}
 
-	return plusSecrets
+	return plusSecrets, nil
+}
+
+func validateSecret(reader client.Reader, nsName types.NamespacedName, fields ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var secret apiv1.Secret
+	if err := reader.Get(ctx, nsName, &secret); err != nil {
+		return fmt.Errorf("error getting %q Secret: %w", nsName.Name, err)
+	}
+
+	for _, field := range fields {
+		if _, ok := secret.Data[field]; !ok {
+			return fmt.Errorf("secret %q does not have expected field %q", nsName.Name, field)
+		}
+	}
+
+	return nil
 }
 
 // 10 min jitter is enough per telemetry destination recommendation

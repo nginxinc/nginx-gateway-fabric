@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"fmt"
+
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -258,6 +260,8 @@ func BuildGraph(
 		globalSettings,
 	)
 
+	setPlusSecretContent(state.Secrets, plusSecrets)
+
 	g := &Graph{
 		GatewayClass:               gc,
 		Gateway:                    gw,
@@ -274,7 +278,7 @@ func BuildGraph(
 		NGFPolicies:                processedPolicies,
 		GlobalSettings:             globalSettings,
 		SnippetsFilters:            processedSnippetsFilters,
-		PlusSecrets:                setPlusSecretContent(state.Secrets, plusSecrets),
+		PlusSecrets:                plusSecrets,
 	}
 
 	g.attachPolicies(controllerName)
@@ -300,12 +304,12 @@ func gatewayExists(
 	return exists
 }
 
-// PlusSecretFileType describes the type of Secret file used for NGINX Plus.
-type PlusSecretFileType int
+// SecretFileType describes the type of Secret file used for NGINX Plus.
+type SecretFileType int
 
 const (
 	// PlusReportJWTToken is the file for the NGINX Plus JWT Token.
-	PlusReportJWTToken PlusSecretFileType = iota
+	PlusReportJWTToken SecretFileType = iota
 	// PlusReportCACertificate is the file for the NGINX Instance Manager CA certificate.
 	PlusReportCACertificate
 	// PlusReportClientSSLCertificate is the file for the NGINX Instance Manager client certificate.
@@ -323,22 +327,25 @@ type PlusSecretFile struct {
 	// Content is the content of this file.
 	Content []byte
 	// Type is the type of Secret file.
-	Type PlusSecretFileType
+	Type SecretFileType
 }
 
 // setPlusSecretContent finds the k8s Secret object associated with a PlusSecretFile object, and sets its contents.
 func setPlusSecretContent(
 	clusterSecrets map[types.NamespacedName]*v1.Secret,
 	plusSecrets map[types.NamespacedName][]PlusSecretFile,
-) map[types.NamespacedName][]PlusSecretFile {
+) {
 	for name, plusSecretFiles := range plusSecrets {
 		if secret, ok := clusterSecrets[name]; ok {
 			for idx, file := range plusSecretFiles {
-				file.Content = secret.Data[file.FieldName]
+				content, ok := secret.Data[file.FieldName]
+				if !ok {
+					panic(fmt.Errorf("NGINX Plus Secret did not have expected field %q", file.FieldName))
+				}
+
+				file.Content = content
 				plusSecrets[name][idx] = file
 			}
 		}
 	}
-
-	return plusSecrets
 }

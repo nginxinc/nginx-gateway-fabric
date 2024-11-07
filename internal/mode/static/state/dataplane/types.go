@@ -39,7 +39,7 @@ type Configuration struct {
 	DeploymentContext DeploymentContext
 	// AuxiliarySecrets contains additional secret data, like certificates/keys/tokens that are not related to
 	// Gateway API resources.
-	AuxiliarySecrets map[graph.PlusSecretFileType][]byte
+	AuxiliarySecrets map[graph.SecretFileType][]byte
 	// StreamUpstreams holds all unique stream Upstreams
 	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
@@ -397,6 +397,7 @@ type Logging struct {
 }
 
 // DeploymentContext contains metadata about NGF and the cluster.
+// This is JSON marshaled into a file created by the generator, hence the json tags.
 type DeploymentContext struct {
 	// Integration is "ngf".
 	Integration string `json:"integration"`

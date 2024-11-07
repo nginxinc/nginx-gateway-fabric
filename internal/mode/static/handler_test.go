@@ -702,55 +702,110 @@ var _ = Describe("setDeploymentCtx", func() {
 	When("nginx plus is false", func() {
 		It("doesn't set the deployment context", func() {
 			handler := eventHandlerImpl{}
-			conf := &dataplane.Configuration{}
 
-			Expect(handler.setDeploymentCtx(context.Background(), conf)).To(Succeed())
-			Expect(conf.DeploymentContext).To(Equal(dataplane.DeploymentContext{}))
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(dataplane.DeploymentContext{}))
 		})
 	})
 
 	When("nginx plus is true", func() {
+		var (
+			clusterID = "test-uid"
+			ngfPod    = &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pod1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind: "ReplicaSet",
+							Name: "replicaset1",
+						},
+					},
+				},
+			}
+
+			ngfReplicaSet = &appsv1.ReplicaSet{
+				Spec: appsv1.ReplicaSetSpec{
+					Replicas: helpers.GetPointer[int32](1),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "replicaset1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind: "Deployment",
+							Name: "Deployment1",
+							UID:  "test-uid-replicaSet",
+						},
+					},
+				},
+			}
+
+			kubeNamespace = &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: metav1.NamespaceSystem,
+					UID:  "test-uid",
+				},
+			}
+
+			nodeList = &v1.NodeList{
+				Items: []v1.Node{{}},
+			}
+		)
+
 		It("sets the deployment context", func() {
-			var (
-				ngfPod = &v1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "pod1",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								Kind: "ReplicaSet",
-								Name: "replicaset1",
-							},
-						},
-					},
-				}
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
 
-				ngfReplicaSet = &appsv1.ReplicaSet{
-					Spec: appsv1.ReplicaSetSpec{
-						Replicas: helpers.GetPointer[int32](1),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "replicaset1",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								Kind: "Deployment",
-								Name: "Deployment1",
-								UID:  "test-uid-replicaSet",
-							},
-						},
-					},
-				}
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        clusterID,
+				InstallationID:   "test-uid-replicaSet",
+				ClusterNodeCount: 1,
+			}
 
-				kubeNamespace = &v1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: metav1.NamespaceSystem,
-						UID:  "test-uid",
-					},
-				}
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
+		})
 
-				nodeList = &v1.NodeList{
-					Items: []v1.Node{{}},
-				}
-			)
+		It("returns an error if cluster info isn't found", func() {
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(),
+			})
+
+			_, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("error getting cluster information"))
+		})
+
+		It("sets the deployment context when the replicaset isn't found", func() {
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
+
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        clusterID,
+				ClusterNodeCount: 1,
+			}
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
+		})
+
+		It("sets the deployment context when the replicaset doesn't have a uid", func() {
+			ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID = ""
 
 			handler := newEventHandlerImpl(eventHandlerConfig{
 				plus:      true,
@@ -760,16 +815,15 @@ var _ = Describe("setDeploymentCtx", func() {
 				},
 			})
 
-			conf := &dataplane.Configuration{}
-			Expect(handler.setDeploymentCtx(context.Background(), conf)).To(Succeed())
-
 			expCtx := dataplane.DeploymentContext{
 				Integration:      "ngf",
-				ClusterID:        "test-uid",
-				InstallationID:   "test-uid-replicaSet",
+				ClusterID:        clusterID,
 				ClusterNodeCount: 1,
 			}
-			Expect(conf.DeploymentContext).To(Equal(expCtx))
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
 		})
 	})
 })

@@ -56,6 +56,10 @@ const (
 	mgmtIncludesFile = mainIncludesFolder + "/mgmt.conf"
 )
 
+// ConfigFolders is a list of folders where NGINX configuration files are stored.
+// Volumes here also need to be added to our crossplane ephemeral test container.
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, mainIncludesFolder, streamFolder}
+
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
 type Generator interface {
