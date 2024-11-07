@@ -11,7 +11,7 @@ import (
 type Config struct {
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
-	// UsageReportConfig specifies the NGINX Plus usage reporting config.
+	// UsageReportConfig specifies the NGINX Plus usage reporting configuration.
 	UsageReportConfig UsageReportConfig
 	// Version is the running NGF version.
 	Version string
