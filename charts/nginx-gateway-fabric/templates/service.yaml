@@ -17,6 +17,9 @@ spec:
   {{- end }}
 {{- end }}
   type: {{ .Values.service.type }}
+{{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+{{- end}}
   selector:
     {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
   ports: # Update the following ports to match your Gateway Listener ports

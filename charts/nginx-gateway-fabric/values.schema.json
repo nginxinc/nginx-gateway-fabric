@@ -573,6 +573,13 @@
           "required": [],
           "title": "externalTrafficPolicy"
         },
+        "loadBalancerIP": {
+          "default": "",
+          "description": "The static IP address for the load balancer. Requires service.type set to LoadBalancer.",
+          "required": [],
+          "title": "loadBalancerIP",
+          "type": "string"
+        },
         "ports": {
           "description": "A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from\nyour Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports.",
           "items": {
