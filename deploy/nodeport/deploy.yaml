@@ -298,8 +298,6 @@ spec:
           name: nginx-run
         - mountPath: /var/cache/nginx
           name: nginx-cache
-        - mountPath: /var/lib/nginx
-          name: nginx-lib
         - mountPath: /etc/nginx/includes
           name: nginx-includes
       initContainers:
@@ -348,8 +346,6 @@ spec:
         name: nginx-run
       - emptyDir: {}
         name: nginx-cache
-      - emptyDir: {}
-        name: nginx-lib
       - emptyDir: {}
         name: nginx-includes
       - configMap:

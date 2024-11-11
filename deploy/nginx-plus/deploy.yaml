@@ -312,10 +312,10 @@ spec:
           name: nginx-run
         - mountPath: /var/cache/nginx
           name: nginx-cache
-        - mountPath: /var/lib/nginx
-          name: nginx-lib
         - mountPath: /etc/nginx/includes
           name: nginx-includes
+        - mountPath: /var/lib/nginx/state
+          name: nginx-lib
         - mountPath: /etc/nginx/license.jwt
           name: nginx-plus-license
           subPath: license.jwt
@@ -368,12 +368,12 @@ spec:
       - emptyDir: {}
         name: nginx-cache
       - emptyDir: {}
-        name: nginx-lib
-      - emptyDir: {}
         name: nginx-includes
       - configMap:
           name: nginx-includes-bootstrap
         name: nginx-includes-bootstrap
+      - emptyDir: {}
+        name: nginx-lib
       - name: nginx-plus-license
         secret:
           secretName: nplus-license
