@@ -124,7 +124,7 @@ We have outlined a few best practices to keep in mind when using `SnippetsFilter
   for i in `seq 1 10`; do curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee; done
   ```
 
-  You should see all successful responses in quick succession as we configured any rate limiting rules yet.
+  You should see all successful responses in quick succession as we have not configured any rate limiting rules yet.
 
 ---
 
