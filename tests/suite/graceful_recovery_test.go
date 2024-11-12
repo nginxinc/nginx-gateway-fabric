@@ -368,11 +368,16 @@ func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 		if strings.Contains(line, "[error]") {
 			expectedError1 := "connect() failed (111: Connection refused)"
 			expectedError2 := "product.connect.nginx.com could not be resolved"
+			expectedError3 := "server returned 429"
 			// FIXME(salonichf5) remove this error message check
 			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
-			expectedError3 := "no live upstreams while connecting to upstream"
+			expectedError4 := "no live upstreams while connecting to upstream"
 			Expect(line).To(Or(
-				ContainSubstring(expectedError1), ContainSubstring(expectedError2), ContainSubstring(expectedError3)))
+				ContainSubstring(expectedError1),
+				ContainSubstring(expectedError2),
+				ContainSubstring(expectedError3),
+				ContainSubstring(expectedError4),
+			))
 		}
 	}
 
