@@ -14,8 +14,8 @@ This topic introduces Snippets, how to implement them using the `SnippetsFilter`
 Snippets allow users to insert NGINX configuration into different contexts of the
 NGINX configurations that NGINX Gateway Fabric generates.
 
-Snippets are for advanced NGINX users who need more control over the generated NGINX configuration,
-and can be used in cases where Gateway API resources or NGINX extension policies don't apply.
+Snippets should only be used by advanced NGINX users who need more control over the generated NGINX configuration,
+and only in cases where Gateway API resources or NGINX extension policies don't apply.
 
 Users can configure Snippets through the `SnippetsFilter` API. `SnippetsFilter` can be an [HTTPRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) or [GRPCRouteFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteFilter),
 that can be defined in an HTTPRoute/GRPCRoute rule and is intended to modify NGINX configuration specifically for that Route rule. `SnippetsFilter` is an `extensionRef` type filter.
