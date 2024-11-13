@@ -56,12 +56,7 @@ No error logs in nginx-gateway
 
 Error logs in nginx
 
-Several errors related to R33 integration
-
-```
-2024-11-11 22:57:46.685 PST
-2024/11/12 06:57:46 [crit] 49#49: open() "/var/lib/nginx/state//nginx-mgmt-state" failed (2: No such file or directory)
-```
+We could not get non-2xx errors from the cluster but should likely be similar to last release's issues.
 
 
 ### Key Metrics
@@ -93,4 +88,4 @@ for endpoints changes.
 
 ## Comparison with previous runs
 
-Graphs look similar to 1.3.0 results.
+Graphs look similar to 1.4.0 results.

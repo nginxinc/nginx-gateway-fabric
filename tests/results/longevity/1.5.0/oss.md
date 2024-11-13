@@ -59,6 +59,8 @@ No error logs in nginx-gateway
 
 Error logs in nginx
 
+We could not get non-2xx errors from the cluster but should likely be similar to last release's issues.
+
 ### Key Metrics
 
 #### Containers memory
