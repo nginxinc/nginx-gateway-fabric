@@ -7,15 +7,15 @@ docs: "DOCS-000"
 
 ## Overview
 
-NGINX Gateway Fabric with NGINX Plus requires a valid JSON Web Token (JWT) to download the container image from the F5 registry. In addition, starting with version 1.5.0, this JWT token is also required to run NGINX Plus.
+NGINX Gateway Fabric with NGINX Plus requires a valid JSON Web Token (JWT) to download the container image from the F5 registry. From version 1.5.0, this JWT token is also required to run NGINX Plus.
 
 This requirement is part of F5’s broader licensing program and aligns with industry best practices. The JWT will streamline subscription renewals and usage reporting, helping you manage your NGINX Plus subscription more efficiently. The [telemetry](#telemetry) data we collect helps us improve our products and services to better meet your needs.
 
 The JWT is required for validating your subscription and reporting telemetry data. For environments connected to the internet, telemetry is automatically sent to F5’s licensing endpoint. In offline environments, telemetry is routed through [NGINX Instance Manager](https://docs.nginx.com/nginx-instance-manager/). Usage is reported every hour and on startup whenever NGINX is reloaded.
 
-## Setting up the JWT
+## Set up the JWT
 
-The JWT needs to be configured before deploying NGINX Gateway Fabric. We'll store the JWT in two Kubernetes Secrets. One will be used for downloading the NGINX Plus container image, and the other for running NGINX Plus.
+The JWT needs to be configured before deploying NGINX Gateway Fabric. The JWT will be stored in two Kubernetes Secrets: one for downloading the NGINX Plus container image, and the other for running NGINX Plus.
 
 {{< include "installation/jwt-password-note.md" >}}
 
@@ -172,7 +172,7 @@ ssl_certificate_key    /etc/nginx/certs-bootstrap/tls.key;
 
 **Once these Secrets are created and configuration options are set, you can now [install NGINX Gateway Fabric]({{< relref "installation/installing-ngf" >}}).**
 
-## Installation flags for configuring usage reporting {#flags}
+## Installation flags to configure usage reporting {#flags}
 
 When installing NGINX Gateway Fabric, the following flags can be specified to configure usage reporting to fit your needs:
 
@@ -215,7 +215,7 @@ All communication between your NGINX Plus instances, NGINX Instance Manager, and
 
 Only **operational metrics** are reported — no **personally identifiable information (PII)** or **sensitive customer data** is transmitted.
 
-## Pulling an image for local use
+## Pull an image for local use
 
 To pull an image for local use, use this command:
 
