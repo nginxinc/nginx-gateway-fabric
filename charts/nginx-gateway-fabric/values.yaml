@@ -306,6 +306,9 @@ service:
   # -- The static IP address for the load balancer. Requires service.type set to LoadBalancer.
   loadBalancerIP: ""
 
+  # -- The IP ranges (CIDR) that are allowed to access the load balancer. Requires service.type set to LoadBalancer.
+  loadBalancerSourceRanges: []
+
   # @schema
   # type: array
   # items:
