@@ -4,6 +4,56 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.5.0
+
+* Add guide for TLS Route in site by @sarthyparty in https://github.com/nginxinc/nginx-gateway-fabric/pull/2363
+* Adds configuration to retain client IP information  by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2284
+* Change validation in Duration type in CRDs and NGF by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2525
+* Use correct indentation in lifecyce examples by @defrank in https://github.com/nginxinc/nginx-gateway-fabric/pull/2588
+* Add Helm schema by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/2492
+* Add SnippetsFilter API by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2667
+* Only set stream status zone if hostname exists by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2684
+* Add loadBalancerSourceRanges to helm parameters by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2773
+
+%%DATE%%
+
+FEATURES:
+
+-
+
+BUG FIXES:
+
+-
+
+DOCUMENTATION:
+
+-
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.5.0
+-
+
+UPGRADE:
+
+-
+
+KNOWN ISSUES:
+
+-
+
+COMPATIBILITY:
+
+- Gateway API version: ``
+- NGINX version: ``
+- NGINX Plus version: ``
+- Kubernetes version: ``
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.5.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.5.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.5.0`
 ## Release 1.4.0
 
 _August 20, 2024_
