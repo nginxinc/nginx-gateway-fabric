@@ -6,54 +6,61 @@ and includes links to all PRs that went into the release.
 
 ## Release 1.5.0
 
-* Add guide for TLS Route in site by @sarthyparty in https://github.com/nginxinc/nginx-gateway-fabric/pull/2363
-* Adds configuration to retain client IP information  by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2284
-* Change validation in Duration type in CRDs and NGF by @bjee19 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2525
-* Use correct indentation in lifecyce examples by @defrank in https://github.com/nginxinc/nginx-gateway-fabric/pull/2588
-* Add Helm schema by @lucacome in https://github.com/nginxinc/nginx-gateway-fabric/pull/2492
-* Add SnippetsFilter API by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2667
-* Only set stream status zone if hostname exists by @sjberman in https://github.com/nginxinc/nginx-gateway-fabric/pull/2684
-* Add loadBalancerSourceRanges to helm parameters by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2773
-
-%%DATE%%
+_November 20, 2024_
 
 FEATURES:
 
--
+- Add support to retain client IP information by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2284
+- NGINX Plus R33 support added by @sjberman in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760). This release of NGINX Plus requires a valid JSON Web Token (JWT) in order to run. Users of NGINX Plus _must_ have this JWT added to a Secret before installing NGINX Gateway Fabric v1.5.0. See the [NGINX Plus JWT](https://docs.nginx.com/nginx-gateway-fabric/installation/nginx-plus-jwt/) guide for information on setting this up in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
+- Add ability to assign a log level for the data plane by @bjee19 in [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
+- Add support to apply SnippetsFilter in NGINX configuration by @kate-osborn in [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
+- Reduced logging verbosity of default Info log level by @sjberman in [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
 
 BUG FIXES:
 
--
+- Only set stream status zone if hostname exists by @sjberman in [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
+- Use correct indentation in lifecyce examples in [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
+- Update backend group name with a prefix when splitting traffic weights by @salonichf5 in [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
+- Return 503 when service has no ready endpoints by @bjee19 in [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
+- Define main includes config only once by @@sjberman in [2666](https://github.com/nginxinc/nginx-gateway-fabric/pull/2666)
+
 
 DOCUMENTATION:
 
--
+- Add guide for TLS Route in site by @sarthyparty in [2363](https://github.com/nginxinc/nginx-gateway-fabric/pull/2363)
+- Add guide for SnippetsFilter by @bjee19 in [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
+- Consolidate how-to guide for request and response header modifiers @salonichf5 in [2715](https://github.com/nginxinc/nginx-gateway-fabric/pull/2715)
+- Add a new "Get started" document by @ADubhlaoich in [2717](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
+- Add documentation for rewrite client IP settings by @salonichf5 by [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
+- Add description for enabling experimental features by @bjee19 in [2546](https://github.com/nginxinc/nginx-gateway-fabric/pull/2546)
+- Add documentation explaining how to do CRD versioning by @sjberman in [2404](https://github.com/nginxinc/nginx-gateway-fabric/pull/2404)
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.5.0
--
+- Add `loadBalancerSourceRanges` to helm parameters by @salonichf5 in [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
+- Add `loadBalancerIP` as a helm parameter to use during install/upgrade by @salonichf5 in [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
+- Add Helm schema by @lucacome in [2492](https://github.com/nginxinc/nginx-gateway-fabric/pull/2492)
+- Add capability to configure `topologySpreadConstraints` in [2703](https://github.com/nginxinc/nginx-gateway-fabric/pull/2703). Thanks to [Robsta86](https://github.com/Robsta86)
 
-UPGRADE:
+DEPENDENCIES:
 
--
-
-KNOWN ISSUES:
-
--
+- NGINX Plus was updated to R33. [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
+- Update to v1.2.0 of the Gateway API. [2694](https://github.com/nginxinc/nginx-gateway-fabric/pull/2694)
 
 COMPATIBILITY:
 
-- Gateway API version: ``
-- NGINX version: ``
-- NGINX Plus version: ``
-- Kubernetes version: ``
+- Gateway API version: `1.2.0`
+- NGINX version: `1.27.2`
+- NGINX Plus version: `R33`
+- Kubernetes version: `1.25+`
 
 CONTAINER IMAGES:
 
 - Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.5.0`
 - Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.5.0`
 - Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.5.0`
+
 ## Release 1.4.0
 
 _August 20, 2024_
