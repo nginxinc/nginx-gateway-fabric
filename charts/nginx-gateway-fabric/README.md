@@ -300,6 +300,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `service.create` | Creates a service to expose the NGINX Gateway Fabric pods. | bool | `true` |
 | `service.externalTrafficPolicy` | The externalTrafficPolicy of the service. The value Local preserves the client source IP. | string | `"Local"` |
 | `service.loadBalancerIP` | The static IP address for the load balancer. Requires service.type set to LoadBalancer. | string | `""` |
+| `service.loadBalancerSourceRanges` | The IP ranges (CIDR) that are allowed to access the load balancer. Requires service.type set to LoadBalancer. | list | `[]` |
 | `service.ports` | A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | list | `[{"name":"http","port":80,"protocol":"TCP","targetPort":80},{"name":"https","port":443,"protocol":"TCP","targetPort":443}]` |
 | `service.type` | The type of service to create for the NGINX Gateway Fabric. | string | `"LoadBalancer"` |
 | `serviceAccount.annotations` | Set of custom annotations for the NGINX Gateway Fabric service account. | object | `{}` |
