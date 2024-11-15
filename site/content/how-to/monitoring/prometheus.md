@@ -102,11 +102,11 @@ You can configure monitoring metrics for NGINX Gateway Fabric using Helm or Mani
 
 ### Using Helm
 
-If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.4.0/charts/nginx-gateway-fabric/README.md).
+If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.5.0/charts/nginx-gateway-fabric/README.md).
 
 ### Using Kubernetes manifests
 
-For setups using Kubernetes manifests, change the metrics configuration by editing the NGINX Gateway Fabric manifest that you want to deploy. You can find some examples in the [deploy](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.4.0/deploy) directory.
+For setups using Kubernetes manifests, change the metrics configuration by editing the NGINX Gateway Fabric manifest that you want to deploy. You can find some examples in the [deploy](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.5.0/deploy) directory.
 
 #### Disabling metrics
 
