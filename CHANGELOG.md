@@ -8,10 +8,13 @@ and includes links to all PRs that went into the release.
 
 _November 20, 2024_
 
+BREAKING CHANGES:
+
+- NGINX Plus R33 support added by @sjberman in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760). This release of NGINX Plus requires a valid JSON Web Token (JWT) in order to run. Users of NGINX Plus _must_ have this JWT added to a Secret before installing NGINX Gateway Fabric v1.5.0. See the [NGINX Plus JWT](https://docs.nginx.com/nginx-gateway-fabric/installation/nginx-plus-jwt/) guide for information on setting this up in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
+
 FEATURES:
 
-- Add support to retain client IP information by @salonichf5 in https://github.com/nginxinc/nginx-gateway-fabric/pull/2284
-- NGINX Plus R33 support added by @sjberman in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760). This release of NGINX Plus requires a valid JSON Web Token (JWT) in order to run. Users of NGINX Plus _must_ have this JWT added to a Secret before installing NGINX Gateway Fabric v1.5.0. See the [NGINX Plus JWT](https://docs.nginx.com/nginx-gateway-fabric/installation/nginx-plus-jwt/) guide for information on setting this up in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
+- Add support to retain client IP information by @salonichf5 in [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
 - Add ability to assign a log level for the data plane by @bjee19 in [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
 - Add support to apply SnippetsFilter in NGINX configuration by @kate-osborn in [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
 - Reduced logging verbosity of default Info log level by @sjberman in [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
@@ -19,15 +22,12 @@ FEATURES:
 BUG FIXES:
 
 - Only set stream status zone if hostname exists by @sjberman in [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
-- Use correct indentation in lifecyce examples in [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
-- Update backend group name with a prefix when splitting traffic weights by @salonichf5 in [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
+- Use correct indentation in lifecycle examples in [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
+- Fix an issue with upstream names when split clients are used with a namespace name that starts with a number by @salonichf5 in [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
 - Return 503 when service has no ready endpoints by @bjee19 in [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
-- Define main includes config only once by @@sjberman in [2666](https://github.com/nginxinc/nginx-gateway-fabric/pull/2666)
-
 
 DOCUMENTATION:
 
-- Add guide for TLS Route in site by @sarthyparty in [2363](https://github.com/nginxinc/nginx-gateway-fabric/pull/2363)
 - Add guide for SnippetsFilter by @bjee19 in [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
 - Consolidate how-to guide for request and response header modifiers @salonichf5 in [2715](https://github.com/nginxinc/nginx-gateway-fabric/pull/2715)
 - Add a new "Get started" document by @ADubhlaoich in [2717](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
@@ -38,7 +38,7 @@ DOCUMENTATION:
 HELM CHART:
 
 - The version of the Helm chart is now 1.5.0
-- Add `loadBalancerSourceRanges` to helm parameters by @salonichf5 in [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
+- Add `loadBalancerSourceRanges` to helm parameters to use during install/upgrade by @salonichf5 in [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
 - Add `loadBalancerIP` as a helm parameter to use during install/upgrade by @salonichf5 in [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
 - Add Helm schema by @lucacome in [2492](https://github.com/nginxinc/nginx-gateway-fabric/pull/2492)
 - Add capability to configure `topologySpreadConstraints` in [2703](https://github.com/nginxinc/nginx-gateway-fabric/pull/2703). Thanks to [Robsta86](https://github.com/Robsta86)
