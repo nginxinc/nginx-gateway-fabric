@@ -15,14 +15,13 @@ BREAKING CHANGES:
 FEATURES:
 
 - Add support to retain client IP information. [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
-- Add ability to configure data plane log level. [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
-- Add support to apply SnippetsFilter in NGINX configuration. [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
+- Add ability to configure data plane error log level. [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
+- Introduce SnippetsFilter API, which allows users to inject custom NGINX configuration via an HTTPRoute or GRPCRoute filter. See the [SnippetsFilter guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets/) for information on how to use SnippetsFilters. [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
 - Reduced logging verbosity of default Info log level. [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
 
 BUG FIXES:
 
 - Only set stream status zone if hostname exists. [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
-- Use correct indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
 - Fix an issue with upstream names when split clients are used with a namespace name that starts with a number. [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
 - Return 503 when service has no ready endpoints. [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
 
@@ -34,6 +33,7 @@ DOCUMENTATION:
 - Add documentation for rewrite client IP settings. [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
 - Add description for enabling experimental features. [2546](https://github.com/nginxinc/nginx-gateway-fabric/pull/2546)
 - Add documentation explaining how to do CRD versioning. [2404](https://github.com/nginxinc/nginx-gateway-fabric/pull/2404)
+- Use correct indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
 
 HELM CHART:
 
