@@ -10,36 +10,36 @@ _November 20, 2024_
 
 BREAKING CHANGES:
 
-- NGINX Plus R33 support added by @sjberman in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760). This release of NGINX Plus requires a valid JSON Web Token (JWT) in order to run. Users of NGINX Plus _must_ have this JWT added to a Secret before installing NGINX Gateway Fabric v1.5.0. See the [NGINX Plus JWT](https://docs.nginx.com/nginx-gateway-fabric/installation/nginx-plus-jwt/) guide for information on setting this up in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
+- NGINX Plus R33 support added. This release of NGINX Plus requires a valid JSON Web Token (JWT) in order to run. Users of NGINX Plus _must_ have this JWT added to a Secret before installing NGINX Gateway Fabric v1.5.0. See the [NGINX Plus JWT](https://docs.nginx.com/nginx-gateway-fabric/installation/nginx-plus-jwt/) guide for information on setting this up in [2760](https://github.com/nginxinc/nginx-gateway-fabric/pull/2760)
 
 FEATURES:
 
-- Add support to retain client IP information by @salonichf5 in [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
-- Add ability to assign a log level for the data plane by @bjee19 in [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
-- Add support to apply SnippetsFilter in NGINX configuration by @kate-osborn in [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
-- Reduced logging verbosity of default Info log level by @sjberman in [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
+- Add support to retain client IP information in [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
+- Add ability to configure data plane log level in [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
+- Add support to apply SnippetsFilter in NGINX configuration in [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
+- Reduced logging verbosity of default Info log level in [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
 
 BUG FIXES:
 
-- Only set stream status zone if hostname exists by @sjberman in [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
+- Only set stream status zone if hostname exists in [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
 - Use correct indentation in lifecycle examples in [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
-- Fix an issue with upstream names when split clients are used with a namespace name that starts with a number by @salonichf5 in [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
-- Return 503 when service has no ready endpoints by @bjee19 in [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
+- Fix an issue with upstream names when split clients are used with a namespace name that starts with a number in [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
+- Return 503 when service has no ready endpoints in [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
 
 DOCUMENTATION:
 
-- Add guide for SnippetsFilter by @bjee19 in [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
-- Consolidate how-to guide for request and response header modifiers @salonichf5 in [2715](https://github.com/nginxinc/nginx-gateway-fabric/pull/2715)
-- Add a new "Get started" document by @ADubhlaoich in [2717](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
-- Add documentation for rewrite client IP settings by @salonichf5 by [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
-- Add description for enabling experimental features by @bjee19 in [2546](https://github.com/nginxinc/nginx-gateway-fabric/pull/2546)
-- Add documentation explaining how to do CRD versioning by @sjberman in [2404](https://github.com/nginxinc/nginx-gateway-fabric/pull/2404)
+- Add guide for SnippetsFilter in [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
+- Consolidate how-to guide for request and response header modifiers in [2715](https://github.com/nginxinc/nginx-gateway-fabric/pull/2715)
+- Add a new "Get started" document in [2717](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
+- Add documentation for rewrite client IP settings by [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
+- Add description for enabling experimental features in [2546](https://github.com/nginxinc/nginx-gateway-fabric/pull/2546)
+- Add documentation explaining how to do CRD versioning in [2404](https://github.com/nginxinc/nginx-gateway-fabric/pull/2404)
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.5.0
-- Add `loadBalancerSourceRanges` to helm parameters to use during install/upgrade by @salonichf5 in [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
-- Add `loadBalancerIP` as a helm parameter to use during install/upgrade by @salonichf5 in [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
+- Add `loadBalancerSourceRanges` to helm parameters to use during install/upgrade in [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
+- Add `loadBalancerIP` as a helm parameter to use during install/upgrade in [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
 - Add Helm schema by @lucacome in [2492](https://github.com/nginxinc/nginx-gateway-fabric/pull/2492)
 - Add capability to configure `topologySpreadConstraints` in [2703](https://github.com/nginxinc/nginx-gateway-fabric/pull/2703). Thanks to [Robsta86](https://github.com/Robsta86)
 
