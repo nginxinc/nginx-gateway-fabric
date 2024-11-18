@@ -27,12 +27,10 @@ BUG FIXES:
 
 DOCUMENTATION:
 
-- Add guide for SnippetsFilter. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
-- Consolidate how-to guide for request and response header modifiers. [2715](https://github.com/nginxinc/nginx-gateway-fabric/pull/2715)
-- Add a new "Get started" document. [2717](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
-- Add documentation for rewrite client IP settings. [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
-- Add description for enabling experimental features. [2546](https://github.com/nginxinc/nginx-gateway-fabric/pull/2546)
-- Add documentation explaining how to do CRD versioning. [2404](https://github.com/nginxinc/nginx-gateway-fabric/pull/2404)
+- Add [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets) for SnippetsFilter.
+- Add a new [Get started](https://docs.nginx.com/nginx-gateway-fabric/get-started/) document.
+- Add documentation for [proxyProtocol and rewriteClientIP](https://docs.nginx.com/nginx-gateway-fabric/how-to/data-plane-configuration/) settings.
+- Add description for enabling [experimental](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/helm/) features.
 - Use correct indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
 
 HELM CHART:
