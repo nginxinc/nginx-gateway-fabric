@@ -119,14 +119,13 @@ jobs:
 
       - name: Install Chart
         run: |
-          ct install --config .ct.yaml --helm-extra-set-args="--set=nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }} \
+          ct install --config .ct.yaml --namespace nginx-gateway --helm-extra-set-args="--set=nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }} \
           --set=nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx${{ inputs.image == 'plus' && '-plus' || ''}} \
           --set=nginx.plus=${{ inputs.image == 'plus' }} \
           --set=nginx.image.tag=${{ steps.nginx-meta.outputs.version }} \
           --set=nginxGateway.image.pullPolicy=Never \
           --set=nginx.image.pullPolicy=Never \
-          --set=nginxGateway.productTelemetry.enable=false \
-          --namespace nginx-gateway"
+          --set=nginxGateway.productTelemetry.enable=false"
 
   helm-test-remote:
     name: Helm Tests Remote
