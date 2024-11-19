@@ -99,6 +99,15 @@ jobs:
           kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
           kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
 
+      - name: Create plus secret
+        if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: |
+          echo "$PLUS_LICENSE" > license.jwt
+          kubectl create namespace nginx-gateway
+          kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gateway
+
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
