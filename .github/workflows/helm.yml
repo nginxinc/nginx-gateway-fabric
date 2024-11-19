@@ -98,6 +98,7 @@ jobs:
           kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
           kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
           kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
+          kubectl create namespace nginx-gateway
 
       - name: Create plus secret
         if: ${{ inputs.image == 'plus' }}
@@ -105,7 +106,6 @@ jobs:
           PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
         run: |
           echo "${PLUS_LICENSE}" > license.jwt
-          kubectl create namespace nginx-gateway
           kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gateway
 
       - name: Set up Python

@@ -102,9 +102,9 @@ jobs:
 
       - name: Setup license file for plus
         if: ${{ inputs.image == 'plus' }}
-        run: echo "${PLUS_LICENSE}" > license.jwt
         env:
           PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: echo "${PLUS_LICENSE}" > license.jwt
 
       - name: Install cloud-provider-kind
         run: |
