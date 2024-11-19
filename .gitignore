@@ -46,6 +46,9 @@ internal/mode/static/nginx/modules/coverage
 *.crt
 *.key
 
+# JWT files
+*.jwt
+
 # Dotenv files
 **/*.env
 

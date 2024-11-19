@@ -18,7 +18,7 @@ rules:
   - get
   - list
   - watch
-{{- if .Values.nginxGateway.productTelemetry.enable }}
+{{- if or .Values.nginxGateway.productTelemetry.enable .Values.nginx.plus }}
 - apiGroups:
   - ""
   resources:

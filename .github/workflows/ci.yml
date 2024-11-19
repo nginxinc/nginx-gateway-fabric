@@ -238,6 +238,7 @@ jobs:
     with:
       image: ${{ matrix.image }}
       k8s-version: ${{ matrix.k8s-version }}
+    secrets: inherit
     permissions:
       contents: read
 
@@ -259,6 +260,7 @@ jobs:
       image: ${{ matrix.image }}
       k8s-version: ${{ matrix.k8s-version }}
       enable-experimental: ${{ matrix.enable-experimental }}
+    secrets: inherit
     permissions:
       contents: write
 

@@ -4282,3 +4282,42 @@ func TestBuildSnippetForContext(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildAuxiliarySecrets(t *testing.T) {
+	t.Parallel()
+
+	secrets := map[types.NamespacedName][]graph.PlusSecretFile{
+		{Name: "license", Namespace: "ngf"}: {
+			{
+				Type:    graph.PlusReportJWTToken,
+				Content: []byte("license"),
+			},
+		},
+		{Name: "ca", Namespace: "ngf"}: {
+			{
+				Type:    graph.PlusReportCACertificate,
+				Content: []byte("ca"),
+			},
+		},
+		{Name: "client", Namespace: "ngf"}: {
+			{
+				Type:    graph.PlusReportClientSSLCertificate,
+				Content: []byte("cert"),
+			},
+			{
+				Type:    graph.PlusReportClientSSLKey,
+				Content: []byte("key"),
+			},
+		},
+	}
+	expSecrets := map[graph.SecretFileType][]byte{
+		graph.PlusReportJWTToken:             []byte("license"),
+		graph.PlusReportCACertificate:        []byte("ca"),
+		graph.PlusReportClientSSLCertificate: []byte("cert"),
+		graph.PlusReportClientSSLKey:         []byte("key"),
+	}
+
+	g := NewWithT(t)
+
+	g.Expect(buildAuxiliarySecrets(secrets)).To(Equal(expSecrets))
+}

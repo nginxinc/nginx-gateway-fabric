@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -104,24 +103,6 @@ func validateQualifiedName(name string) error {
 	return nil
 }
 
-func validateURL(value string) error {
-	if len(value) == 0 {
-		return errors.New("must be set")
-	}
-	val, err := url.Parse(value)
-	if err != nil {
-		return fmt.Errorf("%q must be a valid URL: %w", value, err)
-	}
-	if val.Scheme == "" {
-		return fmt.Errorf("%q must be a valid URL: bad scheme", value)
-	}
-	if val.Host == "" {
-		return fmt.Errorf("%q must be a valid URL: bad host", value)
-	}
-
-	return nil
-}
-
 func validateIP(ip string) error {
 	if ip == "" {
 		return errors.New("IP address must be set")
@@ -162,6 +143,47 @@ func validateEndpoint(endpoint string) error {
 	return fmt.Errorf("%q must be in the format <host>:<port>", endpoint)
 }
 
+func validateEndpointOptionalPort(value string) error {
+	if len(value) == 0 {
+		return errors.New("must be set")
+	}
+
+	// This function assumes a port exists. If it doesn't, ignore those errors. Any errors with the endpoint
+	// will be caught by further validation.
+	host, port, err := net.SplitHostPort(value)
+	if err != nil &&
+		(!strings.Contains(err.Error(), "missing port") && !strings.Contains(err.Error(), "too many colons")) {
+		return fmt.Errorf("error splitting %q into host and port: %w", value, err)
+	}
+
+	if port != "" {
+		portVal, err := strconv.ParseInt(port, 10, 16)
+		if err != nil {
+			return fmt.Errorf("port must be a valid number: %w", err)
+		}
+
+		if portVal < 1 || portVal > 65535 {
+			return fmt.Errorf("port outside of valid port range [1 - 65535]: %v", port)
+		}
+	}
+
+	if host == "" {
+		host = value
+	}
+
+	if err := validateIP(host); err == nil {
+		return nil
+	}
+
+	if errs := validation.IsDNS1123Subdomain(host); len(errs) == 0 {
+		return nil
+	}
+
+	// we don't know if the user intended to use a hostname or an IP address,
+	// so we return a generic error message
+	return fmt.Errorf("%q must be a domain name or IP address with optional port", value)
+}
+
 // validatePort makes sure a given port is inside the valid port range for its usage.
 func validatePort(port int) error {
 	if port < 1024 || port > 65535 {
@@ -179,6 +201,18 @@ func ensureNoPortCollisions(ports ...int) error {
 			return fmt.Errorf("port %d has been defined multiple times", port)
 		}
 		seen[port] = struct{}{}
+	}
+
+	return nil
+}
+
+// validateSleepArgs ensures that arguments to the sleep command are set.
+func validateSleepArgs(srcFiles []string, dest string) error {
+	if len(srcFiles) == 0 {
+		return errors.New("source must not be empty")
+	}
+	if len(dest) == 0 {
+		return errors.New("destination must not be empty")
 	}
 
 	return nil

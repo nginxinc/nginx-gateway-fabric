@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -16,7 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const gwInstallBasePath = "https://github.com/kubernetes-sigs/gateway-api/releases/download"
+const (
+	gwInstallBasePath = "https://github.com/kubernetes-sigs/gateway-api/releases/download"
+	PlusSecretName    = "nplus-license"
+)
 
 // InstallationConfig contains the configuration for the NGF installation.
 type InstallationConfig struct {
@@ -79,6 +83,43 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
 
 	return exec.Command("helm", fullArgs...).CombinedOutput()
+}
+
+// CreateLicenseSecret creates the NGINX Plus JWT secret.
+func CreateLicenseSecret(k8sClient client.Client, namespace, filename string) error {
+	conf, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading file %q: %w", filename, err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeoutConfig().CreateTimeout)
+	defer cancel()
+
+	ns := &core.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+
+	if err := k8sClient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("error creating namespace: %w", err)
+	}
+
+	secret := &core.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      PlusSecretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"license.jwt": conf,
+		},
+	}
+
+	if err := k8sClient.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("error creating secret: %w", err)
+	}
+
+	return nil
 }
 
 // UpgradeNGF upgrades NGF. CRD upgrades assume the chart is local.

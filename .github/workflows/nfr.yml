@@ -111,6 +111,12 @@ jobs:
           echo "GKE_NUM_NODES=12" >> vars.env
           echo "GKE_MACHINE_TYPE=n2d-standard-16" >> vars.env
 
+      - name: Setup license file for plus
+        if: matrix.type == 'plus'
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: echo "${PLUS_LICENSE}" > license.jwt
+
       - name: Create GKE cluster
         working-directory: ./tests
         run: make create-gke-cluster CI=true
