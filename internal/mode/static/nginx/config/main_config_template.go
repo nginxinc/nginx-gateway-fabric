@@ -11,3 +11,28 @@ error_log stderr {{ .Conf.Logging.ErrorLevel }};
 include {{ $i.Name }};
 {{ end -}}
 `
+
+const mgmtConfigTemplateText = `
+mgmt {
+	{{- if .Endpoint }}
+	usage_report endpoint={{ .Endpoint }};
+	{{- end }}
+	{{- if .Resolver }}
+	resolver {{ .Resolver }};
+	{{- end }}
+	license_token {{ .LicenseTokenFile }};
+	{{- if .DeploymentCtxFile }}
+	deployment_context {{ .DeploymentCtxFile }};
+	{{- end }}
+	{{- if .SkipVerify }}
+	ssl_verify off;
+	{{- end }}
+	{{- if .CACertFile }}
+	ssl_trusted_certificate {{ .CACertFile }};
+	{{- end }}
+	{{- if and .ClientSSLCertFile .ClientSSLKeyFile }}
+	ssl_certificate {{ .ClientSSLCertFile }};
+	ssl_certificate_key {{ .ClientSSLKeyFile }};
+	{{- end }}
+}
+`

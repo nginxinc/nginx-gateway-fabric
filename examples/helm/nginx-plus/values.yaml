@@ -5,9 +5,6 @@ nginx:
   plus: true
   image:
     repository: private-registry.nginx.com/nginx-gateway-fabric/nginx-plus
-  usage:
-    secretName: nginx-gateway/ngf-usage-auth
-    serverURL: https://my-instance-nim.example.com
 
 serviceAccount:
   imagePullSecret: nginx-plus-registry-secret

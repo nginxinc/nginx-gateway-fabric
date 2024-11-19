@@ -125,3 +125,25 @@ func TestExecuteMainConfig_Snippets(t *testing.T) {
 
 	g.Expect(res[3].dest).To(Equal(mainIncludesConfigFile))
 }
+
+func TestGenerateMgmtFiles_NoPlus(t *testing.T) {
+	t.Parallel()
+
+	gen := GeneratorImpl{}
+	files := gen.generateMgmtFiles(dataplane.Configuration{})
+
+	g := NewWithT(t)
+	g.Expect(files).To(BeNil())
+}
+
+func TestGenerateMgmtFiles_Panic(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	gen := GeneratorImpl{plus: true}
+
+	// panics if JWT token is not set in the AuxiliarySecrets map
+	g.Expect(func() {
+		gen.generateMgmtFiles(dataplane.Configuration{})
+	}).To(Panic())
+}

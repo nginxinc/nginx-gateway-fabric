@@ -56,6 +56,7 @@ func BuildConfiguration(
 		BaseHTTPConfig:        baseHTTPConfig,
 		Logging:               buildLogging(g),
 		MainSnippets:          buildSnippetsForContext(g.SnippetsFilters, ngfAPI.NginxContextMain),
+		AuxiliarySecrets:      buildAuxiliarySecrets(g.PlusSecrets),
 	}
 
 	return config
@@ -956,9 +957,24 @@ func buildLogging(g *graph.Graph) Logging {
 	return logSettings
 }
 
+func buildAuxiliarySecrets(
+	secrets map[types.NamespacedName][]graph.PlusSecretFile,
+) map[graph.SecretFileType][]byte {
+	auxSecrets := make(map[graph.SecretFileType][]byte)
+
+	for _, secretFiles := range secrets {
+		for _, file := range secretFiles {
+			auxSecrets[file.Type] = file.Content
+		}
+	}
+
+	return auxSecrets
+}
+
 func GetDefaultConfiguration(g *graph.Graph, configVersion int) Configuration {
 	return Configuration{
-		Version: configVersion,
-		Logging: buildLogging(g),
+		Version:          configVersion,
+		Logging:          buildLogging(g),
+		AuxiliarySecrets: buildAuxiliarySecrets(g.PlusSecrets),
 	}
 }

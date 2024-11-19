@@ -70,6 +70,8 @@ type ChangeProcessorConfig struct {
 	MustExtractGVK kinds.MustExtractGVK
 	// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of the ports.
 	ProtectedPorts graph.ProtectedPorts
+	// PlusSecrets is a list of secret files used for NGINX Plus reporting (JWT, client SSL, CA).
+	PlusSecrets map[types.NamespacedName][]graph.PlusSecretFile
 	// Logger is the logger for this Change Processor.
 	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
@@ -275,6 +277,7 @@ func (c *ChangeProcessorImpl) Process() (ChangeType, *graph.Graph) {
 		c.clusterState,
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
+		c.cfg.PlusSecrets,
 		c.cfg.Validators,
 		c.cfg.ProtectedPorts,
 	)

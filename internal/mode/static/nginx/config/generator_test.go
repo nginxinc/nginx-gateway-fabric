@@ -7,10 +7,13 @@ import (
 
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
+	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -116,15 +119,31 @@ func TestGenerate(t *testing.T) {
 				Contents: "main 2 contents",
 			},
 		},
+		DeploymentContext: dataplane.DeploymentContext{
+			Integration:      "ngf",
+			ClusterID:        "test-uid",
+			InstallationID:   "test-uid-replicaSet",
+			ClusterNodeCount: 1,
+		},
+		AuxiliarySecrets: map[graph.SecretFileType][]byte{
+			graph.PlusReportJWTToken:             []byte("license"),
+			graph.PlusReportCACertificate:        []byte("ca"),
+			graph.PlusReportClientSSLCertificate: []byte("cert"),
+			graph.PlusReportClientSSLKey:         []byte("key"),
+		},
 	}
 	g := NewWithT(t)
 
-	var plus bool
-	generator := config.NewGeneratorImpl(plus)
+	plus := true
+	generator := config.NewGeneratorImpl(
+		plus,
+		&ngfConfig.UsageReportConfig{Endpoint: "test-endpoint"},
+		ctlrZap.New(),
+	)
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(11))
+	g.Expect(files).To(HaveLen(17))
 	arrange := func(i, j int) bool {
 		return files[i].Path < files[j].Path
 	}
@@ -139,7 +158,13 @@ func TestGenerate(t *testing.T) {
 		/etc/nginx/includes/http_snippet2.conf
 		/etc/nginx/includes/main_snippet1.conf
 		/etc/nginx/includes/main_snippet2.conf
+		/etc/nginx/main-includes/deployment_ctx.json
 		/etc/nginx/main-includes/main.conf
+		/etc/nginx/main-includes/mgmt.conf
+		/etc/nginx/secrets/license.jwt
+		/etc/nginx/secrets/mgmt-ca.crt
+		/etc/nginx/secrets/mgmt-tls.crt
+		/etc/nginx/secrets/mgmt-tls.key
 		/etc/nginx/secrets/test-certbundle.crt
 		/etc/nginx/secrets/test-keypair.pem
 		/etc/nginx/stream-conf.d/stream.conf
@@ -182,25 +207,53 @@ func TestGenerate(t *testing.T) {
 	g.Expect(files[5].Path).To(Equal("/etc/nginx/includes/main_snippet1.conf"))
 	g.Expect(files[6].Path).To(Equal("/etc/nginx/includes/main_snippet2.conf"))
 
-	g.Expect(files[7].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
-	mainConfStr := string(files[7].Content)
+	g.Expect(files[7].Path).To(Equal("/etc/nginx/main-includes/deployment_ctx.json"))
+	deploymentCtx := string(files[7].Content)
+	g.Expect(deploymentCtx).To(ContainSubstring("\"integration\":\"ngf\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"cluster_id\":\"test-uid\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"installation_id\":\"test-uid-replicaSet\""))
+	g.Expect(deploymentCtx).To(ContainSubstring("\"cluster_node_count\":1"))
+
+	g.Expect(files[8].Path).To(Equal("/etc/nginx/main-includes/main.conf"))
+	mainConfStr := string(files[8].Content)
 	g.Expect(mainConfStr).To(ContainSubstring("load_module modules/ngx_otel_module.so;"))
 	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet1.conf;"))
 	g.Expect(mainConfStr).To(ContainSubstring("include /etc/nginx/includes/main_snippet2.conf;"))
 
-	g.Expect(files[8].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
-	certBundle := string(files[8].Content)
+	g.Expect(files[9].Path).To(Equal("/etc/nginx/main-includes/mgmt.conf"))
+	mgmtConf := string(files[9].Content)
+	g.Expect(mgmtConf).To(ContainSubstring("usage_report endpoint=test-endpoint"))
+	g.Expect(mgmtConf).To(ContainSubstring("license_token /etc/nginx/secrets/license.jwt"))
+	g.Expect(mgmtConf).To(ContainSubstring("deployment_context /etc/nginx/main-includes/deployment_ctx.json"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_trusted_certificate /etc/nginx/secrets/mgmt-ca.crt"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_certificate /etc/nginx/secrets/mgmt-tls.crt"))
+	g.Expect(mgmtConf).To(ContainSubstring("ssl_certificate_key /etc/nginx/secrets/mgmt-tls.key"))
+
+	g.Expect(files[10].Path).To(Equal("/etc/nginx/secrets/license.jwt"))
+	g.Expect(string(files[10].Content)).To(Equal("license"))
+
+	g.Expect(files[11].Path).To(Equal("/etc/nginx/secrets/mgmt-ca.crt"))
+	g.Expect(string(files[11].Content)).To(Equal("ca"))
+
+	g.Expect(files[12].Path).To(Equal("/etc/nginx/secrets/mgmt-tls.crt"))
+	g.Expect(string(files[12].Content)).To(Equal("cert"))
+
+	g.Expect(files[13].Path).To(Equal("/etc/nginx/secrets/mgmt-tls.key"))
+	g.Expect(string(files[13].Content)).To(Equal("key"))
+
+	g.Expect(files[14].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[14].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 
-	g.Expect(files[9]).To(Equal(file.File{
+	g.Expect(files[15]).To(Equal(file.File{
 		Type:    file.TypeSecret,
 		Path:    "/etc/nginx/secrets/test-keypair.pem",
 		Content: []byte("test-cert\ntest-key"),
 	}))
 
-	g.Expect(files[10].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
-	g.Expect(files[10].Type).To(Equal(file.TypeRegular))
-	streamCfg := string(files[10].Content)
+	g.Expect(files[16].Path).To(Equal("/etc/nginx/stream-conf.d/stream.conf"))
+	g.Expect(files[16].Type).To(Equal(file.TypeRegular))
+	streamCfg := string(files[16].Content)
 	g.Expect(streamCfg).To(ContainSubstring("listen unix:/var/run/nginx/app.example.com-443.sock"))
 	g.Expect(streamCfg).To(ContainSubstring("listen 443"))
 	g.Expect(streamCfg).To(ContainSubstring("app.example.com unix:/var/run/nginx/app.example.com-443.sock"))
