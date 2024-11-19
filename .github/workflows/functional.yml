@@ -100,6 +100,12 @@ jobs:
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
 
+      - name: Setup license file for plus
+        if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: echo "${PLUS_LICENSE}" > license.jwt
+
       - name: Install cloud-provider-kind
         run: |
           CLOUD_PROVIDER_KIND_VERSION=v0.4.0 # renovate: datasource=github-tags depName=kubernetes-sigs/cloud-provider-kind

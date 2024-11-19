@@ -138,7 +138,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, errors.New("failed to collect telemetry data: latest graph cannot be nil")
 	}
 
-	clusterInfo, err := collectClusterInformation(ctx, c.cfg.K8sClientReader)
+	clusterInfo, err := CollectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
@@ -148,9 +148,9 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
-	replicaSet, err := getPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	replicaSet, err := GetPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
 	if err != nil {
-		return Data{}, fmt.Errorf("failed to get replica set for pod %s: %w", c.cfg.PodNSName, err)
+		return Data{}, fmt.Errorf("failed to get replica set for pod %v: %w", c.cfg.PodNSName, err)
 	}
 
 	replicaCount, err := getReplicas(replicaSet)
@@ -158,7 +158,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
 
-	deploymentID, err := getDeploymentID(replicaSet)
+	deploymentID, err := GetDeploymentID(replicaSet)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
@@ -280,7 +280,8 @@ func computeRouteCount(
 	}
 }
 
-func getPodReplicaSet(
+// GetPodReplicaSet returns the replicaset for the provided Pod.
+func GetPodReplicaSet(
 	ctx context.Context,
 	k8sClient client.Reader,
 	podNSName types.NamespacedName,
@@ -323,7 +324,8 @@ func getReplicas(replicaSet *appsv1.ReplicaSet) (int, error) {
 	return int(*replicaSet.Spec.Replicas), nil
 }
 
-func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
+// GetDeploymentID gets the deployment ID of the provided ReplicaSet.
+func GetDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
 	replicaOwnerRefs := replicaSet.GetOwnerReferences()
 	if len(replicaOwnerRefs) != 1 {
 		return "", fmt.Errorf("expected one owner reference of the NGF ReplicaSet, got %d", len(replicaOwnerRefs))
@@ -340,8 +342,8 @@ func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
 	return string(replicaOwnerRefs[0].UID), nil
 }
 
-// CollectClusterID gets the UID of the kube-system namespace.
-func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
+// collectClusterID gets the UID of the kube-system namespace.
+func collectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
 	key := types.NamespacedName{
 		Name: metav1.NamespaceSystem,
 	}
@@ -352,24 +354,25 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 	return string(kubeNamespace.GetUID()), nil
 }
 
-type clusterInformation struct {
+type ClusterInformation struct {
 	Platform  string
 	Version   string
 	ClusterID string
 	NodeCount int
 }
 
-func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
-	var clusterInfo clusterInformation
+// CollectClusterInformation collects information about the cluster.
+func CollectClusterInformation(ctx context.Context, k8sClient client.Reader) (ClusterInformation, error) {
+	var clusterInfo ClusterInformation
 
 	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return clusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
+		return ClusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
 	}
 
 	nodeCount := len(nodes.Items)
 	if nodeCount == 0 {
-		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
+		return ClusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
 	}
 	clusterInfo.NodeCount = nodeCount
 
@@ -385,15 +388,15 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 
 	var namespaces v1.NamespaceList
 	if err = k8sClient.List(ctx, &namespaces); err != nil {
-		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+		return ClusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
 	clusterInfo.Platform = getPlatform(node, namespaces)
 
 	var clusterID string
-	clusterID, err = CollectClusterID(ctx, k8sClient)
+	clusterID, err = collectClusterID(ctx, k8sClient)
 	if err != nil {
-		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+		return ClusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 	clusterInfo.ClusterID = clusterID
 

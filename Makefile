@@ -1,13 +1,12 @@
 # variables that should not be overridden by the user
 VERSION = edge
-SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+SELF_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 CHART_DIR = $(SELF_DIR)charts/nginx-gateway-fabric
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
 KIND_CONFIG_FILE = $(SELF_DIR)config/cluster/kind-cluster.yaml
-NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
-BUILD_AGENT=local
-PLUS_ENABLED ?= false
+NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=$(SELF_DIR)nginx-repo.crt --secret id=nginx-repo.key,src=$(SELF_DIR)nginx-repo.key
+BUILD_AGENT = local
 
 PROD_TELEMETRY_ENDPOINT = oss.edge.df.f5.com:443
 # the telemetry related variables below are also configured in goreleaser.yml
@@ -49,6 +48,8 @@ TARGET ?= local## The target of the build. Possible values: local and container
 OUT_DIR ?= build/out## The folder where the binary will be stored
 GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
+PLUS_ENABLED ?= false
+PLUS_LICENSE_FILE ?= $(SELF_DIR)license.jwt
 override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) --build-arg BUILD_AGENT=$(BUILD_AGENT)
 
 .DEFAULT_GOAL := help
@@ -227,7 +228,9 @@ helm-install-local: install-gateway-crds ## Helm install NGF on configured kind 
 
 .PHONY: helm-install-local-with-plus
 helm-install-local-with-plus: install-gateway-crds ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
-	helm install nginx-gateway $(CHART_DIR) --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --create-namespace --wait --set nginxGateway.image.pullPolicy=Never --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway --set nginx.plus=true $(HELM_PARAMETERS)
+	kubectl create namespace nginx-gateway || true
+	kubectl -n nginx-gateway create secret generic nplus-license --from-file $(PLUS_LICENSE_FILE) || true
+	helm install nginx-gateway $(CHART_DIR) --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --wait --set nginxGateway.image.pullPolicy=Never --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway --set nginx.plus=true $(HELM_PARAMETERS)
 
 # Debug Targets
 .PHONY: debug-build

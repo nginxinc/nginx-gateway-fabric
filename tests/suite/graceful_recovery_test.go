@@ -367,10 +367,17 @@ func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
 		if strings.Contains(line, "[error]") {
 			expectedError1 := "connect() failed (111: Connection refused)"
+			expectedError2 := "product.connect.nginx.com could not be resolved"
+			expectedError3 := "server returned 429"
 			// FIXME(salonichf5) remove this error message check
 			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
-			expectedError2 := "no live upstreams while connecting to upstream"
-			Expect(line).To(Or(ContainSubstring(expectedError1), ContainSubstring(expectedError2)))
+			expectedError4 := "no live upstreams while connecting to upstream"
+			Expect(line).To(Or(
+				ContainSubstring(expectedError1),
+				ContainSubstring(expectedError2),
+				ContainSubstring(expectedError3),
+				ContainSubstring(expectedError4),
+			))
 		}
 	}
 
@@ -383,11 +390,7 @@ func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 		Expect(err).ToNot(HaveOccurred())
 
 		for _, line := range strings.Split(ngfLogs, "\n") {
-			if *plusEnabled && strings.Contains(line, "\"level\":\"error\"") {
-				Expect(line).To(ContainSubstring("Usage reporting must be enabled when using NGINX Plus"), line)
-			} else {
-				Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
-			}
+			Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
 		}
 	}
 }

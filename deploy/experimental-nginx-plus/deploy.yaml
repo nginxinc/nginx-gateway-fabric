@@ -159,13 +159,17 @@ apiVersion: v1
 data:
   main.conf: |
     error_log stderr info;
+  mgmt.conf: |
+    mgmt {
+        enforce_initial_report off;
+    }
 kind: ConfigMap
 metadata:
   labels:
     app.kubernetes.io/instance: nginx-gateway
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/version: edge
-  name: nginx-includes
+  name: nginx-includes-bootstrap
   namespace: nginx-gateway
 ---
 apiVersion: v1
@@ -225,6 +229,7 @@ spec:
         - --config=nginx-gateway-config
         - --service=nginx-gateway
         - --nginx-plus
+        - --usage-report-secret=nplus-license
         - --metrics-port=9113
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
@@ -315,14 +320,21 @@ spec:
           name: nginx-cache
         - mountPath: /etc/nginx/includes
           name: nginx-includes
+        - mountPath: /var/lib/nginx/state
+          name: nginx-lib
+        - mountPath: /etc/nginx/license.jwt
+          name: nginx-plus-license
+          subPath: license.jwt
       initContainers:
       - command:
         - /usr/bin/gateway
         - copy
         - --source
         - /includes/main.conf
+        - --source
+        - /includes/mgmt.conf
         - --destination
-        - /etc/nginx/main-includes/main.conf
+        - /etc/nginx/main-includes
         image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: copy-nginx-config
@@ -339,7 +351,7 @@ spec:
             type: RuntimeDefault
         volumeMounts:
         - mountPath: /includes
-          name: nginx-includes-configmap
+          name: nginx-includes-bootstrap
         - mountPath: /etc/nginx/main-includes
           name: nginx-main-includes
       securityContext:
@@ -364,8 +376,13 @@ spec:
       - emptyDir: {}
         name: nginx-includes
       - configMap:
-          name: nginx-includes
-        name: nginx-includes-configmap
+          name: nginx-includes-bootstrap
+        name: nginx-includes-bootstrap
+      - emptyDir: {}
+        name: nginx-lib
+      - name: nginx-plus-license
+        secret:
+          secretName: nplus-license
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

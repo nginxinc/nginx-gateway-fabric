@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +33,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/statefakes"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/staticfakes"
 )
 
 var _ = Describe("eventHandler", func() {
@@ -404,95 +404,6 @@ var _ = Describe("eventHandler", func() {
 		})
 	})
 
-	When("receiving usage Secret updates", func() {
-		var fakeSecretStore *staticfakes.FakeSecretStorer
-		var usageSecret *v1.Secret
-
-		BeforeEach(func() {
-			fakeSecretStore = &staticfakes.FakeSecretStorer{}
-			usageSecret = &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "usage",
-					Namespace: "nginx-gateway",
-				},
-			}
-		})
-
-		It("should not set the N+ usage secret if not initialized", func() {
-			handler.cfg.usageSecret = fakeSecretStore
-
-			e := &events.UpsertEvent{
-				Resource: usageSecret,
-			}
-			batch := []interface{}{e}
-
-			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-			Expect(fakeSecretStore.SetCallCount()).To(Equal(0))
-			Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-		})
-
-		Context("usage secret is initialized", func() {
-			var usageSecretHandler *eventHandlerImpl
-			BeforeEach(func() {
-				usageCfg := &config.UsageReportConfig{
-					SecretNsName: client.ObjectKeyFromObject(usageSecret),
-				}
-				usageSecretHandler = newEventHandlerImpl(eventHandlerConfig{
-					k8sClient:                     fake.NewFakeClient(),
-					processor:                     fakeProcessor,
-					nginxConfiguredOnStartChecker: newNginxConfiguredOnStartChecker(),
-					controlConfigNSName:           types.NamespacedName{Namespace: namespace, Name: configName},
-					usageReportConfig:             usageCfg,
-					usageSecret:                   fakeSecretStore,
-					gatewayPodConfig: config.GatewayPodConfig{
-						ServiceName: "nginx-gateway",
-						Namespace:   "nginx-gateway",
-					},
-					metricsCollector: collectors.NewControllerNoopCollector(),
-				})
-			})
-
-			It("should not set the N+ usage secret if processing a normal secret", func() {
-				e := &events.UpsertEvent{
-					Resource: &v1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "not-usage",
-							Namespace: "nginx-gateway",
-						},
-					},
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.SetCallCount()).To(Equal(0))
-				Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-			})
-
-			It("should set the N+ usage secret when upserted", func() {
-				e := &events.UpsertEvent{
-					Resource: usageSecret,
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.SetCallCount()).To(Equal(1))
-				Expect(fakeProcessor.CaptureUpsertChangeCallCount()).To(Equal(1))
-			})
-
-			It("should remove the N+ usage secret when deleted", func() {
-				e := &events.DeleteEvent{
-					Type:           &v1.Secret{},
-					NamespacedName: client.ObjectKeyFromObject(usageSecret),
-				}
-				batch := []interface{}{e}
-
-				usageSecretHandler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
-				Expect(fakeSecretStore.DeleteCallCount()).To(Equal(1))
-				Expect(fakeProcessor.CaptureDeleteChangeCallCount()).To(Equal(1))
-			})
-		})
-	})
-
 	When("receiving an EndpointsOnlyChange update", func() {
 		e := &events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -784,5 +695,135 @@ var _ = Describe("getGatewayAddresses", func() {
 		Expect(addrs).To(HaveLen(2))
 		Expect(addrs[0].Value).To(Equal("34.35.36.37"))
 		Expect(addrs[1].Value).To(Equal("myhost"))
+	})
+})
+
+var _ = Describe("setDeploymentCtx", func() {
+	When("nginx plus is false", func() {
+		It("doesn't set the deployment context", func() {
+			handler := eventHandlerImpl{}
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(dataplane.DeploymentContext{}))
+		})
+	})
+
+	When("nginx plus is true", func() {
+		var (
+			clusterID = "test-uid"
+			ngfPod    = &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pod1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind: "ReplicaSet",
+							Name: "replicaset1",
+						},
+					},
+				},
+			}
+
+			ngfReplicaSet = &appsv1.ReplicaSet{
+				Spec: appsv1.ReplicaSetSpec{
+					Replicas: helpers.GetPointer[int32](1),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "replicaset1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind: "Deployment",
+							Name: "Deployment1",
+							UID:  "test-uid-replicaSet",
+						},
+					},
+				},
+			}
+
+			kubeNamespace = &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: metav1.NamespaceSystem,
+					UID:  "test-uid",
+				},
+			}
+
+			nodeList = &v1.NodeList{
+				Items: []v1.Node{{}},
+			}
+		)
+
+		It("sets the deployment context", func() {
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
+
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        clusterID,
+				InstallationID:   "test-uid-replicaSet",
+				ClusterNodeCount: 1,
+			}
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
+		})
+
+		It("returns an error if cluster info isn't found", func() {
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(),
+			})
+
+			_, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("error getting cluster information"))
+		})
+
+		It("sets the deployment context when the replicaset isn't found", func() {
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
+
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        clusterID,
+				ClusterNodeCount: 1,
+			}
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
+		})
+
+		It("sets the deployment context when the replicaset doesn't have a uid", func() {
+			ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID = ""
+
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus:      true,
+				k8sReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
+				gatewayPodConfig: config.GatewayPodConfig{
+					Name: ngfPod.Name,
+				},
+			})
+
+			expCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        clusterID,
+				ClusterNodeCount: 1,
+			}
+
+			depCtx, err := handler.setDeploymentCtx(context.Background(), ctlrZap.New())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(depCtx).To(Equal(expCtx))
+		})
 	})
 })

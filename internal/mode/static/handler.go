@@ -29,21 +29,11 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
-}
-
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-//counterfeiter:generate . secretStorer
-
-// secretStorer should store the usage Secret that contains the credentials for NGINX Plus usage reporting.
-type secretStorer interface {
-	// Set stores the updated Secret.
-	Set(*v1.Secret)
-	// Delete nullifies the Secret value.
-	Delete()
 }
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
@@ -56,22 +46,20 @@ type eventHandlerConfig struct {
 	nginxRuntimeMgr runtime.Manager
 	// statusUpdater updates statuses on Kubernetes resources.
 	statusUpdater frameworkStatus.GroupUpdater
-	// usageSecret contains the Secret for the NGINX Plus reporting credentials.
-	usageSecret secretStorer
 	// processor is the state ChangeProcessor.
 	processor state.ChangeProcessor
 	// serviceResolver resolves Services to Endpoints.
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
 	generator ngxConfig.Generator
-	// k8sClient is a Kubernetes API client
+	// k8sClient is a Kubernetes API client.
 	k8sClient client.Client
+	// k8sReader is a Kubernets API reader.
+	k8sReader client.Reader
 	// logLevelSetter is used to update the logging level.
 	logLevelSetter logLevelSetter
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
-	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
-	usageReportConfig *ngfConfig.UsageReportConfig
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// gatewayPodConfig contains information about this Pod.
@@ -82,6 +70,8 @@ type eventHandlerConfig struct {
 	gatewayCtlrName string
 	// updateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	updateGatewayClassStatus bool
+	// plus is whether or not we are running NGINX Plus.
+	plus bool
 }
 
 const (
@@ -133,9 +123,8 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 	handler.objectFilters = map[filterKey]objectFilter{
 		// NginxGateway CRD
 		objectFilterKey(&ngfAPI.NginxGateway{}, handler.cfg.controlConfigNSName): {
-			upsert:               handler.nginxGatewayCRDUpsert,
-			delete:               handler.nginxGatewayCRDDelete,
-			captureChangeInGraph: false,
+			upsert: handler.nginxGatewayCRDUpsert,
+			delete: handler.nginxGatewayCRDDelete,
 		},
 		// NGF-fronting Service
 		objectFilterKey(
@@ -149,16 +138,6 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 			delete:               handler.nginxGatewayServiceDelete,
 			captureChangeInGraph: true,
 		},
-	}
-
-	if handler.cfg.usageReportConfig != nil {
-		// N+ usage reporting Secret
-		nsName := handler.cfg.usageReportConfig.SecretNsName
-		handler.objectFilters[objectFilterKey(&v1.Secret{}, nsName)] = objectFilter{
-			upsert:               handler.nginxPlusUsageSecretUpsert,
-			delete:               handler.nginxPlusUsageSecretDelete,
-			captureChangeInGraph: true,
-		}
 	}
 
 	return handler
@@ -194,6 +173,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
+		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
+		if setErr != nil {
+			logger.Error(setErr, "error setting deployment context for usage reporting")
+		}
+		cfg.DeploymentContext = depCtx
 
 		h.setLatestConfiguration(&cfg)
 
@@ -205,6 +189,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
+		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
+		if setErr != nil {
+			logger.Error(setErr, "error setting deployment context for usage reporting")
+		}
+		cfg.DeploymentContext = depCtx
 
 		h.setLatestConfiguration(&cfg)
 
@@ -511,6 +500,47 @@ func getGatewayAddresses(
 	return gwAddresses, nil
 }
 
+// setDeploymentCtx sets the deployment context metadata for nginx plus reporting.
+func (h *eventHandlerImpl) setDeploymentCtx(
+	ctx context.Context,
+	logger logr.Logger,
+) (dataplane.DeploymentContext, error) {
+	if !h.cfg.plus {
+		return dataplane.DeploymentContext{}, nil
+	}
+
+	podNSName := types.NamespacedName{
+		Name:      h.cfg.gatewayPodConfig.Name,
+		Namespace: h.cfg.gatewayPodConfig.Namespace,
+	}
+
+	clusterInfo, err := telemetry.CollectClusterInformation(ctx, h.cfg.k8sReader)
+	if err != nil {
+		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information: %w", err)
+	}
+
+	var installationID string
+	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
+	replicaSet, err := telemetry.GetPodReplicaSet(ctx, h.cfg.k8sReader, podNSName)
+	if err != nil {
+		logger.Error(err, "failed to get NGF installationID")
+	} else {
+		installationID, err = telemetry.GetDeploymentID(replicaSet)
+		if err != nil {
+			logger.Error(err, "failed to get NGF installationID")
+		}
+	}
+
+	depCtx := dataplane.DeploymentContext{
+		Integration:      "ngf",
+		ClusterID:        clusterInfo.ClusterID,
+		ClusterNodeCount: clusterInfo.NodeCount,
+		InstallationID:   installationID,
+	}
+
+	return depCtx, nil
+}
+
 // GetLatestConfiguration gets the latest configuration.
 func (h *eventHandlerImpl) GetLatestConfiguration() *dataplane.Configuration {
 	h.lock.Lock()
@@ -608,21 +638,4 @@ func (h *eventHandlerImpl) nginxGatewayServiceDelete(
 		h.latestReloadResult,
 	)
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gatewayStatuses...)
-}
-
-func (h *eventHandlerImpl) nginxPlusUsageSecretUpsert(_ context.Context, _ logr.Logger, obj client.Object) {
-	secret, ok := obj.(*v1.Secret)
-	if !ok {
-		panic(fmt.Errorf("obj type mismatch: got %T, expected %T", obj, &v1.Secret{}))
-	}
-
-	h.cfg.usageSecret.Set(secret)
-}
-
-func (h *eventHandlerImpl) nginxPlusUsageSecretDelete(
-	_ context.Context,
-	_ logr.Logger,
-	_ types.NamespacedName,
-) {
-	h.cfg.usageSecret.Delete()
 }

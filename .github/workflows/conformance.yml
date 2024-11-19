@@ -135,6 +135,12 @@ jobs:
           kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
           kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
 
+      - name: Setup license file for plus
+        if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: echo "${PLUS_LICENSE}" > license.jwt
+
       - name: Setup conformance tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
