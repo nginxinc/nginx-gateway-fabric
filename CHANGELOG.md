@@ -27,10 +27,9 @@ BUG FIXES:
 
 DOCUMENTATION:
 
-- Added a [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets) for SnippetsFilter.
-- Added a new [Get started](https://docs.nginx.com/nginx-gateway-fabric/get-started/) document.
-- Added documentation for [proxyProtocol and rewriteClientIP](https://docs.nginx.com/nginx-gateway-fabric/how-to/data-plane-configuration/) settings.
-- Added description for enabling [experimental](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/helm/) features.
+- Added a [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets) for SnippetsFilter. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
+- Added a new [Get started](https://docs.nginx.com/nginx-gateway-fabric/get-started/) document. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
+- Added documentation for [proxyProtocol and rewriteClientIP](https://docs.nginx.com/nginx-gateway-fabric/how-to/data-plane-configuration/#configure-proxy-protocol-and-rewriteclientip-settings) settings. [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
 - Fixed indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
 
 HELM CHART:
