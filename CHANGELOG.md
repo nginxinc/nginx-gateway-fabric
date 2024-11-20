@@ -21,7 +21,7 @@ FEATURES:
 
 BUG FIXES:
 
-- Fix an issue of only setting stream status zone if hostname exists. [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
+- Stream status_zone directive is no longer set if its value is empty. [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
 - Fix an issue with upstream names when split clients are used with a namespace name that starts with a number. [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
 - A 503 http response code is now returned to the client when a service has no ready endpoints. [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
 
