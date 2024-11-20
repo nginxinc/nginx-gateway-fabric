@@ -1,6 +1,6 @@
 # variables that should not be overridden by the user
 VERSION = 1.5.0
-SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+SELF_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 CHART_DIR = $(SELF_DIR)charts/nginx-gateway-fabric
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
