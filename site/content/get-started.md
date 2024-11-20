@@ -53,6 +53,7 @@ Run the following command:
 ```shell
 kind create cluster --config cluster-config.yaml
 ```
+
 ```text
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.31.0) 🖼
@@ -75,6 +76,7 @@ If you have cloned [the NGINX Gateway Fabric repository](https://github.com/ngin
 ```shell
 make create-kind-cluster
 ```
+
 {{< /note >}}
 
 ---
@@ -86,8 +88,9 @@ make create-kind-cluster
 Use `kubectl` to add the API resources for NGINX Gateway Fabric with the following command:
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.4.0" | kubectl apply -f -
+kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.0" | kubectl apply -f -
 ```
+
 ```text
 customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io created
 customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io created
@@ -100,8 +103,9 @@ customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking
 To use experimental features, you'll need to install the API resources from the experimental channel instead.
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.4.0" | kubectl apply -f -
+kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.0" | kubectl apply -f -
 ```
+
 {{< /note >}}
 
 ---
@@ -113,8 +117,9 @@ Use `helm` to install NGINX Gateway Fabric with the following command:
 ```shell
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
 ```
+
 ```text
-Pulled: ghcr.io/nginxinc/charts/nginx-gateway-fabric:1.4.0
+Pulled: ghcr.io/nginxinc/charts/nginx-gateway-fabric:1.5.0
 Digest: sha256:9bbd1a2fcbfd5407ad6be39f796f582e6263512f1f3a8969b427d39063cc6fee
 NAME: ngf
 LAST DEPLOYED: Mon Oct 21 14:45:14 2024
@@ -130,6 +135,7 @@ If you installed the API resources from the experimental channel during the last
 ```shell
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false --set nginxGateway.gwAPIExperimentalFeatures.enable=true
 ```
+
 {{< /note >}}
 
 ---
@@ -151,7 +157,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway-fabric
     app.kubernetes.io/instance: ngf
-    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/version: "1.5.0"
 spec:
   type: NodePort
   selector:
@@ -175,6 +181,7 @@ Apply it using `kubectl`:
 ```shell
 kubectl apply -f nodeport-config.yaml
 ```
+
 ```text
 service/nginx-gateway created
 ```
@@ -199,15 +206,12 @@ The YAML code in the following sections can be found in the [cafe-example folder
 
 ### Create the application resources
 
-Create the file _cafe.yaml_ with the following contents:
-
-{{< ghcode "https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml">}}
-
-Apply it:
+Apply the file _cafe.yaml_ with the contents with `kubectl`:
 
 ```shell
-kubectl apply -f cafe.yaml
+kubectl apply -f "https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml"
 ```
+
 ```text
 deployment.apps/coffee created
 service/coffee created
@@ -220,6 +224,7 @@ Verify that the new pods are in the `default` namespace:
 ```shell
 kubectl -n default get pods
 ```
+
 ```text
 NAME                      READY   STATUS    RESTARTS   AGE
 coffee-6db967495b-wk2mm   1/1     Running   0          10s
@@ -230,28 +235,22 @@ tea-7b7d6c947d-d4qcf      1/1     Running   0          10s
 
 ### Create Gateway and HTTPRoute resources
 
-Create the file _gateway.yaml_ with the following contents:
-
-{{< ghcode "https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml">}}
-
-Apply it using `kubectl`:
+Apply the file _gateway.yaml_ with the contents using `kubectl`:
 
 ```shell
-kubectl apply -f gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml
 ```
+
 ```text
 gateway.gateway.networking.k8s.io/gateway created
 ```
 
-Create the file _cafe-routes.yaml_ with the following contents:
-
-{{< ghcode "https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml">}}
-
-Apply it using `kubectl`:
+Apply the file _cafe-routes.yaml_ with the contents using `kubectl`:
 
 ```shell
-kubectl apply -f cafe-routes.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml
 ```
+
 ```text
 httproute.gateway.networking.k8s.io/coffee created
 httproute.gateway.networking.k8s.io/tea created
@@ -266,6 +265,7 @@ You can check that all of the expected services are available using `kubectl get
 ```shell
 kubectl get service --all-namespaces
 ```
+
 ```text
 NAMESPACE       NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
 default         coffee          ClusterIP   10.96.18.163    <none>        80/TCP                       2m51s
@@ -280,6 +280,7 @@ You can also use `kubectl describe` on the new resources to check their status:
 ```shell
 kubectl describe httproutes
 ```
+
 ```text
 Name:         coffee
 Namespace:    default
@@ -394,6 +395,7 @@ Events:              <none>
 ```shell
 kubectl describe gateways
 ```
+
 ```text
 Name:         gateway
 Namespace:    default
@@ -480,6 +482,7 @@ You can use `curl` to test the new services by targeting the hostname (_cafe.exa
 ```shell
 curl --resolve cafe.example.com:8080:127.0.0.1 http://cafe.example.com:8080/coffee
 ```
+
 ```text
 Server address: 10.244.0.6:8080
 Server name: coffee-6db967495b-wk2mm
@@ -491,6 +494,7 @@ Request ID: fb226a54fd94f927b484dd31fb30e747
 ```shell
 curl --resolve cafe.example.com:8080:127.0.0.1 http://cafe.example.com:8080/tea
 ```
+
 ```text
 Server address: 10.244.0.7:8080
 Server name: tea-7b7d6c947d-d4qcf
