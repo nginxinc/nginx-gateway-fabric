@@ -14,31 +14,31 @@ BREAKING CHANGES:
 
 FEATURES:
 
-- Added support to retain client IP information. [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
-- Added the ability to configure data plane error log level. [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
-- Introduced SnippetsFilter API, which allows users to inject custom NGINX configuration via an HTTPRoute or GRPCRoute filter. See the [SnippetsFilter guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets/) for information on how to use SnippetsFilters. [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
-- Reduced logging verbosity of default Info log level. [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
+- Add support to retain client IP information. [2284](https://github.com/nginxinc/nginx-gateway-fabric/pull/2284)
+- Add the ability to configure data plane error log level. [2603](https://github.com/nginxinc/nginx-gateway-fabric/pull/2603)
+- Introduce SnippetsFilter API, which allows users to inject custom NGINX configuration via an HTTPRoute or GRPCRoute filter. See the [SnippetsFilter guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets/) for information on how to use SnippetsFilters. [2604](https://github.com/nginxinc/nginx-gateway-fabric/pull/2604)
+- Reduce logging verbosity of default Info log level. [2455](https://github.com/nginxinc/nginx-gateway-fabric/pull/2455)
 
 BUG FIXES:
 
-- Fixed an issue of only setting stream status zone if hostname exists. [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
-- Fixed an issue with upstream names when split clients are used with a namespace name that starts with a number. [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
+- Fix an issue of only setting stream status zone if hostname exists. [2684](https://github.com/nginxinc/nginx-gateway-fabric/pull/2684)
+- Fix an issue with upstream names when split clients are used with a namespace name that starts with a number. [2730](https://github.com/nginxinc/nginx-gateway-fabric/pull/2730)
 - A 503 http response code is now returned to the client when a service has no ready endpoints. [2696](https://github.com/nginxinc/nginx-gateway-fabric/pull/2696)
 
 DOCUMENTATION:
 
-- Added a [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets) for SnippetsFilter. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
-- Added a new [Get started](https://docs.nginx.com/nginx-gateway-fabric/get-started/) document. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
-- Added documentation for [proxyProtocol and rewriteClientIP](https://docs.nginx.com/nginx-gateway-fabric/how-to/data-plane-configuration/#configure-proxy-protocol-and-rewriteclientip-settings) settings. [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
-- Fixed indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
+- Add a [guide](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/snippets) for SnippetsFilter. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2721)
+- Add a new [Get started](https://docs.nginx.com/nginx-gateway-fabric/get-started/) document. [2721](https://github.com/nginxinc/nginx-gateway-fabric/pull/2717)
+- Add documentation for [proxyProtocol and rewriteClientIP](https://docs.nginx.com/nginx-gateway-fabric/how-to/data-plane-configuration/#configure-proxy-protocol-and-rewriteclientip-settings) settings. [2701](https://github.com/nginxinc/nginx-gateway-fabric/pull/2701)
+- Fix indentation in lifecycle examples. [2588](https://github.com/nginxinc/nginx-gateway-fabric/pull/2588). Thanks to [Derek F](https://github.com/defrank).
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.5.0
-- Added `loadBalancerSourceRanges` to helm parameters to use during install/upgrade. [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
-- Added `loadBalancerIP` as a helm parameter to use during install/upgrade. [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
-- Added Helm schema. [2492](https://github.com/nginxinc/nginx-gateway-fabric/pull/2492)
-- Added capability to configure `topologySpreadConstraints`. [2703](https://github.com/nginxinc/nginx-gateway-fabric/pull/2703). Thanks to [Robsta86](https://github.com/Robsta86)
+- Add `loadBalancerSourceRanges` to helm parameters to use during install/upgrade. [2773](https://github.com/nginxinc/nginx-gateway-fabric/pull/2773)
+- Add `loadBalancerIP` as a helm parameter to use during install/upgrade. [2766](https://github.com/nginxinc/nginx-gateway-fabric/pull/2766)
+- Add Helm schema. [2492](https://github.com/nginxinc/nginx-gateway-fabric/pull/2492)
+- Add capability to configure `topologySpreadConstraints`. [2703](https://github.com/nginxinc/nginx-gateway-fabric/pull/2703). Thanks to [Robsta86](https://github.com/Robsta86)
 
 DEPENDENCIES:
 
