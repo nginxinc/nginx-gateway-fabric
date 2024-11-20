@@ -56,20 +56,19 @@ Whenever a user creates a Gateway resource, the control plane will provision an 
   - We could introduce a CRD, but where would it attach? We already have NginxProxy which controls dynamic data plane configuration, and this may eventually attach to the Gateway instead of just the GatewayClass. Would a Deployment configuration fit in there, and would it be dynamic? That would require us to completely redeploy nginx if a user changes those settings.
   - We could start with the helm chart option, and rely on user feedback to see if we need to get more granular.
   - This could also involve creating a ConfigMap that the control plane consumes on startup and contains all nginx Deployment/Daemonset configuration, including NGINX Plus usage configuration.
-- nginx Service should have configurable labels and annotations via the GatewayInfrastructure field in the Gateway resource.
+- Resources created for the nginx deployment (Service, Secrets, ConfigMap, etc.) should have configurable labels and annotations via the GatewayInfrastructure field in the Gateway resource. See [the GEP](https://gateway-api.sigs.k8s.io/geps/gep-1762/#automated-deployments).
 - Control plane creates the nginx deployment and service when a Gateway resource is created, in the same namespace as the Gateway resource. When the Gateway is deleted, the control plane deletes nginx deployment and service.
-- Control plane should label the nginx service and deployment with something related to the name of the Gateway so it can easily be linked.
+- Control plane should label the nginx service and deployment with something related to the name of the Gateway so it can easily be linked. See [the GEP](https://gateway-api.sigs.k8s.io/geps/gep-1762/#automated-deployments).
 - Liveness/Readiness probes:
-  - Control plane probe currently waits until we configure nginx. Going forward, this probe should just be when the control plane is ready to configure.
-  - nginx probe...can agent expose any type of health endpoint? This is not yet clear.
-- Control plane should not restart data plane pods if they are unhealthy.
+  - Control plane probe currently waits until we configure nginx. Going forward, this probe should just be when the control plane is ready to configure, in other words the controller runtime manager has started and returns 200 from its health endpoint.
+- Control plane should not restart data plane pods if they are unhealthy. This can either be left in the hands of the users, or if utilizing a liveness probe, Kubernetes will restart the pod.
 
 ### Agent Configuration
 
 Using [nginx-agent.conf](https://github.com/nginx/agent/blob/v3/nginx-agent.conf), we can configure the agent on startup. Note that this example conf file may not have all available options. At a minimum, it will need to be configured for the following:
 
 - command server is the NGF ClusterIP service
-  - tls settings for this connection
+  - [tls settings](#encryption) for this connection
 - prometheus metrics are exposed and available on the expected port (`9113`) and path (`/metrics`)
 
 ### Connecting and Registering an Agent
@@ -87,7 +86,7 @@ not an issue. The gRPC runtime will handle the connection establishment and mana
   Process: agent `Connects` to NGF. We get its identifier and pod name, add the identifier(s) to a context cache, track that connection, and create a subscription channel for it. Agent then `Subscribes`. The context passed in allows us to use the identifier to grab the proper subscription channel and listen on it. This channel will receive a `ConfigApplyRequest` when we have a new nginx config to write.
 
 - If a single nginx deployment is scaled, we should ensure that all instances for that deployment receive the same config (and aren't treated as "different").
-- Each graph that the control plane builds internally should be directly tied to an nginx deployment.
+- Each Gateway graph that the control plane builds internally should be directly tied to an nginx deployment.
 - Whenever the control plane sees an nginx instance become Ready, we send its config to it (it doesn't matter if this is a new pod or a restarted pod).
 - If no nginx instances exist, control plane should not send any configuration.
 - The control plane should check if a connection exists first before sending the config (all replicas, even non-leaders, should be able to send the config because the agent may connect to a non-leader).
@@ -258,3 +257,7 @@ when possible.
 ## Performance
 
 Our NFR tests will help ensure that performance of scaling and configuration have not degraded. We also may want to enhance these tests to include scaling nginx deployments.
+
+## Open Questions
+
+- nginx readiness/liveness probe...can agent expose any type of health endpoint?
