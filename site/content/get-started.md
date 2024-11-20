@@ -206,10 +206,14 @@ The YAML code in the following sections can be found in the [cafe-example folder
 
 ### Create the application resources
 
-Apply the file _cafe.yaml_ with the contents with `kubectl`:
+Create the file _cafe.yaml_ with the following contents:
+
+{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml`>}}
+
+Apply it using `kubectl`:
 
 ```shell
-kubectl apply -f "https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml"
+kubectl apply -f cafe.yaml
 ```
 
 ```text
@@ -235,20 +239,28 @@ tea-7b7d6c947d-d4qcf      1/1     Running   0          10s
 
 ### Create Gateway and HTTPRoute resources
 
-Apply the file _gateway.yaml_ with the contents using `kubectl`:
+Create the file _gateway.yaml_ with the following contents:
+
+{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml`>}}
+
+Apply it using `kubectl`:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml
+kubectl apply -f gateway.yaml
 ```
 
 ```text
 gateway.gateway.networking.k8s.io/gateway created
 ```
 
-Apply the file _cafe-routes.yaml_ with the contents using `kubectl`:
+Create the file _cafe-routes.yaml_ with the following contents:
+
+{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml`>}}
+
+Apply it using `kubectl`:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml
+kubectl apply -f cafe-routes.yaml
 ```
 
 ```text
