@@ -18,6 +18,12 @@ on:
     paths:
     - "site/**"
 
+  push:
+    branches:
+    - release-1.5
+    paths:
+    - "site/**"
+
 concurrency:
   group: ${{ github.ref_name }}-docs-push
   cancel-in-progress: true
@@ -52,6 +58,8 @@ jobs:
       docs_build_path: "./site"
       doc_type: "hugo"
       environment: ${{ inputs.environment }}
+      auto_deploy_branch: "release-1.5"
+      auto_deploy_env: "prod"
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_DOCS }}
       AZURE_KEY_VAULT: ${{ secrets.AZURE_KEY_VAULT_DOCS }}
