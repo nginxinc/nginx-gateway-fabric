@@ -74,9 +74,6 @@ The following table lists the software versions NGINX Gateway Fabric supports.
 | 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
 | 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
 
-\*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not
-specified. This means that the latest available patch version is used.
-
 ## SBOM (Software Bill of Materials)
 
 We generate SBOMs for the binaries and the Docker image.
