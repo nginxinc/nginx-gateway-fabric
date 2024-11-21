@@ -16,12 +16,12 @@ The plugin uses [krew](https://krew.sigs.k8s.io), the plugin manager for the Kub
 
 The plugin may collect some or all of the following global and namespace-specific information:
 
-* K8s version, nodes information, and Custom Resources (kubectl describe output)
-* Pods' logs
-* List of Pods, events, ConfigMaps, Services, Deployments, Daemonsets, StatefulSets, ReplicaSets, and Leases
-* K8s metrics
-* Helm deployments
-* `nginx -T` output from NGINX-related pods
+- Kubernetes version and information about Nodes and Custom Resources
+- Kubernetes metrics
+- Helm deployments
+- List of Pods, Events, ConfigMaps, Services, Deployments, Daemonsets, StatefulSets, ReplicaSets, and Leases
+- Pod log output
+- `nginx -T` output from NGINX-related Pods
 
 This plugin **does not** collect secrets or coredumps.
 
