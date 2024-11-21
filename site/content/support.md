@@ -11,8 +11,6 @@ After opening a support ticket, F5 staff will request additional information to 
 
 The [nginx-supportpkg-for-k8s](https://github.com/nginxinc/nginx-supportpkg-for-k8s) plugin collects the information needed by F5 Technical Support to assist with troubleshooting your issue.
 
-The plugin leverages [krew](https://krew.sigs.k8s.io), the plugin manager for [kubectl](https://kubernetes.io/docs/reference/kubectl/) command-line tool of kubernetes.
-
 
 The plugin uses [krew](https://krew.sigs.k8s.io), the plugin manager for the Kubernetes [kubectl](https://kubernetes.io/docs/reference/kubectl/) command-line tool.
 
