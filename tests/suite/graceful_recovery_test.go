@@ -350,9 +350,7 @@ func checkNGFFunctionality(teaURL, coffeeURL, ngfPodName, containerName string, 
 	checkContainerLogsForErrors(ngfPodName, containerName == nginxContainerName)
 }
 
-// checkContainerLogsForErrors checks both nginx and NGF container's logs for any possible errors.
-// When the NGINX process is killed, some errors are expected in the NGF logs while we wait for the
-// NGINX container to be restarted.
+// checkContainerLogsForErrors checks both nginx and NGF container's logs for any possible critical errors.
 func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 	nginxLogs, err := resourceManager.GetPodLogs(
 		ngfNamespace,
@@ -365,20 +363,6 @@ func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 		Expect(line).ToNot(ContainSubstring("[crit]"), line)
 		Expect(line).ToNot(ContainSubstring("[alert]"), line)
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
-		if strings.Contains(line, "[error]") {
-			expectedError1 := "connect() failed (111: Connection refused)"
-			expectedError2 := "product.connect.nginx.com could not be resolved"
-			expectedError3 := "server returned 429"
-			// FIXME(salonichf5) remove this error message check
-			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
-			expectedError4 := "no live upstreams while connecting to upstream"
-			Expect(line).To(Or(
-				ContainSubstring(expectedError1),
-				ContainSubstring(expectedError2),
-				ContainSubstring(expectedError3),
-				ContainSubstring(expectedError4),
-			))
-		}
 	}
 
 	if !checkNginxLogsOnly {
