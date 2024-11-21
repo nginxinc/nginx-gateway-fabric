@@ -64,7 +64,7 @@ This examples demonstrates how to configure traffic routing for a simple echo se
 Begin by deploying the example application `headers`. It is a simple application that returns the request headers which will be modified later.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-request-header-filter/headers.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.0/examples/http-request-header-filter/headers.yaml
 ```
 
 This will create the headers Service and a Deployment with one Pod. Run the following command to verify the resources were created:
@@ -72,6 +72,7 @@ This will create the headers Service and a Deployment with one Pod. Run the foll
 ```shell
 kubectl get pods,svc
 ```
+
 ```text
 pod/headers-545698447b-z52kj   1/1     Running   0          23s
 
@@ -175,7 +176,7 @@ kubectl delete httproutes.gateway.networking.k8s.io headers
 ```
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-request-header-filter/headers.yaml
+kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.0/examples/http-request-header-filter/headers.yaml
 ```
 
 ## ResponseHeaderModifier example
@@ -187,7 +188,7 @@ Begin by configuring an application with custom headers and a simple HTTPRoute. 
 Begin by deploying the example application `headers`. It is a simple application that adds response headers that will be modified later.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/examples/http-response-header-filter/headers.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.0/examples/http-response-header-filter/headers.yaml
 ```
 
 This will create the headers Service and a Deployment with one Pod. Run the following command to verify the resources were created:
@@ -195,6 +196,7 @@ This will create the headers Service and a Deployment with one Pod. Run the foll
 ```shell
 kubectl get pods,svc
 ```
+
 ```text
 NAME                          READY   STATUS    RESTARTS   AGE
 pod/headers-6f854c478-hd2jr   1/1     Running   0          95s
@@ -243,6 +245,7 @@ Use `curl` with the `-i` flag to access the application and include the response
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
+
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5
@@ -319,6 +322,7 @@ Send a curl request to the modified `headers` application to verify the response
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
+
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5

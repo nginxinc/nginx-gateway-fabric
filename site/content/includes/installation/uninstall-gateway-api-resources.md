@@ -7,11 +7,11 @@ docs: "DOCS-1436"
 To uninstall the Gateway API resources, run the following:
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.4.0" | kubectl delete -f -
+kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.0" | kubectl delete -f -
 ```
 
 Alternatively, if you installed the Gateway APIs from the experimental channel, run the following:
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.4.0" | kubectl delete -f -
+kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.0" | kubectl delete -f -
 ```
