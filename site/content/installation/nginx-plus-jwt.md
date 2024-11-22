@@ -83,6 +83,8 @@ and the following volume mount to the `nginx` container:
 
 {{</tabs>}}
 
+**If you are reporting to the default licensing endpoint, then you can now proceed with [installing NGINX Gateway Fabric]({{< relref "installation/installing-ngf" >}}). Otherwise, follow the steps below to configure reporting to NGINX Instance Manager.**
+
 ### Reporting to NGINX Instance Manager {#nim}
 
 If you are deploying NGINX Gateway Fabric in an environment where you need to report to NGINX Instance Manager instead of the default licensing endpoint, a few extra steps may be required.
