@@ -49,6 +49,8 @@ To complete this guide, you'll need to install:
 
 ### Install from the OCI registry
 
+The following steps install NGINX Gateway Fabric directly from the OCI helm registry. If you prefer, you can [install from sources](#install-from-sources) instead.
+
 {{<tabs name="install-helm-oci">}}
 
 {{%tab name="NGINX"%}}
@@ -68,7 +70,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
 ```
 
 {{% /tab %}}
@@ -77,7 +79,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx
 
 `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
 
-If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
+If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
 
 To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
@@ -87,6 +89,7 @@ kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric -
 
 ### Install from sources {#install-from-sources}
 
+If you prefer to install directly from sources, instead of through the OCI helm registry, use the following steps.
 
 {{<include "installation/helm/pulling-the-chart.md" >}}
 
@@ -109,7 +112,7 @@ helm install ngf . --create-namespace -n nginx-gateway
 To install the chart into the **nginx-gateway** namespace, run the following command:
 
 ```shell
-helm install ngf . --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
+helm install ngf . --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
 ```
 
 {{% /tab %}}
@@ -117,8 +120,6 @@ helm install ngf . --set nginx.image.repository=private-registry.nginx.com/nginx
 {{</tabs>}}
 
    `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
-
-   If the namespace already exists, you can omit the optional `--create-namespace` flag.
 
    To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
@@ -211,6 +212,8 @@ To upgrade the CRDs, take the following steps:
 
 {{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.0 need to install an NGINX Plus JWT
 Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret. If you use a different name than the default `nplus-license` name, specify the Secret name by setting `--set nginx.usage.secretName=<secret-name>` when running `helm upgrade`. {{</ important >}}
+
+There are two possible ways to upgrade NGINX Gateway Fabric. You can either upgrade from the OCI registry, or download the chart and upgrade from the source.
 
 #### Upgrade from the OCI registry
 
