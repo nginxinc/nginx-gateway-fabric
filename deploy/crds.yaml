@@ -904,6 +904,7 @@ spec:
                   - name
                   type: object
                 maxItems: 16
+                minItems: 1
                 type: array
                 x-kubernetes-validations:
                 - message: 'TargetRef Kind must be: HTTPRoute or GRPCRoute'
