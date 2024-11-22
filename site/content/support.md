@@ -10,8 +10,6 @@ F5 NGINX Gateway Fabric adheres to the support policy detailed in the following 
 After opening a support ticket, F5 staff will request additional information to better understand the problem.
 
 The [nginx-supportpkg-for-k8s](https://github.com/nginxinc/nginx-supportpkg-for-k8s) plugin collects the information needed by F5 Technical Support to assist with troubleshooting your issue.
-
-
 The plugin uses [krew](https://krew.sigs.k8s.io), the plugin manager for the Kubernetes [kubectl](https://kubernetes.io/docs/reference/kubectl/) command-line tool.
 
 The plugin may collect some or all of the following global and namespace-specific information:
