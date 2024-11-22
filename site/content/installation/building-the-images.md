@@ -1,6 +1,6 @@
 ---
 title: "Build NGINX Gateway Fabric and NGINX images"
-weight: 300
+weight: 500
 toc: true
 docs: "DOCS-1431"
 ---
@@ -26,7 +26,7 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.4.0
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.5.0
    cd nginx-gateway-fabric
    ```
 
@@ -62,20 +62,20 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-gateway-fabric:1.4.0` and `nginx-gateway-fabric/nginx:1.4.0` or `nginx-gateway-fabric/nginx-plus:1.4.0`.
+   named `nginx-gateway-fabric:1.5.0` and `nginx-gateway-fabric/nginx:1.5.0` or `nginx-gateway-fabric/nginx-plus:1.5.0`.
 
 1. Push the images to your container registry:
 
    ```shell
-   docker push myregistry.example.com/nginx-gateway-fabric:1.4.0
-   docker push myregistry.example.com/nginx-gateway-fabric/nginx:1.4.0
+   docker push myregistry.example.com/nginx-gateway-fabric:1.5.0
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx:1.5.0
    ```
 
    or
 
    ```shell
-   docker push myregistry.example.com/nginx-gateway-fabric:1.4.0
-   docker push myregistry.example.com/nginx-gateway-fabric/nginx-plus:1.4.0
+   docker push myregistry.example.com/nginx-gateway-fabric:1.5.0
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx-plus:1.5.0
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

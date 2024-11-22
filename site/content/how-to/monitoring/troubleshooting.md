@@ -103,14 +103,6 @@ You can see logs for a crashed or killed container by adding the `-p` flag to th
    kubectl -n nginx-gateway logs <ngf-pod-name> -c nginx-gateway | grep error
    ```
 
-   For example, an error message when telemetry is not enabled for NGINX Plus installations:
-
-   ```text
-   kubectl logs -n nginx-gateway nginx-gateway-nginx-gateway-fabric-77f8746996-j6z6v | grep error
-   Defaulted container "nginx-gateway" out of: nginx-gateway, nginx
-   {"level":"error","ts":"2024-06-13T18:22:16Z","logger":"usageReporter","msg":"Usage reporting must be enabled when using NGINX Plus; redeploy with usage reporting enabled","error":"usage reporting not enabled","stacktrace":"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static.createUsageWarningJob.func1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/manager.go:616\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:226\nk8s.io/apimachinery/pkg/util/wait.BackoffUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:227\nk8s.io/apimachinery/pkg/util/wait.JitterUntil\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:204\nk8s.io/apimachinery/pkg/util/wait.JitterUntilWithContext\n\tk8s.io/apimachinery@v0.30.1/pkg/util/wait/backoff.go:259\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables.(*CronJob).Start\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables/cronjob.go:53\nsigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1\n\tsigs.k8s.io/controller-runtime@v0.18.4/pkg/manager/runnable_group.go:226"}
-   ```
-
    For the _nginx_ container you can `grep` for various [error](https://nginx.org/en/docs/ngx_core_module.html#error_log) logs. For example, to search for all logs logged at the `emerg` level:
 
    ```shell
@@ -300,7 +292,7 @@ Verify that the port number (for example, `8080`) matches the port number you ha
 | Startup | NGINX Gateway Fabric fails to start. | Check logs for _nginx_ and _nginx-gateway_ containers. | Readiness probe failed. |
 | Resources not configured | Status missing on resources. | Check referenced resources. | Referenced resources do not belong to NGINX Gateway Fabric. |
 | NGINX errors | Reload failures on NGINX | Fix permissions for control plane. | Security context not configured. |
-| Usage reporting | Errors logs related to usage reporting | Enable usage reporting. Refer to [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) | Usage reporting disabled. |
+| NGINX Plus errors | Failure to start; traffic interruptions | Set up the [NGINX Plus JWT]({{< relref "installation/nginx-plus-jwt.md" >}}) | License is not configured or has expired. |
 | Client Settings | Request entity too large error | Adjust client settings. Refer to [Client Settings Policy]({{< relref "../traffic-management/client-settings.md" >}}) | Payload is greater than the [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size) value.|
 
 {{< /bootstrap-table >}}
@@ -373,13 +365,23 @@ To **resolve** this issue you will need to set `allowPrivilegeEscalation` to `tr
 - If using Helm, you can set the `nginxGateway.securityContext.allowPrivilegeEscalation` value.
 - If using the manifests directly, you can update this field under the `nginx-gateway` container's `securityContext`.
 
-##### Usage Reporting errors
+##### NGINX Plus failure to start or traffic interruptions
 
-If using NGINX Gateway Fabric with NGINX Plus as the data plane, you will see the following error in the _nginx-gateway_ logs if you have not enabled Usage Reporting:
+Beginning with NGINX Gateway Fabric 1.5.0, NGINX Plus requires a valid JSON Web Token (JWT) to run. If this is not set up properly, or your JWT token has expired, you may see errors in the NGINX logs that look like the following:
 
-`usage reporting not enabled`
+```text
+nginx: [error] invalid license token
+```
 
-To **resolve** this issue, enable Usage Reporting by following the [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) guide.
+```text
+nginx: [emerg] License file is required. Download JWT license from MyF5 and configure its location...
+```
+
+```text
+nginx: [emerg] license expired
+```
+
+These errors could prevent NGINX Plus from starting or prevent traffic from flowing. To fix these issues, see the [NGINX Plus JWT]({{< relref "installation/nginx-plus-jwt.md" >}}) guide.
 
 ##### 413 Request Entity Too Large
 
@@ -467,7 +469,7 @@ If you check your _nginx_ container logs and see the following error:
 
 It indicates that `proxy_protocol` is enabled for the gateway listeners, but the request sent to the application endpoint does not contain proxy information. To **resolve** this, you can do one of the following:
 
-- Unassign the field [`rewriteClientIP.mode`](({{< relref "reference/api.md" >}})) in the NginxProxy configuration.
+- Unassign the field [`rewriteClientIP.mode`]({{< relref "reference/api.md" >}}) in the NginxProxy configuration.
 
 - Send valid proxy information with requests being handled by your application.
 

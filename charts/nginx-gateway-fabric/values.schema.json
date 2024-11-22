@@ -262,33 +262,47 @@
         "usage": {
           "description": "Configuration for NGINX Plus usage reporting.",
           "properties": {
-            "clusterName": {
+            "caSecretName": {
               "default": "",
-              "description": "The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.",
+              "description": "The name of the Secret containing the NGINX Instance Manager CA certificate.\nMust exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
-              "title": "clusterName",
+              "title": "caSecretName",
               "type": "string"
             },
-            "insecureSkipVerify": {
-              "default": false,
-              "description": "Disable client verification of the NGINX Plus usage reporting server certificate.",
+            "clientSSLSecretName": {
+              "default": "",
+              "description": "The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager.\nMust exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
-              "title": "insecureSkipVerify",
-              "type": "boolean"
+              "title": "clientSSLSecretName",
+              "type": "string"
+            },
+            "endpoint": {
+              "default": "",
+              "description": "The endpoint of the NGINX Plus usage reporting server. Default: product.connect.nginx.com",
+              "required": [],
+              "title": "endpoint",
+              "type": "string"
+            },
+            "resolver": {
+              "default": "",
+              "description": "The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager.",
+              "required": [],
+              "title": "resolver",
+              "type": "string"
             },
             "secretName": {
-              "default": "",
-              "description": "The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.",
+              "default": "nplus-license",
+              "description": "The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace\nthat the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
               "required": [],
               "title": "secretName",
               "type": "string"
             },
-            "serverURL": {
-              "default": "",
-              "description": "The base server URL of the NGINX Plus usage reporting server.",
+            "skipVerify": {
+              "default": false,
+              "description": "Disable client verification of the NGINX Plus usage reporting server certificate.",
               "required": [],
-              "title": "serverURL",
-              "type": "string"
+              "title": "skipVerify",
+              "type": "boolean"
             }
           },
           "required": [],
@@ -579,6 +593,15 @@
           "required": [],
           "title": "loadBalancerIP",
           "type": "string"
+        },
+        "loadBalancerSourceRanges": {
+          "description": "The IP ranges (CIDR) that are allowed to access the load balancer. Requires service.type set to LoadBalancer.",
+          "items": {
+            "required": []
+          },
+          "required": [],
+          "title": "loadBalancerSourceRanges",
+          "type": "array"
         },
         "ports": {
           "description": "A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from\nyour Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports.",

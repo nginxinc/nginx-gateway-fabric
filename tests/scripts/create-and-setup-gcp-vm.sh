@@ -3,6 +3,7 @@
 set -o pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+REPO_DIR=$(dirname $(dirname "$SCRIPT_DIR"))
 
 source scripts/vars.env
 
@@ -54,6 +55,8 @@ rm -rf nginx-gateway-fabric
 git clone https://github.com/${NGF_REPO}/nginx-gateway-fabric.git
 EOF" -- -t
 fi
+
+gcloud compute scp --quiet --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" "${REPO_DIR}"/license.jwt username@"${RESOURCE_NAME}":~/nginx-gateway-fabric/
 
 gcloud compute ssh --zone "${GKE_CLUSTER_ZONE}" --project="${GKE_PROJECT}" username@"${RESOURCE_NAME}" \
     --command="bash -i <<EOF

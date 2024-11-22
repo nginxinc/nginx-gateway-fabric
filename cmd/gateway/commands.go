@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -46,28 +47,31 @@ func createRootCommand() *cobra.Command {
 	return rootCmd
 }
 
+//nolint:gocyclo
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
-		gatewayFlag                 = "gateway"
-		configFlag                  = "config"
-		serviceFlag                 = "service"
-		updateGCStatusFlag          = "update-gatewayclass-status"
-		metricsDisableFlag          = "metrics-disable"
-		metricsSecureFlag           = "metrics-secure-serving"
-		metricsPortFlag             = "metrics-port"
-		healthDisableFlag           = "health-disable"
-		healthPortFlag              = "health-port"
-		leaderElectionDisableFlag   = "leader-election-disable"
-		leaderElectionLockNameFlag  = "leader-election-lock-name"
-		productTelemetryDisableFlag = "product-telemetry-disable"
-		plusFlag                    = "nginx-plus"
-		gwAPIExperimentalFlag       = "gateway-api-experimental-features"
-		usageReportSecretFlag       = "usage-report-secret"
-		usageReportServerURLFlag    = "usage-report-server-url"
-		usageReportSkipVerifyFlag   = "usage-report-skip-verify"
-		usageReportClusterNameFlag  = "usage-report-cluster-name"
-		snippetsFiltersFlag         = "snippets-filters"
+		gatewayFlag                    = "gateway"
+		configFlag                     = "config"
+		serviceFlag                    = "service"
+		updateGCStatusFlag             = "update-gatewayclass-status"
+		metricsDisableFlag             = "metrics-disable"
+		metricsSecureFlag              = "metrics-secure-serving"
+		metricsPortFlag                = "metrics-port"
+		healthDisableFlag              = "health-disable"
+		healthPortFlag                 = "health-port"
+		leaderElectionDisableFlag      = "leader-election-disable"
+		leaderElectionLockNameFlag     = "leader-election-lock-name"
+		productTelemetryDisableFlag    = "product-telemetry-disable"
+		plusFlag                       = "nginx-plus"
+		gwAPIExperimentalFlag          = "gateway-api-experimental-features"
+		usageReportSecretFlag          = "usage-report-secret"
+		usageReportEndpointFlag        = "usage-report-endpoint"
+		usageReportResolverFlag        = "usage-report-resolver"
+		usageReportSkipVerifyFlag      = "usage-report-skip-verify"
+		usageReportClientSSLSecretFlag = "usage-report-client-ssl-secret" //nolint:gosec // not credentials
+		usageReportCASecretFlag        = "usage-report-ca-secret"         //nolint:gosec // not credentials
+		snippetsFiltersFlag            = "snippets-filters"
 	)
 
 	// flag values
@@ -110,17 +114,26 @@ func createStaticModeCommand() *cobra.Command {
 
 		disableProductTelemetry bool
 
-		plus                   bool
-		usageReportSkipVerify  bool
-		usageReportClusterName = stringValidatingValue{
-			validator: validateQualifiedName,
-		}
-		usageReportSecretName = namespacedNameValue{}
-		usageReportServerURL  = stringValidatingValue{
-			validator: validateURL,
-		}
-
 		snippetsFilters bool
+
+		plus                  bool
+		usageReportSkipVerify bool
+		usageReportSecretName = stringValidatingValue{
+			validator: validateResourceName,
+			value:     "nplus-license",
+		}
+		usageReportEndpoint = stringValidatingValue{
+			validator: validateEndpointOptionalPort,
+		}
+		usageReportResolver = stringValidatingValue{
+			validator: validateEndpointOptionalPort,
+		}
+		usageReportClientSSLSecretName = stringValidatingValue{
+			validator: validateResourceName,
+		}
+		usageReportCASecretName = stringValidatingValue{
+			validator: validateResourceName,
+		}
 	)
 
 	cmd := &cobra.Command{
@@ -187,17 +200,19 @@ func createStaticModeCommand() *cobra.Command {
 				gwNsName = &gateway.value
 			}
 
-			var usageReportConfig *config.UsageReportConfig
-			if cmd.Flags().Changed(usageReportSecretFlag) {
-				if !plus {
-					return errors.New("usage-report arguments are only valid if using nginx-plus")
-				}
+			var usageReportConfig config.UsageReportConfig
+			if plus && usageReportSecretName.value == "" {
+				return errors.New("usage-report-secret is required when using NGINX Plus")
+			}
 
-				usageReportConfig = &config.UsageReportConfig{
-					SecretNsName:       usageReportSecretName.value,
-					ServerURL:          usageReportServerURL.value,
-					ClusterDisplayName: usageReportClusterName.value,
-					InsecureSkipVerify: usageReportSkipVerify,
+			if plus {
+				usageReportConfig = config.UsageReportConfig{
+					SecretName:          usageReportSecretName.value,
+					ClientSSLSecretName: usageReportClientSSLSecretName.value,
+					CASecretName:        usageReportCASecretName.value,
+					Endpoint:            usageReportEndpoint.value,
+					Resolver:            usageReportResolver.value,
+					SkipVerify:          usageReportSkipVerify,
 				}
 			}
 
@@ -378,21 +393,20 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&usageReportSecretName,
 		usageReportSecretFlag,
-		"The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.",
+		"The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace "+
+			"that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway).",
 	)
 
 	cmd.Flags().Var(
-		&usageReportServerURL,
-		usageReportServerURLFlag,
-		"The base server URL of the NGINX Plus usage reporting server.",
+		&usageReportEndpoint,
+		usageReportEndpointFlag,
+		"The endpoint of the NGINX Plus usage reporting server.",
 	)
 
-	cmd.MarkFlagsRequiredTogether(usageReportSecretFlag, usageReportServerURLFlag)
-
 	cmd.Flags().Var(
-		&usageReportClusterName,
-		usageReportClusterNameFlag,
-		"The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.",
+		&usageReportResolver,
+		usageReportResolverFlag,
+		"The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager.",
 	)
 
 	cmd.Flags().BoolVar(
@@ -400,6 +414,22 @@ func createStaticModeCommand() *cobra.Command {
 		usageReportSkipVerifyFlag,
 		false,
 		"Disable client verification of the NGINX Plus usage reporting server certificate.",
+	)
+
+	cmd.Flags().Var(
+		&usageReportClientSSLSecretName,
+		usageReportClientSSLSecretFlag,
+		"The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. "+
+			"Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
+			"(default namespace: nginx-gateway).",
+	)
+
+	cmd.Flags().Var(
+		&usageReportCASecretName,
+		usageReportCASecretFlag,
+		"The name of the Secret containing the NGINX Instance Manager CA certificate. "+
+			"Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in "+
+			"(default namespace: nginx-gateway).",
 	)
 
 	cmd.Flags().BoolVar(
@@ -499,56 +529,64 @@ func createCopyCommand() *cobra.Command {
 	const srcFlag = "source"
 	const destFlag = "destination"
 	// flag values
-	var src, dest string
+	var srcFiles []string
+	var dest string
 
 	cmd := &cobra.Command{
 		Use:   "copy",
-		Short: "Copy a file to a destination",
+		Short: "Copy files to another directory",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if len(src) == 0 {
-				return errors.New("source must not be empty")
-			}
-			if len(dest) == 0 {
-				return errors.New("destination must not be empty")
+			if err := validateSleepArgs(srcFiles, dest); err != nil {
+				return err
 			}
 
-			srcFile, err := os.Open(src)
-			if err != nil {
-				return fmt.Errorf("error opening source file: %w", err)
-			}
-			defer srcFile.Close()
-
-			destFile, err := os.Create(dest)
-			if err != nil {
-				return fmt.Errorf("error creating destination file: %w", err)
-			}
-			defer destFile.Close()
-
-			if _, err := io.Copy(destFile, srcFile); err != nil {
-				return fmt.Errorf("error copying file contents: %w", err)
+			for _, src := range srcFiles {
+				if err := copyFile(src, dest); err != nil {
+					return err
+				}
 			}
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(
-		&src,
+	cmd.Flags().StringSliceVar(
+		&srcFiles,
 		srcFlag,
-		"",
-		"The source file to be copied",
+		[]string{},
+		"The source files to be copied",
 	)
 
 	cmd.Flags().StringVar(
 		&dest,
 		destFlag,
 		"",
-		"The destination for the source file to be copied to",
+		"The destination directory for the source files to be copied to",
 	)
 
 	cmd.MarkFlagsRequiredTogether(srcFlag, destFlag)
 
 	return cmd
+}
+
+func copyFile(src, dest string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("error opening source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(filepath.Join(dest, filepath.Base(src)))
+	if err != nil {
+		return fmt.Errorf("error creating destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	if _, err := io.Copy(destFile, srcFile); err != nil {
+		return fmt.Errorf("error copying file contents: %w", err)
+	}
+
+	return nil
 }
 
 func parseFlags(flags *pflag.FlagSet) ([]string, []string) {

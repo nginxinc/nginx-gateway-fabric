@@ -99,7 +99,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           context: ${{ inputs.tag != '' && 'git' || 'workflow' }}
           images: |
@@ -163,7 +163,7 @@ jobs:
 
       - name: Scan SBOM
         id: scan
-        uses: anchore/scan-action@f2ba85e044c8f5e5014c9a539328a9c78d3bfa49 # v5.2.1
+        uses: anchore/scan-action@869c549e657a088dc0441b08ce4fc0ecdac2bb65 # v5.3.0
         with:
           sbom: "sbom-${{ inputs.image }}.json"
           only-fixed: true
@@ -171,7 +171,7 @@ jobs:
           fail-build: false
 
       - name: Upload scan result to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@396bb3e45325a47dd9ef434068033c6d5bb0d11a # v3.27.3
+        uses: github/codeql-action/upload-sarif@f09c1c0a94de965c15400f5634aa42fac8fb8f88 # v3.27.5
         continue-on-error: true
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}

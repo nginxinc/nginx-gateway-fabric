@@ -59,7 +59,7 @@ jobs:
       - name: Output Variables
         id: vars
         run: |
-          K8S_KIND_VERSION=v1.31.1 # renovate: datasource=docker depName=kindest/node
+          K8S_KIND_VERSION=v1.31.2 # renovate: datasource=docker depName=kindest/node
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "min_k8s_version=v1.25.16" >> $GITHUB_OUTPUT
           echo "k8s_latest=${K8S_KIND_VERSION}" >> $GITHUB_OUTPUT
@@ -94,7 +94,7 @@ jobs:
         run: make unit-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+        uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -122,7 +122,7 @@ jobs:
         run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+        uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -161,7 +161,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@fc46e51fd3cb168ffb36c6d1915723c47db58abb # v0.17.7
+        uses: anchore/sbom-action/download-syft@55dc4ee22412511ee8c3142cbea40418e6cec693 # v0.17.8
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
@@ -171,7 +171,7 @@ jobs:
       - name: Build binary
         uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
         with:
-          version: v2.4.4 # renovate: datasource=github-tags depName=goreleaser/goreleaser
+          version: v2.4.7 # renovate: datasource=github-tags depName=goreleaser/goreleaser
           args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -238,6 +238,7 @@ jobs:
     with:
       image: ${{ matrix.image }}
       k8s-version: ${{ matrix.k8s-version }}
+    secrets: inherit
     permissions:
       contents: read
 
@@ -259,6 +260,7 @@ jobs:
       image: ${{ matrix.image }}
       k8s-version: ${{ matrix.k8s-version }}
       enable-experimental: ${{ matrix.enable-experimental }}
+    secrets: inherit
     permissions:
       contents: write
 

@@ -17,7 +17,7 @@ jobs:
   helm-tests-local:
     name: Helm Tests Local
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name != 'schedule' }}
+    if: ${{ github.event_name != 'schedule' && (!github.event.pull_request.head.repo.fork || inputs.image != 'plus') }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -35,7 +35,7 @@ jobs:
 
       - name: NGF Docker meta
         id: ngf-meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric
@@ -48,7 +48,7 @@ jobs:
 
       - name: NGINX Docker meta
         id: nginx-meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
@@ -98,6 +98,15 @@ jobs:
           kind create cluster --name ${{ github.run_id }} --image=kindest/node:${{ inputs.k8s-version }}
           kind load docker-image ${{ join(fromJSON(steps.ngf-meta.outputs.json).tags, ' ') }} ${{ join(fromJSON(steps.nginx-meta.outputs.json).tags, ' ') }} --name ${{ github.run_id }}
           kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
+          kubectl create namespace nginx-gateway
+
+      - name: Create plus secret
+        if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: |
+          echo "${PLUS_LICENSE}" > license.jwt
+          kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gateway
 
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
@@ -110,7 +119,7 @@ jobs:
 
       - name: Install Chart
         run: |
-          ct install --config .ct.yaml --helm-extra-set-args="--set=nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }} \
+          ct install --config .ct.yaml --namespace nginx-gateway --helm-extra-set-args="--set=nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }} \
           --set=nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx${{ inputs.image == 'plus' && '-plus' || ''}} \
           --set=nginx.plus=${{ inputs.image == 'plus' }} \
           --set=nginx.image.tag=${{ steps.nginx-meta.outputs.version }} \
@@ -143,10 +152,14 @@ jobs:
           kubectl kustomize config/crd/gateway-api/standard | kubectl apply -f -
           kubectl create namespace nginx-gateway
 
-      - name: Create k8s secret
+      - name: Create plus secrets
         if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
         run: |
+          echo "${PLUS_LICENSE}" > license.jwt
           kubectl create secret docker-registry nginx-plus-registry-secret --docker-server=private-registry.nginx.com --docker-username=${{ secrets.JWT_PLUS_REGISTRY }} --docker-password=none -n nginx-gateway
+          kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gateway
 
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0

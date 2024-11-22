@@ -21,6 +21,7 @@ jobs:
   functional-tests:
     name: Run Tests
     runs-on: ubuntu-24.04
+    if: ${{ !github.event.pull_request.head.repo.fork || inputs.image != 'plus' }}
     env:
       DOCKER_BUILD_SUMMARY: false
     steps:
@@ -42,7 +43,7 @@ jobs:
 
       - name: NGF Docker meta
         id: ngf-meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric
@@ -55,7 +56,7 @@ jobs:
 
       - name: NGINX Docker meta
         id: nginx-meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
@@ -69,7 +70,7 @@ jobs:
       - name: Build binary
         uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
         with:
-          version: v2.4.4 # renovate: datasource=github-tags depName=goreleaser/goreleaser
+          version: v2.4.7 # renovate: datasource=github-tags depName=goreleaser/goreleaser
           args: build --single-target --snapshot --clean
         env:
           TELEMETRY_ENDPOINT: otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317
@@ -99,6 +100,12 @@ jobs:
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
+
+      - name: Setup license file for plus
+        if: ${{ inputs.image == 'plus' }}
+        env:
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+        run: echo "${PLUS_LICENSE}" > license.jwt
 
       - name: Install cloud-provider-kind
         run: |

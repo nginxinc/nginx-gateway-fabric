@@ -3,6 +3,9 @@ package config
 import (
 	"path/filepath"
 
+	"github.com/go-logr/logr"
+
+	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
@@ -13,6 +16,7 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 //counterfeiter:generate . Generator
 
+// Volumes here also need to be added to our crossplane ephemeral test container.
 const (
 	// configFolder is the folder where NGINX configuration files are stored.
 	configFolder = "/etc/nginx"
@@ -47,6 +51,9 @@ const (
 
 	// mainIncludesConfigFile is the path to the file containing NGINX configuration in the main context.
 	mainIncludesConfigFile = mainIncludesFolder + "/main.conf"
+
+	// mgmtIncludesFile is the path to the file containing the NGINX Plus mgmt config.
+	mgmtIncludesFile = mainIncludesFolder + "/mgmt.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
@@ -62,17 +69,27 @@ type Generator interface {
 
 // GeneratorImpl is an implementation of Generator.
 //
-// It generates files to be written to the ConfigFolders locations, which must exist and available for writing.
+// It generates files to be written to the folders above, which must exist and available for writing.
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
-// includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from httpFolder.
+// includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from other folders.
 type GeneratorImpl struct {
-	plus bool
+	usageReportConfig *ngfConfig.UsageReportConfig
+	logger            logr.Logger
+	plus              bool
 }
 
 // NewGeneratorImpl creates a new GeneratorImpl.
-func NewGeneratorImpl(plus bool) GeneratorImpl {
-	return GeneratorImpl{plus: plus}
+func NewGeneratorImpl(
+	plus bool,
+	usageReportConfig *ngfConfig.UsageReportConfig,
+	logger logr.Logger,
+) GeneratorImpl {
+	return GeneratorImpl{
+		plus:              plus,
+		usageReportConfig: usageReportConfig,
+		logger:            logger,
+	}
 }
 
 type executeResult struct {
@@ -88,7 +105,7 @@ type executeFunc func(configuration dataplane.Configuration) []executeResult
 // In case of invalid configuration, NGINX will fail to reload or could be configured with malicious configuration.
 // To validate, use the validators from the validation package.
 func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
-	files := make([]file.File, 0, len(conf.SSLKeyPairs)+1 /* http config */)
+	files := make([]file.File, 0)
 
 	for id, pair := range conf.SSLKeyPairs {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
@@ -121,7 +138,12 @@ func (g GeneratorImpl) executeConfigTemplates(
 		}
 	}
 
-	files := make([]file.File, 0, len(fileBytes))
+	var mgmtFiles []file.File
+	if g.plus {
+		mgmtFiles = g.generateMgmtFiles(conf)
+	}
+
+	files := make([]file.File, 0, len(fileBytes)+len(mgmtFiles))
 	for fp, bytes := range fileBytes {
 		files = append(files, file.File{
 			Path:    fp,
@@ -129,6 +151,7 @@ func (g GeneratorImpl) executeConfigTemplates(
 			Type:    file.TypeRegular,
 		})
 	}
+	files = append(files, mgmtFiles...)
 
 	return files
 }

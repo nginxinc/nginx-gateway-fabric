@@ -2,6 +2,8 @@ package main
 
 import (
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -148,9 +150,12 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--health-disable",
 				"--leader-election-lock-name=my-lock",
 				"--leader-election-disable=false",
-				"--usage-report-secret=default/my-secret",
-				"--usage-report-server-url=https://my-api.com",
-				"--usage-report-cluster-name=my-cluster",
+				"--nginx-plus",
+				"--usage-report-secret=my-secret",
+				"--usage-report-endpoint=example.com",
+				"--usage-report-resolver=resolver.com",
+				"--usage-report-ca-secret=ca-secret",
+				"--usage-report-client-ssl-secret=client-secret",
 				"--snippets-filters",
 			},
 			wantErr: false,
@@ -318,54 +323,76 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 		{
 			name: "usage-report-secret is invalid",
 			args: []string{
-				"--usage-report-secret=my-secret", // no namespace
+				"--usage-report-secret=!@#$",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "!@#$" for "--usage-report-secret" flag: invalid format: `,
+		},
+		{
+			name: "usage-report-endpoint is set to empty string",
+			args: []string{
+				"--usage-report-endpoint=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-endpoint" flag: must be set`,
+		},
+		{
+			name: "usage-report-endpoint is an invalid endpoint",
+			args: []string{
+				"--usage-report-endpoint=$*(invalid)",
 			},
 			wantErr: true,
-			expectedErrPrefix: `invalid argument "my-secret" for "--usage-report-secret" flag: invalid format; ` +
-				"must be NAMESPACE/NAME",
+			expectedErrPrefix: `invalid argument "$*(invalid)" for "--usage-report-endpoint" flag: ` +
+				`"$*(invalid)" must be a domain name or IP address with optional port`,
 		},
 		{
-			name: "usage-report-server-url is set to empty string",
+			name: "usage-report-resolver is set to empty string",
 			args: []string{
-				"--usage-report-server-url=",
+				"--usage-report-resolver=",
 			},
 			wantErr:           true,
-			expectedErrPrefix: `invalid argument "" for "--usage-report-server-url" flag: must be set`,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-resolver" flag: must be set`,
 		},
 		{
-			name: "usage-report-server-url is an invalid url",
+			name: "usage-report-resolver is an invalid endpoint",
 			args: []string{
-				"--usage-report-server-url=invalid",
-			},
-			wantErr:           true,
-			expectedErrPrefix: `invalid argument "invalid" for "--usage-report-server-url" flag: "invalid" must be a valid URL`,
-		},
-		{
-			name: "usage secret and server url not specified together",
-			args: []string{
-				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
-				"--gatewayclass=nginx",
-				"--usage-report-server-url=http://example.com",
+				"--usage-report-resolver=$*(invalid)",
 			},
 			wantErr: true,
-			expectedErrPrefix: "if any flags in the group [usage-report-secret usage-report-server-url] " +
-				"are set they must all be set",
+			expectedErrPrefix: `invalid argument "$*(invalid)" for "--usage-report-resolver" flag: ` +
+				`"$*(invalid)" must be a domain name or IP address with optional port`,
 		},
 		{
-			name: "usage-report-cluster-name is set to empty string",
+			name: "usage-report-ca-secret is set to empty string",
 			args: []string{
-				"--usage-report-cluster-name=",
+				"--usage-report-ca-secret=",
 			},
 			wantErr:           true,
-			expectedErrPrefix: `invalid argument "" for "--usage-report-cluster-name" flag: must be set`,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-ca-secret" flag: must be set`,
 		},
 		{
-			name: "usage-report-cluster-name is invalid",
+			name: "usage-report-ca-secret is invalid",
 			args: []string{
-				"--usage-report-cluster-name=$invalid*(#)",
+				"--usage-report-ca-secret=!@#$",
 			},
 			wantErr:           true,
-			expectedErrPrefix: `invalid argument "$invalid*(#)" for "--usage-report-cluster-name" flag: invalid format`,
+			expectedErrPrefix: `invalid argument "!@#$" for "--usage-report-ca-secret" flag: invalid format: `,
+		},
+		{
+			name: "usage-report-client-ssl-secret is set to empty string",
+			args: []string{
+				"--usage-report-client-ssl-secret=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-client-ssl-secret" flag: must be set`,
+		},
+		{
+			name: "usage-report-client-ssl-secret is invalid",
+			args: []string{
+				"--usage-report-client-ssl-secret=!@#$",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "!@#$" for "--usage-report-client-ssl-secret" flag: invalid format: `,
 		},
 		{
 			name: "snippets-filters is not a bool",
@@ -490,6 +517,23 @@ func TestCopyCmdFlagValidation(t *testing.T) {
 			testFlag(t, cmd, test)
 		})
 	}
+}
+
+func TestCopyFile(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	src, err := os.CreateTemp(os.TempDir(), "testfile")
+	g.Expect(err).ToNot(HaveOccurred())
+	defer os.Remove(src.Name())
+
+	dest, err := os.MkdirTemp(os.TempDir(), "testdir")
+	g.Expect(err).ToNot(HaveOccurred())
+	defer os.RemoveAll(dest)
+
+	g.Expect(copyFile(src.Name(), dest)).To(Succeed())
+	_, err = os.Stat(filepath.Join(dest, filepath.Base(src.Name())))
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestParseFlags(t *testing.T) {

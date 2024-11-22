@@ -1,7 +1,7 @@
 
 # NGINX Gateway Fabric Helm Chart
 
-![Version: 1.4.0](https://img.shields.io/badge/Version-1.4.0-informational?style=flat-square) ![AppVersion: edge](https://img.shields.io/badge/AppVersion-edge-informational?style=flat-square)
+![Version: 1.5.0](https://img.shields.io/badge/Version-1.5.0-informational?style=flat-square) ![AppVersion: edge](https://img.shields.io/badge/AppVersion-edge-informational?style=flat-square)
 
 - [NGINX Gateway Fabric Helm Chart](#nginx-gateway-fabric-helm-chart)
   - [Introduction](#introduction)
@@ -268,10 +268,12 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginx.image.tag` |  | string | `"edge"` |
 | `nginx.lifecycle` | The lifecycle of the nginx container. | object | `{}` |
 | `nginx.plus` | Is NGINX Plus image being used | bool | `false` |
-| `nginx.usage.clusterName` | The display name of the Kubernetes cluster in the NGINX Plus usage reporting server. | string | `""` |
-| `nginx.usage.insecureSkipVerify` | Disable client verification of the NGINX Plus usage reporting server certificate. | bool | `false` |
-| `nginx.usage.secretName` | The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting. | string | `""` |
-| `nginx.usage.serverURL` | The base server URL of the NGINX Plus usage reporting server. | string | `""` |
+| `nginx.usage.caSecretName` | The name of the Secret containing the NGINX Instance Manager CA certificate. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.clientSSLSecretName` | The name of the Secret containing the client certificate and key for authenticating with NGINX Instance Manager. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `""` |
+| `nginx.usage.endpoint` | The endpoint of the NGINX Plus usage reporting server. Default: product.connect.nginx.com | string | `""` |
+| `nginx.usage.resolver` | The nameserver used to resolve the NGINX Plus usage reporting endpoint. Used with NGINX Instance Manager. | string | `""` |
+| `nginx.usage.secretName` | The name of the Secret containing the JWT for NGINX Plus usage reporting. Must exist in the same namespace that the NGINX Gateway Fabric control plane is running in (default namespace: nginx-gateway). | string | `"nplus-license"` |
+| `nginx.usage.skipVerify` | Disable client verification of the NGINX Plus usage reporting server certificate. | bool | `false` |
 | `nginxGateway.config.logging.level` | Log level. | string | `"info"` |
 | `nginxGateway.configAnnotations` | Set of custom annotations for NginxGateway objects. | object | `{}` |
 | `nginxGateway.extraVolumeMounts` | extraVolumeMounts are the additional volume mounts for the nginx-gateway container. | list | `[]` |
@@ -300,6 +302,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `service.create` | Creates a service to expose the NGINX Gateway Fabric pods. | bool | `true` |
 | `service.externalTrafficPolicy` | The externalTrafficPolicy of the service. The value Local preserves the client source IP. | string | `"Local"` |
 | `service.loadBalancerIP` | The static IP address for the load balancer. Requires service.type set to LoadBalancer. | string | `""` |
+| `service.loadBalancerSourceRanges` | The IP ranges (CIDR) that are allowed to access the load balancer. Requires service.type set to LoadBalancer. | list | `[]` |
 | `service.ports` | A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | list | `[{"name":"http","port":80,"protocol":"TCP","targetPort":80},{"name":"https","port":443,"protocol":"TCP","targetPort":443}]` |
 | `service.type` | The type of service to create for the NGINX Gateway Fabric. | string | `"LoadBalancer"` |
 | `serviceAccount.annotations` | Set of custom annotations for the NGINX Gateway Fabric service account. | object | `{}` |

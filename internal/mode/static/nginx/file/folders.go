@@ -19,6 +19,12 @@ type ClearFoldersOSFileManager interface {
 	Remove(name string) error
 }
 
+// These files are needed on startup, so skip deleting them.
+const (
+	mainConf = "/etc/nginx/main-includes/main.conf"
+	mgmtConf = "/etc/nginx/main-includes/mgmt.conf"
+)
+
 // ClearFolders removes all files in the given folders and returns the removed files' full paths.
 func ClearFolders(fileMgr ClearFoldersOSFileManager, paths []string) (removedFiles []string, e error) {
 	for _, path := range paths {
@@ -29,6 +35,11 @@ func ClearFolders(fileMgr ClearFoldersOSFileManager, paths []string) (removedFil
 
 		for _, entry := range entries {
 			entryPath := filepath.Join(path, entry.Name())
+
+			if entryPath == mainConf || entryPath == mgmtConf {
+				continue
+			}
+
 			if err := fileMgr.Remove(entryPath); err != nil {
 				return removedFiles, fmt.Errorf("failed to remove %q: %w", entryPath, err)
 			}

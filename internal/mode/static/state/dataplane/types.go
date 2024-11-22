@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -34,6 +35,11 @@ type Configuration struct {
 	TLSPassthroughServers []Layer4VirtualServer
 	// Upstreams holds all unique http Upstreams.
 	Upstreams []Upstream
+	// DeploymentContext contains metadata about NGF and the cluster.
+	DeploymentContext DeploymentContext
+	// AuxiliarySecrets contains additional secret data, like certificates/keys/tokens that are not related to
+	// Gateway API resources.
+	AuxiliarySecrets map[graph.SecretFileType][]byte
 	// StreamUpstreams holds all unique stream Upstreams
 	StreamUpstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
@@ -388,4 +394,17 @@ type Ratio struct {
 type Logging struct {
 	// ErrorLevel defines the error log level.
 	ErrorLevel string
+}
+
+// DeploymentContext contains metadata about NGF and the cluster.
+// This is JSON marshaled into a file created by the generator, hence the json tags.
+type DeploymentContext struct {
+	// Integration is "ngf".
+	Integration string `json:"integration"`
+	// ClusterID is the ID of the kube-system namespace.
+	ClusterID string `json:"cluster_id"`
+	// InstallationID is the ID of the NGF deployment.
+	InstallationID string `json:"installation_id"`
+	// ClusterNodeCount is the count of nodes in the cluster.
+	ClusterNodeCount int `json:"cluster_node_count"`
 }
