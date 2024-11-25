@@ -140,8 +140,7 @@ This process must be documented so users are aware that their Secrets are being 
 ### Encryption
 
 The agent and control plane communication channel will be encrypted. We will store the server certificate, key pair, and
-CA certificate in Kubernetes Secrets. The user will install the Secrets in the `nginx-gateway` namespace under the
-following names:
+CA certificate in Kubernetes Secrets. The server Secret will live in the `nginx-gateway` namespace, and the agent Secret will live in the same namespace where the agent is deployed. The Secrets need to exist before the control plane and data planes are deployed.
 
 - `nginx-gateway-cert`: This Secret will contain the TLS certificate and private key that the control plane will use to
   serve gRPC traffic.
@@ -152,7 +151,7 @@ names and mount path configurable via flags. For production, we will direct the 
 For development and testing purposes, we will provide a self-signed default certificate. In order to be secure by
 default, NGF should generate the default certificates and keypair during installation using a Kubernetes Job.
 
-Using cert-manager may also be an easy option to reduce the burden of installing and rotating Secrets.
+Using cert-manager may also be an easy option to reduce the burden of installing and rotating Secrets. A user would need to install this before NGF, and ensure they create agent Secrets before deploying their Gateway resource. We could also tie the NGF control plane directly into cert-manager so that our control plane could create the agent Secrets for the user when they create a Gateway resource, further reducing the burden on the user.
 
 #### Certificate Rotation
 
