@@ -140,7 +140,7 @@ This process must be documented so users are aware that their Secrets are being 
 ### Encryption
 
 The agent and control plane communication channel will be encrypted. We will store the server certificate, key pair, and
-CA certificate in Kubernetes Secrets. The server Secret will live in the `nginx-gateway` namespace, and the agent Secret will live in the same namespace where the agent is deployed. The Secrets need to exist before the control plane and data planes are deployed.
+CA certificate in Kubernetes Secrets. The server Secret will live in the control plane namespace, and the agent Secret will live in the same namespace where the agent is deployed. The Secrets need to exist before the control plane and data planes are deployed.
 
 - `nginx-gateway-cert`: This Secret will contain the TLS certificate and private key that the control plane will use to
   serve gRPC traffic.
@@ -151,7 +151,7 @@ names and mount path configurable via flags. For production, we will direct the 
 For development and testing purposes, we will provide a self-signed default certificate. In order to be secure by
 default, NGF should generate the default certificates and keypair during installation using a Kubernetes Job.
 
-Cert-manager is probably the easiest way for a user to manage certs for this. [Reflector](https://github.com/emberstack/kubernetes-reflector) is a tool that can be used to sync Secrets across namespaces, so that all agents receive the certificate updates for the initial Secret created by cert-manager.
+Cert-manager is probably the easiest way for a user to manage certs for this. [Reflector](https://github.com/emberstack/kubernetes-reflector) is a tool that can be used to sync Secrets across namespaces, so that all agents receive the certificate updates for the initial Secret created by cert-manager. Or our control plane just does this since we will likely have this logic anyway for copying NGINX Plus Secrets.
 
 #### Certificate Rotation
 
