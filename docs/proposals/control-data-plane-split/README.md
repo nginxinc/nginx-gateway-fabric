@@ -153,8 +153,6 @@ default, NGF should generate the default certificates and keypair during install
 
 Using cert-manager may also be an easy option to reduce the burden of installing and rotating Secrets. A user would need to install this before NGF, and ensure they create agent Secrets before deploying their Gateway resource. We could also tie the NGF control plane directly into cert-manager so that our control plane could create the agent Secrets for the user when they create a Gateway resource, further reducing the burden on the user.
 
-Or we could use SPIRE, which might automate all of this. Potential downside is the need for `hostPath` mounting, which is a security concern.
-
 #### Certificate Rotation
 
 Kubernetes automatically updates mounted Secrets when the content changes, but the control plane
