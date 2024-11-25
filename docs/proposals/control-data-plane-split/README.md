@@ -89,8 +89,9 @@ not an issue. The gRPC runtime will handle the connection establishment and mana
 - Each Gateway graph that the control plane builds internally should be directly tied to an nginx deployment.
 - Whenever the control plane sees an nginx instance become Ready, we send its config to it (it doesn't matter if this is a new pod or a restarted pod).
 - If no nginx instances exist, control plane should not send any configuration.
-- The control plane should check if a connection exists first before sending the config (all replicas, even non-leaders, should be able to send the config because the agent may connect to a non-leader).
-  - Different pods within an nginx deployment may connect to a different NGF control plane if the NGF control plane has also been scaled. So each NGF control plane may have a different list of connected agents that they would be sending to. However, each NGF pod should have the exact same internal graph of nginx configuration.
+- The control plane should check if a connection exists first before sending the config.
+- If the control plane is scaled, then we should mark non-leaders as Unready (return non-200 readiness probe). This will prevent nginx agents from connecting to the non-leaders (k8s removes the Unready Pods from the Endpoint pool), and therefore only the leader will send config and write statuses.
+  - We will need to ensure that the leader Pod can handle many nginx connections.
 
 <img src="graph-conns.png" alt="Scaled connections" width=500 style="display: block; margin: 0 auto">
 
