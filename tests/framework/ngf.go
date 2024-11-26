@@ -35,6 +35,7 @@ type InstallationConfig struct {
 	ServiceType          string
 	IsGKEInternalLB      bool
 	Plus                 bool
+	Telemetry            bool
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
@@ -70,7 +71,6 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 		"--create-namespace",
 		"--namespace", cfg.Namespace,
 		"--wait",
-		"--set", "nginxGateway.productTelemetry.enable=false",
 		"--set", "nginxGateway.snippetsFilters.enable=true",
 	}
 	if cfg.ChartVersion != "" {
@@ -78,6 +78,7 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args = append(args, setImageArgs(cfg)...)
+	args = append(args, setTelemetryArgs(cfg)...)
 	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
@@ -136,7 +137,6 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 		cfg.ChartPath,
 		"--namespace", cfg.Namespace,
 		"--wait",
-		"--set", "nginxGateway.productTelemetry.enable=false",
 		"--set", "nginxGateway.config.logging.level=debug",
 		"--set", "nginxGateway.snippetsFilter.enable=true",
 	}
@@ -145,6 +145,7 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args = append(args, setImageArgs(cfg)...)
+	args = append(args, setTelemetryArgs(cfg)...)
 	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Upgrading NGF with command: helm %v\n", strings.Join(fullArgs, " "))
@@ -186,6 +187,16 @@ func UninstallNGF(cfg InstallationConfig, k8sClient client.Client) ([]byte, erro
 	}
 
 	return nil, nil
+}
+
+func setTelemetryArgs(cfg InstallationConfig) []string {
+	var args []string
+
+	args = append(args, formatValueSet("nginxGateway.productTelemetry.enable", "false")...)
+	if cfg.Telemetry {
+		args = append(args, formatValueSet("nginxGateway.productTelemetry.enable", "true")...)
+	}
+	return args
 }
 
 func setImageArgs(cfg InstallationConfig) []string {
