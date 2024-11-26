@@ -1,4 +1,4 @@
-name: Build and deploy docs
+name: Build and deploy documentation
 on:
   workflow_dispatch:
     inputs:
@@ -12,6 +12,11 @@ on:
         - dev
         - staging
         - prod
+      hugo_theme_override:
+        description: "Hugo theme version (Leave blank for latest)"
+        required: false
+        default: ""
+        type: string
   pull_request:
     branches:
     - "*"
@@ -43,7 +48,7 @@ jobs:
     if: ${{ github.event.repository.fork == false && needs.vars.outputs.azure_creds == 'true' }}
     uses: nginxinc/docs-actions/.github/workflows/docs-build-push.yml@9c59fab05a8131f4d691ba6ea2b6a119f3ef832a # v1.0.7
     permissions:
-      pull-requests: write # needed to write preview url comment to PR
+      pull-requests: write
       contents: read
     with:
       production_url_path: "/nginx-gateway-fabric"
@@ -52,6 +57,7 @@ jobs:
       docs_build_path: "./site"
       doc_type: "hugo"
       environment: ${{ inputs.environment }}
+      force_hugo_theme_version: ${{inputs.hugo_theme_override}}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_DOCS }}
       AZURE_KEY_VAULT: ${{ secrets.AZURE_KEY_VAULT_DOCS }}
