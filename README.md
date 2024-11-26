@@ -105,7 +105,7 @@ For troubleshooting help, see the [Troubleshooting](https://docs.nginx.com/nginx
 
 We’d like to hear your feedback! If you experience issues with our Gateway Controller, please [open a bug][bug] in
 GitHub. If you have any suggestions or enhancement requests, please [open an idea][idea] on GitHub discussions. You can
-contact us directly via kubernetes@nginx.com or on the [NGINX Community Slack][slack] in
+contact us directly on the [NGINX Community Slack][slack] in
 the `#nginx-gateway-fabric`
 channel.
 

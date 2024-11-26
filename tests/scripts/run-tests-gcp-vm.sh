@@ -35,7 +35,12 @@ if [ "${STOP_LONGEVITY}" = "true" ]; then
         version=${TAG}
     fi
 
-    results="${SCRIPT_DIR}/../results/longevity/$version/$version.md"
+    runType=oss
+    if [ "${PLUS_ENABLED}" = "true" ]; then
+        runType=plus
+    fi
+
+    results="${SCRIPT_DIR}/../results/longevity/$version/$version-$runType.md"
     printf "\n## Error Logs\n\n" >>"${results}"
 
     ## ngf error logs

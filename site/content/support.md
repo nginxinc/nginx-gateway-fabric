@@ -5,7 +5,27 @@ weight: 600
 docs: "DOCS-1411"
 ---
 
-NGINX Gateway Fabric adheres to the support policy detailed in the following knowledge base article: [K000140156](https://my.f5.com/manage/s/article/K000140156).
+F5 NGINX Gateway Fabric adheres to the support policy detailed in the following knowledge base article: [K000140156](https://my.f5.com/manage/s/article/K000140156).
+
+After opening a support ticket, F5 staff will request additional information to better understand the problem.
+
+The [nginx-supportpkg-for-k8s](https://github.com/nginxinc/nginx-supportpkg-for-k8s) plugin collects the information needed by F5 Technical Support to assist with troubleshooting your issue.
+
+The plugin uses [krew](https://krew.sigs.k8s.io), the plugin manager for the Kubernetes [kubectl](https://kubernetes.io/docs/reference/kubectl/) command-line tool.
+
+The plugin may collect some or all of the following global and namespace-specific information:
+
+- Kubernetes version and information about Nodes and Custom Resources
+- Kubernetes metrics
+- Helm deployments
+- List of Pods, Events, ConfigMaps, Services, Deployments, Daemonsets, StatefulSets, ReplicaSets, and Leases
+- Pod log output
+- `nginx -T` output from NGINX-related Pods
+
+This plugin **does not** collect secrets or coredumps.
+
+Visit the [project’s GitHub repository](https://github.com/nginxinc/nginx-supportpkg-for-k8s) for further details.
+
 
 **Support Channels:**
 
