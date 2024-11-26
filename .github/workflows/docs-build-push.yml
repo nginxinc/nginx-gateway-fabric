@@ -57,7 +57,7 @@ jobs:
       docs_build_path: "./site"
       doc_type: "hugo"
       environment: ${{ inputs.environment }}
-      force_hugo_theme_version: ${{inputs.hugo_theme_override}}
+      force_hugo_theme_version: ${{ inputs.hugo_theme_override }}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_DOCS }}
       AZURE_KEY_VAULT: ${{ secrets.AZURE_KEY_VAULT_DOCS }}
