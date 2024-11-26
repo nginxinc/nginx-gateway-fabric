@@ -124,6 +124,8 @@ In the current implementation using NGINX Plus, when only upstream servers chang
 
 An example of what this looks like is defined [here](https://docs.nginx.com/nginx/admin-guide/load-balancer/dynamic-configuration-api/#configuring-persistence-of-dynamic-configuration).
 
+We will send an UpdateHTTPUpstreams APIRequest to the agent, and it will make the NGINX Plus API call. The state file gets created automatically by nginx.
+
 #### Secret duplication and synchronization
 
 There are multiple Secrets that an NGINX Plus user can and will be creating. These include:
