@@ -41,7 +41,7 @@ const (
 	tlsListenerName   = "listener-8443-1"
 )
 
-func createRoute(
+func createHTTPRoute(
 	name string,
 	gateway string,
 	hostname string,
@@ -82,6 +82,58 @@ func createRoute(
 							Path: &v1.HTTPPathMatch{
 								Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 								Value: helpers.GetPointer("/"),
+							},
+						},
+					},
+					BackendRefs: backendRefs,
+				},
+			},
+		},
+	}
+}
+
+func createGRPCRoute(
+	name string,
+	gateway string,
+	hostname string,
+	backendRefs ...v1.GRPCBackendRef,
+) *v1.GRPCRoute {
+	return &v1.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       name,
+			Generation: 1,
+		},
+		Spec: v1.GRPCRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
+					{
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:      v1.ObjectName(gateway),
+						SectionName: (*v1.SectionName)(
+							helpers.GetPointer(httpListenerName),
+						),
+					},
+					{
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:      v1.ObjectName(gateway),
+						SectionName: (*v1.SectionName)(
+							helpers.GetPointer(httpsListenerName),
+						),
+					},
+				},
+			},
+			Hostnames: []v1.Hostname{
+				v1.Hostname(hostname),
+			},
+			Rules: []v1.GRPCRouteRule{
+				{
+					Matches: []v1.GRPCRouteMatch{
+						{
+							Method: &v1.GRPCMethodMatch{
+								Type:    helpers.GetPointer(v1.GRPCMethodMatchExact),
+								Service: helpers.GetPointer("my-svc"),
+								Method:  helpers.GetPointer("Hello"),
 							},
 						},
 					},
@@ -181,7 +233,7 @@ func createRouteWithMultipleRules(
 	name, gateway, hostname string,
 	rules []v1.HTTPRouteRule,
 ) *v1.HTTPRoute {
-	hr := createRoute(name, gateway, hostname)
+	hr := createHTTPRoute(name, gateway, hostname)
 	hr.Spec.Rules = rules
 
 	return hr
@@ -237,6 +289,17 @@ func createBackendRefObj(
 }
 
 func createRouteBackendRefs(refs []v1.HTTPBackendRef) []graph.RouteBackendRef {
+	rbrs := make([]graph.RouteBackendRef, 0, len(refs))
+	for _, ref := range refs {
+		rbr := graph.RouteBackendRef{
+			BackendRef: ref.BackendRef,
+		}
+		rbrs = append(rbrs, rbr)
+	}
+	return rbrs
+}
+
+func createGRPCRouteBackendRefs(refs []v1.GRPCBackendRef) []graph.RouteBackendRef {
 	rbrs := make([]graph.RouteBackendRef, 0, len(refs))
 	for _, ref := range refs {
 		rbr := graph.RouteBackendRef{
@@ -359,24 +422,35 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated                                            *v1.GatewayClass
-				diffNsTLSSecret, sameNsTLSSecret                     *apiv1.Secret
-				hr1, hr1Updated, hr2                                 *v1.HTTPRoute
-				tr1, tr1Updated, tr2                                 *v1alpha2.TLSRoute
-				gw1, gw1Updated, gw2                                 *v1.Gateway
-				secretRefGrant, hrServiceRefGrant, trServiceRefGrant *v1beta1.ReferenceGrant
-				expGraph                                             *graph.Graph
-				expRouteHR1, expRouteHR2                             *graph.L7Route
-				expRouteTR1, expRouteTR2                             *graph.L4Route
-				gatewayAPICRD, gatewayAPICRDUpdated                  *metav1.PartialObjectMetadata
-				routeKey1, routeKey2                                 graph.RouteKey
-				trKey1, trKey2                                       graph.L4RouteKey
+				gcUpdated                                          *v1.GatewayClass
+				diffNsTLSSecret, sameNsTLSSecret                   *apiv1.Secret
+				hr1, hr1Updated, hr2                               *v1.HTTPRoute
+				gr1, gr1Updated, gr2                               *v1.GRPCRoute
+				tr1, tr1Updated, tr2                               *v1alpha2.TLSRoute
+				gw1, gw1Updated, gw2                               *v1.Gateway
+				secretRefGrant, hrServiceRefGrant                  *v1beta1.ReferenceGrant
+				grServiceRefGrant, trServiceRefGrant               *v1beta1.ReferenceGrant
+				expGraph                                           *graph.Graph
+				expRouteHR1, expRouteHR2                           *graph.L7Route
+				expRouteGR1, expRouteGR2                           *graph.L7Route
+				expRouteTR1, expRouteTR2                           *graph.L4Route
+				gatewayAPICRD, gatewayAPICRDUpdated                *metav1.PartialObjectMetadata
+				routeKey1, routeKey2, grpcRouteKey1, grpcRouteKey2 graph.RouteKey
+				trKey1, trKey2                                     graph.L4RouteKey
 			)
+
+			processAndValidateGraph := func(expGraph *graph.Graph) {
+				changed, graphCfg := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+			}
+
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
 				gcUpdated.Generation++
 
-				crossNsBackendRef := v1.HTTPBackendRef{
+				crossNsHTTPBackendRef := v1.HTTPBackendRef{
 					BackendRef: v1.BackendRef{
 						BackendObjectReference: v1.BackendObjectReference{
 							Kind:      helpers.GetPointer[v1.Kind]("Service"),
@@ -387,28 +461,37 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com", crossNsBackendRef)
+				grpcBackendRef := v1.GRPCBackendRef{
+					BackendRef: v1.BackendRef{
+						BackendObjectReference: v1.BackendObjectReference{
+							Kind:      helpers.GetPointer[v1.Kind]("Service"),
+							Name:      "grpc-service",
+							Namespace: helpers.GetPointer[v1.Namespace]("grpc-service-ns"),
+							Port:      helpers.GetPointer[v1.PortNumber](80),
+						},
+					},
+				}
 
+				hr1 = createHTTPRoute("hr-1", "gateway-1", "foo.example.com", crossNsHTTPBackendRef)
 				routeKey1 = graph.CreateRouteKey(hr1)
-
 				hr1Updated = hr1.DeepCopy()
 				hr1Updated.Generation++
-
-				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
-
+				hr2 = createHTTPRoute("hr-2", "gateway-2", "bar.example.com")
 				routeKey2 = graph.CreateRouteKey(hr2)
 
+				gr1 = createGRPCRoute("gr-1", "gateway-1", "foo.example.com", grpcBackendRef)
+				grpcRouteKey1 = graph.CreateRouteKey(gr1)
+				gr1Updated = gr1.DeepCopy()
+				gr1Updated.Generation++
+				gr2 = createGRPCRoute("gr-2", "gateway-2", "bar.example.com")
+				grpcRouteKey2 = graph.CreateRouteKey(gr2)
+
 				tlsBackendRef := createTLSBackendRef("tls-service", "tls-service-ns")
-
 				tr1 = createTLSRoute("tr-1", "gateway-1", "foo.tls.com", tlsBackendRef)
-
 				trKey1 = graph.CreateRouteKeyL4(tr1)
-
 				tr1Updated = tr1.DeepCopy()
 				tr1Updated.Generation++
-
 				tr2 = createTLSRoute("tr-2", "gateway-2", "bar.tls.com", tlsBackendRef)
-
 				trKey2 = graph.CreateRouteKeyL4(tr2)
 
 				secretRefGrant = &v1beta1.ReferenceGrant{
@@ -442,6 +525,27 @@ var _ = Describe("ChangeProcessor", func() {
 							{
 								Group:     v1.GroupName,
 								Kind:      kinds.HTTPRoute,
+								Namespace: "test",
+							},
+						},
+						To: []v1beta1.ReferenceGrantTo{
+							{
+								Kind: "Service",
+							},
+						},
+					},
+				}
+
+				grServiceRefGrant = &v1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "grpc-service-ns",
+						Name:      "ref-grant",
+					},
+					Spec: v1beta1.ReferenceGrantSpec{
+						From: []v1beta1.ReferenceGrantFrom{
+							{
+								Group:     v1.GroupName,
+								Kind:      kinds.GRPCRoute,
 								Namespace: "test",
 							},
 						},
@@ -627,6 +731,101 @@ var _ = Describe("ChangeProcessor", func() {
 					Attachable: true,
 				}
 
+				expRouteGR1 = &graph.L7Route{
+					Source:    gr1,
+					RouteType: graph.RouteTypeGRPC,
+					ParentRefs: []graph.ParentRef{
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{httpListenerName: {"foo.example.com"}},
+								Attached:          true,
+								ListenerPort:      80,
+							},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							SectionName: gr1.Spec.ParentRefs[0].SectionName,
+						},
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{httpsListenerName: {"foo.example.com"}},
+								Attached:          true,
+								ListenerPort:      443,
+							},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							Idx:         1,
+							SectionName: gr1.Spec.ParentRefs[1].SectionName,
+						},
+					},
+					Spec: graph.L7RouteSpec{
+						Hostnames: gr1.Spec.Hostnames,
+						Rules: []graph.RouteRule{
+							{
+								BackendRefs: []graph.BackendRef{
+									{
+										SvcNsName: types.NamespacedName{Namespace: "grpc-service-ns", Name: "grpc-service"},
+										Weight:    1,
+									},
+								},
+								ValidMatches: true,
+								Filters: graph.RouteRuleFilters{
+									Filters: []graph.Filter{},
+									Valid:   true,
+								},
+								Matches:          graph.ConvertGRPCMatches(gr1.Spec.Rules[0].Matches),
+								RouteBackendRefs: createGRPCRouteBackendRefs(gr1.Spec.Rules[0].BackendRefs),
+							},
+						},
+					},
+					Valid:      true,
+					Attachable: true,
+					Conditions: []conditions.Condition{
+						staticConds.NewRouteBackendRefRefBackendNotFound(
+							"spec.rules[0].backendRefs[0].name: Not found: \"grpc-service\"",
+						),
+					},
+				}
+
+				expRouteGR2 = &graph.L7Route{
+					Source:    gr2,
+					RouteType: graph.RouteTypeGRPC,
+					ParentRefs: []graph.ParentRef{
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{httpListenerName: {"bar.example.com"}},
+								Attached:          true,
+								ListenerPort:      80,
+							},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							SectionName: gr2.Spec.ParentRefs[0].SectionName,
+						},
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{httpsListenerName: {"bar.example.com"}},
+								Attached:          true,
+								ListenerPort:      443,
+							},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							Idx:         1,
+							SectionName: gr2.Spec.ParentRefs[1].SectionName,
+						},
+					},
+					Spec: graph.L7RouteSpec{
+						Hostnames: gr2.Spec.Hostnames,
+						Rules: []graph.RouteRule{
+							{
+								ValidMatches: true,
+								Filters: graph.RouteRuleFilters{
+									Valid:   true,
+									Filters: []graph.Filter{},
+								},
+								Matches:          graph.ConvertGRPCMatches(gr2.Spec.Rules[0].Matches),
+								RouteBackendRefs: []graph.RouteBackendRef{},
+							},
+						},
+					},
+					Valid:      true,
+					Attachable: true,
+				}
+
 				expRouteTR1 = &graph.L4Route{
 					Source: tr1,
 					ParentRefs: []graph.ParentRef{
@@ -698,7 +897,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Source:     gw1.Spec.Listeners[0],
 								Valid:      true,
 								Attachable: true,
-								Routes:     map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+								Routes:     map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1, grpcRouteKey1: expRouteGR1},
 								L4Routes:   map[graph.L4RouteKey]*graph.L4Route{},
 								SupportedKinds: []v1.RouteGroupKind{
 									{Kind: v1.Kind(kinds.HTTPRoute), Group: helpers.GetPointer[v1.Group](v1.GroupName)},
@@ -710,7 +909,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Source:         gw1.Spec.Listeners[1],
 								Valid:          true,
 								Attachable:     true,
-								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1, grpcRouteKey1: expRouteGR1},
 								L4Routes:       map[graph.L4RouteKey]*graph.L4Route{},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
 								SupportedKinds: []v1.RouteGroupKind{
@@ -734,12 +933,16 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					IgnoredGateways:   map[types.NamespacedName]*v1.Gateway{},
 					L4Routes:          map[graph.L4RouteKey]*graph.L4Route{trKey1: expRouteTR1},
-					Routes:            map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
+					Routes:            map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1, grpcRouteKey1: expRouteGR1},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
 					ReferencedServices: map[types.NamespacedName]struct{}{
 						{
 							Namespace: "service-ns",
 							Name:      "service",
+						}: {},
+						{
+							Namespace: "grpc-service-ns",
+							Name:      "grpc-service",
 						}: {},
 						{
 							Namespace: "tls-service-ns",
@@ -761,10 +964,7 @@ var _ = Describe("ChangeProcessor", func() {
 					It("returns empty graph", func() {
 						processor.CaptureUpsertChange(gatewayAPICRD)
 
-						changed, graphCfg := processor.Process()
-						Expect(changed).To(Equal(state.ClusterStateChange))
-						Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-						Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
+						processAndValidateGraph(&graph.Graph{})
 					})
 				})
 				When("Gateways don't exist", func() {
@@ -772,20 +972,21 @@ var _ = Describe("ChangeProcessor", func() {
 						It("returns empty graph", func() {
 							processor.CaptureUpsertChange(hr1)
 
-							changed, graphCfg := processor.Process()
-							Expect(changed).To(Equal(state.ClusterStateChange))
-							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
+							processAndValidateGraph(&graph.Graph{})
+						})
+					})
+					When("the first GRPCRoute is upserted", func() {
+						It("returns empty graph", func() {
+							processor.CaptureUpsertChange(gr1)
+
+							processAndValidateGraph(&graph.Graph{})
 						})
 					})
 					When("the first TLSRoute is upserted", func() {
 						It("returns empty graph", func() {
 							processor.CaptureUpsertChange(tr1)
 
-							changed, graphCfg := processor.Process()
-							Expect(changed).To(Equal(state.ClusterStateChange))
-							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
+							processAndValidateGraph(&graph.Graph{})
 						})
 					})
 					When("the different namespace TLS Secret is upserted", func() {
@@ -808,10 +1009,16 @@ var _ = Describe("ChangeProcessor", func() {
 							expGraph.Gateway.Valid = false
 							expGraph.Gateway.Listeners = nil
 
-							// no ref grant exists yet for hr1 or tr1
+							// no ref grant exists yet for the routes
 							expGraph.Routes[routeKey1].Conditions = []conditions.Condition{
 								staticConds.NewRouteBackendRefRefNotPermitted(
 									"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
+								),
+							}
+
+							expGraph.Routes[grpcRouteKey1].Conditions = []conditions.Condition{
+								staticConds.NewRouteBackendRefRefNotPermitted(
+									"Backend ref to Service grpc-service-ns/grpc-service not permitted by any ReferenceGrant",
 								),
 							}
 
@@ -830,6 +1037,14 @@ var _ = Describe("ChangeProcessor", func() {
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
+							expGraph.Routes[grpcRouteKey1].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{},
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
+							}
+							expGraph.Routes[grpcRouteKey1].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{},
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
+							}
 							expGraph.L4Routes[trKey1].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
@@ -839,12 +1054,10 @@ var _ = Describe("ChangeProcessor", func() {
 							expGraph.ReferencedServices = nil
 
 							expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+							expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 							expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
 
-							changed, graphCfg := processor.Process()
-							Expect(changed).To(Equal(state.ClusterStateChange))
-							Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-							Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+							processAndValidateGraph(expGraph)
 						})
 					})
 				})
@@ -881,6 +1094,8 @@ var _ = Describe("ChangeProcessor", func() {
 					listener80 := getListenerByName(expGraph.Gateway, httpListenerName)
 					listener80.Routes[routeKey1].ParentRefs[0].Attachment = expAttachment80
 					listener443.Routes[routeKey1].ParentRefs[1].Attachment = expAttachment443
+					listener80.Routes[grpcRouteKey1].ParentRefs[0].Attachment = expAttachment80
+					listener443.Routes[grpcRouteKey1].ParentRefs[1].Attachment = expAttachment443
 
 					// no ref grant exists yet for hr1
 					expGraph.Routes[routeKey1].Conditions = []conditions.Condition{
@@ -891,6 +1106,16 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expGraph.Routes[routeKey1].ParentRefs[0].Attachment = expAttachment80
 					expGraph.Routes[routeKey1].ParentRefs[1].Attachment = expAttachment443
+
+					// no ref grant exists yet for gr1
+					expGraph.Routes[grpcRouteKey1].Conditions = []conditions.Condition{
+						staticConds.NewRouteInvalidListener(),
+						staticConds.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service grpc-service-ns/grpc-service not permitted by any ReferenceGrant",
+						),
+					}
+					expGraph.Routes[grpcRouteKey1].ParentRefs[0].Attachment = expAttachment80
+					expGraph.Routes[grpcRouteKey1].ParentRefs[1].Attachment = expAttachment443
 
 					// no ref grant exists yet for tr1
 					expGraph.L4Routes[trKey1].Conditions = []conditions.Condition{
@@ -903,12 +1128,10 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.ReferencedServices = nil
 
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the ReferenceGrant allowing the Gateway to reference its Secret is upserted", func() {
@@ -919,6 +1142,13 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Routes[routeKey1].Conditions = []conditions.Condition{
 						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
+						),
+					}
+
+					// no ref grant exists yet for gr1
+					expGraph.Routes[grpcRouteKey1].Conditions = []conditions.Condition{
+						staticConds.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service grpc-service-ns/grpc-service not permitted by any ReferenceGrant",
 						),
 					}
 
@@ -935,17 +1165,24 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expGraph.ReferencedServices = nil
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the ReferenceGrant allowing the hr1 to reference the Service in different ns is upserted", func() {
 				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(hrServiceRefGrant)
+
+					// no ref grant exists yet for gr1
+					expGraph.Routes[grpcRouteKey1].Conditions = []conditions.Condition{
+						staticConds.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service grpc-service-ns/grpc-service not permitted by any ReferenceGrant",
+						),
+					}
+					delete(expGraph.ReferencedServices, types.NamespacedName{Namespace: "grpc-service-ns", Name: "grpc-service"})
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					// no ref grant exists yet for tr1
 					expGraph.L4Routes[trKey1].Conditions = []conditions.Condition{
@@ -960,10 +1197,27 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
+				})
+			})
+			When("the ReferenceGrant allowing the gr1 to reference the Service in different ns is upserted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureUpsertChange(grServiceRefGrant)
+
+					// no ref grant exists yet for tr1
+					expGraph.L4Routes[trKey1].Conditions = []conditions.Condition{
+						staticConds.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service tls-service-ns/tls-service not permitted by any ReferenceGrant",
+						),
+					}
+					delete(expGraph.ReferencedServices, types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"})
+					expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
+
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the ReferenceGrant allowing the tr1 to reference the Service in different ns is upserted", func() {
@@ -974,10 +1228,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the Gateway API CRD with bundle version annotation change is processed", func() {
@@ -992,10 +1243,7 @@ var _ = Describe("ChangeProcessor", func() {
 						gatewayclass.SupportedVersion,
 					)
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the Gateway API CRD without bundle version annotation change is processed", func() {
@@ -1027,10 +1275,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the first HTTPRoute update with a generation changed is processed", func() {
@@ -1046,12 +1291,25 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				},
 				)
+			})
+			When("the first GRPCRoute update with a generation changed is processed", func() {
+				It("returns populated graph", func() {
+					processor.CaptureUpsertChange(gr1Updated)
+
+					listener443 := getListenerByName(expGraph.Gateway, httpsListenerName)
+					listener443.Routes[grpcRouteKey1].Source.SetGeneration(gr1Updated.Generation)
+
+					listener80 := getListenerByName(expGraph.Gateway, httpListenerName)
+					listener80.Routes[grpcRouteKey1].Source.SetGeneration(gr1Updated.Generation)
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					processAndValidateGraph(expGraph)
+				})
 			})
 			When("the first TLSRoute update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
@@ -1064,12 +1322,8 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
-				},
-				)
+					processAndValidateGraph(expGraph)
+				})
 			})
 			When("the first Gateway update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
@@ -1080,10 +1334,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the GatewayClass update with generation change is processed", func() {
@@ -1095,10 +1346,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the different namespace TLS secret is upserted again", func() {
@@ -1109,10 +1357,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("no changes are captured", func() {
@@ -1152,10 +1397,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the second HTTPRoute is upserted", func() {
@@ -1178,10 +1420,41 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
+				})
+			})
+			When("the second GRPCRoute is upserted", func() {
+				It("returns populated graph", func() {
+					processor.CaptureUpsertChange(gr2)
+
+					expGraph.IgnoredGateways = map[types.NamespacedName]*v1.Gateway{
+						{Namespace: "test", Name: "gateway-2"}: gw2,
+					}
+					expGraph.Routes[routeKey2] = expRouteHR2
+					expGraph.Routes[routeKey2].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+					expGraph.Routes[routeKey2].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+
+					expGraph.Routes[grpcRouteKey2] = expRouteGR2
+					expGraph.Routes[grpcRouteKey2].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+					expGraph.Routes[grpcRouteKey2].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the second TLSRoute is upserted", func() {
@@ -1201,6 +1474,16 @@ var _ = Describe("ChangeProcessor", func() {
 						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
 					}
 
+					expGraph.Routes[grpcRouteKey2] = expRouteGR2
+					expGraph.Routes[grpcRouteKey2].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+					expGraph.Routes[grpcRouteKey2].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   staticConds.NewRouteNotAcceptedGatewayIgnored(),
+					}
+
 					expGraph.L4Routes[trKey2] = expRouteTR2
 					expGraph.L4Routes[trKey2].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
@@ -1211,10 +1494,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the first Gateway is deleted", func() {
@@ -1237,16 +1517,22 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(listener80.Routes, routeKey1)
 					delete(listener443.Routes, routeKey1)
+					delete(listener80.Routes, grpcRouteKey1)
+					delete(listener443.Routes, grpcRouteKey1)
 					delete(tlsListener.L4Routes, trKey1)
 
 					listener80.Routes[routeKey2] = expRouteHR2
 					listener443.Routes[routeKey2] = expRouteHR2
+					listener80.Routes[grpcRouteKey2] = expRouteGR2
+					listener443.Routes[grpcRouteKey2] = expRouteGR2
 					tlsListener.L4Routes[trKey2] = expRouteTR2
 
 					delete(expGraph.Routes, routeKey1)
+					delete(expGraph.Routes, grpcRouteKey1)
 					delete(expGraph.L4Routes, trKey1)
 
 					expGraph.Routes[routeKey2] = expRouteHR2
+					expGraph.Routes[grpcRouteKey2] = expRouteGR2
 					expGraph.L4Routes[trKey2] = expRouteTR2
 
 					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
@@ -1257,11 +1543,10 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					delete(expGraph.ReferencedServices, expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the second HTTPRoute is deleted", func() {
@@ -1273,6 +1558,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// gateway 2 still in charge;
 					// no HTTP routes remain
+					// GRPCRoute 2 still exists
 					// TLSRoute 2 still exists
 					listener80 := getListenerByName(expGraph.Gateway, httpListenerName)
 					listener443 := getListenerByName(expGraph.Gateway, httpsListenerName)
@@ -1285,11 +1571,18 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(listener80.Routes, routeKey1)
 					delete(listener443.Routes, routeKey1)
+					delete(listener80.Routes, grpcRouteKey1)
+					delete(listener443.Routes, grpcRouteKey1)
 					delete(tlsListener.L4Routes, trKey1)
 
+					listener80.Routes[grpcRouteKey2] = expRouteGR2
+					listener443.Routes[grpcRouteKey2] = expRouteGR2
 					tlsListener.L4Routes[trKey2] = expRouteTR2
 
-					expGraph.Routes = map[graph.RouteKey]*graph.L7Route{}
+					delete(expGraph.Routes, routeKey1)
+					delete(expGraph.Routes, grpcRouteKey1)
+					expGraph.Routes[grpcRouteKey2] = expRouteGR2
+
 					delete(expGraph.L4Routes, trKey1)
 					expGraph.L4Routes[trKey2] = expRouteTR2
 
@@ -1301,11 +1594,54 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					delete(expGraph.ReferencedServices, expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
+				})
+			})
+			When("the second GRPCRoute is deleted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureDeleteChange(
+						&v1.GRPCRoute{},
+						types.NamespacedName{Namespace: "test", Name: "gr-2"},
+					)
+
+					// gateway 2 still in charge;
+					// no routes remain
+					listener80 := getListenerByName(expGraph.Gateway, httpListenerName)
+					listener443 := getListenerByName(expGraph.Gateway, httpsListenerName)
+					tlsListener := getListenerByName(expGraph.Gateway, tlsListenerName)
+
+					expGraph.Gateway.Source = gw2
+					listener80.Source = gw2.Spec.Listeners[0]
+					listener443.Source = gw2.Spec.Listeners[1]
+					tlsListener.Source = gw2.Spec.Listeners[2]
+
+					delete(listener80.Routes, routeKey1)
+					delete(listener443.Routes, routeKey1)
+					delete(listener80.Routes, grpcRouteKey1)
+					delete(listener443.Routes, grpcRouteKey1)
+					delete(tlsListener.L4Routes, trKey1)
+
+					tlsListener.L4Routes[trKey2] = expRouteTR2
+					expGraph.Routes = map[graph.RouteKey]*graph.L7Route{}
+
+					delete(expGraph.L4Routes, trKey1)
+					expGraph.L4Routes[trKey2] = expRouteTR2
+
+					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
+					listener443.ResolvedSecret = sameNsTLSSecretRef
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
+						Source: sameNsTLSSecret,
+					}
+
+					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
+					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					delete(expGraph.ReferencedServices, expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the second TLSRoute is deleted", func() {
@@ -1328,6 +1664,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(listener80.Routes, routeKey1)
 					delete(listener443.Routes, routeKey1)
+					delete(listener80.Routes, grpcRouteKey1)
+					delete(listener443.Routes, grpcRouteKey1)
 					delete(tlsListener.L4Routes, trKey1)
 
 					expGraph.Routes = map[graph.RouteKey]*graph.L7Route{}
@@ -1340,12 +1678,10 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServices = nil
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the GatewayClass is deleted", func() {
@@ -1365,12 +1701,10 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.ReferencedSecrets = nil
 
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServices = nil
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(expGraph)
 				})
 			})
 			When("the second Gateway is deleted", func() {
@@ -1381,12 +1715,10 @@ var _ = Describe("ChangeProcessor", func() {
 					)
 
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServices = nil
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(&graph.Graph{})
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {
@@ -1399,10 +1731,32 @@ var _ = Describe("ChangeProcessor", func() {
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServices = nil
 
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
-					Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
+					processAndValidateGraph(&graph.Graph{})
+				})
+			})
+			When("the first GRPCRoute is deleted", func() {
+				It("returns empty graph", func() {
+					processor.CaptureDeleteChange(
+						&v1.GRPCRoute{},
+						types.NamespacedName{Namespace: "test", Name: "gr-1"},
+					)
+
+					expRouteGR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
+					expGraph.ReferencedServices = nil
+
+					processAndValidateGraph(&graph.Graph{})
+				})
+			})
+			When("the first TLSRoute is deleted", func() {
+				It("returns empty graph", func() {
+					processor.CaptureDeleteChange(
+						&v1alpha2.TLSRoute{},
+						types.NamespacedName{Namespace: "test", Name: "tr-1"},
+					)
+
+					expGraph.ReferencedServices = nil
+
+					processAndValidateGraph(&graph.Graph{})
 				})
 			})
 		})
@@ -1468,11 +1822,11 @@ var _ = Describe("ChangeProcessor", func() {
 				invalidKindRef := createHTTPBackendRef(&kindInvalid, "bar-svc", &testNamespace)
 
 				// httproutes
-				hr1 = createRoute("hr1", "gw", "foo.example.com", fooRef)
-				hr2 = createRoute("hr2", "gw", "bar.example.com", barRef)
+				hr1 = createHTTPRoute("hr1", "gw", "foo.example.com", fooRef)
+				hr2 = createHTTPRoute("hr2", "gw", "bar.example.com", barRef)
 				// hr3 shares the same backendRef as hr2
-				hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef)
-				hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.com", invalidKindRef)
+				hr3 = createHTTPRoute("hr3", "gw", "bar.2.example.com", barRef)
+				hrInvalidBackendRef = createHTTPRoute("hr-invalid", "gw", "invalid.com", invalidKindRef)
 				hrMultipleRules = createRouteWithMultipleRules(
 					"hr-multiple-rules",
 					"gw",
@@ -2011,7 +2365,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(newGraph.NGFPolicies).To(BeEmpty())
 
 				gw = createGateway("gw", createHTTPListener())
-				route = createRoute("hr-1", "gw", "foo.example.com", v1.HTTPBackendRef{})
+				route = createHTTPRoute("hr-1", "gw", "foo.example.com", v1.HTTPBackendRef{})
 
 				csp = &ngfAPI.ClientSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2205,21 +2559,22 @@ var _ = Describe("ChangeProcessor", func() {
 		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
 		// -- this is done in 'Normal cases of processing changes'
 
-		//nolint:lll
 		var (
-			processor                                                                                                               *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName, npNsName types.NamespacedName
-			gc, gcUpdated                                                                                                           *v1.GatewayClass
-			gw1, gw1Updated, gw2                                                                                                    *v1.Gateway
-			hr1, hr1Updated, hr2                                                                                                    *v1.HTTPRoute
-			rg1, rg1Updated, rg2                                                                                                    *v1beta1.ReferenceGrant
-			svc, barSvc, unrelatedSvc                                                                                               *apiv1.Service
-			slice, barSlice, unrelatedSlice                                                                                         *discoveryV1.EndpointSlice
-			ns, unrelatedNS, testNs, barNs                                                                                          *apiv1.Namespace
-			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                                     *apiv1.Secret
-			cm, cmUpdated, unrelatedCM                                                                                              *apiv1.ConfigMap
-			btls, btlsUpdated                                                                                                       *v1alpha3.BackendTLSPolicy
-			np, npUpdated                                                                                                           *ngfAPI.NginxProxy
+			processor                                                                         *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, grNsName, gr2NsName, rgNsName, svcNsName types.NamespacedName
+			sliceNsName, secretNsName, cmNsName, btlsNsName, npNsName                         types.NamespacedName
+			gc, gcUpdated                                                                     *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                              *v1.Gateway
+			hr1, hr1Updated, hr2                                                              *v1.HTTPRoute
+			gr1, gr1Updated, gr2                                                              *v1.GRPCRoute
+			rg1, rg1Updated, rg2                                                              *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                         *apiv1.Service
+			slice, barSlice, unrelatedSlice                                                   *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                                    *apiv1.Namespace
+			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated               *apiv1.Secret
+			cm, cmUpdated, unrelatedCM                                                        *apiv1.ConfigMap
+			btls, btlsUpdated                                                                 *v1alpha3.BackendTLSPolicy
+			np, npUpdated                                                                     *ngfAPI.NginxProxy
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -2361,16 +2716,20 @@ var _ = Describe("ChangeProcessor", func() {
 			barRef := createHTTPBackendRef(&kindService, "bar-svc", &testNamespace)
 
 			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr-1"}
-
-			hr1 = createRoute("hr-1", "gw-1", "foo.example.com", fooRef, barRef)
-
+			hr1 = createHTTPRoute("hr-1", "gw-1", "foo.example.com", fooRef, barRef)
 			hr1Updated = hr1.DeepCopy()
 			hr1Updated.Generation++
-
 			hr2NsName = types.NamespacedName{Namespace: "test", Name: "hr-2"}
-
 			hr2 = hr1.DeepCopy()
 			hr2.Name = hr2NsName.Name
+
+			grNsName = types.NamespacedName{Namespace: "test", Name: "gr-1"}
+			gr1 = createGRPCRoute("gr-1", "gw-1", "foo.grpc.com")
+			gr1Updated = gr1.DeepCopy()
+			gr1Updated.Generation++
+			gr2NsName = types.NamespacedName{Namespace: "test", Name: "hr-2"}
+			gr2 = gr1.DeepCopy()
+			gr2.Name = gr2NsName.Name
 
 			svcNsName = types.NamespacedName{Namespace: "test", Name: "foo-svc"}
 			svc = &apiv1.Service{
@@ -2539,6 +2898,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(gr1)
 				processor.CaptureUpsertChange(rg1)
 				processor.CaptureUpsertChange(btls)
 				processor.CaptureUpsertChange(cm)
@@ -2553,6 +2913,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(gr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
@@ -2562,6 +2923,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(gr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
@@ -2575,6 +2937,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// we can't have a second GatewayClass, so we don't add it
 				processor.CaptureUpsertChange(gw2)
 				processor.CaptureUpsertChange(hr2)
+				processor.CaptureUpsertChange(gr2)
 				processor.CaptureUpsertChange(rg2)
 
 				changed, _ := processor.Process()
@@ -2586,6 +2949,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1.GatewayClass{}, gcNsName)
 					processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
 					processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
+					processor.CaptureDeleteChange(&v1.GRPCRoute{}, grNsName)
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 					processor.CaptureDeleteChange(&v1alpha3.BackendTLSPolicy{}, btlsNsName)
 					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
@@ -2594,6 +2958,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are non-changing changes
 					processor.CaptureUpsertChange(gw2)
 					processor.CaptureUpsertChange(hr2)
+					processor.CaptureUpsertChange(gr2)
 					processor.CaptureUpsertChange(rg2)
 
 					changed, _ := processor.Process()
@@ -2602,6 +2967,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			It("should report changed after deleting resources", func() {
 				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hr2NsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, gr2NsName)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
@@ -2613,6 +2979,8 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
 				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
 				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hr2NsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, grNsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, gr2NsName)
 				processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 
 				changed, _ := processor.Process()
@@ -2626,6 +2994,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(gr1)
 				processor.CaptureUpsertChange(secret)
 				processor.CaptureUpsertChange(barSecret)
 				processor.CaptureUpsertChange(cm)
@@ -2700,6 +3069,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(gr1)
 				processor.CaptureUpsertChange(rg1)
 				processor.CaptureUpsertChange(btls)
 
@@ -2730,6 +3100,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(gr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 
