@@ -192,9 +192,10 @@ func UninstallNGF(cfg InstallationConfig, k8sClient client.Client) ([]byte, erro
 func setTelemetryArgs(cfg InstallationConfig) []string {
 	var args []string
 
-	args = append(args, formatValueSet("nginxGateway.productTelemetry.enable", "false")...)
 	if cfg.Telemetry {
 		args = append(args, formatValueSet("nginxGateway.productTelemetry.enable", "true")...)
+	} else {
+		args = append(args, formatValueSet("nginxGateway.productTelemetry.enable", "false")...)
 	}
 	return args
 }
