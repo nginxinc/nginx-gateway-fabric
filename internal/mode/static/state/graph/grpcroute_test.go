@@ -149,7 +149,7 @@ func TestBuildGRPCRoutes(t *testing.T) {
 						Hostnames: gr.Spec.Hostnames,
 						Rules: []RouteRule{
 							{
-								Matches: convertGRPCMatches(gr.Spec.Rules[0].Matches),
+								Matches: ConvertGRPCMatches(gr.Spec.Rules[0].Matches),
 								Filters: RouteRuleFilters{
 									Valid: true,
 									Filters: []Filter{
@@ -486,7 +486,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grBoth.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grBoth.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
@@ -495,7 +495,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grBoth.Spec.Rules[1].Matches),
+							Matches:          ConvertGRPCMatches(grBoth.Spec.Rules[1].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -527,7 +527,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grEmptyMatch.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grEmptyMatch.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{{BackendRef: backendRef}},
 						},
 					},
@@ -555,7 +555,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 					Rules: []RouteRule{
 						{
 							ValidMatches:     true,
-							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 							Filters: RouteRuleFilters{
 								Filters: []Filter{
@@ -628,7 +628,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grInvalidMatchesEmptyMethodFields.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidMatchesEmptyMethodFields.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -671,7 +671,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grInvalidMatchesInvalidMethodFields.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidMatchesInvalidMethodFields.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -739,7 +739,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grOneInvalid.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 						{
@@ -748,7 +748,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[1].Matches),
+							Matches:          ConvertGRPCMatches(grOneInvalid.Spec.Rules[1].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -786,7 +786,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grInvalidHeadersInvalidType.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidHeadersInvalidType.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -824,7 +824,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grInvalidHeadersEmptyType.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidHeadersEmptyType.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -861,7 +861,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   true,
 								Filters: []Filter{},
 							},
-							Matches:          convertGRPCMatches(grInvalidMatchesNilMethodType.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidMatchesNilMethodType.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -900,7 +900,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   false,
 								Filters: convertGRPCRouteFilters(grInvalidFilter.Spec.Rules[0].Filters),
 							},
-							Matches:          convertGRPCMatches(grInvalidFilter.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -967,7 +967,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   false,
 								Filters: convertGRPCRouteFilters(grInvalidSnippetsFilter.Spec.Rules[0].Filters),
 							},
-							Matches:          convertGRPCMatches(grInvalidSnippetsFilter.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidSnippetsFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -1007,7 +1007,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   false,
 								Filters: convertGRPCRouteFilters(grUnresolvableSnippetsFilter.Spec.Rules[0].Filters),
 							},
-							Matches:          convertGRPCMatches(grUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -1051,7 +1051,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 								Valid:   false,
 								Filters: convertGRPCRouteFilters(grInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Filters),
 							},
-							Matches:          convertGRPCMatches(grInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
+							Matches:          ConvertGRPCMatches(grInvalidAndUnresolvableSnippetsFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
 						},
 					},
@@ -1146,7 +1146,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			httpMatches := convertGRPCMatches(test.methodMatches)
+			httpMatches := ConvertGRPCMatches(test.methodMatches)
 			g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
 		})
 	}
