@@ -1,0 +1,25 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: coffee-svc-usp-1
+spec:
+  zoneSize: 64k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: coffee-svc-usp-2
+spec:
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
+  keepAlive:
+    connections: 100
+    requests: 55
+    time: 1m
+    timeout: 5h
