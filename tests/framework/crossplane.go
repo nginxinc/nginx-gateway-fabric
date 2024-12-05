@@ -30,6 +30,8 @@ type ExpectedNginxField struct {
 	Location string
 	// Servers are the server names that the directive should exist in.
 	Servers []string
+	// Upstream are the upstream names that the directive should exist in.
+	Upstreams []string
 	// ValueSubstringAllowed allows the expected value to be a substring of the real value.
 	// This makes it easier for cases when real values are complex file names or contain things we
 	// don't care about, and we just want to check if a substring exists.
@@ -64,6 +66,8 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 					}
 				}
 			}
+
+			return validateUpstreamDirectives(expFieldCfg, directive)
 		}
 	}
 
@@ -73,6 +77,19 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 	}
 
 	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, string(b))
+}
+
+func validateUpstreamDirectives(expFieldCfg ExpectedNginxField, directive *Directive) error {
+	for _, upstreamName := range expFieldCfg.Upstreams {
+		if directive.Directive == "upstream" && directive.Args[0] == upstreamName {
+			for _, upstreamDirective := range directive.Block {
+				if expFieldCfg.fieldFound(upstreamDirective) {
+					return nil
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func getServerName(serverBlock Directives) string {

@@ -1,0 +1,49 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: coffee-svc-usp
+spec:
+  zoneSize: 512k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
+  keepAlive:
+    connections: 10
+    requests: 3
+    time: 10s
+    timeout: 50s
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: tea-multiple-svc-usp
+spec:
+  zoneSize: 128k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: tea
+    - group: core
+      kind: Service
+      name: coffee
+  keepAlive:
+    connections: 12
+    requests: 31
+    time: 20s
+    timeout: 40s
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: grpc-svc-usp
+spec:
+  targetRef:
+    group: core
+    kind: Service
+    name: grpc-backend
+  keepAlive:
+    connections: 10
+    requests: 3
+    time: 10s
+    timeout: 50s
