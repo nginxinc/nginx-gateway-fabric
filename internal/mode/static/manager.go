@@ -215,20 +215,11 @@ func StartManager(cfg config.Config) error {
 	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		k8sClient:       mgr.GetClient(),
-		k8sReader:       mgr.GetAPIReader(),
-		processor:       processor,
-		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator: ngxcfg.NewGeneratorImpl(
-			cfg.Plus,
-			&cfg.UsageReportConfig,
-			cfg.Logger.WithName("generator"),
-		),
-		logLevelSetter: logLevelSetter,
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
 		),
+		metricsCollector: handlerCollector,
 		nginxRuntimeMgr: ngxruntime.NewManagerImpl(
 			ngxPlusClient,
 			ngxruntimeCollector,
@@ -236,12 +227,21 @@ func StartManager(cfg config.Config) error {
 			processHandler,
 			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
 		),
-		statusUpdater:                 groupStatusUpdater,
+		statusUpdater:   groupStatusUpdater,
+		processor:       processor,
+		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator: ngxcfg.NewGeneratorImpl(
+			cfg.Plus,
+			&cfg.UsageReportConfig,
+			cfg.Logger.WithName("generator"),
+		),
+		k8sClient:                     mgr.GetClient(),
+		k8sReader:                     mgr.GetAPIReader(),
+		logLevelSetter:                logLevelSetter,
 		eventRecorder:                 recorder,
 		nginxConfiguredOnStartChecker: nginxChecker,
-		controlConfigNSName:           controlConfigNSName,
 		gatewayPodConfig:              cfg.GatewayPodConfig,
-		metricsCollector:              handlerCollector,
+		controlConfigNSName:           controlConfigNSName,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 		plus:                          cfg.Plus,

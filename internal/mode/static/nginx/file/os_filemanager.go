@@ -1,6 +1,7 @@
 package file
 
 import (
+	"io"
 	"io/fs"
 	"os"
 )
@@ -40,4 +41,13 @@ func (s *StdLibOSFileManager) Create(name string) (*os.File, error) {
 // Chmod wraps os.File.Chmod.
 func (s *StdLibOSFileManager) Chmod(file *os.File, mode os.FileMode) error {
 	return file.Chmod(mode)
+}
+
+// Open wraps os.Open.
+func (s *StdLibOSFileManager) Open(name string) (*os.File, error) { return os.Open(name) }
+
+// Copy wraps io.Copy.
+func (s *StdLibOSFileManager) Copy(dst io.Writer, src io.Reader) error {
+	_, err := io.Copy(dst, src)
+	return err
 }

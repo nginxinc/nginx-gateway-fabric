@@ -2,8 +2,6 @@ package main
 
 import (
 	"io"
-	"os"
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -474,7 +472,7 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 }
 
-func TestCopyCmdFlagValidation(t *testing.T) {
+func TestInitializeCmdFlagValidation(t *testing.T) {
 	t.Parallel()
 	tests := []flagTestCase{
 		{
@@ -482,6 +480,7 @@ func TestCopyCmdFlagValidation(t *testing.T) {
 			args: []string{
 				"--source=/my/file",
 				"--destination=dest/file",
+				"--nginx-plus",
 			},
 			wantErr: false,
 		},
@@ -513,27 +512,10 @@ func TestCopyCmdFlagValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			cmd := createCopyCommand()
+			cmd := createInitializeCommand()
 			testFlag(t, cmd, test)
 		})
 	}
-}
-
-func TestCopyFile(t *testing.T) {
-	t.Parallel()
-	g := NewWithT(t)
-
-	src, err := os.CreateTemp(os.TempDir(), "testfile")
-	g.Expect(err).ToNot(HaveOccurred())
-	defer os.Remove(src.Name())
-
-	dest, err := os.MkdirTemp(os.TempDir(), "testdir")
-	g.Expect(err).ToNot(HaveOccurred())
-	defer os.RemoveAll(dest)
-
-	g.Expect(copyFile(src.Name(), dest)).To(Succeed())
-	_, err = os.Stat(filepath.Join(dest, filepath.Base(src.Name())))
-	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestParseFlags(t *testing.T) {

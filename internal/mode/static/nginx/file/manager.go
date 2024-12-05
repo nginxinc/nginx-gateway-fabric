@@ -3,6 +3,7 @@ package file
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 
@@ -61,6 +62,10 @@ type OSFileManager interface {
 	Chmod(file *os.File, mode os.FileMode) error
 	// Write writes contents to the file.
 	Write(file *os.File, contents []byte) error
+	// Open opens the file.
+	Open(name string) (*os.File, error)
+	// Copy copies from src to dst.
+	Copy(dst io.Writer, src io.Reader) error
 }
 
 //counterfeiter:generate . Manager
@@ -113,7 +118,7 @@ func (m *ManagerImpl) ReplaceFiles(files []File) error {
 	m.lastWrittenPaths = make([]string, 0, len(files))
 
 	for _, file := range files {
-		if err := writeFile(m.osFileManager, file); err != nil {
+		if err := WriteFile(m.osFileManager, file); err != nil {
 			return fmt.Errorf("failed to write file %q of type %v: %w", file.Path, file.Type, err)
 		}
 
@@ -124,7 +129,7 @@ func (m *ManagerImpl) ReplaceFiles(files []File) error {
 	return nil
 }
 
-func writeFile(fileMgr OSFileManager, file File) error {
+func WriteFile(fileMgr OSFileManager, file File) error {
 	ensureType(file.Type)
 
 	f, err := fileMgr.Create(file.Path)
