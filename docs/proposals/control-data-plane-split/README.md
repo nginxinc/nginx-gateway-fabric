@@ -51,11 +51,10 @@ Whenever a user creates a Gateway resource, the control plane will provision an 
 
 - Both deployments should have read only filesystems.
 - Both deployments should have the minimal permissions required to perform their functions.
-- The nginx deployment should be configurable via the helm chart.
-  - Downside of this is that these options will apply to all nginx instances.
-  - We could introduce a CRD, but where would it attach? We already have NginxProxy which controls dynamic data plane configuration, and this may eventually attach to the Gateway instead of just the GatewayClass. Would a Deployment configuration fit in there, and would it be dynamic? That would require us to completely redeploy nginx if a user changes those settings.
-  - We could start with the helm chart option, and rely on user feedback to see if we need to get more granular.
-  - This could also involve creating a ConfigMap that the control plane consumes on startup and contains all nginx Deployment/Daemonset configuration, including NGINX Plus usage configuration.
+- The nginx deployment should be configurable via the helm chart and NginxProxy CRD.
+  - The NginxProxy CRD needs to be enhanced to work at the Gateway level. The nginx Deployment/Service configuration can then live in the NginxProxy CRD and either be applied globally (GatewayClass) or per Gateway. Certain fields (like a Service's `loadBalancerIP`) would have to be applied per-Gateway, so a user needs to be aware of where to attach the NginxProxy resource for these types of cases.
+  - The helm chart should allow for both globally setting configuration, as well as per Gateway. To start, we could just have the per-Gateway section of the values file contain the Gateway name, and it's up to a user to reference the resulting NginxProxy resource when they create that Gateway resource.
+  - A user can update the NginxProxy at runtime to change the Deployment/Service config, and we'll attempt to patch the Deployment and/or Service. If it fails, logs, events, and status are written.
 - Resources created for the nginx deployment (Service, Secrets, ConfigMap, etc.) should have configurable labels and annotations via the GatewayInfrastructure field in the Gateway resource. See [the GEP](https://gateway-api.sigs.k8s.io/geps/gep-1762/#automated-deployments).
 - Control plane creates the nginx deployment and service when a Gateway resource is created, in the same namespace as the Gateway resource. When the Gateway is deleted, the control plane deletes nginx deployment and service.
 - Control plane should label the nginx service and deployment with something related to the name of the Gateway so it can easily be linked. See [the GEP](https://gateway-api.sigs.k8s.io/geps/gep-1762/#automated-deployments).
