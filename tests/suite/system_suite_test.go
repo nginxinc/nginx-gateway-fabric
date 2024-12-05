@@ -99,6 +99,7 @@ type setupConfig struct {
 	deploy        bool
 	nfr           bool
 	debugLogLevel bool
+	telemetry     bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -151,6 +152,10 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		Skip("Graceful Recovery test must be run on Kind")
 	}
 
+	if clusterInfo.IsGKE && strings.Contains(GinkgoLabelFilter(), "longevity") {
+		cfg.telemetry = true
+	}
+
 	switch {
 	case *versionUnderTest != "":
 		version = *versionUnderTest
@@ -196,6 +201,7 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		ServiceType:     *serviceType,
 		IsGKEInternalLB: *isGKEInternalLB,
 		Plus:            *plusEnabled,
+		Telemetry:       cfg.telemetry,
 	}
 
 	// if we aren't installing from the public charts, then set the custom images

@@ -40,7 +40,7 @@ jobs:
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6.1.1
         with:
           working-directory: ${{ matrix.directory }}
-          version: v1.62.0 # renovate: datasource=github-tags depName=golangci/golangci-lint
+          version: v1.62.2 # renovate: datasource=github-tags depName=golangci/golangci-lint
 
   njs-lint:
     name: NJS Lint
@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Lint Actions
-        uses: reviewdog/action-actionlint@7eeec1dd160c2301eb28e1568721837d084558ad # v1.57.0
+        uses: reviewdog/action-actionlint@08ef4afa963243489a457cca426f705ce4e0d1a5 # v1.60.0
         with:
           actionlint_flags: -shellcheck ""
 
@@ -127,4 +127,4 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Lint YAML
-        uses: reviewdog/action-yamllint@e09f07780388032a624e9eb44a23fd1bbb4052cc # v1.19.0
+        uses: reviewdog/action-yamllint@1dca3ad811867be18fbe293a9818d715a6c2cd46 # v1.20.0

@@ -2,7 +2,7 @@ module github.com/nginxinc/nginx-gateway-fabric/tests/framework/crossplane
 
 go 1.23.1
 
-require github.com/nginxinc/nginx-go-crossplane v0.4.68
+require github.com/nginxinc/nginx-go-crossplane v0.4.69
 
 require (
 	github.com/jstemmer/go-junit-report v1.0.0 // indirect
