@@ -3,9 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -22,8 +20,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
+// These flags are shared by mutliple commands.
 const (
 	domain                = "gateway.nginx.org"
 	gatewayClassFlag      = "gatewayclass"
@@ -32,6 +32,7 @@ const (
 	gatewayCtlrNameFlag     = "gateway-ctlr-name"
 	gatewayCtlrNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
+	plusFlag = "nginx-plus"
 )
 
 func createRootCommand() *cobra.Command {
@@ -47,7 +48,6 @@ func createRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-//nolint:gocyclo
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
@@ -63,7 +63,6 @@ func createStaticModeCommand() *cobra.Command {
 		leaderElectionDisableFlag      = "leader-election-disable"
 		leaderElectionLockNameFlag     = "leader-election-lock-name"
 		productTelemetryDisableFlag    = "product-telemetry-disable"
-		plusFlag                       = "nginx-plus"
 		gwAPIExperimentalFlag          = "gateway-api-experimental-features"
 		usageReportSecretFlag          = "usage-report-secret"
 		usageReportEndpointFlag        = "usage-report-endpoint"
@@ -164,14 +163,9 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
 			}
 
-			namespace := os.Getenv("POD_NAMESPACE")
-			if namespace == "" {
-				return errors.New("POD_NAMESPACE environment variable must be set")
-			}
-
-			podName := os.Getenv("POD_NAME")
-			if podName == "" {
-				return errors.New("POD_NAME environment variable must be set")
+			podNsName, err := getPodNsName()
+			if err != nil {
+				return fmt.Errorf("could not get pod nsname: %w", err)
 			}
 
 			imageSource := os.Getenv("BUILD_AGENT")
@@ -229,8 +223,8 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayPodConfig: config.GatewayPodConfig{
 					PodIP:       podIP,
 					ServiceName: serviceName.value,
-					Namespace:   namespace,
-					Name:        podName,
+					Namespace:   podNsName.Namespace,
+					Name:        podNsName.Name,
 				},
 				HealthConfig: config.HealthConfig{
 					Enabled: !disableHealth,
@@ -244,7 +238,7 @@ func createStaticModeCommand() *cobra.Command {
 				LeaderElection: config.LeaderElectionConfig{
 					Enabled:  !disableLeaderElection,
 					LockName: leaderElectionLockName.String(),
-					Identity: podName,
+					Identity: podNsName.Name,
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
@@ -524,29 +518,50 @@ func createSleepCommand() *cobra.Command {
 	return cmd
 }
 
-func createCopyCommand() *cobra.Command {
+func createInitializeCommand() *cobra.Command {
 	// flag names
 	const srcFlag = "source"
 	const destFlag = "destination"
+
 	// flag values
 	var srcFiles []string
 	var dest string
+	var plus bool
 
 	cmd := &cobra.Command{
-		Use:   "copy",
-		Short: "Copy files to another directory",
+		Use:   "initialize",
+		Short: "Write initial configuration files",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := validateSleepArgs(srcFiles, dest); err != nil {
+			if err := validateCopyArgs(srcFiles, dest); err != nil {
 				return err
 			}
 
-			for _, src := range srcFiles {
-				if err := copyFile(src, dest); err != nil {
-					return err
-				}
+			podNsName, err := getPodNsName()
+			if err != nil {
+				return fmt.Errorf("could not get pod nsname: %w", err)
 			}
 
-			return nil
+			logger := ctlrZap.New()
+			klog.SetLogger(logger)
+			logger.Info(
+				"Starting init container",
+				"source filenames to copy", srcFiles,
+				"destination directory", dest,
+				"nginx-plus",
+				plus,
+			)
+			log.SetLogger(logger)
+
+			return initialize(initializeConfig{
+				controllerPodNSName: podNsName,
+				fileManager:         file.NewStdLibOSFileManager(),
+				logger:              logger,
+				plus:                plus,
+				copy: copyFiles{
+					srcFileNames: srcFiles,
+					destDirName:  dest,
+				},
+			})
 		},
 	}
 
@@ -564,29 +579,16 @@ func createCopyCommand() *cobra.Command {
 		"The destination directory for the source files to be copied to",
 	)
 
+	cmd.Flags().BoolVar(
+		&plus,
+		plusFlag,
+		false,
+		"Use NGINX Plus",
+	)
+
 	cmd.MarkFlagsRequiredTogether(srcFlag, destFlag)
 
 	return cmd
-}
-
-func copyFile(src, dest string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error opening source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(filepath.Join(dest, filepath.Base(src)))
-	if err != nil {
-		return fmt.Errorf("error creating destination file: %w", err)
-	}
-	defer destFile.Close()
-
-	if _, err := io.Copy(destFile, srcFile); err != nil {
-		return fmt.Errorf("error copying file contents: %w", err)
-	}
-
-	return nil
 }
 
 func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
@@ -633,4 +635,18 @@ func getBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
 	}
 
 	return
+}
+
+func getPodNsName() (types.NamespacedName, error) {
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		return types.NamespacedName{}, errors.New("POD_NAMESPACE environment variable must be set")
+	}
+
+	podName := os.Getenv("POD_NAME")
+	if podName == "" {
+		return types.NamespacedName{}, errors.New("POD_NAME environment variable must be set")
+	}
+
+	return types.NamespacedName{Namespace: namespace, Name: podName}, nil
 }

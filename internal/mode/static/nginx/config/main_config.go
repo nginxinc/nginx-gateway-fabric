@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -19,6 +20,23 @@ var (
 type mainConfig struct {
 	Includes []shared.Include
 	Conf     dataplane.Configuration
+}
+
+// GenerateDeploymentContextFile generates the deployment_ctx.json file needed for N+ licensing.
+// It's exported since it's used by the init container process.
+func GenerateDeploymentContextFile(depCtx dataplane.DeploymentContext) (file.File, error) {
+	depCtxBytes, err := json.Marshal(depCtx)
+	if err != nil {
+		return file.File{}, fmt.Errorf("error building deployment context for mgmt block: %w", err)
+	}
+
+	deploymentCtxFile := file.File{
+		Content: depCtxBytes,
+		Path:    mainIncludesFolder + "/deployment_ctx.json",
+		Type:    file.TypeRegular,
+	}
+
+	return deploymentCtxFile, nil
 }
 
 func executeMainConfig(conf dataplane.Configuration) []executeResult {
@@ -43,7 +61,6 @@ type mgmtConf struct {
 	Endpoint          string
 	Resolver          string
 	LicenseTokenFile  string
-	DeploymentCtxFile string
 	CACertFile        string
 	ClientSSLCertFile string
 	ClientSSLKeyFile  string
@@ -106,17 +123,10 @@ func (g GeneratorImpl) generateMgmtFiles(conf dataplane.Configuration) []file.Fi
 		files = append(files, keyFile)
 	}
 
-	depCtx, err := json.Marshal(conf.DeploymentContext)
+	deploymentCtxFile, err := GenerateDeploymentContextFile(conf.DeploymentContext)
 	if err != nil {
 		g.logger.Error(err, "error building deployment context for mgmt block")
 	} else {
-		deploymentCtxFile := file.File{
-			Content: depCtx,
-			Path:    mainIncludesFolder + "/deployment_ctx.json",
-			Type:    file.TypeRegular,
-		}
-
-		cfg.DeploymentCtxFile = deploymentCtxFile.Path
 		files = append(files, deploymentCtxFile)
 	}
 
