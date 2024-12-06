@@ -12,6 +12,15 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
+//counterfeiter:generate . Collector
+
+// Collector collects licensing information for N+.
+type Collector interface {
+	Collect(ctx context.Context, log logr.Logger) (dataplane.DeploymentContext, error)
+}
+
 const integrationID = "ngf"
 
 // DeploymentContextCollectorConfig contains the configuration for the DeploymentContextCollector.

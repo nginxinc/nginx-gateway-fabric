@@ -7,9 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-	ctlr "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
@@ -23,11 +20,11 @@ type copyFiles struct {
 }
 
 type initializeConfig struct {
-	controllerPodNSName types.NamespacedName
-	fileManager         file.OSFileManager
-	logger              logr.Logger
-	copy                copyFiles
-	plus                bool
+	collector   licensing.Collector
+	fileManager file.OSFileManager
+	logger      logr.Logger
+	copy        copyFiles
+	plus        bool
 }
 
 func initialize(cfg initializeConfig) error {
@@ -42,21 +39,10 @@ func initialize(cfg initializeConfig) error {
 		return nil
 	}
 
-	clusterCfg := ctlr.GetConfigOrDie()
-	k8sReader, err := client.New(clusterCfg, client.Options{})
-	if err != nil {
-		return fmt.Errorf("unable to initialize k8s client: %w", err)
-	}
-
-	dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-		K8sClientReader: k8sReader,
-		PodNSName:       cfg.controllerPodNSName,
-	})
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	depCtx, err := dcc.Collect(ctx, cfg.logger.WithName("deployCtxCollector"))
+	depCtx, err := cfg.collector.Collect(ctx, cfg.logger.WithName("deployCtxCollector"))
 	if err != nil {
 		return fmt.Errorf("failed to collect deployment context: %w", err)
 	}
