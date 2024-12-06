@@ -59,6 +59,8 @@ type eventHandlerConfig struct {
 	logLevelSetter logLevelSetter
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
+	// deployCtxCollector collects the deployment context for N+ licensing
+	deployCtxCollector licensing.Collector
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// gatewayPodConfig contains information about this Pod.
@@ -91,11 +93,6 @@ type objectFilter struct {
 	captureChangeInGraph bool
 }
 
-// deployCtxCollector collects the deployment context for N+ licensing.
-type deployCtxCollector interface {
-	Collect(ctx context.Context, logger logr.Logger) (dataplane.DeploymentContext, error)
-}
-
 // eventHandlerImpl implements EventHandler.
 // eventHandlerImpl is responsible for:
 // (1) Reconciling the Gateway API and Kubernetes built-in resources with the NGINX configuration.
@@ -111,8 +108,6 @@ type eventHandlerImpl struct {
 
 	latestReloadResult status.NginxReloadResult
 
-	deployCtxCollector deployCtxCollector
-
 	cfg  eventHandlerConfig
 	lock sync.Mutex
 
@@ -124,13 +119,6 @@ type eventHandlerImpl struct {
 func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 	handler := &eventHandlerImpl{
 		cfg: cfg,
-		deployCtxCollector: licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-			K8sClientReader: cfg.k8sReader,
-			PodNSName: types.NamespacedName{
-				Namespace: cfg.gatewayPodConfig.Namespace,
-				Name:      cfg.gatewayPodConfig.Name,
-			},
-		}),
 	}
 
 	handler.objectFilters = map[filterKey]objectFilter{
@@ -186,7 +174,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		depCtx, getErr := h.getDeploymentContext(ctx, logger)
+		depCtx, getErr := h.getDeploymentContext(ctx)
 		if getErr != nil {
 			logger.Error(getErr, "error getting deployment context for usage reporting")
 		}
@@ -202,7 +190,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		depCtx, getErr := h.getDeploymentContext(ctx, logger)
+		depCtx, getErr := h.getDeploymentContext(ctx)
 		if getErr != nil {
 			logger.Error(getErr, "error getting deployment context for usage reporting")
 		}
@@ -514,15 +502,12 @@ func getGatewayAddresses(
 }
 
 // getDeploymentContext gets the deployment context metadata for N+ reporting.
-func (h *eventHandlerImpl) getDeploymentContext(
-	ctx context.Context,
-	logger logr.Logger,
-) (dataplane.DeploymentContext, error) {
+func (h *eventHandlerImpl) getDeploymentContext(ctx context.Context) (dataplane.DeploymentContext, error) {
 	if !h.cfg.plus {
 		return dataplane.DeploymentContext{}, nil
 	}
 
-	return h.deployCtxCollector.Collect(ctx, logger.WithName("deployCtxCollector"))
+	return h.cfg.deployCtxCollector.Collect(ctx)
 }
 
 // GetLatestConfiguration gets the latest configuration.

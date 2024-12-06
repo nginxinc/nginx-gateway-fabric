@@ -47,6 +47,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
@@ -213,6 +214,14 @@ func StartManager(cfg config.Config) error {
 	)
 
 	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
+	deployCtxCollector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
+		K8sClientReader: mgr.GetAPIReader(),
+		PodNSName: types.NamespacedName{
+			Namespace: cfg.GatewayPodConfig.Namespace,
+			Name:      cfg.GatewayPodConfig.Name,
+		},
+		Logger: cfg.Logger.WithName("deployCtxCollector"),
+	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		nginxFileMgr: file.NewManagerImpl(
@@ -239,6 +248,7 @@ func StartManager(cfg config.Config) error {
 		k8sReader:                     mgr.GetAPIReader(),
 		logLevelSetter:                logLevelSetter,
 		eventRecorder:                 recorder,
+		deployCtxCollector:            deployCtxCollector,
 		nginxConfiguredOnStartChecker: nginxChecker,
 		gatewayPodConfig:              cfg.GatewayPodConfig,
 		controlConfigNSName:           controlConfigNSName,

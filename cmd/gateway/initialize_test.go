@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -35,7 +34,7 @@ func TestInitialize_OSS(t *testing.T) {
 	}
 
 	err := initialize(ic)
-	g.Expect(err).To(BeNil())
+	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(fakeFileMgr.CreateCallCount()).To(Equal(2))
 	g.Expect(fakeFileMgr.OpenCallCount()).To(Equal(2))
 	g.Expect(fakeFileMgr.CopyCallCount()).To(Equal(2))
@@ -106,7 +105,7 @@ func TestInitialize_Plus_Error(t *testing.T) {
 	collectErr := errors.New("collect error")
 	fakeFileMgr := &filefakes.FakeOSFileManager{}
 	fakeCollector := &licensingfakes.FakeCollector{
-		CollectStub: func(_ context.Context, _ logr.Logger) (dataplane.DeploymentContext, error) {
+		CollectStub: func(_ context.Context) (dataplane.DeploymentContext, error) {
 			return dataplane.DeploymentContext{}, collectErr
 		},
 	}

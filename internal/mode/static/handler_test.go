@@ -23,6 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing/licensingfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -105,6 +106,7 @@ var _ = Describe("eventHandler", func() {
 			nginxRuntimeMgr:               fakeNginxRuntimeMgr,
 			statusUpdater:                 fakeStatusUpdater,
 			eventRecorder:                 fakeEventRecorder,
+			deployCtxCollector:            &licensingfakes.FakeCollector{},
 			nginxConfiguredOnStartChecker: newNginxConfiguredOnStartChecker(),
 			controlConfigNSName:           types.NamespacedName{Namespace: namespace, Name: configName},
 			gatewayPodConfig: config.GatewayPodConfig{
@@ -702,21 +704,49 @@ var _ = Describe("getDeploymentContext", func() {
 		It("doesn't set the deployment context", func() {
 			handler := eventHandlerImpl{}
 
-			depCtx, err := handler.getDeploymentContext(context.Background(), ctlrZap.New())
+			depCtx, err := handler.getDeploymentContext(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(depCtx).To(Equal(dataplane.DeploymentContext{}))
 		})
 	})
 
 	When("nginx plus is true", func() {
-		It("returns an error on failure ", func() {
+		It("returns deployment context", func() {
+			expDepCtx := dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        "cluster-id",
+				InstallationID:   "installation-id",
+				ClusterNodeCount: 1,
+			}
+
 			handler := newEventHandlerImpl(eventHandlerConfig{
-				plus:      true,
-				k8sReader: fake.NewFakeClient(), // client with no runtime objects will cause the collector to error
+				plus: true,
+				deployCtxCollector: &licensingfakes.FakeCollector{
+					CollectStub: func(_ context.Context) (dataplane.DeploymentContext, error) {
+						return expDepCtx, nil
+					},
+				},
 			})
 
-			_, err := handler.getDeploymentContext(context.Background(), ctlrZap.New())
-			Expect(err).To(HaveOccurred())
+			dc, err := handler.getDeploymentContext(context.Background())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dc).To(Equal(expDepCtx))
+		})
+		It("returns error if it occurs", func() {
+			expErr := errors.New("collect error")
+
+			handler := newEventHandlerImpl(eventHandlerConfig{
+				plus: true,
+				deployCtxCollector: &licensingfakes.FakeCollector{
+					CollectStub: func(_ context.Context) (dataplane.DeploymentContext, error) {
+						return dataplane.DeploymentContext{}, expErr
+					},
+				},
+			})
+
+			dc, err := handler.getDeploymentContext(context.Background())
+			Expect(err).To(MatchError(expErr))
+			Expect(dc).To(Equal(dataplane.DeploymentContext{}))
 		})
 	})
 })

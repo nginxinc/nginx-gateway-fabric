@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
@@ -73,7 +72,7 @@ var _ = Describe("DeploymentContextCollector", func() {
 			ClusterNodeCount: 1,
 		}
 
-		depCtx, err := collector.Collect(context.Background(), ctlrZap.New())
+		depCtx, err := collector.Collect(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 		Expect(depCtx).To(Equal(expCtx))
 	})
@@ -83,7 +82,7 @@ var _ = Describe("DeploymentContextCollector", func() {
 			K8sClientReader: fake.NewFakeClient(),
 		})
 
-		_, err := collector.Collect(context.Background(), ctlrZap.New())
+		_, err := collector.Collect(context.Background())
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("error getting cluster information"))
 	})
@@ -100,7 +99,7 @@ var _ = Describe("DeploymentContextCollector", func() {
 			ClusterNodeCount: 1,
 		}
 
-		depCtx, err := collector.Collect(context.Background(), ctlrZap.New())
+		depCtx, err := collector.Collect(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 		Expect(depCtx).To(Equal(expCtx))
 	})
@@ -119,7 +118,7 @@ var _ = Describe("DeploymentContextCollector", func() {
 			ClusterNodeCount: 1,
 		}
 
-		depCtx, err := collector.Collect(context.Background(), ctlrZap.New())
+		depCtx, err := collector.Collect(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 		Expect(depCtx).To(Equal(expCtx))
 	})
