@@ -42,7 +42,7 @@ func initialize(cfg initializeConfig) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	depCtx, err := cfg.collector.Collect(ctx, cfg.logger.WithName("deployCtxCollector"))
+	depCtx, err := cfg.collector.Collect(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to collect deployment context: %w", err)
 	}

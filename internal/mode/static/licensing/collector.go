@@ -18,7 +18,7 @@ import (
 
 // Collector collects licensing information for N+.
 type Collector interface {
-	Collect(ctx context.Context, log logr.Logger) (dataplane.DeploymentContext, error)
+	Collect(ctx context.Context) (dataplane.DeploymentContext, error)
 }
 
 const integrationID = "ngf"
@@ -29,6 +29,8 @@ type DeploymentContextCollectorConfig struct {
 	K8sClientReader client.Reader
 	// PodNSName is the NamespacedName of the NGF Pod.
 	PodNSName types.NamespacedName
+	// Logger is the logger.
+	Logger logr.Logger
 }
 
 // DeploymentContextCollector collects the deployment context information needed for N+ licensing.
@@ -46,10 +48,7 @@ func NewDeploymentContextCollector(
 }
 
 // Collect collects all the information needed to create the deployment context for N+ licensing.
-func (c *DeploymentContextCollector) Collect(
-	ctx context.Context,
-	logger logr.Logger,
-) (dataplane.DeploymentContext, error) {
+func (c *DeploymentContextCollector) Collect(ctx context.Context) (dataplane.DeploymentContext, error) {
 	clusterInfo, err := telemetry.CollectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information: %w", err)
@@ -60,11 +59,11 @@ func (c *DeploymentContextCollector) Collect(
 	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
 	replicaSet, err := telemetry.GetPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
 	if err != nil {
-		logger.Error(err, "failed to get NGF installationID")
+		c.cfg.Logger.Error(err, "failed to get NGF installationID")
 	} else {
 		installationID, err = telemetry.GetDeploymentID(replicaSet)
 		if err != nil {
-			logger.Error(err, "failed to get NGF installationID")
+			c.cfg.Logger.Error(err, "failed to get NGF installationID")
 		}
 	}
 

@@ -550,11 +550,6 @@ func createInitializeCommand() *cobra.Command {
 				return fmt.Errorf("unable to initialize k8s client: %w", err)
 			}
 
-			dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-				K8sClientReader: k8sReader,
-				PodNSName:       podNsName,
-			})
-
 			logger := ctlrZap.New()
 			klog.SetLogger(logger)
 			logger.Info(
@@ -565,6 +560,12 @@ func createInitializeCommand() *cobra.Command {
 				plus,
 			)
 			log.SetLogger(logger)
+
+			dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
+				K8sClientReader: k8sReader,
+				PodNSName:       podNsName,
+				Logger:          logger.WithName("deployCtxCollector"),
+			})
 
 			return initialize(initializeConfig{
 				fileManager: file.NewStdLibOSFileManager(),
