@@ -588,7 +588,7 @@ func TestValidateSleepArgs(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			err := validateSleepArgs(tc.srcFiles, tc.dest)
+			err := validateCopyArgs(tc.srcFiles, tc.dest)
 			if !tc.expErr {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {

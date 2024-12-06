@@ -21,9 +21,7 @@ mgmt {
 	resolver {{ .Resolver }};
 	{{- end }}
 	license_token {{ .LicenseTokenFile }};
-	{{- if .DeploymentCtxFile }}
-	deployment_context {{ .DeploymentCtxFile }};
-	{{- end }}
+	deployment_context /etc/nginx/main-includes/deployment_ctx.json;
 	{{- if .SkipVerify }}
 	ssl_verify off;
 	{{- end }}
