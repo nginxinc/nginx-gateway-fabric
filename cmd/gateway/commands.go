@@ -23,6 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
+	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
@@ -161,16 +162,6 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating ports: %w", err)
 			}
 
-			podIP := os.Getenv("POD_IP")
-			if err := validateIP(podIP); err != nil {
-				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
-			}
-
-			podNsName, err := getPodNsName()
-			if err != nil {
-				return fmt.Errorf("could not get pod namespaced name: %w", err)
-			}
-
 			imageSource := os.Getenv("BUILD_AGENT")
 			if imageSource != "gha" && imageSource != "local" {
 				imageSource = "unknown"
@@ -215,6 +206,11 @@ func createStaticModeCommand() *cobra.Command {
 
 			flagKeys, flagValues := parseFlags(cmd.Flags())
 
+			podConfig, err := createGatewayPodConfig(serviceName.value)
+			if err != nil {
+				return fmt.Errorf("error creating gateway pod config: %w", err)
+			}
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -223,12 +219,7 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayClassName:         gatewayClassName.value,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
-				GatewayPodConfig: config.GatewayPodConfig{
-					PodIP:       podIP,
-					ServiceName: serviceName.value,
-					Namespace:   podNsName.Namespace,
-					Name:        podNsName.Name,
-				},
+				GatewayPodConfig:         podConfig,
 				HealthConfig: config.HealthConfig{
 					Enabled: !disableHealth,
 					Port:    healthListenPort.value,
@@ -241,7 +232,7 @@ func createStaticModeCommand() *cobra.Command {
 				LeaderElection: config.LeaderElectionConfig{
 					Enabled:  !disableLeaderElection,
 					LockName: leaderElectionLockName.String(),
-					Identity: podNsName.Name,
+					Identity: podConfig.Name,
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
@@ -539,9 +530,9 @@ func createInitializeCommand() *cobra.Command {
 				return err
 			}
 
-			podNsName, err := getPodNsName()
+			podUID, err := getValueFromEnv("POD_UID")
 			if err != nil {
-				return fmt.Errorf("could not get pod namespaced name: %w", err)
+				return fmt.Errorf("could not get pod UID: %w", err)
 			}
 
 			clusterCfg := ctlr.GetConfigOrDie()
@@ -563,15 +554,16 @@ func createInitializeCommand() *cobra.Command {
 
 			dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
 				K8sClientReader: k8sReader,
-				PodNSName:       podNsName,
+				PodUID:          podUID,
 				Logger:          logger.WithName("deployCtxCollector"),
 			})
 
 			return initialize(initializeConfig{
-				fileManager: file.NewStdLibOSFileManager(),
-				logger:      logger,
-				plus:        plus,
-				collector:   dcc,
+				fileManager:   file.NewStdLibOSFileManager(),
+				fileGenerator: ngxConfig.NewGeneratorImpl(plus, nil, logger.WithName("generator")),
+				logger:        logger,
+				plus:          plus,
+				collector:     dcc,
 				copy: copyFiles{
 					srcFileNames: srcFiles,
 					destDirName:  dest,
@@ -652,16 +644,43 @@ func getBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
 	return
 }
 
-func getPodNsName() (types.NamespacedName, error) {
-	namespace := os.Getenv("POD_NAMESPACE")
-	if namespace == "" {
-		return types.NamespacedName{}, errors.New("POD_NAMESPACE environment variable must be set")
+func createGatewayPodConfig(svcName string) (config.GatewayPodConfig, error) {
+	podIP, err := getValueFromEnv("POD_IP")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
 	}
 
-	podName := os.Getenv("POD_NAME")
-	if podName == "" {
-		return types.NamespacedName{}, errors.New("POD_NAME environment variable must be set")
+	podUID, err := getValueFromEnv("POD_UID")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
 	}
 
-	return types.NamespacedName{Namespace: namespace, Name: podName}, nil
+	ns, err := getValueFromEnv("POD_NAMESPACE")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	name, err := getValueFromEnv("POD_NAME")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	c := config.GatewayPodConfig{
+		PodIP:       podIP,
+		ServiceName: svcName,
+		Namespace:   ns,
+		Name:        name,
+		UID:         podUID,
+	}
+
+	return c, nil
+}
+
+func getValueFromEnv(key string) (string, error) {
+	val := os.Getenv(key)
+	if val == "" {
+		return "", fmt.Errorf("environment variable %s not set", key)
+	}
+
+	return val, nil
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 type copyFiles struct {
@@ -20,11 +19,12 @@ type copyFiles struct {
 }
 
 type initializeConfig struct {
-	collector   licensing.Collector
-	fileManager file.OSFileManager
-	logger      logr.Logger
-	copy        copyFiles
-	plus        bool
+	collector     licensing.Collector
+	fileManager   file.OSFileManager
+	fileGenerator config.Generator
+	logger        logr.Logger
+	copy          copyFiles
+	plus          bool
 }
 
 func initialize(cfg initializeConfig) error {
@@ -44,29 +44,21 @@ func initialize(cfg initializeConfig) error {
 
 	depCtx, err := cfg.collector.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to collect deployment context: %w", err)
+		cfg.logger.Error(err, "error collecting deployment context")
 	}
 
 	cfg.logger.Info("Deployment context collected", "deployment context", depCtx)
 
-	if err := writeDeploymentContextFile(cfg.fileManager, depCtx); err != nil {
-		return fmt.Errorf("failed to write deployment context file: %w", err)
-	}
-
-	cfg.logger.Info("Finished initializing configuration")
-
-	return nil
-}
-
-func writeDeploymentContextFile(osFileManager file.OSFileManager, depCtx dataplane.DeploymentContext) error {
-	depCtxFile, err := config.GenerateDeploymentContextFile(depCtx)
+	depCtxFile, err := cfg.fileGenerator.GenerateDeploymentContext(depCtx)
 	if err != nil {
 		return fmt.Errorf("failed to generate deployment context file: %w", err)
 	}
 
-	if err := file.WriteFile(osFileManager, depCtxFile); err != nil {
+	if err := file.WriteFile(cfg.fileManager, depCtxFile); err != nil {
 		return fmt.Errorf("failed to write deployment context file: %w", err)
 	}
+
+	cfg.logger.Info("Finished initializing configuration")
 
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing/licensingfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -68,62 +69,72 @@ func TestInitialize_OSS_Error(t *testing.T) {
 
 func TestInitialize_Plus(t *testing.T) {
 	t.Parallel()
-	g := NewGomegaWithT(t)
 
-	fakeFileMgr := &filefakes.FakeOSFileManager{}
-	fakeCollector := &licensingfakes.FakeCollector{}
-
-	ic := initializeConfig{
-		fileManager: fakeFileMgr,
-		logger:      zap.New(),
-		collector:   fakeCollector,
-		copy: copyFiles{
-			destDirName:  "destDir",
-			srcFileNames: []string{"src1", "src2"},
+	tests := []struct {
+		name       string
+		collectErr error
+		depCtx     dataplane.DeploymentContext
+	}{
+		{
+			name:       "normal",
+			collectErr: nil,
+			depCtx: dataplane.DeploymentContext{
+				Integration:      "ngf",
+				ClusterID:        "cluster-id",
+				InstallationID:   "install-id",
+				ClusterNodeCount: 2,
+			},
 		},
-		plus: true,
-	}
-
-	err := initialize(ic)
-	g.Expect(err).ToNot(HaveOccurred())
-	// copies
-	g.Expect(fakeFileMgr.OpenCallCount()).To(Equal(2))
-	g.Expect(fakeFileMgr.CopyCallCount()).To(Equal(2))
-
-	// 2 copies, 1 write deploy ctx
-	g.Expect(fakeFileMgr.CreateCallCount()).To(Equal(3))
-	// write deploy ctx
-	g.Expect(fakeCollector.CollectCallCount()).To(Equal(1))
-	g.Expect(fakeFileMgr.WriteCallCount()).To(Equal(1))
-	g.Expect(fakeFileMgr.ChmodCallCount()).To(Equal(1))
-}
-
-func TestInitialize_Plus_Error(t *testing.T) {
-	t.Parallel()
-	g := NewGomegaWithT(t)
-
-	collectErr := errors.New("collect error")
-	fakeFileMgr := &filefakes.FakeOSFileManager{}
-	fakeCollector := &licensingfakes.FakeCollector{
-		CollectStub: func(_ context.Context) (dataplane.DeploymentContext, error) {
-			return dataplane.DeploymentContext{}, collectErr
+		{
+			name:       "collecting deployment context errors",
+			collectErr: errors.New("collect error"),
+			depCtx: dataplane.DeploymentContext{
+				Integration:    "ngf",
+				InstallationID: "install-id",
+			},
 		},
 	}
 
-	ic := initializeConfig{
-		fileManager: fakeFileMgr,
-		logger:      zap.New(),
-		collector:   fakeCollector,
-		copy: copyFiles{
-			destDirName:  "destDir",
-			srcFileNames: []string{"src1", "src2"},
-		},
-		plus: true,
-	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
 
-	err := initialize(ic)
-	g.Expect(err).To(HaveOccurred())
-	g.Expect(err).To(MatchError(collectErr))
+			fakeFileMgr := &filefakes.FakeOSFileManager{}
+			fakeCollector := &licensingfakes.FakeCollector{
+				CollectStub: func(_ context.Context) (dataplane.DeploymentContext, error) {
+					return test.depCtx, test.collectErr
+				},
+			}
+			fakeGenerator := &configfakes.FakeGenerator{}
+
+			ic := initializeConfig{
+				fileManager:   fakeFileMgr,
+				logger:        zap.New(),
+				collector:     fakeCollector,
+				fileGenerator: fakeGenerator,
+				copy: copyFiles{
+					destDirName:  "destDir",
+					srcFileNames: []string{"src1", "src2"},
+				},
+				plus: true,
+			}
+
+			g.Expect(initialize(ic)).To(Succeed())
+			// copies
+			g.Expect(fakeFileMgr.OpenCallCount()).To(Equal(2))
+			g.Expect(fakeFileMgr.CopyCallCount()).To(Equal(2))
+
+			// 2 copies, 1 write deploy ctx
+			g.Expect(fakeFileMgr.CreateCallCount()).To(Equal(3))
+			// write deploy ctx
+			g.Expect(fakeGenerator.GenerateDeploymentContextCallCount()).To(Equal(1))
+			g.Expect(fakeGenerator.GenerateDeploymentContextArgsForCall(0)).To(Equal(test.depCtx))
+			g.Expect(fakeCollector.CollectCallCount()).To(Equal(1))
+			g.Expect(fakeFileMgr.WriteCallCount()).To(Equal(1))
+			g.Expect(fakeFileMgr.ChmodCallCount()).To(Equal(1))
+		})
+	}
 }
 
 func TestCopyFile(t *testing.T) {

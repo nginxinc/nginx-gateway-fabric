@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -27,8 +26,8 @@ const integrationID = "ngf"
 type DeploymentContextCollectorConfig struct {
 	// K8sClientReader is a Kubernetes API client Reader.
 	K8sClientReader client.Reader
-	// PodNSName is the NamespacedName of the NGF Pod.
-	PodNSName types.NamespacedName
+	// PodUID is the UID of the NGF Pod.
+	PodUID string
 	// Logger is the logger.
 	Logger logr.Logger
 }
@@ -49,30 +48,18 @@ func NewDeploymentContextCollector(
 
 // Collect collects all the information needed to create the deployment context for N+ licensing.
 func (c *DeploymentContextCollector) Collect(ctx context.Context) (dataplane.DeploymentContext, error) {
+	depCtx := dataplane.DeploymentContext{
+		Integration:    integrationID,
+		InstallationID: c.cfg.PodUID,
+	}
+
 	clusterInfo, err := telemetry.CollectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
-		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information: %w", err)
+		return depCtx, fmt.Errorf("error collecting cluster ID and cluster node count: %w", err)
 	}
 
-	var installationID string
-
-	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
-	replicaSet, err := telemetry.GetPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
-	if err != nil {
-		c.cfg.Logger.Error(err, "failed to get NGF installationID")
-	} else {
-		installationID, err = telemetry.GetDeploymentID(replicaSet)
-		if err != nil {
-			c.cfg.Logger.Error(err, "failed to get NGF installationID")
-		}
-	}
-
-	depCtx := dataplane.DeploymentContext{
-		Integration:      integrationID,
-		ClusterID:        clusterInfo.ClusterID,
-		ClusterNodeCount: clusterInfo.NodeCount,
-		InstallationID:   installationID,
-	}
+	depCtx.ClusterID = clusterInfo.ClusterID
+	depCtx.ClusterNodeCount = clusterInfo.NodeCount
 
 	return depCtx, nil
 }

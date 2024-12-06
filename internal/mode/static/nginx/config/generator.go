@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 
 	"github.com/go-logr/logr"
@@ -65,6 +67,8 @@ var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, mainIncl
 type Generator interface {
 	// Generate generates NGINX configuration files from internal representation.
 	Generate(configuration dataplane.Configuration) []file.File
+	// GenerateDeploymentContext generates the deployment context used for N+ licensing.
+	GenerateDeploymentContext(depCtx dataplane.DeploymentContext) (file.File, error)
 }
 
 // GeneratorImpl is an implementation of Generator.
@@ -123,6 +127,23 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 	}
 
 	return files
+}
+
+// GenerateDeploymentContext generates the deployment_ctx.json file needed for N+ licensing.
+// It's exported since it's used by the init container process.
+func (g GeneratorImpl) GenerateDeploymentContext(depCtx dataplane.DeploymentContext) (file.File, error) {
+	depCtxBytes, err := json.Marshal(depCtx)
+	if err != nil {
+		return file.File{}, fmt.Errorf("error building deployment context for mgmt block: %w", err)
+	}
+
+	deploymentCtxFile := file.File{
+		Content: depCtxBytes,
+		Path:    mainIncludesFolder + "/deployment_ctx.json",
+		Type:    file.TypeRegular,
+	}
+
+	return deploymentCtxFile, nil
 }
 
 func (g GeneratorImpl) executeConfigTemplates(

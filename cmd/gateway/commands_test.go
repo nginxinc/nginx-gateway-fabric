@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -9,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
 type flagTestCase struct {
@@ -660,24 +663,49 @@ func TestGetBuildInfo(t *testing.T) {
 	g.Expect(dirtyBuild).To(Not(Equal("unknown")))
 }
 
-func TestGetPodNsName(t *testing.T) {
+func TestCreateGatewayPodConfig(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)
 
+	// Order matters here
+	// We start with all env vars set
+	g.Expect(os.Setenv("POD_IP", "10.0.0.0")).To(Succeed())
+	g.Expect(os.Setenv("POD_UID", "1234")).To(Succeed())
 	g.Expect(os.Setenv("POD_NAMESPACE", "default")).To(Succeed())
 	g.Expect(os.Setenv("POD_NAME", "my-pod")).To(Succeed())
 
-	nsname, err := getPodNsName()
+	expCfg := config.GatewayPodConfig{
+		PodIP:       "10.0.0.0",
+		ServiceName: "svc",
+		Namespace:   "default",
+		Name:        "my-pod",
+		UID:         "1234",
+	}
+	cfg, err := createGatewayPodConfig("svc")
 	g.Expect(err).To(Not(HaveOccurred()))
-	g.Expect(nsname).To(Equal(types.NamespacedName{Name: "my-pod", Namespace: "default"}))
+	g.Expect(cfg).To(Equal(expCfg))
 
-	g.Expect(os.Unsetenv("POD_NAMESPACE")).To(Succeed())
-	nsname, err = getPodNsName()
-	g.Expect(err).To(HaveOccurred())
-	g.Expect(nsname).To(Equal(types.NamespacedName{}))
-
+	// unset name
 	g.Expect(os.Unsetenv("POD_NAME")).To(Succeed())
-	nsname, err = getPodNsName()
-	g.Expect(err).To(HaveOccurred())
-	g.Expect(nsname).To(Equal(types.NamespacedName{}))
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_NAME not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset namespace
+	g.Expect(os.Unsetenv("POD_NAMESPACE")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_NAMESPACE not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset UUID
+	g.Expect(os.Unsetenv("POD_UID")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_UID not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset IP
+	g.Expect(os.Unsetenv("POD_IP")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_IP not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
 }
