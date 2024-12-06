@@ -4,8 +4,13 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -47,6 +52,32 @@ func TestExecuteUpstreams(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "up5-usp",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "12.0.0.0",
+					Port:    80,
+				},
+			},
+			Policies: []policies.Policy{
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						ZoneSize: helpers.GetPointer[ngfAPI.Size]("2m"),
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Connections: helpers.GetPointer(int32(1)),
+							Requests:    helpers.GetPointer(int32(1)),
+							Time:        helpers.GetPointer[ngfAPI.Duration]("5s"),
+							Timeout:     helpers.GetPointer[ngfAPI.Duration]("10s"),
+						}),
+					},
+				},
+			},
+		},
 	}
 
 	expectedSubStrings := []string{
@@ -54,21 +85,32 @@ func TestExecuteUpstreams(t *testing.T) {
 		"upstream up2",
 		"upstream up3",
 		"upstream up4-ipv6",
+		"upstream up5-usp",
 		"upstream invalid-backend-ref",
+
 		"server 10.0.0.0:80;",
 		"server 11.0.0.0:80;",
 		"server [2001:db8::1]:80",
+		"server 12.0.0.0:80;",
 		"server unix:/var/run/nginx/nginx-503-server.sock;",
+
+		"keepalive 1;",
+		"keepalive_requests 1;",
+		"keepalive_time 5s;",
+		"keepalive_timeout 10s;",
+		"zone up5-usp 2m;",
 	}
 
-	upstreamResults := gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams})
+	upstreams := gen.createUpstreams(stateUpstreams, upstreamsettings.NewProcessor())
+
+	upstreamResults := gen.executeUpstreams(upstreams)
 	g := NewWithT(t)
 	g.Expect(upstreamResults).To(HaveLen(1))
-	upstreams := string(upstreamResults[0].data)
+	nginxUpstreams := string(upstreamResults[0].data)
 
 	g.Expect(upstreamResults[0].dest).To(Equal(httpConfigFile))
 	for _, expSubString := range expectedSubStrings {
-		g.Expect(upstreams).To(ContainSubstring(expSubString))
+		g.Expect(nginxUpstreams).To(ContainSubstring(expSubString))
 	}
 }
 
@@ -113,6 +155,32 @@ func TestCreateUpstreams(t *testing.T) {
 					Address: "fd00:10:244:1::7",
 					Port:    80,
 					IPv6:    true,
+				},
+			},
+		},
+		{
+			Name: "up5-usp",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "12.0.0.0",
+					Port:    80,
+				},
+			},
+			Policies: []policies.Policy{
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						ZoneSize: helpers.GetPointer[ngfAPI.Size]("2m"),
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Connections: helpers.GetPointer(int32(1)),
+							Requests:    helpers.GetPointer(int32(1)),
+							Time:        helpers.GetPointer[ngfAPI.Duration]("5s"),
+							Timeout:     helpers.GetPointer[ngfAPI.Duration]("10s"),
+						}),
+					},
 				},
 			},
 		},
@@ -162,6 +230,19 @@ func TestCreateUpstreams(t *testing.T) {
 			},
 		},
 		{
+			Name:     "up5-usp",
+			ZoneSize: "2m",
+			Servers: []http.UpstreamServer{
+				{
+					Address: "12.0.0.0:80",
+				},
+			},
+			KeepAliveConnections: 1,
+			KeepAliveRequests:    1,
+			KeepAliveTime:        "5s",
+			KeepAliveTimeout:     "10s",
+		},
+		{
 			Name: invalidBackendRef,
 			Servers: []http.UpstreamServer{
 				{
@@ -172,7 +253,7 @@ func TestCreateUpstreams(t *testing.T) {
 	}
 
 	g := NewWithT(t)
-	result := gen.createUpstreams(stateUpstreams)
+	result := gen.createUpstreams(stateUpstreams, upstreamsettings.NewProcessor())
 	g.Expect(result).To(Equal(expUpstreams))
 }
 
@@ -273,13 +354,107 @@ func TestCreateUpstream(t *testing.T) {
 			},
 			msg: "endpoint ipv6",
 		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "single upstreamSettingsPolicy",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+				Policies: []policies.Policy{
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp",
+							Namespace: "test",
+						},
+						Spec: ngfAPI.UpstreamSettingsPolicySpec{
+							ZoneSize: helpers.GetPointer[ngfAPI.Size]("2m"),
+							KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+								Connections: helpers.GetPointer(int32(1)),
+								Requests:    helpers.GetPointer(int32(1)),
+								Time:        helpers.GetPointer[ngfAPI.Duration]("5s"),
+								Timeout:     helpers.GetPointer[ngfAPI.Duration]("10s"),
+							}),
+						},
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "single upstreamSettingsPolicy",
+				ZoneSize: "2m",
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+			msg: "single upstreamSettingsPolicy",
+		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "multiple upstreamSettingsPolicies",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+				Policies: []policies.Policy{
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp1",
+							Namespace: "test",
+						},
+						Spec: ngfAPI.UpstreamSettingsPolicySpec{
+							ZoneSize: helpers.GetPointer[ngfAPI.Size]("2m"),
+							KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+								Time:    helpers.GetPointer[ngfAPI.Duration]("5s"),
+								Timeout: helpers.GetPointer[ngfAPI.Duration]("10s"),
+							}),
+						},
+					},
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp2",
+							Namespace: "test",
+						},
+						Spec: ngfAPI.UpstreamSettingsPolicySpec{
+							KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+								Connections: helpers.GetPointer(int32(1)),
+								Requests:    helpers.GetPointer(int32(1)),
+							}),
+						},
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "multiple upstreamSettingsPolicies",
+				ZoneSize: "2m",
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+			msg: "multiple upstreamSettingsPolicies",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
-			result := gen.createUpstream(test.stateUpstream)
+			result := gen.createUpstream(test.stateUpstream, upstreamsettings.NewProcessor())
 			g.Expect(result).To(Equal(test.expectedUpstream))
 		})
 	}
@@ -308,7 +483,7 @@ func TestCreateUpstreamPlus(t *testing.T) {
 		},
 	}
 
-	result := gen.createUpstream(stateUpstream)
+	result := gen.createUpstream(stateUpstream, upstreamsettings.NewProcessor())
 
 	g := NewWithT(t)
 	g.Expect(result).To(Equal(expectedUpstream))
@@ -504,4 +679,120 @@ func TestCreateStreamUpstreamPlus(t *testing.T) {
 
 	g := NewWithT(t)
 	g.Expect(result).To(Equal(expectedUpstream))
+}
+
+func TestCreateUpstreamMap(t *testing.T) {
+	t.Parallel()
+	gen := GeneratorImpl{}
+
+	up1 := http.Upstream{
+		Name: "up1",
+	}
+
+	up2 := http.Upstream{
+		Name: "up2",
+	}
+
+	up3 := http.Upstream{
+		Name: "up3",
+	}
+
+	upstreamMap := gen.createUpstreamMap([]http.Upstream{up1, up2, up3})
+	expUpstreamMap := UpstreamMap{
+		nameToUpstream: map[string]http.Upstream{
+			"up1": up1,
+			"up2": up2,
+			"up3": up3,
+		},
+	}
+
+	g := NewWithT(t)
+	g.Expect(upstreamMap).To(Equal(expUpstreamMap))
+}
+
+func TestKeepAliveEnabled(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		msg                 string
+		upstream            http.Upstream
+		expKeepAliveEnabled bool
+	}{
+		{
+			msg: "upstream with all keepAlive fields set",
+			upstream: http.Upstream{
+				Name:                 "upAllKeepAliveFieldsSet",
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+			expKeepAliveEnabled: true,
+		},
+		{
+			msg: "upstream with keepAlive connection field set",
+			upstream: http.Upstream{
+				Name:                 "upKeepAliveConnectionsSet",
+				KeepAliveConnections: 1,
+			},
+			expKeepAliveEnabled: true,
+		},
+		{
+			msg: "upstream with keepAlive requests field set",
+			upstream: http.Upstream{
+				Name:              "upKeepAliveRequestsSet",
+				KeepAliveRequests: 1,
+			},
+			expKeepAliveEnabled: true,
+		},
+		{
+			msg: "upstream with keepAlive time field set",
+			upstream: http.Upstream{
+				Name:          "upKeepAliveTimeSet",
+				KeepAliveTime: "5s",
+			},
+			expKeepAliveEnabled: true,
+		},
+		{
+			msg: "upstream with keepAlive timeout field set",
+			upstream: http.Upstream{
+				Name:             "upKeepAliveTimeoutSet",
+				KeepAliveTimeout: "10s",
+			},
+			expKeepAliveEnabled: true,
+		},
+		{
+			msg: "upstream with no keepAlive fields set",
+			upstream: http.Upstream{
+				Name: "upNoKeepAliveFieldsSet",
+			},
+			expKeepAliveEnabled: false,
+		},
+		{
+			msg: "upstream with keepAlive fields set to empty values",
+			upstream: http.Upstream{
+				Name:                 "upNoKeepAliveFieldsSet",
+				KeepAliveConnections: 0,
+				KeepAliveRequests:    0,
+				KeepAliveTime:        "",
+				KeepAliveTimeout:     "",
+			},
+			expKeepAliveEnabled: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			upstreamMap := UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					test.upstream.Name: test.upstream,
+				},
+			}
+
+			g.Expect(upstreamMap.keepAliveEnabled(test.upstream.Name)).To(Equal(test.expKeepAliveEnabled))
+		})
+	}
 }
