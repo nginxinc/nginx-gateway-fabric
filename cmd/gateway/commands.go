@@ -23,7 +23,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
-// These flags are shared by mutliple commands.
+// These flags are shared by multiple commands.
 const (
 	domain                = "gateway.nginx.org"
 	gatewayClassFlag      = "gatewayclass"
