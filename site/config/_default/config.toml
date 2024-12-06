@@ -60,7 +60,7 @@ pygmentsUseClasses = true
     "taxonomy",
     "taxonomyTerm"
   ]
-  logo = "NGINX-product-icon.svg"
+  logo = "NGINX-Gateway-Fabric-product-icon.svg"
 
 sectionPagesMenu = "docs"
 
