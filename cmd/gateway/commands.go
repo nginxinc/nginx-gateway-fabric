@@ -168,7 +168,7 @@ func createStaticModeCommand() *cobra.Command {
 
 			podNsName, err := getPodNsName()
 			if err != nil {
-				return fmt.Errorf("could not get pod nsname: %w", err)
+				return fmt.Errorf("could not get pod namespaced name: %w", err)
 			}
 
 			imageSource := os.Getenv("BUILD_AGENT")
@@ -541,7 +541,7 @@ func createInitializeCommand() *cobra.Command {
 
 			podNsName, err := getPodNsName()
 			if err != nil {
-				return fmt.Errorf("could not get pod nsname: %w", err)
+				return fmt.Errorf("could not get pod namespaced name: %w", err)
 			}
 
 			clusterCfg := ctlr.GetConfigOrDie()
