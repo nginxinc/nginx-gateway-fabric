@@ -14,12 +14,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog/v2"
+	ctlr "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
@@ -541,6 +544,17 @@ func createInitializeCommand() *cobra.Command {
 				return fmt.Errorf("could not get pod nsname: %w", err)
 			}
 
+			clusterCfg := ctlr.GetConfigOrDie()
+			k8sReader, err := client.New(clusterCfg, client.Options{})
+			if err != nil {
+				return fmt.Errorf("unable to initialize k8s client: %w", err)
+			}
+
+			dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
+				K8sClientReader: k8sReader,
+				PodNSName:       podNsName,
+			})
+
 			logger := ctlrZap.New()
 			klog.SetLogger(logger)
 			logger.Info(
@@ -553,10 +567,10 @@ func createInitializeCommand() *cobra.Command {
 			log.SetLogger(logger)
 
 			return initialize(initializeConfig{
-				controllerPodNSName: podNsName,
-				fileManager:         file.NewStdLibOSFileManager(),
-				logger:              logger,
-				plus:                plus,
+				fileManager: file.NewStdLibOSFileManager(),
+				logger:      logger,
+				plus:        plus,
+				collector:   dcc,
 				copy: copyFiles{
 					srcFileNames: srcFiles,
 					destDirName:  dest,

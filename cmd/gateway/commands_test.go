@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"os"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -657,4 +658,26 @@ func TestGetBuildInfo(t *testing.T) {
 	g.Expect(commitHash).To(Not(Equal("unknown")))
 	g.Expect(commitTime).To(Not(Equal("unknown")))
 	g.Expect(dirtyBuild).To(Not(Equal("unknown")))
+}
+
+func TestGetPodNsName(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	g.Expect(os.Setenv("POD_NAMESPACE", "default")).To(Succeed())
+	g.Expect(os.Setenv("POD_NAME", "my-pod")).To(Succeed())
+
+	nsname, err := getPodNsName()
+	g.Expect(err).To(Not(HaveOccurred()))
+	g.Expect(nsname).To(Equal(types.NamespacedName{Name: "my-pod", Namespace: "default"}))
+
+	g.Expect(os.Unsetenv("POD_NAMESPACE")).To(Succeed())
+	nsname, err = getPodNsName()
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(nsname).To(Equal(types.NamespacedName{}))
+
+	g.Expect(os.Unsetenv("POD_NAME")).To(Succeed())
+	nsname, err = getPodNsName()
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(nsname).To(Equal(types.NamespacedName{}))
 }
