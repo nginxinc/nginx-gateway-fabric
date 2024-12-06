@@ -215,6 +215,7 @@ func StartManager(cfg config.Config) error {
 	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
+		k8sConfig:       mgr.GetConfig(),
 		k8sClient:       mgr.GetClient(),
 		k8sReader:       mgr.GetAPIReader(),
 		processor:       processor,

@@ -1,6 +1,7 @@
 package static
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -11,6 +12,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -38,6 +41,7 @@ type handlerMetricsCollector interface {
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
+	k8sConfig *rest.Config
 	// nginxFileMgr is the file Manager for nginx.
 	nginxFileMgr file.Manager
 	// metricsCollector collects metrics for this controller.
@@ -234,12 +238,17 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 	if h.cfg.updateGatewayClassStatus {
 		gcReqs = status.PrepareGatewayClassRequests(gr.GatewayClass, gr.IgnoredGatewayClasses, transitionTime)
 	}
+	logs, err := h.GetPodLogs()
+	if err != nil {
+		logger.Error(err, "getting logs")
+	}
 	routeReqs := status.PrepareRouteRequests(
 		gr.L4Routes,
 		gr.Routes,
 		transitionTime,
 		h.latestReloadResult,
 		h.cfg.gatewayCtlrName,
+		logs,
 	)
 
 	polReqs := status.PrepareBackendTLSPolicyRequests(gr.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
@@ -273,6 +282,40 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 		h.latestReloadResult,
 	)
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gwReqs...)
+}
+
+func (h *eventHandlerImpl) GetPodLogs() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	namespace := h.cfg.gatewayPodConfig.Namespace
+	name := h.cfg.gatewayPodConfig.Name
+	opts := &v1.PodLogOptions{
+		Container: "nginx",
+		TailLines: helpers.GetPointer(int64(20)),
+	}
+
+	clientGoClient, err := kubernetes.NewForConfig(h.cfg.k8sConfig)
+	if err != nil {
+		return err.Error(), err
+	}
+
+	req := clientGoClient.CoreV1().Pods(namespace).GetLogs(name, opts)
+
+	logs, err := req.Stream(ctx)
+	if err != nil {
+		return fmt.Sprintf("error getting logs from Pod: %v", err),
+			fmt.Errorf("error getting logs from Pod: %w", err)
+	}
+	defer logs.Close()
+
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(logs); err != nil {
+		return fmt.Sprintf("error reading logs from Pod: %v", err),
+			fmt.Errorf("error reading logs from Pod: %w", err)
+	}
+
+	return buf.String(), nil
 }
 
 func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr.Logger, event interface{}) {

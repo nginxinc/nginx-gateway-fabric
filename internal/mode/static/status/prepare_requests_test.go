@@ -276,6 +276,7 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 		transitionTime,
 		NginxReloadResult{},
 		gatewayCtlrName,
+		"",
 	)
 
 	updater.Update(context.Background(), reqs...)
@@ -355,6 +356,7 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 		transitionTime,
 		NginxReloadResult{},
 		gatewayCtlrName,
+		"",
 	)
 
 	updater.Update(context.Background(), reqs...)
@@ -432,6 +434,7 @@ func TestBuildTLSRouteStatuses(t *testing.T) {
 		transitionTime,
 		NginxReloadResult{},
 		gatewayCtlrName,
+		"",
 	)
 
 	updater.Update(context.Background(), reqs...)
@@ -536,6 +539,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 		transitionTime,
 		NginxReloadResult{Error: errors.New("test error")},
 		gatewayCtlrName,
+		"",
 	)
 
 	g.Expect(reqs).To(HaveLen(1))

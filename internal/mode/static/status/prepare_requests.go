@@ -32,6 +32,7 @@ func PrepareRouteRequests(
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
 	gatewayCtlrName string,
+	logs string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
@@ -43,6 +44,7 @@ func PrepareRouteRequests(
 			nginxReloadRes,
 			transitionTime,
 			r.Source.GetGeneration(),
+			logs,
 		)
 
 		status := v1alpha2.TLSRouteStatus{
@@ -66,6 +68,7 @@ func PrepareRouteRequests(
 			nginxReloadRes,
 			transitionTime,
 			r.Source.GetGeneration(),
+			logs,
 		)
 
 		switch r.RouteType {
@@ -110,6 +113,7 @@ func prepareRouteStatus(
 	nginxReloadRes NginxReloadResult,
 	transitionTime metav1.Time,
 	srcGeneration int64,
+	logs string,
 ) v1.RouteStatus {
 	parents := make([]v1.RouteParentStatus, 0, len(parentRefs))
 
@@ -133,7 +137,7 @@ func prepareRouteStatus(
 		if nginxReloadRes.Error != nil {
 			allConds = append(
 				allConds,
-				staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
+				staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload+logs),
 			)
 		}
 

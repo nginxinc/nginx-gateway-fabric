@@ -11,6 +11,7 @@ rules:
   - namespaces
   - services
   - secrets
+  - pods/log
 {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - configmaps
 {{- end }}
