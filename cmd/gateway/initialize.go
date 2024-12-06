@@ -13,6 +13,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
+const (
+	collectDeployCtxTimeout = 10 * time.Second
+)
+
 type copyFiles struct {
 	destDirName  string
 	srcFileNames []string
@@ -39,7 +43,7 @@ func initialize(cfg initializeConfig) error {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), collectDeployCtxTimeout)
 	defer cancel()
 
 	depCtx, err := cfg.collector.Collect(ctx)
