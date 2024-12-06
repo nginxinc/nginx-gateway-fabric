@@ -15,6 +15,32 @@ upstream {{ $u.Name }} {
     {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
+	{{ if $u.KeepAliveConnections -}}
+	keepalive {{ $u.KeepAliveConnections }};
+	{{- end }}
+	{{ if $u.KeepAliveRequests -}}
+	keepalive_requests {{ $u.KeepAliveRequests }};
+	{{- end }}
+	{{ if $u.KeepAliveTime -}}
+	keepalive_time {{ $u.KeepAliveTime }};
+	{{- end }}
+	{{ if $u.KeepAliveTimeout -}}
+	keepalive_timeout {{ $u.KeepAliveTimeout }};
+	{{- end }}
+}
+{{ end -}}
+`
+
+const streamUpstreamsTemplateText = `
+{{ range $u := . }}
+upstream {{ $u.Name }} {
+    random two least_conn;
+    {{ if $u.ZoneSize -}}
+    zone {{ $u.Name }} {{ $u.ZoneSize }};
+    {{ end -}}
+    {{ range $server := $u.Servers }}
+    server {{ $server.Address }};
+    {{- end }}
 }
 {{ end -}}
 `

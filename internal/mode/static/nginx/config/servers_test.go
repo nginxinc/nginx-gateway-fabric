@@ -17,6 +17,11 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
+var (
+	httpBaseHeaders = createBaseProxySetHeaders(upgradeHeader, connectionHeader)
+	grpcBaseHeaders = createBaseProxySetHeaders(authorityHeader)
+)
+
 func TestExecuteServers(t *testing.T) {
 	t.Parallel()
 
@@ -182,7 +187,7 @@ func TestExecuteServers(t *testing.T) {
 	)
 
 	gen := GeneratorImpl{}
-	results := gen.executeServers(conf, fakeGenerator)
+	results := gen.executeServers(conf, fakeGenerator, UpstreamMap{})
 	g.Expect(results).To(HaveLen(len(expectedResults)))
 
 	for _, res := range results {
@@ -321,7 +326,7 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -439,7 +444,7 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{})
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -481,7 +486,7 @@ func TestExecuteServers_Plus(t *testing.T) {
 	g := NewWithT(t)
 
 	gen := GeneratorImpl{plus: true}
-	results := gen.executeServers(config, &policiesfakes.FakeGenerator{})
+	results := gen.executeServers(config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
 	g.Expect(results).To(HaveLen(2))
 
 	serverConf := string(results[0].data)
@@ -565,7 +570,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{})
+			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{}, UpstreamMap{})
 			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
@@ -1073,14 +1078,6 @@ func TestCreateServers(t *testing.T) {
 			Value: "$proxy_add_x_forwarded_for",
 		},
 		{
-			Name:  "Upgrade",
-			Value: "$http_upgrade",
-		},
-		{
-			Name:  "Connection",
-			Value: "$connection_upgrade",
-		},
-		{
 			Name:  "X-Real-IP",
 			Value: "$remote_addr",
 		},
@@ -1095,6 +1092,14 @@ func TestCreateServers(t *testing.T) {
 		{
 			Name:  "X-Forwarded-Port",
 			Value: "$server_port",
+		},
+		{
+			Name:  "Upgrade",
+			Value: "$http_upgrade",
+		},
+		{
+			Name:  "Connection",
+			Value: "$connection_upgrade",
 		},
 	}
 
@@ -1343,44 +1348,12 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:      "/proxy-set-headers/",
 				ProxyPass: "http://test_foo_80$request_uri",
-				ProxySetHeaders: []http.Header{
+				ProxySetHeaders: append([]http.Header{
 					{
 						Name:  "my-header",
 						Value: "${my_header_header_var}some-value-123",
 					},
-					{
-						Name:  "Host",
-						Value: "$gw_api_compliant_host",
-					},
-					{
-						Name:  "X-Forwarded-For",
-						Value: "$proxy_add_x_forwarded_for",
-					},
-					{
-						Name:  "Upgrade",
-						Value: "$http_upgrade",
-					},
-					{
-						Name:  "Connection",
-						Value: "$connection_upgrade",
-					},
-					{
-						Name:  "X-Real-IP",
-						Value: "$remote_addr",
-					},
-					{
-						Name:  "X-Forwarded-Proto",
-						Value: "$scheme",
-					},
-					{
-						Name:  "X-Forwarded-Host",
-						Value: "$host",
-					},
-					{
-						Name:  "X-Forwarded-Port",
-						Value: "$server_port",
-					},
-				},
+				}, httpBaseHeaders...),
 				ResponseHeaders: http.ResponseHeaders{
 					Add: []http.Header{
 						{
@@ -1397,44 +1370,12 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:      "= /proxy-set-headers",
 				ProxyPass: "http://test_foo_80$request_uri",
-				ProxySetHeaders: []http.Header{
+				ProxySetHeaders: append([]http.Header{
 					{
 						Name:  "my-header",
 						Value: "${my_header_header_var}some-value-123",
 					},
-					{
-						Name:  "Host",
-						Value: "$gw_api_compliant_host",
-					},
-					{
-						Name:  "X-Forwarded-For",
-						Value: "$proxy_add_x_forwarded_for",
-					},
-					{
-						Name:  "Upgrade",
-						Value: "$http_upgrade",
-					},
-					{
-						Name:  "Connection",
-						Value: "$connection_upgrade",
-					},
-					{
-						Name:  "X-Real-IP",
-						Value: "$remote_addr",
-					},
-					{
-						Name:  "X-Forwarded-Proto",
-						Value: "$scheme",
-					},
-					{
-						Name:  "X-Forwarded-Host",
-						Value: "$host",
-					},
-					{
-						Name:  "X-Forwarded-Port",
-						Value: "$server_port",
-					},
-				},
+				}, httpBaseHeaders...),
 				ResponseHeaders: http.ResponseHeaders{
 					Add: []http.Header{
 						{
@@ -1540,8 +1481,7 @@ func TestCreateServers(t *testing.T) {
 			Content: []byte("include-1"),
 		},
 	})
-
-	result, httpMatchPair := createServers(conf, fakeGenerator)
+	result, httpMatchPair := createServers(conf, fakeGenerator, UpstreamMap{})
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1762,6 +1702,7 @@ func TestCreateServersConflicts(t *testing.T) {
 			result, _ := createServers(
 				dataplane.Configuration{HTTPServers: httpServers},
 				&policiesfakes.FakeGenerator{},
+				UpstreamMap{},
 			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
@@ -1912,7 +1853,7 @@ func TestCreateServers_Includes(t *testing.T) {
 
 	conf := dataplane.Configuration{HTTPServers: httpServers, SSLServers: sslServers}
 
-	actualServers, matchPairs := createServers(conf, fakeGenerator)
+	actualServers, matchPairs := createServers(conf, fakeGenerator, UpstreamMap{})
 	g.Expect(matchPairs).To(BeEmpty())
 	g.Expect(actualServers).To(HaveLen(len(expServers)))
 
@@ -2073,7 +2014,7 @@ func TestCreateLocations_Includes(t *testing.T) {
 		},
 	})
 
-	locations, matches, grpc := createLocations(&httpServer, "1", fakeGenerator)
+	locations, matches, grpc := createLocations(&httpServer, "1", fakeGenerator, UpstreamMap{})
 
 	g := NewWithT(t)
 	g.Expect(grpc).To(BeFalse())
@@ -2256,10 +2197,15 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			locs, httpMatchPair, grpc := createLocations(&dataplane.VirtualServer{
-				PathRules: test.pathRules,
-				Port:      80,
-			}, "1", &policiesfakes.FakeGenerator{})
+			locs, httpMatchPair, grpc := createLocations(
+				&dataplane.VirtualServer{
+					PathRules: test.pathRules,
+					Port:      80,
+				},
+				"1",
+				&policiesfakes.FakeGenerator{},
+				UpstreamMap{},
+			)
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
 			g.Expect(grpc).To(Equal(test.grpc))
@@ -2897,6 +2843,8 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		filters         *dataplane.HTTPFilters
 		msg             string
 		expectedHeaders []http.Header
+		upstreamMap     UpstreamMap
+		backends        []dataplane.Backend
 		GRPC            bool
 	}{
 		{
@@ -2918,7 +2866,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Remove: []string{"my-header"},
 				},
 			},
-			expectedHeaders: []http.Header{
+			expectedHeaders: append([]http.Header{
 				{
 					Name:  "Authorization",
 					Value: "${authorization_header_var}my-auth",
@@ -2931,39 +2879,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Name:  "my-header",
 					Value: "",
 				},
-				{
-					Name:  "Host",
-					Value: "$gw_api_compliant_host",
-				},
-				{
-					Name:  "X-Forwarded-For",
-					Value: "$proxy_add_x_forwarded_for",
-				},
-				{
-					Name:  "Upgrade",
-					Value: "$http_upgrade",
-				},
-				{
-					Name:  "Connection",
-					Value: "$connection_upgrade",
-				},
-				{
-					Name:  "X-Real-IP",
-					Value: "$remote_addr",
-				},
-				{
-					Name:  "X-Forwarded-Proto",
-					Value: "$scheme",
-				},
-				{
-					Name:  "X-Forwarded-Host",
-					Value: "$host",
-				},
-				{
-					Name:  "X-Forwarded-Port",
-					Value: "$server_port",
-				},
-			},
+			}, httpBaseHeaders...),
 		},
 		{
 			msg: "with url rewrite hostname",
@@ -2994,14 +2910,6 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Value: "$proxy_add_x_forwarded_for",
 				},
 				{
-					Name:  "Upgrade",
-					Value: "$http_upgrade",
-				},
-				{
-					Name:  "Connection",
-					Value: "$connection_upgrade",
-				},
-				{
 					Name:  "X-Real-IP",
 					Value: "$remote_addr",
 				},
@@ -3016,6 +2924,14 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				{
 					Name:  "X-Forwarded-Port",
 					Value: "$server_port",
+				},
+				{
+					Name:  "Upgrade",
+					Value: "$http_upgrade",
+				},
+				{
+					Name:  "Connection",
+					Value: "$connection_upgrade",
 				},
 			},
 		},
@@ -3039,7 +2955,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Remove: []string{"my-header"},
 				},
 			},
-			expectedHeaders: []http.Header{
+			expectedHeaders: append([]http.Header{
 				{
 					Name:  "Authorization",
 					Value: "${authorization_header_var}my-auth",
@@ -3052,33 +2968,77 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Name:  "my-header",
 					Value: "",
 				},
+			}, grpcBaseHeaders...),
+		},
+		{
+			msg:             "upstream with keepAlive enabled",
+			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream": {
+						Name:                 "upstream",
+						KeepAliveConnections: 1,
+					},
+				},
+			},
+			backends: []dataplane.Backend{
 				{
-					Name:  "Host",
-					Value: "$gw_api_compliant_host",
+					UpstreamName: "upstream",
+				},
+			},
+		},
+		{
+			msg:             "multiple upstreams with keepAlive enabled",
+			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream1": {
+						Name:                 "upstream1",
+						KeepAliveConnections: 1,
+					},
+					"upstream2": {
+						Name:              "upstream2",
+						KeepAliveRequests: 1,
+					},
+					"upstream3": {
+						Name:          "upstream3",
+						KeepAliveTime: "5s",
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream1",
 				},
 				{
-					Name:  "X-Forwarded-For",
-					Value: "$proxy_add_x_forwarded_for",
+					UpstreamName: "upstream2",
 				},
 				{
-					Name:  "Authority",
-					Value: "$gw_api_compliant_host",
+					UpstreamName: "upstream3",
+				},
+			},
+		},
+		{
+			msg:             "mix of upstreams with keepAlive enabled and disabled",
+			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream1": {
+						Name:                 "upstream1",
+						KeepAliveConnections: 1,
+					},
+					"upstream2": {
+						Name:     "upstream2",
+						ZoneSize: "2m",
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream1",
 				},
 				{
-					Name:  "X-Real-IP",
-					Value: "$remote_addr",
-				},
-				{
-					Name:  "X-Forwarded-Proto",
-					Value: "$scheme",
-				},
-				{
-					Name:  "X-Forwarded-Host",
-					Value: "$host",
-				},
-				{
-					Name:  "X-Forwarded-Port",
-					Value: "$server_port",
+					UpstreamName: "upstream2",
 				},
 			},
 		},
@@ -3089,8 +3049,76 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			headers := generateProxySetHeaders(tc.filters, tc.GRPC)
+			headers := generateProxySetHeaders(tc.filters, tc.GRPC, tc.upstreamMap, tc.backends)
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
+	}
+}
+
+func TestCreateBaseProxySetHeaders(t *testing.T) {
+	t.Parallel()
+
+	baseHeaders := []http.Header{
+		{
+			Name:  "Host",
+			Value: "$gw_api_compliant_host",
+		},
+		{
+			Name:  "X-Forwarded-For",
+			Value: "$proxy_add_x_forwarded_for",
+		},
+		{
+			Name:  "X-Real-IP",
+			Value: "$remote_addr",
+		},
+		{
+			Name:  "X-Forwarded-Proto",
+			Value: "$scheme",
+		},
+		{
+			Name:  "X-Forwarded-Host",
+			Value: "$host",
+		},
+		{
+			Name:  "X-Forwarded-Port",
+			Value: "$server_port",
+		},
+	}
+
+	tests := []struct {
+		msg               string
+		additionalHeaders []http.Header
+		expBaseHeaders    []http.Header
+	}{
+		{
+			msg:               "no additional headers",
+			additionalHeaders: []http.Header{},
+			expBaseHeaders:    baseHeaders,
+		},
+		{
+			msg: "single additional headers",
+			additionalHeaders: []http.Header{
+				authorityHeader,
+			},
+			expBaseHeaders: append(baseHeaders, authorityHeader),
+		},
+		{
+			msg: "multiple additional headers",
+			additionalHeaders: []http.Header{
+				connectionHeader,
+				upgradeHeader,
+			},
+			expBaseHeaders: append(baseHeaders, connectionHeader, upgradeHeader),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			result := createBaseProxySetHeaders(test.additionalHeaders...)
+			g.Expect(result).To(Equal(test.expBaseHeaders))
 		})
 	}
 }
