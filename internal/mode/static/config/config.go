@@ -60,6 +60,8 @@ type GatewayPodConfig struct {
 	Namespace string
 	// Name is the name of the Pod.
 	Name string
+	// UID is the UID of the Pod.
+	UID string
 }
 
 // MetricsConfig specifies the metrics config.

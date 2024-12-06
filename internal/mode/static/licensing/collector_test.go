@@ -5,13 +5,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -19,33 +16,6 @@ import (
 var _ = Describe("DeploymentContextCollector", func() {
 	var (
 		clusterID = "test-uid"
-		ngfPod    = &v1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "pod1",
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: "ReplicaSet",
-						Name: "replicaset1",
-					},
-				},
-			},
-		}
-
-		ngfReplicaSet = &appsv1.ReplicaSet{
-			Spec: appsv1.ReplicaSetSpec{
-				Replicas: helpers.GetPointer[int32](1),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "replicaset1",
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: "Deployment",
-						Name: "Deployment1",
-						UID:  "test-uid-replicaSet",
-					},
-				},
-			},
-		}
 
 		kubeNamespace = &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -61,14 +31,14 @@ var _ = Describe("DeploymentContextCollector", func() {
 
 	It("collects the deployment context", func() {
 		collector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-			K8sClientReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
-			PodNSName:       types.NamespacedName{Name: ngfPod.Name},
+			K8sClientReader: fake.NewFakeClient(kubeNamespace, nodeList),
+			PodUID:          "pod-uid",
 		})
 
 		expCtx := dataplane.DeploymentContext{
 			Integration:      "ngf",
 			ClusterID:        clusterID,
-			InstallationID:   "test-uid-replicaSet",
+			InstallationID:   "pod-uid",
 			ClusterNodeCount: 1,
 		}
 
@@ -77,49 +47,20 @@ var _ = Describe("DeploymentContextCollector", func() {
 		Expect(depCtx).To(Equal(expCtx))
 	})
 
-	It("returns an error if cluster info isn't found", func() {
+	It("returns an error and default deployment context if cluster info isn't found", func() {
 		collector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
 			K8sClientReader: fake.NewFakeClient(),
+			PodUID:          "pod-uid",
 		})
 
-		_, err := collector.Collect(context.Background())
+		expCtx := dataplane.DeploymentContext{
+			Integration:    "ngf",
+			InstallationID: "pod-uid",
+		}
+
+		depCtx, err := collector.Collect(context.Background())
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("error getting cluster information"))
-	})
-
-	It("returns the deployment context when the replicaset isn't found", func() {
-		collector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-			K8sClientReader: fake.NewFakeClient(ngfPod, kubeNamespace, nodeList),
-			PodNSName:       types.NamespacedName{Name: ngfPod.Name},
-		})
-
-		expCtx := dataplane.DeploymentContext{
-			Integration:      "ngf",
-			ClusterID:        clusterID,
-			ClusterNodeCount: 1,
-		}
-
-		depCtx, err := collector.Collect(context.Background())
-		Expect(err).ToNot(HaveOccurred())
-		Expect(depCtx).To(Equal(expCtx))
-	})
-
-	It("returns the deployment context when the replicaset doesn't have a uid", func() {
-		ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID = ""
-
-		collector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
-			K8sClientReader: fake.NewFakeClient(ngfPod, ngfReplicaSet, kubeNamespace, nodeList),
-			PodNSName:       types.NamespacedName{Name: ngfPod.Name},
-		})
-
-		expCtx := dataplane.DeploymentContext{
-			Integration:      "ngf",
-			ClusterID:        clusterID,
-			ClusterNodeCount: 1,
-		}
-
-		depCtx, err := collector.Collect(context.Background())
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("error collecting cluster ID and cluster node count"))
 		Expect(depCtx).To(Equal(expCtx))
 	})
 })

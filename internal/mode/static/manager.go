@@ -216,11 +216,8 @@ func StartManager(cfg config.Config) error {
 	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
 	deployCtxCollector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
 		K8sClientReader: mgr.GetAPIReader(),
-		PodNSName: types.NamespacedName{
-			Namespace: cfg.GatewayPodConfig.Namespace,
-			Name:      cfg.GatewayPodConfig.Name,
-		},
-		Logger: cfg.Logger.WithName("deployCtxCollector"),
+		PodUID:          cfg.GatewayPodConfig.UID,
+		Logger:          cfg.Logger.WithName("deployCtxCollector"),
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
