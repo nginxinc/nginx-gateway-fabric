@@ -118,7 +118,7 @@ func processGRPCRouteRule(
 
 	return RouteRule{
 		ValidMatches:     validMatches,
-		Matches:          convertGRPCMatches(specRule.Matches),
+		Matches:          ConvertGRPCMatches(specRule.Matches),
 		Filters:          routeFilters,
 		RouteBackendRefs: backendRefs,
 	}, errors
@@ -174,7 +174,8 @@ func processGRPCRouteRules(
 	return rules, valid, conds
 }
 
-func convertGRPCMatches(grpcMatches []v1.GRPCRouteMatch) []v1.HTTPRouteMatch {
+// ConvertGRPCMatches converts a GRPCMatch list to an HTTPRouteMatch list.
+func ConvertGRPCMatches(grpcMatches []v1.GRPCRouteMatch) []v1.HTTPRouteMatch {
 	pathValue := "/"
 	pathType := v1.PathMatchType("PathPrefix")
 	// If no matches are specified, the implementation MUST match every gRPC request.
