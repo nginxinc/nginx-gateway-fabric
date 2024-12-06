@@ -17,6 +17,7 @@ import (
 
 // Collector collects licensing information for N+.
 type Collector interface {
+	// Collect collects the licensing information for N+ and returns it in the deployment context.
 	Collect(ctx context.Context) (dataplane.DeploymentContext, error)
 }
 
