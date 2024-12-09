@@ -47,7 +47,7 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			name: "zoneSize set",
+			name: "zone size set",
 			policies: []policies.Policy{
 				&ngfAPI.UpstreamSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -64,7 +64,7 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			name: "keepAlive Connections set",
+			name: "keep alive connections set",
 			policies: []policies.Policy{
 				&ngfAPI.UpstreamSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -83,7 +83,7 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			name: "keepAlive Requests set",
+			name: "keep alive requests set",
 			policies: []policies.Policy{
 				&ngfAPI.UpstreamSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			name: "keepAlive Time set",
+			name: "keep alive time set",
 			policies: []policies.Policy{
 				&ngfAPI.UpstreamSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -121,7 +121,7 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			name: "keepAlive Timeout set",
+			name: "keep alive timeout set",
 			policies: []policies.Policy{
 				&ngfAPI.UpstreamSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{

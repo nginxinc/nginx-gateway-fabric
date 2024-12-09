@@ -123,13 +123,13 @@ func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstre
 
 func (g GeneratorImpl) createUpstreams(
 	upstreams []dataplane.Upstream,
-	generator policies.UpstreamSettingsProcessor,
+	processor policies.UpstreamSettingsProcessor,
 ) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, g.createUpstream(u, generator))
+		ups = append(ups, g.createUpstream(u, processor))
 	}
 
 	ups = append(ups, createInvalidBackendRefUpstream())
@@ -139,9 +139,9 @@ func (g GeneratorImpl) createUpstreams(
 
 func (g GeneratorImpl) createUpstream(
 	up dataplane.Upstream,
-	generator policies.UpstreamSettingsProcessor,
+	processor policies.UpstreamSettingsProcessor,
 ) http.Upstream {
-	upstreamPolicySettings := generator.Process(up.Policies)
+	upstreamPolicySettings := processor.Process(up.Policies)
 
 	zoneSize := ossZoneSize
 	if g.plus {
