@@ -50,6 +50,8 @@ GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd6
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
 PLUS_ENABLED ?= false
 PLUS_LICENSE_FILE ?= $(SELF_DIR)license.jwt
+PLUS_USAGE_ENDPOINT ?=## The N+ usage endpoint. For development, please set to the N1 staging endpoint.
+
 override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) --build-arg BUILD_AGENT=$(BUILD_AGENT)
 
 .DEFAULT_GOAL := help
@@ -227,10 +229,16 @@ helm-install-local: install-gateway-crds ## Helm install NGF on configured kind 
 	helm install nginx-gateway $(CHART_DIR) --set nginx.image.repository=$(NGINX_PREFIX) --create-namespace --wait --set nginxGateway.image.pullPolicy=Never --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway $(HELM_PARAMETERS)
 
 .PHONY: helm-install-local-with-plus
-helm-install-local-with-plus: install-gateway-crds ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
+helm-install-local-with-plus: check-for-plus-usage-endpoint install-gateway-crds ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
 	kubectl create namespace nginx-gateway || true
 	kubectl -n nginx-gateway create secret generic nplus-license --from-file $(PLUS_LICENSE_FILE) || true
-	helm install nginx-gateway $(CHART_DIR) --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --wait --set nginxGateway.image.pullPolicy=Never --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway --set nginx.plus=true $(HELM_PARAMETERS)
+	helm install nginx-gateway $(CHART_DIR) --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --wait --set nginxGateway.image.pullPolicy=Never --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway --set nginx.plus=true --set nginx.usage.endpoint=$(NGINX_PLUS_USAGE_ENDPOINT) $(HELM_PARAMETERS)
+
+.PHONY: check-for-plus-usage-endpoint
+check-for-plus-usage-endpoint: ## Checks that the PLUS_USAGE_ENDPOINT is set in the environment. This env var is required when deploying or testing with N+.
+ifndef PLUS_USAGE_ENDPOINT
+	$(error PLUS_USAGE_ENDPOINT must be defined in your environment)
+endif
 
 # Debug Targets
 .PHONY: debug-build

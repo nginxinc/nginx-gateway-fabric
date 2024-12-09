@@ -139,7 +139,7 @@ jobs:
       - name: Setup license file for plus
         if: ${{ inputs.image == 'plus' }}
         env:
-          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REPORTING }}
         run: echo "${PLUS_LICENSE}" > license.jwt
 
       - name: Setup conformance tests
@@ -148,6 +148,7 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
+          export PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
           make helm-install-local${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
           make deploy-updated-provisioner PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests

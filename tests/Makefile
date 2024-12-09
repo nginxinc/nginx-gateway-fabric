@@ -109,7 +109,7 @@ sync-files-to-vm: ## Syncs your local NGF files with the NGF repo on the VM
 	./scripts/sync-files-to-vm.sh
 
 .PHONY: nfr-test
-nfr-test: ## Run the NFR tests on a GCP VM
+nfr-test: check-for-plus-usage-endpoint ## Run the NFR tests on a GCP VM
 	CI=$(CI) ./scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
@@ -130,10 +130,10 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL) --plus-enabled=$(PLUS_ENABLED) \
-		--plus-license-file-name=$(PLUS_LICENSE_FILE)
+		--plus-license-file-name=$(PLUS_LICENSE_FILE) --plus-usage-endpoint=$(PLUS_USAGE_ENDPOINT)
 
 .PHONY: test
-test: build-crossplane-image ## Runs the functional tests on your kind k8s cluster
+test: check-for-plus-usage-endpoint build-crossplane-image ## Runs the functional tests on your kind k8s cluster
 	kind load docker-image nginx-crossplane:latest --name $(CLUSTER_NAME)
 	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending \
 		--trace -r -v --buildvcs --force-newlines $(GITHUB_OUTPUT) \
@@ -143,7 +143,7 @@ test: build-crossplane-image ## Runs the functional tests on your kind k8s clust
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL) --cluster-name=$(CLUSTER_NAME) --plus-enabled=$(PLUS_ENABLED) \
-		--plus-license-file-name=$(PLUS_LICENSE_FILE)
+		--plus-license-file-name=$(PLUS_LICENSE_FILE) --plus-usage-endpoint=$(PLUS_USAGE_ENDPOINT)
 
 .PHONY: test-with-plus
 test-with-plus: PLUS_ENABLED=true
