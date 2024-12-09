@@ -1,6 +1,6 @@
 package policies
 
-// UpstreamSettingsProcessor defines an interface for an UpstreamSettingsPolicy processor'
+// UpstreamSettingsProcessor defines an interface for an UpstreamSettingsPolicy processor
 // to implement the process function.
 type UpstreamSettingsProcessor interface {
 	Process(policies []Policy) UpstreamSettings
