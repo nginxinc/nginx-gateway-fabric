@@ -19,8 +19,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
-
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
@@ -29,7 +29,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/status"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 type handlerMetricsCollector interface {
@@ -60,6 +59,8 @@ type eventHandlerConfig struct {
 	logLevelSetter logLevelSetter
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
+	// deployCtxCollector collects the deployment context for N+ licensing
+	deployCtxCollector licensing.Collector
 	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// gatewayPodConfig contains information about this Pod.
@@ -173,9 +174,9 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
-		if setErr != nil {
-			logger.Error(setErr, "error setting deployment context for usage reporting")
+		depCtx, getErr := h.getDeploymentContext(ctx)
+		if getErr != nil {
+			logger.Error(getErr, "error getting deployment context for usage reporting")
 		}
 		cfg.DeploymentContext = depCtx
 
@@ -189,9 +190,9 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
-		depCtx, setErr := h.setDeploymentCtx(ctx, logger)
-		if setErr != nil {
-			logger.Error(setErr, "error setting deployment context for usage reporting")
+		depCtx, getErr := h.getDeploymentContext(ctx)
+		if getErr != nil {
+			logger.Error(getErr, "error getting deployment context for usage reporting")
 		}
 		cfg.DeploymentContext = depCtx
 
@@ -500,45 +501,13 @@ func getGatewayAddresses(
 	return gwAddresses, nil
 }
 
-// setDeploymentCtx sets the deployment context metadata for nginx plus reporting.
-func (h *eventHandlerImpl) setDeploymentCtx(
-	ctx context.Context,
-	logger logr.Logger,
-) (dataplane.DeploymentContext, error) {
+// getDeploymentContext gets the deployment context metadata for N+ reporting.
+func (h *eventHandlerImpl) getDeploymentContext(ctx context.Context) (dataplane.DeploymentContext, error) {
 	if !h.cfg.plus {
 		return dataplane.DeploymentContext{}, nil
 	}
 
-	podNSName := types.NamespacedName{
-		Name:      h.cfg.gatewayPodConfig.Name,
-		Namespace: h.cfg.gatewayPodConfig.Namespace,
-	}
-
-	clusterInfo, err := telemetry.CollectClusterInformation(ctx, h.cfg.k8sReader)
-	if err != nil {
-		return dataplane.DeploymentContext{}, fmt.Errorf("error getting cluster information: %w", err)
-	}
-
-	var installationID string
-	// InstallationID is not required by the usage API, so if we can't get it, don't return an error
-	replicaSet, err := telemetry.GetPodReplicaSet(ctx, h.cfg.k8sReader, podNSName)
-	if err != nil {
-		logger.Error(err, "failed to get NGF installationID")
-	} else {
-		installationID, err = telemetry.GetDeploymentID(replicaSet)
-		if err != nil {
-			logger.Error(err, "failed to get NGF installationID")
-		}
-	}
-
-	depCtx := dataplane.DeploymentContext{
-		Integration:      "ngf",
-		ClusterID:        clusterInfo.ClusterID,
-		ClusterNodeCount: clusterInfo.NodeCount,
-		InstallationID:   installationID,
-	}
-
-	return depCtx, nil
+	return h.cfg.deployCtxCollector.Collect(ctx)
 }
 
 // GetLatestConfiguration gets the latest configuration.

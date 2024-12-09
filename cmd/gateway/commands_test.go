@@ -1,15 +1,17 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
 type flagTestCase struct {
@@ -474,7 +476,7 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 }
 
-func TestCopyCmdFlagValidation(t *testing.T) {
+func TestInitializeCmdFlagValidation(t *testing.T) {
 	t.Parallel()
 	tests := []flagTestCase{
 		{
@@ -482,6 +484,7 @@ func TestCopyCmdFlagValidation(t *testing.T) {
 			args: []string{
 				"--source=/my/file",
 				"--destination=dest/file",
+				"--nginx-plus",
 			},
 			wantErr: false,
 		},
@@ -513,27 +516,10 @@ func TestCopyCmdFlagValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			cmd := createCopyCommand()
+			cmd := createInitializeCommand()
 			testFlag(t, cmd, test)
 		})
 	}
-}
-
-func TestCopyFile(t *testing.T) {
-	t.Parallel()
-	g := NewWithT(t)
-
-	src, err := os.CreateTemp(os.TempDir(), "testfile")
-	g.Expect(err).ToNot(HaveOccurred())
-	defer os.Remove(src.Name())
-
-	dest, err := os.MkdirTemp(os.TempDir(), "testdir")
-	g.Expect(err).ToNot(HaveOccurred())
-	defer os.RemoveAll(dest)
-
-	g.Expect(copyFile(src.Name(), dest)).To(Succeed())
-	_, err = os.Stat(filepath.Join(dest, filepath.Base(src.Name())))
-	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestParseFlags(t *testing.T) {
@@ -675,4 +661,51 @@ func TestGetBuildInfo(t *testing.T) {
 	g.Expect(commitHash).To(Not(Equal("unknown")))
 	g.Expect(commitTime).To(Not(Equal("unknown")))
 	g.Expect(dirtyBuild).To(Not(Equal("unknown")))
+}
+
+func TestCreateGatewayPodConfig(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	// Order matters here
+	// We start with all env vars set
+	g.Expect(os.Setenv("POD_IP", "10.0.0.0")).To(Succeed())
+	g.Expect(os.Setenv("POD_UID", "1234")).To(Succeed())
+	g.Expect(os.Setenv("POD_NAMESPACE", "default")).To(Succeed())
+	g.Expect(os.Setenv("POD_NAME", "my-pod")).To(Succeed())
+
+	expCfg := config.GatewayPodConfig{
+		PodIP:       "10.0.0.0",
+		ServiceName: "svc",
+		Namespace:   "default",
+		Name:        "my-pod",
+		UID:         "1234",
+	}
+	cfg, err := createGatewayPodConfig("svc")
+	g.Expect(err).To(Not(HaveOccurred()))
+	g.Expect(cfg).To(Equal(expCfg))
+
+	// unset name
+	g.Expect(os.Unsetenv("POD_NAME")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_NAME not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset namespace
+	g.Expect(os.Unsetenv("POD_NAMESPACE")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_NAMESPACE not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset pod UID
+	g.Expect(os.Unsetenv("POD_UID")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_UID not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
+
+	// unset IP
+	g.Expect(os.Unsetenv("POD_IP")).To(Succeed())
+	cfg, err = createGatewayPodConfig("svc")
+	g.Expect(err).To(MatchError(errors.New("environment variable POD_IP not set")))
+	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
 }
