@@ -697,7 +697,7 @@ func TestCreateGatewayPodConfig(t *testing.T) {
 	g.Expect(err).To(MatchError(errors.New("environment variable POD_NAMESPACE not set")))
 	g.Expect(cfg).To(Equal(config.GatewayPodConfig{}))
 
-	// unset UUID
+	// unset pod UID
 	g.Expect(os.Unsetenv("POD_UID")).To(Succeed())
 	cfg, err = createGatewayPodConfig("svc")
 	g.Expect(err).To(MatchError(errors.New("environment variable POD_UID not set")))
