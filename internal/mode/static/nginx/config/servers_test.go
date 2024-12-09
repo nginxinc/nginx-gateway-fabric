@@ -2971,8 +2971,11 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			}, grpcBaseHeaders...),
 		},
 		{
-			msg:             "upstream with keepAlive enabled",
-			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			msg: "upstream with keepAlive enabled",
+			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
+				Name:  connectionHeader.Name,
+				Value: "",
+			}),
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream": {
@@ -2988,8 +2991,11 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg:             "multiple upstreams with keepAlive enabled",
-			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			msg: "multiple upstreams with keepAlive enabled",
+			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
+				Name:  connectionHeader.Name,
+				Value: "",
+			}),
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream1": {
@@ -3019,8 +3025,11 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg:             "mix of upstreams with keepAlive enabled and disabled",
-			expectedHeaders: createBaseProxySetHeaders(upgradeHeader),
+			msg: "mix of upstreams with keepAlive enabled and disabled",
+			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
+				Name:  connectionHeader.Name,
+				Value: "",
+			}),
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream1": {

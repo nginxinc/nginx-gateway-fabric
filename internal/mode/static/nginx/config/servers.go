@@ -727,11 +727,16 @@ func generateProxySetHeaders(
 	um UpstreamMap,
 	backends []dataplane.Backend,
 ) []http.Header {
-	var keepAlive bool
+	modifiedConnectionHeader := connectionHeader
 
 	for _, backend := range backends {
 		if um.keepAliveEnabled(backend.UpstreamName) {
-			keepAlive = true
+			// if keep-alive settings are enabled on any upstream, the connection header value
+			// must be empty for the location
+			modifiedConnectionHeader = http.Header{
+				Name:  connectionHeader.Name,
+				Value: "",
+			}
 			break
 		}
 	}
@@ -741,10 +746,7 @@ func generateProxySetHeaders(
 		extraHeaders = append(extraHeaders, authorityHeader)
 	} else {
 		extraHeaders = append(extraHeaders, upgradeHeader)
-
-		if !keepAlive {
-			extraHeaders = append(extraHeaders, connectionHeader)
-		}
+		extraHeaders = append(extraHeaders, modifiedConnectionHeader)
 	}
 
 	headers := createBaseProxySetHeaders(extraHeaders...)
