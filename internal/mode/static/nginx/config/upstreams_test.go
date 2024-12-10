@@ -448,6 +448,35 @@ func TestCreateUpstream(t *testing.T) {
 			},
 			msg: "multiple upstreamSettingsPolicies",
 		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "empty upstreamSettingsPolicies",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+				Policies: []policies.Policy{
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp1",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "empty upstreamSettingsPolicies",
+				ZoneSize: ossZoneSize,
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
+			},
+			msg: "empty upstreamSettingsPolicies",
+		},
 	}
 
 	for _, test := range tests {
