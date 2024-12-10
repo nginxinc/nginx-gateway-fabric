@@ -39,11 +39,13 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				ZoneSize:             "2m",
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				ZoneSize: "2m",
+				KeepAlive: policies.KeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 		},
 		{
@@ -79,7 +81,9 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAliveConnections: 1,
+				KeepAlive: policies.KeepAlive{
+					Connections: 1,
+				},
 			},
 		},
 		{
@@ -98,7 +102,9 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAliveRequests: 1,
+				KeepAlive: policies.KeepAlive{
+					Requests: 1,
+				},
 			},
 		},
 		{
@@ -117,7 +123,9 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAliveTime: "5s",
+				KeepAlive: policies.KeepAlive{
+					Time: "5s",
+				},
 			},
 		},
 		{
@@ -136,7 +144,9 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAliveTimeout: "10s",
+				KeepAlive: policies.KeepAlive{
+					Timeout: "10s",
+				},
 			},
 		},
 		{
@@ -210,11 +220,13 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				ZoneSize:             "2m",
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				ZoneSize: "2m",
+				KeepAlive: policies.KeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 		},
 		{
@@ -298,11 +310,13 @@ func TestProcess(t *testing.T) {
 				},
 			},
 			expUpstreamSettings: policies.UpstreamSettings{
-				ZoneSize:             "2m",
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				ZoneSize: "2m",
+				KeepAlive: policies.KeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 		},
 	}

@@ -179,10 +179,10 @@ func (g GeneratorImpl) createUpstream(
 		Name:                 up.Name,
 		ZoneSize:             zoneSize,
 		Servers:              upstreamServers,
-		KeepAliveConnections: upstreamPolicySettings.KeepAliveConnections,
-		KeepAliveRequests:    upstreamPolicySettings.KeepAliveRequests,
-		KeepAliveTime:        upstreamPolicySettings.KeepAliveTime,
-		KeepAliveTimeout:     upstreamPolicySettings.KeepAliveTimeout,
+		KeepAliveConnections: upstreamPolicySettings.KeepAlive.Connections,
+		KeepAliveRequests:    upstreamPolicySettings.KeepAlive.Requests,
+		KeepAliveTime:        upstreamPolicySettings.KeepAlive.Time,
+		KeepAliveTimeout:     upstreamPolicySettings.KeepAlive.Timeout,
 	}
 }
 

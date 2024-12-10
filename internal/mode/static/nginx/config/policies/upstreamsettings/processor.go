@@ -5,12 +5,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 )
 
-// Processor processes UpstreamSettingsPolicies.
+// Processor processes UpstreamSettingsPolicies. It implements policies.UpstreamSettingsProcessor.
 type Processor struct{}
 
 // NewProcessor returns a new instance of Processor.
-func NewProcessor() *Processor {
-	return &Processor{}
+func NewProcessor() Processor {
+	return Processor{}
 }
 
 // Process processes policies into an UpstreamSettings object. The policies are already validated and are guaranteed
@@ -37,19 +37,19 @@ func processPolicies(pols []policies.Policy) policies.UpstreamSettings {
 
 		if usp.Spec.KeepAlive != nil {
 			if usp.Spec.KeepAlive.Connections != nil {
-				upstreamSettings.KeepAliveConnections = *usp.Spec.KeepAlive.Connections
+				upstreamSettings.KeepAlive.Connections = *usp.Spec.KeepAlive.Connections
 			}
 
 			if usp.Spec.KeepAlive.Requests != nil {
-				upstreamSettings.KeepAliveRequests = *usp.Spec.KeepAlive.Requests
+				upstreamSettings.KeepAlive.Requests = *usp.Spec.KeepAlive.Requests
 			}
 
 			if usp.Spec.KeepAlive.Time != nil {
-				upstreamSettings.KeepAliveTime = string(*usp.Spec.KeepAlive.Time)
+				upstreamSettings.KeepAlive.Time = string(*usp.Spec.KeepAlive.Time)
 			}
 
 			if usp.Spec.KeepAlive.Timeout != nil {
-				upstreamSettings.KeepAliveTimeout = string(*usp.Spec.KeepAlive.Timeout)
+				upstreamSettings.KeepAlive.Timeout = string(*usp.Spec.KeepAlive.Timeout)
 			}
 		}
 	}
