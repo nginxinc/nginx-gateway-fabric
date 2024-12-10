@@ -13,7 +13,9 @@ func NewProcessor() *Processor {
 	return &Processor{}
 }
 
-// Process processes policy configuration for an upstream block.
+// Process processes policies into an UpstreamSettings object. The policies are already validated and are guaranteed
+// to not contain overlapping settings. This method merges all fields in the policies into a single UpstreamSettings
+// object.
 func (g Processor) Process(pols []policies.Policy) policies.UpstreamSettings {
 	return processPolicies(pols)
 }
