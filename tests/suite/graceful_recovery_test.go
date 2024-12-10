@@ -367,7 +367,7 @@ func checkContainerLogsForErrors(ngfPodName string, checkNginxLogsOnly bool) {
 		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
 		if strings.Contains(line, "[error]") {
 			expectedError1 := "connect() failed (111: Connection refused)"
-			expectedError2 := "product.connect.nginx.com could not be resolved"
+			expectedError2 := "could not be resolved (host not found) during usage report"
 			expectedError3 := "server returned 429"
 			// FIXME(salonichf5) remove this error message check
 			// when https://github.com/nginxinc/nginx-gateway-fabric/issues/2090 is completed.
