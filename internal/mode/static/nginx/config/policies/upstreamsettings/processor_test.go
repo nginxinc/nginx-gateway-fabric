@@ -152,6 +152,71 @@ func TestProcess(t *testing.T) {
 			},
 			expUpstreamSettings: policies.UpstreamSettings{},
 		},
+		{
+			name: "multiple policies",
+			policies: []policies.Policy{
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp-zonesize",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						ZoneSize: helpers.GetPointer[ngfAPI.Size]("2m"),
+					},
+				},
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp-keepalive-connections",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Connections: helpers.GetPointer(int32(1)),
+						}),
+					},
+				},
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp-keepalive-requests",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Requests: helpers.GetPointer(int32(1)),
+						}),
+					},
+				},
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp-keepalive-time",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Time: helpers.GetPointer[ngfAPI.Duration]("5s"),
+						}),
+					},
+				},
+				&ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp-keepalive-timeout",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+							Timeout: helpers.GetPointer[ngfAPI.Duration]("10s"),
+						}),
+					},
+				},
+			},
+			expUpstreamSettings: policies.UpstreamSettings{
+				ZoneSize:             "2m",
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+		},
 	}
 
 	for _, test := range tests {
