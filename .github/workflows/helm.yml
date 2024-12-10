@@ -103,7 +103,7 @@ jobs:
       - name: Create plus secret
         if: ${{ inputs.image == 'plus' }}
         env:
-          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REPORTING }}
         run: |
           echo "${PLUS_LICENSE}" > license.jwt
           kubectl create secret generic nplus-license --from-file license.jwt -n nginx-gateway
@@ -155,7 +155,7 @@ jobs:
       - name: Create plus secrets
         if: ${{ inputs.image == 'plus' }}
         env:
-          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REPORTING }}
         run: |
           echo "${PLUS_LICENSE}" > license.jwt
           kubectl create secret docker-registry nginx-plus-registry-secret --docker-server=private-registry.nginx.com --docker-username=${{ secrets.JWT_PLUS_REGISTRY }} --docker-password=none -n nginx-gateway
