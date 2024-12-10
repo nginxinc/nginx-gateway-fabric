@@ -77,6 +77,7 @@ jobs:
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
+          export PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
           make generate-static-deployment PLUS_ENABLED=${{ inputs.image == 'plus' && 'true' || 'false' }} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
