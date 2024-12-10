@@ -103,7 +103,7 @@ func TestExecuteUpstreams(t *testing.T) {
 
 	upstreams := gen.createUpstreams(stateUpstreams, upstreamsettings.NewProcessor())
 
-	upstreamResults := gen.executeUpstreams(upstreams)
+	upstreamResults := executeUpstreams(upstreams)
 	g := NewWithT(t)
 	g.Expect(upstreamResults).To(HaveLen(1))
 	nginxUpstreams := string(upstreamResults[0].data)

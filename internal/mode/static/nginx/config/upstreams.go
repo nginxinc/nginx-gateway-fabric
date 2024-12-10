@@ -49,13 +49,13 @@ func (um UpstreamMap) keepAliveEnabled(name string) bool {
 	return false
 }
 
-func (g GeneratorImpl) newExecuteUpstreamsFunc(upstreams []http.Upstream) executeFunc {
+func newExecuteUpstreamsFunc(upstreams []http.Upstream) executeFunc {
 	return func(_ dataplane.Configuration) []executeResult {
-		return g.executeUpstreams(upstreams)
+		return executeUpstreams(upstreams)
 	}
 }
 
-func (g GeneratorImpl) executeUpstreams(upstreams []http.Upstream) []executeResult {
+func executeUpstreams(upstreams []http.Upstream) []executeResult {
 	result := executeResult{
 		dest: httpConfigFile,
 		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),

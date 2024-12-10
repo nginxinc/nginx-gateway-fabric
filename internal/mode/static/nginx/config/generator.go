@@ -170,7 +170,7 @@ func (g GeneratorImpl) getExecuteFuncs(
 		executeMainConfig,
 		executeBaseHTTPConfig,
 		g.newExecuteServersFunc(generator, upstreamMap),
-		g.newExecuteUpstreamsFunc(upstreams),
+		newExecuteUpstreamsFunc(upstreams),
 		executeSplitClients,
 		executeMaps,
 		executeTelemetry,
