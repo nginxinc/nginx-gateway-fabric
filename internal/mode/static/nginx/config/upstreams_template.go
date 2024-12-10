@@ -8,6 +8,8 @@ package config
 const upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {
+    # if there is a keepalive directive present, it is necessary to activate the load balancing method before the
+    # keepalive directive
     random two least_conn;
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
@@ -15,18 +17,18 @@ upstream {{ $u.Name }} {
     {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
-	{{ if $u.KeepAliveConnections -}}
-	keepalive {{ $u.KeepAliveConnections }};
-	{{- end }}
-	{{ if $u.KeepAliveRequests -}}
-	keepalive_requests {{ $u.KeepAliveRequests }};
-	{{- end }}
-	{{ if $u.KeepAliveTime -}}
-	keepalive_time {{ $u.KeepAliveTime }};
-	{{- end }}
-	{{ if $u.KeepAliveTimeout -}}
-	keepalive_timeout {{ $u.KeepAliveTimeout }};
-	{{- end }}
+    {{ if $u.KeepAliveConnections -}}
+    keepalive {{ $u.KeepAliveConnections }};
+    {{- end }}
+    {{ if $u.KeepAliveRequests -}}
+    keepalive_requests {{ $u.KeepAliveRequests }};
+    {{- end }}
+    {{ if $u.KeepAliveTime -}}
+    keepalive_time {{ $u.KeepAliveTime }};
+    {{- end }}
+    {{ if $u.KeepAliveTimeout -}}
+    keepalive_timeout {{ $u.KeepAliveTimeout }};
+    {{- end }}
 }
 {{ end -}}
 `
