@@ -29,5 +29,6 @@ data:
         ssl_certificate_key    /etc/nginx/certs-bootstrap/tls.key;
         {{- end }}
         enforce_initial_report off;
+        deployment_context /etc/nginx/main-includes/deployment_ctx.json;
     }
   {{- end }}

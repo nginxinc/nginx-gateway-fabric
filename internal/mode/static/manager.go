@@ -47,6 +47,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
@@ -213,22 +214,18 @@ func StartManager(cfg config.Config) error {
 	)
 
 	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
+	deployCtxCollector := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
+		K8sClientReader: mgr.GetAPIReader(),
+		PodUID:          cfg.GatewayPodConfig.UID,
+		Logger:          cfg.Logger.WithName("deployCtxCollector"),
+	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		k8sClient:       mgr.GetClient(),
-		k8sReader:       mgr.GetAPIReader(),
-		processor:       processor,
-		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator: ngxcfg.NewGeneratorImpl(
-			cfg.Plus,
-			&cfg.UsageReportConfig,
-			cfg.Logger.WithName("generator"),
-		),
-		logLevelSetter: logLevelSetter,
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
 		),
+		metricsCollector: handlerCollector,
 		nginxRuntimeMgr: ngxruntime.NewManagerImpl(
 			ngxPlusClient,
 			ngxruntimeCollector,
@@ -236,12 +233,22 @@ func StartManager(cfg config.Config) error {
 			processHandler,
 			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
 		),
-		statusUpdater:                 groupStatusUpdater,
+		statusUpdater:   groupStatusUpdater,
+		processor:       processor,
+		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator: ngxcfg.NewGeneratorImpl(
+			cfg.Plus,
+			&cfg.UsageReportConfig,
+			cfg.Logger.WithName("generator"),
+		),
+		k8sClient:                     mgr.GetClient(),
+		k8sReader:                     mgr.GetAPIReader(),
+		logLevelSetter:                logLevelSetter,
 		eventRecorder:                 recorder,
+		deployCtxCollector:            deployCtxCollector,
 		nginxConfiguredOnStartChecker: nginxChecker,
-		controlConfigNSName:           controlConfigNSName,
 		gatewayPodConfig:              cfg.GatewayPodConfig,
-		metricsCollector:              handlerCollector,
+		controlConfigNSName:           controlConfigNSName,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 		plus:                          cfg.Plus,

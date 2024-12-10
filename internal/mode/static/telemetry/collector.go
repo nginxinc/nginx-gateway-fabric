@@ -148,7 +148,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
-	replicaSet, err := GetPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	replicaSet, err := getPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to get replica set for pod %v: %w", c.cfg.PodNSName, err)
 	}
@@ -158,7 +158,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
 
-	deploymentID, err := GetDeploymentID(replicaSet)
+	deploymentID, err := getDeploymentID(replicaSet)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
@@ -280,8 +280,8 @@ func computeRouteCount(
 	}
 }
 
-// GetPodReplicaSet returns the replicaset for the provided Pod.
-func GetPodReplicaSet(
+// getPodReplicaSet returns the replicaset for the provided Pod.
+func getPodReplicaSet(
 	ctx context.Context,
 	k8sClient client.Reader,
 	podNSName types.NamespacedName,
@@ -324,8 +324,8 @@ func getReplicas(replicaSet *appsv1.ReplicaSet) (int, error) {
 	return int(*replicaSet.Spec.Replicas), nil
 }
 
-// GetDeploymentID gets the deployment ID of the provided ReplicaSet.
-func GetDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
+// getDeploymentID gets the deployment ID of the provided ReplicaSet.
+func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
 	replicaOwnerRefs := replicaSet.GetOwnerReferences()
 	if len(replicaOwnerRefs) != 1 {
 		return "", fmt.Errorf("expected one owner reference of the NGF ReplicaSet, got %d", len(replicaOwnerRefs))
