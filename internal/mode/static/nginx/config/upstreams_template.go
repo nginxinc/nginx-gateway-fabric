@@ -8,8 +8,7 @@ package config
 const upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {
-    # if there is a keepalive directive present, it is necessary to activate the load balancing method before the
-    # keepalive directive
+    # if the keepalive directive us present, it is necessary to activate the load balancing method before the directive
     random two least_conn;
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
