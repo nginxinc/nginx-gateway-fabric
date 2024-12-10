@@ -6,8 +6,8 @@ NGINX Plus: true
 
 NGINX Gateway Fabric:
 
-- Commit: e7d217a8f01fb3c8fc4507ef6f0e7feead667f20
-- Date: 2024-11-14T18:42:55Z
+- Commit: 929413c15af7bee3adb32e103c9d1513a693da16
+- Date: 2024-11-28T12:52:45Z
 - Dirty: false
 
 GKE Cluster:
@@ -20,28 +20,13 @@ GKE Cluster:
 - Zone: us-west1-b
 - Instance Type: n2d-standard-16
 
-## Test: Send http /coffee traffic
-
-```text
-Requests      [total, rate, throughput]         6000, 100.02, 100.02
-Duration      [total, attack, wait]             59.991s, 59.99s, 772.721µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  596.14µs, 835.746µs, 798.892µs, 926.941µs, 975.553µs, 1.151ms, 14.047ms
-Bytes In      [total, mean]                     956060, 159.34
-Bytes Out     [total, mean]                     0, 0.00
-Success       [ratio]                           100.00%
-Status Codes  [code:count]                      200:6000  
-Error Set:
-```
-
-![http-plus.png](http-plus.png)
-
 ## Test: Send https /tea traffic
 
 ```text
 Requests      [total, rate, throughput]         6000, 100.02, 100.01
-Duration      [total, attack, wait]             59.991s, 59.99s, 955.654µs
-Latencies     [min, mean, 50, 90, 95, 99, max]  630.575µs, 856.057µs, 818.559µs, 939.26µs, 986.329µs, 1.177ms, 14.025ms
-Bytes In      [total, mean]                     918000, 153.00
+Duration      [total, attack, wait]             59.991s, 59.991s, 798.287µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  667.36µs, 885.127µs, 863.095µs, 997.184µs, 1.045ms, 1.188ms, 14.513ms
+Bytes In      [total, mean]                     936000, 156.00
 Bytes Out     [total, mean]                     0, 0.00
 Success       [ratio]                           100.00%
 Status Codes  [code:count]                      200:6000  
@@ -49,3 +34,18 @@ Error Set:
 ```
 
 ![https-plus.png](https-plus.png)
+
+## Test: Send http /coffee traffic
+
+```text
+Requests      [total, rate, throughput]         6000, 100.02, 100.01
+Duration      [total, attack, wait]             59.991s, 59.991s, 801.148µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  639.595µs, 880.974µs, 857.222µs, 1.007ms, 1.067ms, 1.214ms, 11.71ms
+Bytes In      [total, mean]                     974020, 162.34
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:6000  
+Error Set:
+```
+
+![http-plus.png](http-plus.png)
