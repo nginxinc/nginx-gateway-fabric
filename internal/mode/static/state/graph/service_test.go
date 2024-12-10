@@ -9,6 +9,10 @@ import (
 
 func TestBuildReferencedServices(t *testing.T) {
 	t.Parallel()
+
+	gw1 := types.NamespacedName{Namespace: "test", Name: "gw1"}
+	gw2 := types.NamespacedName{Namespace: "test", Name: "gw2"}
+
 	getNormalL7Route := func() *L7Route {
 		return &L7Route{
 			ParentRefs: []ParentRef{
@@ -16,6 +20,7 @@ func TestBuildReferencedServices(t *testing.T) {
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 					},
+					Gateway: gw1,
 				},
 			},
 			Valid: true,
@@ -51,6 +56,7 @@ func TestBuildReferencedServices(t *testing.T) {
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 					},
+					Gateway: gw1,
 				},
 			},
 		}
@@ -127,22 +133,35 @@ func TestBuildReferencedServices(t *testing.T) {
 		return route
 	})
 
+	nilAttachmentRoute := getModifiedL7Route(func(route *L7Route) *L7Route {
+		route.ParentRefs[0].Attachment = nil
+		return route
+	})
+
+	nilAttachmentL4Route := getModifiedL4Route(func(route *L4Route) *L4Route {
+		route.ParentRefs[0].Attachment = nil
+		return route
+	})
+
 	attachedRouteWithManyParentRefs := getModifiedL7Route(func(route *L7Route) *L7Route {
 		route.ParentRefs = []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: false,
 				},
+				Gateway: gw1,
 			},
 			{
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: false,
 				},
+				Gateway: gw2,
 			},
 			{
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: true,
 				},
+				Gateway: gw1,
 			},
 		}
 
@@ -155,16 +174,19 @@ func TestBuildReferencedServices(t *testing.T) {
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: false,
 				},
+				Gateway: gw2,
 			},
 			{
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: true,
 				},
+				Gateway: gw1,
 			},
 			{
 				Attachment: &ParentRefAttachmentStatus{
 					Attached: false,
 				},
+				Gateway: gw1,
 			},
 		}
 
@@ -184,7 +206,7 @@ func TestBuildReferencedServices(t *testing.T) {
 	tests := []struct {
 		l7Routes map[RouteKey]*L7Route
 		l4Routes map[L4RouteKey]*L4Route
-		exp      map[types.NamespacedName]struct{}
+		exp      map[types.NamespacedName]*ReferencedService
 		name     string
 	}{
 		{
@@ -195,9 +217,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			l4Routes: map[L4RouteKey]*L4Route{
 				{NamespacedName: types.NamespacedName{Name: "normal-l4-route"}}: normalL4Route,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "banana-ns", Name: "service"}:   {},
-				{Namespace: "tlsroute-ns", Name: "service"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "banana-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -205,9 +227,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			l7Routes: map[RouteKey]*L7Route{
 				{NamespacedName: types.NamespacedName{Name: "two-svc-one-rule"}}: validRouteTwoServicesOneRule,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "service-ns", Name: "service"}:   {},
-				{Namespace: "service-ns2", Name: "service2"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "service-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "service-ns2", Name: "service2"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -215,9 +237,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			l7Routes: map[RouteKey]*L7Route{
 				{NamespacedName: types.NamespacedName{Name: "one-svc-per-rule"}}: validRouteTwoServicesTwoRules,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "service-ns", Name: "service"}:   {},
-				{Namespace: "service-ns2", Name: "service2"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "service-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "service-ns2", Name: "service2"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -231,11 +253,11 @@ func TestBuildReferencedServices(t *testing.T) {
 				{NamespacedName: types.NamespacedName{Name: "l4-route-2"}}:                    normalL4Route2,
 				{NamespacedName: types.NamespacedName{Name: "l4-route-same-svc-as-l7-route"}}: normalL4RouteWithSameSvcAsL7Route,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "service-ns", Name: "service"}:   {},
-				{Namespace: "service-ns2", Name: "service2"}: {},
-				{Namespace: "tlsroute-ns", Name: "service"}:  {},
-				{Namespace: "tlsroute-ns", Name: "service2"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "service-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "service-ns2", Name: "service2"}: {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service"}:  {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service2"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -247,11 +269,11 @@ func TestBuildReferencedServices(t *testing.T) {
 			l4Routes: map[L4RouteKey]*L4Route{
 				{NamespacedName: types.NamespacedName{Name: "normal-l4-route"}}: normalL4Route,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "service-ns", Name: "service"}:   {},
-				{Namespace: "service-ns2", Name: "service2"}: {},
-				{Namespace: "banana-ns", Name: "service"}:    {},
-				{Namespace: "tlsroute-ns", Name: "service"}:  {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "service-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "service-ns2", Name: "service2"}: {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "banana-ns", Name: "service"}:    {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service"}:  {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -275,6 +297,16 @@ func TestBuildReferencedServices(t *testing.T) {
 			exp: nil,
 		},
 		{
+			name: "route wil nil parent attachment status",
+			l7Routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "nil-attachment-route"}}: nilAttachmentRoute,
+			},
+			l4Routes: map[L4RouteKey]*L4Route{
+				{NamespacedName: types.NamespacedName{Name: "nil-attachment-l4-route"}}: nilAttachmentL4Route,
+			},
+			exp: nil,
+		},
+		{
 			name: "combination of valid and invalid routes",
 			l7Routes: map[RouteKey]*L7Route{
 				{NamespacedName: types.NamespacedName{Name: "normal-route"}}:  normalRoute,
@@ -284,9 +316,9 @@ func TestBuildReferencedServices(t *testing.T) {
 				{NamespacedName: types.NamespacedName{Name: "invalid-l4-route"}}: invalidL4Route,
 				{NamespacedName: types.NamespacedName{Name: "normal-l4-route"}}:  normalL4Route,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "banana-ns", Name: "service"}:   {},
-				{Namespace: "tlsroute-ns", Name: "service"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "banana-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -297,9 +329,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			l4Routes: map[L4RouteKey]*L4Route{
 				{NamespacedName: types.NamespacedName{Name: "multiple-parent-ref-l4-route"}}: attachedL4RoutesWithManyParentRefs,
 			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "banana-ns", Name: "service"}:   {},
-				{Namespace: "tlsroute-ns", Name: "service"}: {},
+			exp: map[types.NamespacedName]*ReferencedService{
+				{Namespace: "banana-ns", Name: "service"}:   {ParentGateways: []types.NamespacedName{gw1}},
+				{Namespace: "tlsroute-ns", Name: "service"}: {ParentGateways: []types.NamespacedName{gw1}},
 			},
 		},
 		{
@@ -321,4 +353,48 @@ func TestBuildReferencedServices(t *testing.T) {
 			g.Expect(buildReferencedServices(test.l7Routes, test.l4Routes)).To(Equal(test.exp))
 		})
 	}
+}
+
+func TestGetUniqueAttachedParentGateways(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	parentRefs := []ParentRef{
+		{
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
+			Gateway: types.NamespacedName{Name: "attached-1", Namespace: "test"},
+		},
+		{
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
+			Gateway: types.NamespacedName{Name: "attached-2", Namespace: "test2"},
+		},
+		{
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: false,
+			},
+			Gateway: types.NamespacedName{Name: "not-attached-1", Namespace: "test"},
+		},
+		{
+			Attachment: nil,
+			Gateway:    types.NamespacedName{Name: "nil-attachment", Namespace: "test"},
+		},
+		{
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
+			Gateway: types.NamespacedName{Name: "attached-1", Namespace: "test"}, // dupe
+		},
+	}
+
+	expectedNsNames := []types.NamespacedName{
+		{Namespace: "test", Name: "attached-1"},
+		{Namespace: "test2", Name: "attached-2"},
+	}
+
+	uniqueAtttachedRefs := getUniqueAttachedParentGateways(parentRefs)
+	g.Expect(uniqueAtttachedRefs).To(Equal(expectedNsNames))
 }

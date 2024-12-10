@@ -21,7 +21,7 @@ import (
 type Policy struct {
 	// Source is the corresponding Policy resource.
 	Source policies.Policy
-	// Ancestors is list of ancestor objects of the Policy. Used in status.
+	// Ancestors is a list of ancestor objects of the Policy. Used in status.
 	Ancestors []PolicyAncestor
 	// TargetRefs are the resources that the Policy targets.
 	TargetRefs []PolicyTargetRef
@@ -63,6 +63,7 @@ const (
 	gatewayGroupKind = v1.GroupName + "/" + kinds.Gateway
 	hrGroupKind      = v1.GroupName + "/" + kinds.HTTPRoute
 	grpcGroupKind    = v1.GroupName + "/" + kinds.GRPCRoute
+	serviceGroupKind = "core" + "/" + kinds.Service
 )
 
 // attachPolicies attaches the graph's processed policies to the resources they target. It modifies the graph in place.
@@ -83,9 +84,52 @@ func (g *Graph) attachPolicies(ctlrName string) {
 				}
 
 				attachPolicyToRoute(policy, route, ctlrName)
+			case kinds.Service:
+				svc, exists := g.ReferencedServices[ref.Nsname]
+				if !exists {
+					continue
+				}
+
+				attachPolicyToService(policy, svc, g.Gateway, ctlrName)
 			}
 		}
 	}
+}
+
+func attachPolicyToService(
+	policy *Policy,
+	svc *ReferencedService,
+	gw *Gateway,
+	ctlrName string,
+) {
+	var ancestor *PolicyAncestor
+
+	for _, parentGw := range svc.ParentGateways {
+		if parentGw != client.ObjectKeyFromObject(gw.Source) {
+			continue
+		}
+		// Once we support multiple Gateways, this will turn into a list.
+		ancestor = &PolicyAncestor{
+			Ancestor: createParentReference(v1.GroupName, kinds.Gateway, parentGw),
+		}
+	}
+
+	if ancestor == nil {
+		return
+	}
+
+	if ngfPolicyAncestorsFull(policy, ctlrName) {
+		return
+	}
+
+	if !gw.Valid {
+		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("Parent Gateway is invalid")}
+		policy.Ancestors = append(policy.Ancestors, *ancestor)
+		return
+	}
+
+	policy.Ancestors = append(policy.Ancestors, *ancestor)
+	svc.Policies = append(svc.Policies, policy)
 }
 
 func attachPolicyToRoute(policy *Policy, route *L7Route, ctlrName string) {
@@ -158,6 +202,7 @@ func processPolicies(
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
+	services map[types.NamespacedName]*ReferencedService,
 	globalSettings *policies.GlobalSettings,
 ) map[PolicyKey]*Policy {
 	if len(pols) == 0 || gateways.Winner == nil {
@@ -174,9 +219,8 @@ func processPolicies(
 
 		for _, ref := range policy.GetTargetRefs() {
 			refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.GetNamespace()}
-			refGroupKind := fmt.Sprintf("%s/%s", ref.Group, ref.Kind)
 
-			switch refGroupKind {
+			switch refGroupKind(ref.Group, ref.Kind) {
 			case gatewayGroupKind:
 				if !gatewayExists(refNsName, gateways.Winner, gateways.Ignored) {
 					continue
@@ -186,6 +230,10 @@ func processPolicies(
 					continue
 				} else {
 					targetedRoutes[client.ObjectKeyFromObject(route.Source)] = route
+				}
+			case serviceGroupKind:
+				if _, exists := services[refNsName]; !exists {
+					continue
 				}
 			default:
 				continue
@@ -203,22 +251,8 @@ func processPolicies(
 			continue
 		}
 
-		for _, targetedRoute := range targetedRoutes {
-			// We need to check if this route referenced in the policy has an overlapping
-			// hostname:port/path with any other route that isn't referenced by this policy.
-			// If so, deny the policy.
-			hostPortPaths := buildHostPortPaths(targetedRoute)
-
-			for _, route := range routes {
-				if _, ok := targetedRoutes[client.ObjectKeyFromObject(route.Source)]; ok {
-					continue
-				}
-
-				if cond := checkForRouteOverlap(route, hostPortPaths); cond != nil {
-					conds = append(conds, *cond)
-				}
-			}
-		}
+		overlapConds := checkTargetRoutesForOverlap(targetedRoutes, routes)
+		conds = append(conds, overlapConds...)
 
 		conds = append(conds, validator.Validate(policy, globalSettings)...)
 
@@ -234,6 +268,32 @@ func processPolicies(
 	markConflictedPolicies(processedPolicies, validator)
 
 	return processedPolicies
+}
+
+func checkTargetRoutesForOverlap(
+	targetedRoutes map[types.NamespacedName]*L7Route,
+	graphRoutes map[RouteKey]*L7Route,
+) []conditions.Condition {
+	var conds []conditions.Condition
+
+	for _, targetedRoute := range targetedRoutes {
+		// We need to check if this route referenced in the policy has an overlapping
+		// hostname:port/path with any other route that isn't referenced by this policy.
+		// If so, deny the policy.
+		hostPortPaths := buildHostPortPaths(targetedRoute)
+
+		for _, route := range graphRoutes {
+			if _, ok := targetedRoutes[client.ObjectKeyFromObject(route.Source)]; ok {
+				continue
+			}
+
+			if cond := checkForRouteOverlap(route, hostPortPaths); cond != nil {
+				conds = append(conds, *cond)
+			}
+		}
+	}
+
+	return conds
 }
 
 // checkForRouteOverlap checks if any route references the same hostname:port/path combination
@@ -354,4 +414,13 @@ func markConflictedPolicies(pols map[PolicyKey]*Policy, validator validation.Pol
 			}
 		}
 	}
+}
+
+// refGroupKind formats the group and kind as a string.
+func refGroupKind(group v1.Group, kind v1.Kind) string {
+	if group == "" {
+		return fmt.Sprintf("core/%s", kind)
+	}
+
+	return fmt.Sprintf("%s/%s", group, kind)
 }

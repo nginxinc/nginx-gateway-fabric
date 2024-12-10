@@ -66,9 +66,8 @@ type Graph struct {
 	ReferencedSecrets map[types.NamespacedName]*Secret
 	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
 	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
-	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
-	// Storing the whole resource is not necessary, compared to the similar maps above.
-	ReferencedServices map[types.NamespacedName]struct{}
+	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one Route.
+	ReferencedServices map[types.NamespacedName]*ReferencedService
 	// ReferencedCaCertConfigMaps includes ConfigMaps that have been referenced by any BackendTLSPolicies.
 	ReferencedCaCertConfigMaps map[types.NamespacedName]*CaCertConfigMap
 	// BackendTLSPolicies holds BackendTLSPolicy resources.
@@ -155,8 +154,18 @@ func (g *Graph) IsNGFPolicyRelevant(
 	}
 
 	for _, ref := range policy.GetTargetRefs() {
-		if ref.Group == gatewayv1.GroupName && g.gatewayAPIResourceExist(ref, policy.GetNamespace()) {
-			return true
+		switch ref.Group {
+		case gatewayv1.GroupName:
+			if g.gatewayAPIResourceExist(ref, policy.GetNamespace()) {
+				return true
+			}
+		case "", "core":
+			if ref.Kind == kinds.Service {
+				svcNsName := types.NamespacedName{Namespace: policy.GetNamespace(), Name: string(ref.Name)}
+				if _, exists := g.ReferencedServices[svcNsName]; exists {
+					return true
+				}
+			}
 		}
 	}
 
@@ -257,6 +266,7 @@ func BuildGraph(
 		validators.PolicyValidator,
 		processedGws,
 		routes,
+		referencedServices,
 		globalSettings,
 	)
 

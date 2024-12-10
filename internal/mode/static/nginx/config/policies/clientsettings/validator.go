@@ -30,7 +30,9 @@ func (v *Validator) Validate(policy policies.Policy, _ *policies.GlobalSettings)
 
 	targetRefPath := field.NewPath("spec").Child("targetRef")
 	supportedKinds := []gatewayv1.Kind{kinds.Gateway, kinds.HTTPRoute, kinds.GRPCRoute}
-	if err := policies.ValidateTargetRef(csp.Spec.TargetRef, targetRefPath, supportedKinds); err != nil {
+	supportedGroups := []gatewayv1.Group{gatewayv1.GroupName}
+
+	if err := policies.ValidateTargetRef(csp.Spec.TargetRef, targetRefPath, supportedGroups, supportedKinds); err != nil {
 		return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
 	}
 
