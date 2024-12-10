@@ -477,6 +477,88 @@ func TestCreateUpstream(t *testing.T) {
 			},
 			msg: "empty upstreamSettingsPolicies",
 		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "upstreamSettingsPolicy with only keep alive settings",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+				Policies: []policies.Policy{
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp1",
+							Namespace: "test",
+						},
+						Spec: ngfAPI.UpstreamSettingsPolicySpec{
+							KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+								Connections: helpers.GetPointer(int32(1)),
+								Requests:    helpers.GetPointer(int32(1)),
+								Time:        helpers.GetPointer[ngfAPI.Duration]("5s"),
+								Timeout:     helpers.GetPointer[ngfAPI.Duration]("10s"),
+							}),
+						},
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "upstreamSettingsPolicy with only keep alive settings",
+				ZoneSize: ossZoneSize,
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+			msg: "upstreamSettingsPolicy with only keep alive settings",
+		},
+		{
+			stateUpstream: dataplane.Upstream{
+				Name: "upstreamSettingsPolicy with only keep alive settings",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+				Policies: []policies.Policy{
+					&ngfAPI.UpstreamSettingsPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "usp1",
+							Namespace: "test",
+						},
+						Spec: ngfAPI.UpstreamSettingsPolicySpec{
+							KeepAlive: helpers.GetPointer(ngfAPI.UpstreamKeepAlive{
+								Connections: helpers.GetPointer(int32(1)),
+								Requests:    helpers.GetPointer(int32(1)),
+								Time:        helpers.GetPointer[ngfAPI.Duration]("5s"),
+								Timeout:     helpers.GetPointer[ngfAPI.Duration]("10s"),
+							}),
+						},
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:     "upstreamSettingsPolicy with only keep alive settings",
+				ZoneSize: ossZoneSize,
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
+				KeepAliveConnections: 1,
+				KeepAliveRequests:    1,
+				KeepAliveTime:        "5s",
+				KeepAliveTimeout:     "10s",
+			},
+			msg: "upstreamSettingsPolicy with only keep alive settings",
+		},
 	}
 
 	for _, test := range tests {
