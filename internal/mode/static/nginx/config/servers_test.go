@@ -2843,9 +2843,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		filters         *dataplane.HTTPFilters
 		msg             string
 		expectedHeaders []http.Header
-		upstreamMap     UpstreamMap
-		backends        []dataplane.Backend
-		GRPC            bool
+		baseHeaders     []http.Header
 	}{
 		{
 			msg: "header filter",
@@ -2880,6 +2878,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Value: "",
 				},
 			}, httpBaseHeaders...),
+			baseHeaders: httpBaseHeaders,
 		},
 		{
 			msg: "with url rewrite hostname",
@@ -2934,10 +2933,10 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Value: "$connection_upgrade",
 				},
 			},
+			baseHeaders: createBaseProxySetHeaders(httpUpgradeHeader, httpConnectionHeader),
 		},
 		{
-			msg:  "header filter with gRPC",
-			GRPC: true,
+			msg: "header filter with gRPC",
 			filters: &dataplane.HTTPFilters{
 				RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 					Add: []dataplane.HTTPHeader{
@@ -2969,87 +2968,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 					Value: "",
 				},
 			}, grpcBaseHeaders...),
-		},
-		{
-			msg: "upstream with keepAlive enabled",
-			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
-				Name:  httpConnectionHeader.Name,
-				Value: "",
-			}),
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream": {
-						Name:                 "upstream",
-						KeepAliveConnections: 1,
-					},
-				},
-			},
-			backends: []dataplane.Backend{
-				{
-					UpstreamName: "upstream",
-				},
-			},
-		},
-		{
-			msg: "multiple upstreams with keepAlive enabled",
-			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
-				Name:  httpConnectionHeader.Name,
-				Value: "",
-			}),
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream1": {
-						Name:                 "upstream1",
-						KeepAliveConnections: 1,
-					},
-					"upstream2": {
-						Name:              "upstream2",
-						KeepAliveRequests: 1,
-					},
-					"upstream3": {
-						Name:          "upstream3",
-						KeepAliveTime: "5s",
-					},
-				},
-			},
-			backends: []dataplane.Backend{
-				{
-					UpstreamName: "upstream1",
-				},
-				{
-					UpstreamName: "upstream2",
-				},
-				{
-					UpstreamName: "upstream3",
-				},
-			},
-		},
-		{
-			msg: "mix of upstreams with keepAlive enabled and disabled",
-			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
-				Name:  httpConnectionHeader.Name,
-				Value: "",
-			}),
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream1": {
-						Name:                 "upstream1",
-						KeepAliveConnections: 1,
-					},
-					"upstream2": {
-						Name:     "upstream2",
-						ZoneSize: "2m",
-					},
-				},
-			},
-			backends: []dataplane.Backend{
-				{
-					UpstreamName: "upstream1",
-				},
-				{
-					UpstreamName: "upstream2",
-				},
-			},
+			baseHeaders: grpcBaseHeaders,
 		},
 	}
 
@@ -3058,7 +2977,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			headers := generateProxySetHeaders(tc.filters, tc.GRPC, tc.upstreamMap, tc.backends)
+			headers := generateProxySetHeaders(tc.filters, tc.baseHeaders)
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
 		})
 	}
@@ -3128,6 +3047,128 @@ func TestCreateBaseProxySetHeaders(t *testing.T) {
 
 			result := createBaseProxySetHeaders(test.additionalHeaders...)
 			g.Expect(result).To(Equal(test.expBaseHeaders))
+		})
+	}
+}
+
+func TestGetConnectionHeader(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		msg                 string
+		upstreamMap         UpstreamMap
+		expConnectionHeader http.Header
+		backends            []dataplane.Backend
+	}{
+		{
+			msg: "no upstreams with keepAlive enabled",
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream1": {
+						Name: "upstream1",
+					},
+					"upstream2": {
+						Name: "upstream2",
+					},
+					"upstream3": {
+						Name: "upstream3",
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream1",
+				},
+				{
+					UpstreamName: "upstream2",
+				},
+				{
+					UpstreamName: "upstream3",
+				},
+			},
+			expConnectionHeader: httpConnectionHeader,
+		},
+		{
+			msg: "upstream with keepAlive enabled",
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream": {
+						Name:                 "upstream",
+						KeepAliveConnections: 1,
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream",
+				},
+			},
+			expConnectionHeader: unsetHTTPConnectionHeader,
+		},
+		{
+			msg: "multiple upstreams with keepAlive enabled",
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream1": {
+						Name:                 "upstream1",
+						KeepAliveConnections: 1,
+					},
+					"upstream2": {
+						Name:              "upstream2",
+						KeepAliveRequests: 1,
+					},
+					"upstream3": {
+						Name:          "upstream3",
+						KeepAliveTime: "5s",
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream1",
+				},
+				{
+					UpstreamName: "upstream2",
+				},
+				{
+					UpstreamName: "upstream3",
+				},
+			},
+			expConnectionHeader: unsetHTTPConnectionHeader,
+		},
+		{
+			msg:                 "mix of upstreams with keepAlive enabled and disabled",
+			expConnectionHeader: unsetHTTPConnectionHeader,
+			upstreamMap: UpstreamMap{
+				nameToUpstream: map[string]http.Upstream{
+					"upstream1": {
+						Name:                 "upstream1",
+						KeepAliveConnections: 1,
+					},
+					"upstream2": {
+						Name:     "upstream2",
+						ZoneSize: "2m",
+					},
+				},
+			},
+			backends: []dataplane.Backend{
+				{
+					UpstreamName: "upstream1",
+				},
+				{
+					UpstreamName: "upstream2",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			connectionHeader := getConnectionHeader(tc.upstreamMap, tc.backends)
+			g.Expect(connectionHeader).To(Equal(tc.expConnectionHeader))
 		})
 	}
 }

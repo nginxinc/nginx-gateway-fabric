@@ -33,6 +33,11 @@ var httpConnectionHeader = http.Header{
 	Value: "$connection_upgrade",
 }
 
+var unsetHTTPConnectionHeader = http.Header{
+	Name:  "Connection",
+	Value: "",
+}
+
 var httpUpgradeHeader = http.Header{
 	Name:  "Upgrade",
 	Value: "$http_upgrade",
@@ -425,7 +430,16 @@ func updateLocation(
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
-	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc, um, matchRule.BackendGroup.Backends)
+
+	extraHeaders := make([]http.Header, 0, 3)
+	if grpc {
+		extraHeaders = append(extraHeaders, grpcAuthorityHeader)
+	} else {
+		extraHeaders = append(extraHeaders, httpUpgradeHeader)
+		extraHeaders = append(extraHeaders, getConnectionHeader(um, matchRule.BackendGroup.Backends))
+	}
+
+	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, createBaseProxySetHeaders(extraHeaders...))
 	responseHeaders := generateResponseHeaders(&matchRule.Filters)
 
 	if rewrites != nil {
@@ -723,50 +737,24 @@ func createMatchLocation(path string, grpc bool) http.Location {
 
 func generateProxySetHeaders(
 	filters *dataplane.HTTPFilters,
-	grpc bool,
-	um UpstreamMap,
-	backends []dataplane.Backend,
+	baseHeaders []http.Header,
 ) []http.Header {
-	modifiedConnectionHeader := httpConnectionHeader
-
-	for _, backend := range backends {
-		if um.keepAliveEnabled(backend.UpstreamName) {
-			// if keep-alive settings are enabled on any upstream, the connection header value
-			// must be empty for the location
-			modifiedConnectionHeader = http.Header{
-				Name:  httpConnectionHeader.Name,
-				Value: "",
-			}
-			break
-		}
-	}
-
-	var extraHeaders []http.Header
-	if grpc {
-		extraHeaders = append(extraHeaders, grpcAuthorityHeader)
-	} else {
-		extraHeaders = append(extraHeaders, httpUpgradeHeader)
-		extraHeaders = append(extraHeaders, modifiedConnectionHeader)
-	}
-
-	headers := createBaseProxySetHeaders(extraHeaders...)
-
 	if filters != nil && filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
-		for i, header := range headers {
+		for i, header := range baseHeaders {
 			if header.Name == "Host" {
-				headers[i].Value = *filters.RequestURLRewrite.Hostname
+				baseHeaders[i].Value = *filters.RequestURLRewrite.Hostname
 				break
 			}
 		}
 	}
 
 	if filters == nil || filters.RequestHeaderModifiers == nil {
-		return headers
+		return baseHeaders
 	}
 
 	headerFilter := filters.RequestHeaderModifiers
 
-	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(headers)
+	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(baseHeaders)
 	proxySetHeaders := make([]http.Header, 0, headerLen)
 	if len(headerFilter.Add) > 0 {
 		addHeaders := createHeadersWithVarName(headerFilter.Add)
@@ -784,7 +772,7 @@ func generateProxySetHeaders(
 		})
 	}
 
-	return append(proxySetHeaders, headers...)
+	return append(proxySetHeaders, baseHeaders...)
 }
 
 func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
@@ -900,4 +888,16 @@ func createBaseProxySetHeaders(extraHeaders ...http.Header) []http.Header {
 	baseHeaders = append(baseHeaders, extraHeaders...)
 
 	return baseHeaders
+}
+
+func getConnectionHeader(um UpstreamMap, backends []dataplane.Backend) http.Header {
+	for _, backend := range backends {
+		if um.keepAliveEnabled(backend.UpstreamName) {
+			// if keep-alive settings are enabled on any upstream, the connection header value
+			// must be empty for the location
+			return unsetHTTPConnectionHeader
+		}
+	}
+
+	return httpConnectionHeader
 }
