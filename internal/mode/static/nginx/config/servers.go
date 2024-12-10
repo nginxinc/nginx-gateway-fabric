@@ -23,17 +23,17 @@ const (
 	rootPath             = "/"
 )
 
-var authorityHeader = http.Header{
+var grpcAuthorityHeader = http.Header{
 	Name:  "Authority",
 	Value: "$gw_api_compliant_host",
 }
 
-var connectionHeader = http.Header{
+var httpConnectionHeader = http.Header{
 	Name:  "Connection",
 	Value: "$connection_upgrade",
 }
 
-var upgradeHeader = http.Header{
+var httpUpgradeHeader = http.Header{
 	Name:  "Upgrade",
 	Value: "$http_upgrade",
 }
@@ -727,14 +727,14 @@ func generateProxySetHeaders(
 	um UpstreamMap,
 	backends []dataplane.Backend,
 ) []http.Header {
-	modifiedConnectionHeader := connectionHeader
+	modifiedConnectionHeader := httpConnectionHeader
 
 	for _, backend := range backends {
 		if um.keepAliveEnabled(backend.UpstreamName) {
 			// if keep-alive settings are enabled on any upstream, the connection header value
 			// must be empty for the location
 			modifiedConnectionHeader = http.Header{
-				Name:  connectionHeader.Name,
+				Name:  httpConnectionHeader.Name,
 				Value: "",
 			}
 			break
@@ -743,9 +743,9 @@ func generateProxySetHeaders(
 
 	var extraHeaders []http.Header
 	if grpc {
-		extraHeaders = append(extraHeaders, authorityHeader)
+		extraHeaders = append(extraHeaders, grpcAuthorityHeader)
 	} else {
-		extraHeaders = append(extraHeaders, upgradeHeader)
+		extraHeaders = append(extraHeaders, httpUpgradeHeader)
 		extraHeaders = append(extraHeaders, modifiedConnectionHeader)
 	}
 
@@ -869,7 +869,7 @@ func getRewriteClientIPSettings(rewriteIPConfig dataplane.RewriteClientIPSetting
 	}
 }
 
-func createBaseProxySetHeaders(headers ...http.Header) []http.Header {
+func createBaseProxySetHeaders(extraHeaders ...http.Header) []http.Header {
 	baseHeaders := []http.Header{
 		{
 			Name:  "Host",
@@ -897,7 +897,7 @@ func createBaseProxySetHeaders(headers ...http.Header) []http.Header {
 		},
 	}
 
-	baseHeaders = append(baseHeaders, headers...)
+	baseHeaders = append(baseHeaders, extraHeaders...)
 
 	return baseHeaders
 }

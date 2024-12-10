@@ -133,10 +133,10 @@ func (g GeneratorImpl) executeConfigTemplates(
 ) []file.File {
 	fileBytes := make(map[string][]byte)
 
-	upstreams := g.createUpstreams(conf.Upstreams, upstreamsettings.NewProcessor())
-	upstreamMap := g.createUpstreamMap(upstreams)
+	httpUpstreams := g.createUpstreams(conf.Upstreams, upstreamsettings.NewProcessor())
+	upstreamMap := g.createUpstreamMap(httpUpstreams)
 
-	for _, execute := range g.getExecuteFuncs(generator, upstreams, upstreamMap) {
+	for _, execute := range g.getExecuteFuncs(generator, httpUpstreams, upstreamMap) {
 		results := execute(conf)
 		for _, res := range results {
 			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)

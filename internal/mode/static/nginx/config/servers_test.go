@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	httpBaseHeaders = createBaseProxySetHeaders(upgradeHeader, connectionHeader)
-	grpcBaseHeaders = createBaseProxySetHeaders(authorityHeader)
+	httpBaseHeaders = createBaseProxySetHeaders(httpUpgradeHeader, httpConnectionHeader)
+	grpcBaseHeaders = createBaseProxySetHeaders(grpcAuthorityHeader)
 )
 
 func TestExecuteServers(t *testing.T) {
@@ -2972,8 +2972,8 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		},
 		{
 			msg: "upstream with keepAlive enabled",
-			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
-				Name:  connectionHeader.Name,
+			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
+				Name:  httpConnectionHeader.Name,
 				Value: "",
 			}),
 			upstreamMap: UpstreamMap{
@@ -2992,8 +2992,8 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple upstreams with keepAlive enabled",
-			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
-				Name:  connectionHeader.Name,
+			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
+				Name:  httpConnectionHeader.Name,
 				Value: "",
 			}),
 			upstreamMap: UpstreamMap{
@@ -3026,8 +3026,8 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		},
 		{
 			msg: "mix of upstreams with keepAlive enabled and disabled",
-			expectedHeaders: append(createBaseProxySetHeaders(upgradeHeader), http.Header{
-				Name:  connectionHeader.Name,
+			expectedHeaders: append(createBaseProxySetHeaders(httpUpgradeHeader), http.Header{
+				Name:  httpConnectionHeader.Name,
 				Value: "",
 			}),
 			upstreamMap: UpstreamMap{
@@ -3067,7 +3067,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 func TestCreateBaseProxySetHeaders(t *testing.T) {
 	t.Parallel()
 
-	baseHeaders := []http.Header{
+	expBaseHeaders := []http.Header{
 		{
 			Name:  "Host",
 			Value: "$gw_api_compliant_host",
@@ -3102,22 +3102,22 @@ func TestCreateBaseProxySetHeaders(t *testing.T) {
 		{
 			msg:               "no additional headers",
 			additionalHeaders: []http.Header{},
-			expBaseHeaders:    baseHeaders,
+			expBaseHeaders:    expBaseHeaders,
 		},
 		{
 			msg: "single additional headers",
 			additionalHeaders: []http.Header{
-				authorityHeader,
+				grpcAuthorityHeader,
 			},
-			expBaseHeaders: append(baseHeaders, authorityHeader),
+			expBaseHeaders: append(expBaseHeaders, grpcAuthorityHeader),
 		},
 		{
 			msg: "multiple additional headers",
 			additionalHeaders: []http.Header{
-				connectionHeader,
-				upgradeHeader,
+				httpConnectionHeader,
+				httpUpgradeHeader,
 			},
-			expBaseHeaders: append(baseHeaders, connectionHeader, upgradeHeader),
+			expBaseHeaders: append(expBaseHeaders, httpConnectionHeader, httpUpgradeHeader),
 		},
 	}
 
