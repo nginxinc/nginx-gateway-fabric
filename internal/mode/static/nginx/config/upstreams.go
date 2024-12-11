@@ -27,6 +27,8 @@ const (
 	ossZoneSizeStream = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
 	plusZoneSizeStream = "1m"
+	// stateDir is the directory for storing state files.
+	stateDir = "/var/lib/nginx/state"
 )
 
 func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
@@ -101,15 +103,18 @@ func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Up
 }
 
 func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
+	var stateFile string
 	zoneSize := ossZoneSize
 	if g.plus {
 		zoneSize = plusZoneSize
+		stateFile = fmt.Sprintf("%s/%s.conf", stateDir, up.Name)
 	}
 
 	if len(up.Endpoints) == 0 {
 		return http.Upstream{
-			Name:     up.Name,
-			ZoneSize: zoneSize,
+			Name:      up.Name,
+			ZoneSize:  zoneSize,
+			StateFile: stateFile,
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx503Server,
@@ -130,9 +135,10 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 	}
 
 	return http.Upstream{
-		Name:     up.Name,
-		ZoneSize: zoneSize,
-		Servers:  upstreamServers,
+		Name:      up.Name,
+		ZoneSize:  zoneSize,
+		StateFile: stateFile,
+		Servers:   upstreamServers,
 	}
 }
 

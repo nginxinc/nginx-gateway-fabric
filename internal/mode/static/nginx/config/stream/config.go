@@ -15,9 +15,10 @@ type Server struct {
 
 // Upstream holds all configuration for a stream upstream.
 type Upstream struct {
-	Name     string
-	ZoneSize string // format: 512k, 1m
-	Servers  []UpstreamServer
+	Name      string
+	ZoneSize  string // format: 512k, 1m
+	StateFile string // FIXME(sberman): temporary until stream upstreams template is split in UpstreamSettingsPolicy work.
+	Servers   []UpstreamServer
 }
 
 // UpstreamServer holds all configuration for a stream upstream server.

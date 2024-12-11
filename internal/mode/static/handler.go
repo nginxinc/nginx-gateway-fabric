@@ -182,11 +182,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 		h.setLatestConfiguration(&cfg)
 
-		err = h.updateUpstreamServers(
-			ctx,
-			logger,
-			cfg,
-		)
+		if h.cfg.plus {
+			err = h.updateUpstreamServers(logger, cfg)
+		} else {
+			err = h.updateNginxConf(ctx, logger, cfg)
+		}
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
@@ -198,10 +198,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 		h.setLatestConfiguration(&cfg)
 
-		err = h.updateNginxConf(
-			ctx,
-			cfg,
-		)
+		err = h.updateNginxConf(ctx, logger, cfg)
 	}
 
 	var nginxReloadRes status.NginxReloadResult
@@ -306,7 +303,11 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 }
 
 // updateNginxConf updates nginx conf files and reloads nginx.
-func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.Configuration) error {
+func (h *eventHandlerImpl) updateNginxConf(
+	ctx context.Context,
+	logger logr.Logger,
+	conf dataplane.Configuration,
+) error {
 	files := h.cfg.generator.Generate(conf)
 	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
@@ -316,75 +317,52 @@ func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.C
 		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 
+	// If using NGINX Plus, update upstream servers using the API.
+	if err := h.updateUpstreamServers(logger, conf); err != nil {
+		return fmt.Errorf("failed to update upstream servers: %w", err)
+	}
+
 	return nil
 }
 
-// updateUpstreamServers is called only when endpoints have changed. It updates nginx conf files and then:
-// - if using NGINX Plus, determines which servers have changed and uses the N+ API to update them;
-// - otherwise if not using NGINX Plus, or an error was returned from the API, reloads nginx.
-func (h *eventHandlerImpl) updateUpstreamServers(
-	ctx context.Context,
-	logger logr.Logger,
-	conf dataplane.Configuration,
-) error {
-	isPlus := h.cfg.nginxRuntimeMgr.IsPlus()
-
-	files := h.cfg.generator.Generate(conf)
-	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
-		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
-	}
-
-	reload := func() error {
-		if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
-			return fmt.Errorf("failed to reload NGINX: %w", err)
-		}
-
+// updateUpstreamServers determines which servers have changed and uses the NGINX Plus API to update them.
+// Only applicable when using NGINX Plus.
+func (h *eventHandlerImpl) updateUpstreamServers(logger logr.Logger, conf dataplane.Configuration) error {
+	if !h.cfg.plus {
 		return nil
 	}
 
-	if isPlus {
-		type upstream struct {
-			name    string
-			servers []ngxclient.UpstreamServer
-		}
-		var upstreams []upstream
+	type upstream struct {
+		name    string
+		servers []ngxclient.UpstreamServer
+	}
+	var upstreams []upstream
 
-		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
-		if err != nil {
-			logger.Error(err, "failed to get upstreams from API, reloading configuration instead")
-			return reload()
+	prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
+	if err != nil {
+		return fmt.Errorf("failed to get upstreams from API: %w", err)
+	}
+
+	for _, u := range conf.Upstreams {
+		confUpstream := upstream{
+			name:    u.Name,
+			servers: ngxConfig.ConvertEndpoints(u.Endpoints),
 		}
 
-		for _, u := range conf.Upstreams {
-			confUpstream := upstream{
-				name:    u.Name,
-				servers: ngxConfig.ConvertEndpoints(u.Endpoints),
+		if u, ok := prevUpstreams[confUpstream.name]; ok {
+			if !serversEqual(confUpstream.servers, u.Peers) {
+				upstreams = append(upstreams, confUpstream)
 			}
-
-			if u, ok := prevUpstreams[confUpstream.name]; ok {
-				if !serversEqual(confUpstream.servers, u.Peers) {
-					upstreams = append(upstreams, confUpstream)
-				}
-			}
-		}
-
-		var reloadPlus bool
-		for _, upstream := range upstreams {
-			if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
-				logger.Error(
-					err, "couldn't update upstream via the API, reloading configuration instead",
-					"upstreamName", upstream.name,
-				)
-				reloadPlus = true
-			}
-		}
-
-		if !reloadPlus {
-			return nil
 		}
 	}
 
-	return reload()
+	for _, upstream := range upstreams {
+		if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
+			logger.Error(err, "couldn't update upstream via the API", "upstreamName", upstream.name)
+		}
+	}
+
+	return nil
 }
 
 func serversEqual(newServers []ngxclient.UpstreamServer, oldServers []ngxclient.Peer) bool {

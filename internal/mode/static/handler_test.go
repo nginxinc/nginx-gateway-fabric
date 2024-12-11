@@ -428,15 +428,15 @@ var _ = Describe("eventHandler", func() {
 
 		When("running NGINX Plus", func() {
 			It("should call the NGINX Plus API", func() {
-				fakeNginxRuntimeMgr.IsPlusReturns(true)
+				handler.cfg.plus = true
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 				dcfg := dataplane.GetDefaultConfiguration(&graph.Graph{}, 1)
 				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
-				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
-				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
+				Expect(fakeGenerator.GenerateCallCount()).To(Equal(0))
+				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(0))
 				Expect(fakeNginxRuntimeMgr.GetUpstreamsCallCount()).To(Equal(1))
 			})
 		})
@@ -465,19 +465,6 @@ var _ = Describe("eventHandler", func() {
 			},
 		}
 
-		type callCounts struct {
-			generate int
-			update   int
-			reload   int
-		}
-
-		assertCallCounts := func(cc callCounts) {
-			Expect(fakeGenerator.GenerateCallCount()).To(Equal(cc.generate))
-			Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(cc.generate))
-			Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(cc.update))
-			Expect(fakeNginxRuntimeMgr.ReloadCallCount()).To(Equal(cc.reload))
-		}
-
 		BeforeEach(func() {
 			upstreams := ngxclient.Upstreams{
 				"one": ngxclient.Upstream{
@@ -491,42 +478,25 @@ var _ = Describe("eventHandler", func() {
 
 		When("running NGINX Plus", func() {
 			BeforeEach(func() {
-				fakeNginxRuntimeMgr.IsPlusReturns(true)
+				handler.cfg.plus = true
 			})
 
 			It("should update servers using the NGINX Plus API", func() {
-				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
-
-				assertCallCounts(callCounts{generate: 1, update: 1, reload: 0})
+				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).To(Succeed())
+				Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(1))
 			})
 
-			It("should reload when GET API returns an error", func() {
+			It("should return error when GET API returns an error", func() {
 				fakeNginxRuntimeMgr.GetUpstreamsReturns(nil, errors.New("error"))
-				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
-
-				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
-			})
-
-			It("should reload when POST API returns an error", func() {
-				fakeNginxRuntimeMgr.UpdateHTTPServersReturns(errors.New("error"))
-				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
-
-				assertCallCounts(callCounts{generate: 1, update: 1, reload: 1})
+				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).ToNot(Succeed())
 			})
 		})
 
 		When("not running NGINX Plus", func() {
-			It("should update servers by reloading", func() {
-				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
+			It("should not do anything", func() {
+				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).To(Succeed())
 
-				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
-			})
-
-			It("should return an error when reloading fails", func() {
-				fakeNginxRuntimeMgr.ReloadReturns(errors.New("error"))
-				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).ToNot(Succeed())
-
-				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
+				Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(0))
 			})
 		})
 	})
