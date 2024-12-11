@@ -1,19 +1,15 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: gateway-httproute-allowed
+  name: gateway-not-valid
 spec:
   gatewayClassName: nginx
+  addresses: "10.0.0.1"
   listeners:
   - name: http
     port: 80
     protocol: HTTP
     hostname: "soda.example.com"
-    allowedRoutes:
-      namespaces:
-        from: All
-      kinds:
-        kind: GRPCRoute
 ---
 apiVersion: apps/v1
 kind: Deployment

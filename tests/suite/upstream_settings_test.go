@@ -46,24 +46,23 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("uspolicy"), func() {
 		Expect(resourceManager.DeleteNamespace(namespace)).To(Succeed())
 	})
 
-	When("UpstreamSettingsPolicy are applied to the resources", func() {
-		snippetsFilter := []string{
+	When("UpstreamSettingsPolicies target distinct Services", func() {
+		usps := []string{
 			"upstream-settings-policy/valid-usps.yaml",
 		}
 
 		BeforeAll(func() {
-			Expect(resourceManager.ApplyFromFiles(snippetsFilter, namespace)).To(Succeed())
+			Expect(resourceManager.ApplyFromFiles(usps, namespace)).To(Succeed())
 		})
 
 		AfterAll(func() {
-			Expect(resourceManager.DeleteFromFiles(snippetsFilter, namespace)).To(Succeed())
+			Expect(resourceManager.DeleteFromFiles(usps, namespace)).To(Succeed())
 		})
 
-		Specify("usPolicies are accepted", func() {
+		Specify("they are accepted", func() {
 			usPolicies := []string{
-				"coffee-svc-usp",
+				"multiple-http-svc-usp",
 				"grpc-svc-usp",
-				"tea-multiple-svc-usp",
 			}
 
 			for _, name := range usPolicies {
@@ -124,98 +123,131 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("uspolicy"), func() {
 						Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
 					}
 				},
-				Entry("HTTPRoute", []framework.ExpectedNginxField{
+				Entry("HTTP upstreams", []framework.ExpectedNginxField{
 					{
-						Directive:             "zone default_coffee_80",
-						Value:                 "128k",
+						Directive:             "zone",
+						Value:                 "default_coffee_80 128k",
 						Upstreams:             []string{"default_coffee_80"},
-						File:                  "nginx.conf",
+						File:                  "http.conf",
 						ValueSubstringAllowed: true,
 					},
 					{
 						Directive: "keepalive",
 						Value:     "12",
 						Upstreams: []string{"default_coffee_80"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_requests",
 						Value:     "31",
 						Upstreams: []string{"default_coffee_80"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_time",
 						Value:     "20s",
 						Upstreams: []string{"default_coffee_80"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_timeout",
 						Value:     "40s",
 						Upstreams: []string{"default_coffee_80"},
-						File:      "nginx.conf",
+						File:      "http.conf",
+					},
+					{
+						Directive:             "zone",
+						Value:                 "default_tea_80 64k",
+						Upstreams:             []string{"default_tea_80"},
+						File:                  "http.conf",
+						ValueSubstringAllowed: true,
+					},
+					{
+						Directive: "keepalive",
+						Value:     "100",
+						Upstreams: []string{"default_tea_80"},
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_requests",
+						Value:     "55",
+						Upstreams: []string{"default_tea_80"},
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_time",
+						Value:     "1m",
+						Upstreams: []string{"default_tea_80"},
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_timeout",
+						Value:     "5h",
+						Upstreams: []string{"default_tea_80"},
+						File:      "http.conf",
 					},
 				}),
-				Entry("GRPCRoute", []framework.ExpectedNginxField{
+				Entry("GRPC upstreams", []framework.ExpectedNginxField{
 					{
-						Directive:             "zone default_grpc-backend_8080",
-						Value:                 "512k",
+						Directive:             "zone",
+						Value:                 "default_grpc-backend_8080 512k",
 						Upstreams:             []string{"default_grpc-backend_8080"},
-						File:                  "nginx.conf",
+						File:                  "http.conf",
 						ValueSubstringAllowed: true,
 					},
 					{
 						Directive: "keepalive",
 						Value:     "10",
 						Upstreams: []string{"default_grpc-backend_8080"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_requests",
 						Value:     "3",
 						Upstreams: []string{"default_grpc-backend_8080"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_time",
 						Value:     "10s",
 						Upstreams: []string{"default_grpc-backend_8080"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 					{
 						Directive: "keepalive_timeout",
 						Value:     "50s",
 						Upstreams: []string{"default_grpc-backend_8080"},
-						File:      "nginx.conf",
+						File:      "http.conf",
 					},
 				}),
 			)
 		})
 	})
 
-	When("When multiple UpstreamSettings Policy target the same service", func() {
-		Specify("configuring distinct settings then directives are merged", func() {
-			files := []string{"upstream-settings-policy/valid-merge-usps.yaml"}
+	When("multiple UpstreamSettingsPolicies with overlapping settings target the same Service", func() {
+		Specify("configuring distinct settings, the policies are merged", func() {
+			files := []string{
+				"upstream-settings-policy/valid-merge-usps.yaml",
+			}
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
 			nsname := types.NamespacedName{Name: "coffee-svc-usp-1", Namespace: namespace}
-			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonTargetNotFound)).To(Succeed())
+			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted)).To(Succeed())
 
 			nsname = types.NamespacedName{Name: "coffee-svc-usp-2", Namespace: namespace}
-			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonTargetNotFound)).To(Succeed())
+			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted)).To(Succeed())
 
 			Context("verify working traffic", func() {
-				It("should return a 200 response for HTTPRoute", func() {
+				It("should return a 200 response for HTTPRoutes", func() {
 					port := 80
 					if portFwdPort != 0 {
 						port = portFwdPort
 					}
-					baseURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
+					baseCoffeeURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
 
 					Eventually(
 						func() error {
-							return expectRequestToSucceed(baseURL, address, "URI: /coffee")
+							return expectRequestToSucceed(baseCoffeeURL, address, "URI: /coffee")
 						}).
 						WithTimeout(timeoutConfig.RequestTimeout).
 						WithPolling(500 * time.Millisecond).
@@ -246,53 +278,52 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("uspolicy"), func() {
 							Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
 						}
 					},
-					Entry("HTTPRoute", []framework.ExpectedNginxField{
+					Entry("Coffee upstream", []framework.ExpectedNginxField{
 						{
-							Directive:             "zone default_coffee_80",
-							Value:                 "64k",
+							Directive:             "zone",
+							Value:                 "default_coffee_80 64k",
 							Upstreams:             []string{"default_coffee_80"},
-							File:                  "nginx.conf",
+							File:                  "http.conf",
 							ValueSubstringAllowed: true,
 						},
 						{
 							Directive: "keepalive",
 							Value:     "100",
 							Upstreams: []string{"default_coffee_80"},
-							File:      "nginx.conf",
+							File:      "http.conf",
 						},
 						{
 							Directive: "keepalive_requests",
 							Value:     "55",
 							Upstreams: []string{"default_coffee_80"},
-							File:      "nginx.conf",
+							File:      "http.conf",
 						},
 						{
 							Directive: "keepalive_time",
 							Value:     "1m",
 							Upstreams: []string{"default_coffee_80"},
-							File:      "nginx.conf",
+							File:      "http.conf",
 						},
 						{
 							Directive: "keepalive_timeout",
 							Value:     "5h",
 							Upstreams: []string{"default_coffee_80"},
-							File:      "nginx.conf",
+							File:      "http.conf",
 						},
 					}),
 				)
 			})
-
-			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		})
-		Specify("configuring overlapping settings, the policy created first wins", func() {
+
+		Specify("the policy created first wins", func() {
 			files := []string{"upstream-settings-policy/valid-usps-first-wins.yaml"}
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
 			nsname := types.NamespacedName{Name: "coffee-svc-usp-1", Namespace: namespace}
-			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonTargetNotFound)).To(Succeed())
+			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted)).To(Succeed())
 
 			nsname = types.NamespacedName{Name: "coffee-svc-usp-2", Namespace: namespace}
-			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonTargetNotFound)).To(Succeed())
+			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted)).To(Succeed())
 
 			Context("verify working traffic", func() {
 				It("should return a 200 response for HTTPRoute", func() {
@@ -335,23 +366,26 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("uspolicy"), func() {
 							Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
 						}
 					},
-					Entry("HTTPRoute", []framework.ExpectedNginxField{
+					Entry("Coffee upstream", []framework.ExpectedNginxField{
 						{
-							Directive:             "zone default_coffee_80",
-							Value:                 "128k",
+							Directive:             "zone",
+							Value:                 "default_coffee_80 128k",
 							Upstreams:             []string{"default_coffee_80"},
-							File:                  "nginx.conf",
+							File:                  "http.conf",
 							ValueSubstringAllowed: true,
 						},
 					}),
 				)
 			})
+		})
+
+		AfterEach(func() {
 			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		})
 	})
 
-	When("UpstreamSettings Policy is invalid", func() {
-		Specify("if service mentioned in the target ref is not present", func() {
+	When("UpstreamSettingsPolicy targets a Service that has an invalid Gateway", func() {
+		Specify("usptreamSettingsPolicy has a condition TargetNotFound", func() {
 			files := []string{"upstream-settings-policy/invalid-usps.yaml"}
 
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
@@ -362,10 +396,22 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("uspolicy"), func() {
 			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		})
 	})
+	When("UpstreamSettingsPolicy targets a Service that does not exist", func() {
+		Specify("usptreamSettingsPolicy has no condition", func() {
+			files := []string{"upstream-settings-policy/invalid-svc-usps.yaml"}
+
+			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
+
+			nsname := types.NamespacedName{Name: "latte-svc-usp", Namespace: namespace}
+			Expect(waitForUSPolicyStatus(nsname, metav1.ConditionFalse, v1alpha2.PolicyReasonAccepted)).To(BeFalse())
+
+			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
+		})
+	})
 })
 
 func waitForUSPolicyStatus(
-	usPolicyNsNames types.NamespacedName,
+	usPolicyNsName types.NamespacedName,
 	condStatus metav1.ConditionStatus,
 	condReason v1alpha2.PolicyConditionReason,
 ) error {
@@ -373,8 +419,10 @@ func waitForUSPolicyStatus(
 	defer cancel()
 
 	GinkgoWriter.Printf(
-		"Waiting for UpstreamSettings Policy %q to have the condition Accepted/True/Accepted\n",
-		usPolicyNsNames,
+		"Waiting for UpstreamSettings Policy %q to have the condition %q/%q\n",
+		usPolicyNsName,
+		condStatus,
+		condReason,
 	)
 
 	return wait.PollUntilContextCancel(
@@ -385,7 +433,7 @@ func waitForUSPolicyStatus(
 			var usPolicy ngfAPI.UpstreamSettingsPolicy
 			var err error
 
-			if err := k8sClient.Get(ctx, usPolicyNsNames, &usPolicy); err != nil {
+			if err := k8sClient.Get(ctx, usPolicyNsName, &usPolicy); err != nil {
 				return false, err
 			}
 
@@ -402,7 +450,7 @@ func waitForUSPolicyStatus(
 			ancestors := usPolicy.Status.Ancestors
 
 			for i, ancestor := range ancestors {
-				if err := ancestorMustEqualTargetRef(ancestor, usPolicy.GetTargetRefs()[i], usPolicy.Namespace); err != nil {
+				if err := ancestorMustEqualGatewayRef(ancestor, usPolicy.GetTargetRefs()[i], usPolicy.Namespace); err != nil {
 					return false, err
 				}
 
@@ -411,4 +459,46 @@ func waitForUSPolicyStatus(
 			return err == nil, err
 		},
 	)
+}
+
+func ancestorMustEqualGatewayRef(
+	ancestor v1alpha2.PolicyAncestorStatus,
+	targetRef v1alpha2.LocalPolicyTargetReference,
+	namespace string,
+) error {
+	if ancestor.ControllerName != ngfControllerName {
+		return fmt.Errorf(
+			"expected ancestor controller name to be %s, got %s",
+			ngfControllerName,
+			ancestor.ControllerName,
+		)
+	}
+
+	if ancestor.AncestorRef.Namespace == nil {
+		return fmt.Errorf("expected ancestor namespace to be %s, got nil", namespace)
+	}
+
+	if string(*ancestor.AncestorRef.Namespace) != namespace {
+		return fmt.Errorf(
+			"expected ancestor namespace to be %s, got %s",
+			namespace,
+			string(*ancestor.AncestorRef.Namespace),
+		)
+	}
+
+	ancestorRef := ancestor.AncestorRef
+
+	if ancestorRef.Name != targetRef.Name {
+		return fmt.Errorf("expected ancestorRef to have name %s, got %s", targetRef.Name, ancestorRef.Name)
+	}
+
+	if ancestorRef.Kind == nil {
+		return fmt.Errorf("expected ancestorRef to have kind %s, got nil", targetRef.Kind)
+	}
+
+	if *ancestorRef.Kind != targetRef.Kind {
+		return fmt.Errorf("expected ancestorRef to have kind %s, got %s", targetRef.Kind, string(*ancestorRef.Kind))
+	}
+
+	return nil
 }

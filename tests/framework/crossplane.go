@@ -54,20 +54,15 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 				continue
 			}
 
-			for _, serverName := range expFieldCfg.Servers {
-				if directive.Directive == "server" && getServerName(directive.Block) == serverName {
-					for _, serverDirective := range directive.Block {
-						if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
-							return nil
-						} else if serverDirective.Directive == "location" &&
-							fieldExistsInLocation(serverDirective, expFieldCfg) {
-							return nil
-						}
-					}
-				}
+			err := validateServerBlockDirectives(expFieldCfg, *directive)
+			if err != nil {
+				return err
 			}
 
-			return validateUpstreamDirectives(expFieldCfg, directive)
+			err = validateUpstreamDirectives(expFieldCfg, directive)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -77,6 +72,22 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 	}
 
 	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, string(b))
+}
+
+func validateServerBlockDirectives(expFieldCfg ExpectedNginxField, directive Directive) error {
+	for _, serverName := range expFieldCfg.Servers {
+		if directive.Directive == "server" && getServerName(directive.Block) == serverName {
+			for _, serverDirective := range directive.Block {
+				if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
+					return nil
+				} else if serverDirective.Directive == "location" &&
+					fieldExistsInLocation(serverDirective, expFieldCfg) {
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, directive.Directive)
 }
 
 func validateUpstreamDirectives(expFieldCfg ExpectedNginxField, directive *Directive) error {
@@ -89,7 +100,7 @@ func validateUpstreamDirectives(expFieldCfg ExpectedNginxField, directive *Direc
 			}
 		}
 	}
-	return nil
+	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, directive.Directive)
 }
 
 func getServerName(serverBlock Directives) string {
