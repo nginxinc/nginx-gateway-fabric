@@ -601,7 +601,7 @@ func TestAttachPolicyToService(t *testing.T) {
 			name:        "no attachment; gateway is invalid",
 			policy:      &Policy{Source: &policiesfakes.FakePolicy{}},
 			svc:         &ReferencedService{ParentGateways: []types.NamespacedName{winningGwNsName}},
-			gw:          getGateway(false /*valid*/),
+			gw:          getGateway(false /*invalid*/),
 			expAttached: false,
 			expAncestors: []PolicyAncestor{
 				{
@@ -625,7 +625,7 @@ func TestAttachPolicyToService(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			attachPolicyToService(test.policy, test.svc, test.gw, "ctrl")
+			attachPolicyToService(test.policy, test.svc, test.gw, "ctlr")
 			if test.expAttached {
 				g.Expect(test.svc.Policies).To(HaveLen(1))
 			} else {

@@ -297,7 +297,7 @@ func TestBuildReferencedServices(t *testing.T) {
 			exp: nil,
 		},
 		{
-			name: "route wil nil parent attachment status",
+			name: "route with nil parent attachment status",
 			l7Routes: map[RouteKey]*L7Route{
 				{NamespacedName: types.NamespacedName{Name: "nil-attachment-route"}}: nilAttachmentRoute,
 			},
@@ -395,6 +395,6 @@ func TestGetUniqueAttachedParentGateways(t *testing.T) {
 		{Namespace: "test2", Name: "attached-2"},
 	}
 
-	uniqueAtttachedRefs := getUniqueAttachedParentGateways(parentRefs)
-	g.Expect(uniqueAtttachedRefs).To(Equal(expectedNsNames))
+	uniqueAttachedRefs := getUniqueAttachedParentGateways(parentRefs)
+	g.Expect(uniqueAttachedRefs).To(Equal(expectedNsNames))
 }
