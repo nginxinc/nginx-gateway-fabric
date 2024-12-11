@@ -8,7 +8,7 @@ import (
 // Processor processes UpstreamSettingsPolicies. It implements policies.UpstreamSettingsProcessor.
 type Processor struct{}
 
-// NewProcessor returns a new instance of Processor.
+// NewProcessor returns a new Processor.
 func NewProcessor() Processor {
 	return Processor{}
 }

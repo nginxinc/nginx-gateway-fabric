@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	httpBaseHeaders = createBaseProxySetHeaders(httpUpgradeHeader, httpConnectionHeader)
-	grpcBaseHeaders = createBaseProxySetHeaders(grpcAuthorityHeader)
+	httpBaseHeaders             = createBaseProxySetHeaders(httpUpgradeHeader, httpConnectionHeader)
+	grpcBaseHeaders             = createBaseProxySetHeaders(grpcAuthorityHeader)
+	alwaysFalseKeepAliveChecker = func(_ string) bool { return false }
 )
 
 func TestExecuteServers(t *testing.T) {
@@ -187,7 +188,7 @@ func TestExecuteServers(t *testing.T) {
 	)
 
 	gen := GeneratorImpl{}
-	results := gen.executeServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
+	results := gen.executeServers(conf, fakeGenerator, alwaysFalseKeepAliveChecker)
 	g.Expect(results).To(HaveLen(len(expectedResults)))
 
 	for _, res := range results {
@@ -326,11 +327,8 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(
-				test.config,
-				&policiesfakes.FakeGenerator{},
-				newKeepAliveChecker([]http.Upstream{}),
-			)
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, alwaysFalseKeepAliveChecker)
+
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -448,11 +446,7 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(
-				test.config,
-				&policiesfakes.FakeGenerator{},
-				newKeepAliveChecker([]http.Upstream{}),
-			)
+			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, alwaysFalseKeepAliveChecker)
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -494,7 +488,7 @@ func TestExecuteServers_Plus(t *testing.T) {
 	g := NewWithT(t)
 
 	gen := GeneratorImpl{plus: true}
-	results := gen.executeServers(config, &policiesfakes.FakeGenerator{}, newKeepAliveChecker([]http.Upstream{}))
+	results := gen.executeServers(config, &policiesfakes.FakeGenerator{}, alwaysFalseKeepAliveChecker)
 	g.Expect(results).To(HaveLen(2))
 
 	serverConf := string(results[0].data)
@@ -578,11 +572,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			serverResults := gen.executeServers(
-				tc.conf,
-				&policiesfakes.FakeGenerator{},
-				newKeepAliveChecker([]http.Upstream{}),
-			)
+			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{}, alwaysFalseKeepAliveChecker)
 			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
@@ -1493,7 +1483,7 @@ func TestCreateServers(t *testing.T) {
 			Content: []byte("include-1"),
 		},
 	})
-	result, httpMatchPair := createServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
+	result, httpMatchPair := createServers(conf, fakeGenerator, alwaysFalseKeepAliveChecker)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1714,7 +1704,7 @@ func TestCreateServersConflicts(t *testing.T) {
 			result, _ := createServers(
 				dataplane.Configuration{HTTPServers: httpServers},
 				&policiesfakes.FakeGenerator{},
-				newKeepAliveChecker([]http.Upstream{}),
+				alwaysFalseKeepAliveChecker,
 			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
@@ -1865,7 +1855,7 @@ func TestCreateServers_Includes(t *testing.T) {
 
 	conf := dataplane.Configuration{HTTPServers: httpServers, SSLServers: sslServers}
 
-	actualServers, matchPairs := createServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
+	actualServers, matchPairs := createServers(conf, fakeGenerator, alwaysFalseKeepAliveChecker)
 	g.Expect(matchPairs).To(BeEmpty())
 	g.Expect(actualServers).To(HaveLen(len(expServers)))
 
@@ -2026,12 +2016,7 @@ func TestCreateLocations_Includes(t *testing.T) {
 		},
 	})
 
-	locations, matches, grpc := createLocations(
-		&httpServer,
-		"1",
-		fakeGenerator,
-		newKeepAliveChecker([]http.Upstream{}),
-	)
+	locations, matches, grpc := createLocations(&httpServer, "1", fakeGenerator, alwaysFalseKeepAliveChecker)
 
 	g := NewWithT(t)
 	g.Expect(grpc).To(BeFalse())
@@ -2221,7 +2206,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				},
 				"1",
 				&policiesfakes.FakeGenerator{},
-				newKeepAliveChecker([]http.Upstream{}),
+				alwaysFalseKeepAliveChecker,
 			)
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
@@ -3054,6 +3039,14 @@ func TestCreateBaseProxySetHeaders(t *testing.T) {
 				httpUpgradeHeader,
 			},
 			expBaseHeaders: append(expBaseHeaders, httpConnectionHeader, httpUpgradeHeader),
+		},
+		{
+			msg: "unset connection header and upgrade header",
+			additionalHeaders: []http.Header{
+				unsetHTTPConnectionHeader,
+				httpUpgradeHeader,
+			},
+			expBaseHeaders: append(expBaseHeaders, unsetHTTPConnectionHeader, httpUpgradeHeader),
 		},
 	}
 
