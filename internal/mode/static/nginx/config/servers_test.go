@@ -656,6 +656,18 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	keepAliveGroup := dataplane.BackendGroup{
+		Source:  hrNsName,
+		RuleIdx: 4,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_keep_alive_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+
 	filterGroup1 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 3}
 
 	filterGroup2 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 4}
@@ -973,6 +985,16 @@ func TestCreateServers(t *testing.T) {
 						Method: helpers.GetPointer("GET"),
 					},
 					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
+			Path:     "/keep-alive-enabled",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: keepAliveGroup,
 				},
 			},
 		},
@@ -1432,6 +1454,13 @@ func TestCreateServers(t *testing.T) {
 				Type:            http.InternalLocationType,
 				Includes:        internalIncludes,
 			},
+			{
+				Path:            "= /keep-alive-enabled",
+				ProxyPass:       "http://test_keep_alive_80$request_uri",
+				ProxySetHeaders: createBaseProxySetHeaders(httpUpgradeHeader, unsetHTTPConnectionHeader),
+				Type:            http.ExternalLocationType,
+				Includes:        externalIncludes,
+			},
 		}
 	}
 
@@ -1483,7 +1512,16 @@ func TestCreateServers(t *testing.T) {
 			Content: []byte("include-1"),
 		},
 	})
-	result, httpMatchPair := createServers(conf, fakeGenerator, alwaysFalseKeepAliveChecker)
+
+	keepAliveEnabledUpstream := http.Upstream{
+		Name: "test_keep_alive_80",
+		KeepAlive: http.UpstreamKeepAlive{
+			Connections: 1,
+		},
+	}
+	keepAliveCheck := newKeepAliveChecker([]http.Upstream{keepAliveEnabledUpstream})
+
+	result, httpMatchPair := createServers(conf, fakeGenerator, keepAliveCheck)
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
