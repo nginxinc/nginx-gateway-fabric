@@ -23,82 +23,38 @@ const (
 	rootPath             = "/"
 )
 
-// httpBaseHeaders contains the constant headers set in each HTTP server block.
-var httpBaseHeaders = []http.Header{
-	{
-		Name:  "Host",
-		Value: "$gw_api_compliant_host",
-	},
-	{
-		Name:  "X-Forwarded-For",
-		Value: "$proxy_add_x_forwarded_for",
-	},
-	{
-		Name:  "Upgrade",
-		Value: "$http_upgrade",
-	},
-	{
-		Name:  "Connection",
-		Value: "$connection_upgrade",
-	},
-	{
-		Name:  "X-Real-IP",
-		Value: "$remote_addr",
-	},
-	{
-		Name:  "X-Forwarded-Proto",
-		Value: "$scheme",
-	},
-	{
-		Name:  "X-Forwarded-Host",
-		Value: "$host",
-	},
-	{
-		Name:  "X-Forwarded-Port",
-		Value: "$server_port",
-	},
+var grpcAuthorityHeader = http.Header{
+	Name:  "Authority",
+	Value: "$gw_api_compliant_host",
 }
 
-// grpcBaseHeaders contains the constant headers set in each gRPC server block.
-var grpcBaseHeaders = []http.Header{
-	{
-		Name:  "Host",
-		Value: "$gw_api_compliant_host",
-	},
-	{
-		Name:  "X-Forwarded-For",
-		Value: "$proxy_add_x_forwarded_for",
-	},
-	{
-		Name:  "Authority",
-		Value: "$gw_api_compliant_host",
-	},
-	{
-		Name:  "X-Real-IP",
-		Value: "$remote_addr",
-	},
-	{
-		Name:  "X-Forwarded-Proto",
-		Value: "$scheme",
-	},
-	{
-		Name:  "X-Forwarded-Host",
-		Value: "$host",
-	},
-	{
-		Name:  "X-Forwarded-Port",
-		Value: "$server_port",
-	},
+var httpConnectionHeader = http.Header{
+	Name:  "Connection",
+	Value: "$connection_upgrade",
 }
 
-func (g GeneratorImpl) newExecuteServersFunc(generator policies.Generator) executeFunc {
+var unsetHTTPConnectionHeader = http.Header{
+	Name:  "Connection",
+	Value: "",
+}
+
+var httpUpgradeHeader = http.Header{
+	Name:  "Upgrade",
+	Value: "$http_upgrade",
+}
+
+func (g GeneratorImpl) newExecuteServersFunc(generator policies.Generator, um UpstreamMap) executeFunc {
 	return func(configuration dataplane.Configuration) []executeResult {
-		return g.executeServers(configuration, generator)
+		return g.executeServers(configuration, generator, um)
 	}
 }
 
-func (g GeneratorImpl) executeServers(conf dataplane.Configuration, generator policies.Generator) []executeResult {
-	servers, httpMatchPairs := createServers(conf, generator)
+func (g GeneratorImpl) executeServers(
+	conf dataplane.Configuration,
+	generator policies.Generator,
+	um UpstreamMap,
+) []executeResult {
+	servers, httpMatchPairs := createServers(conf, generator, um)
 
 	serverConfig := http.ServerConfig{
 		Servers:         servers,
@@ -145,7 +101,11 @@ func getIPFamily(baseHTTPConfig dataplane.BaseHTTPConfig) shared.IPFamily {
 	return shared.IPFamily{IPv4: true, IPv6: true}
 }
 
-func createServers(conf dataplane.Configuration, generator policies.Generator) ([]http.Server, httpMatchPairs) {
+func createServers(
+	conf dataplane.Configuration,
+	generator policies.Generator,
+	um UpstreamMap,
+) ([]http.Server, httpMatchPairs) {
 	servers := make([]http.Server, 0, len(conf.HTTPServers)+len(conf.SSLServers))
 	finalMatchPairs := make(httpMatchPairs)
 	sharedTLSPorts := make(map[int32]struct{})
@@ -156,7 +116,7 @@ func createServers(conf dataplane.Configuration, generator policies.Generator) (
 
 	for idx, s := range conf.HTTPServers {
 		serverID := fmt.Sprintf("%d", idx)
-		httpServer, matchPairs := createServer(s, serverID, generator)
+		httpServer, matchPairs := createServer(s, serverID, generator, um)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPairs)
 	}
@@ -164,7 +124,7 @@ func createServers(conf dataplane.Configuration, generator policies.Generator) (
 	for idx, s := range conf.SSLServers {
 		serverID := fmt.Sprintf("SSL_%d", idx)
 
-		sslServer, matchPairs := createSSLServer(s, serverID, generator)
+		sslServer, matchPairs := createSSLServer(s, serverID, generator, um)
 		if _, portInUse := sharedTLSPorts[s.Port]; portInUse {
 			sslServer.Listen = getSocketNameHTTPS(s.Port)
 			sslServer.IsSocket = true
@@ -180,6 +140,7 @@ func createSSLServer(
 	virtualServer dataplane.VirtualServer,
 	serverID string,
 	generator policies.Generator,
+	um UpstreamMap,
 ) (http.Server, httpMatchPairs) {
 	listen := fmt.Sprint(virtualServer.Port)
 	if virtualServer.IsDefault {
@@ -189,7 +150,7 @@ func createSSLServer(
 		}, nil
 	}
 
-	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator, um)
 
 	server := http.Server{
 		ServerName: virtualServer.Hostname,
@@ -218,6 +179,7 @@ func createServer(
 	virtualServer dataplane.VirtualServer,
 	serverID string,
 	generator policies.Generator,
+	um UpstreamMap,
 ) (http.Server, httpMatchPairs) {
 	listen := fmt.Sprint(virtualServer.Port)
 
@@ -228,7 +190,7 @@ func createServer(
 		}, nil
 	}
 
-	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID, generator, um)
 
 	server := http.Server{
 		ServerName: virtualServer.Hostname,
@@ -264,6 +226,7 @@ func createLocations(
 	server *dataplane.VirtualServer,
 	serverID string,
 	generator policies.Generator,
+	um UpstreamMap,
 ) ([]http.Location, httpMatchPairs, bool) {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(server.PathRules)
 	locs := make([]http.Location, 0, maxLocs)
@@ -292,7 +255,7 @@ func createLocations(
 
 		if !needsInternalLocations(rule) {
 			for _, r := range rule.MatchRules {
-				extLocations = updateLocations(r.Filters, extLocations, r, server.Port, rule.Path, rule.GRPC)
+				extLocations = updateLocations(r.Filters, extLocations, r, server.Port, rule.Path, rule.GRPC, um)
 			}
 
 			locs = append(locs, extLocations...)
@@ -314,6 +277,7 @@ func createLocations(
 				server.Port,
 				rule.Path,
 				rule.GRPC,
+				um,
 			)
 
 			internalLocations = append(internalLocations, intLocation)
@@ -450,6 +414,7 @@ func updateLocation(
 	listenerPort int32,
 	path string,
 	grpc bool,
+	um UpstreamMap,
 ) http.Location {
 	if filters.InvalidFilter != nil {
 		location.Return = &http.Return{Code: http.StatusInternalServerError}
@@ -465,7 +430,16 @@ func updateLocation(
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
-	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc)
+
+	extraHeaders := make([]http.Header, 0, 3)
+	if grpc {
+		extraHeaders = append(extraHeaders, grpcAuthorityHeader)
+	} else {
+		extraHeaders = append(extraHeaders, httpUpgradeHeader)
+		extraHeaders = append(extraHeaders, getConnectionHeader(um, matchRule.BackendGroup.Backends))
+	}
+
+	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, createBaseProxySetHeaders(extraHeaders...))
 	responseHeaders := generateResponseHeaders(&matchRule.Filters)
 
 	if rewrites != nil {
@@ -502,11 +476,12 @@ func updateLocations(
 	listenerPort int32,
 	path string,
 	grpc bool,
+	um UpstreamMap,
 ) []http.Location {
 	updatedLocations := make([]http.Location, len(buildLocations))
 
 	for i, loc := range buildLocations {
-		updatedLocations[i] = updateLocation(filters, loc, matchRule, listenerPort, path, grpc)
+		updatedLocations[i] = updateLocation(filters, loc, matchRule, listenerPort, path, grpc, um)
 	}
 
 	return updatedLocations
@@ -760,32 +735,26 @@ func createMatchLocation(path string, grpc bool) http.Location {
 	return loc
 }
 
-func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.Header {
-	var headers []http.Header
-	if !grpc {
-		headers = make([]http.Header, len(httpBaseHeaders))
-		copy(headers, httpBaseHeaders)
-	} else {
-		headers = make([]http.Header, len(grpcBaseHeaders))
-		copy(headers, grpcBaseHeaders)
-	}
-
+func generateProxySetHeaders(
+	filters *dataplane.HTTPFilters,
+	baseHeaders []http.Header,
+) []http.Header {
 	if filters != nil && filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
-		for i, header := range headers {
+		for i, header := range baseHeaders {
 			if header.Name == "Host" {
-				headers[i].Value = *filters.RequestURLRewrite.Hostname
+				baseHeaders[i].Value = *filters.RequestURLRewrite.Hostname
 				break
 			}
 		}
 	}
 
 	if filters == nil || filters.RequestHeaderModifiers == nil {
-		return headers
+		return baseHeaders
 	}
 
 	headerFilter := filters.RequestHeaderModifiers
 
-	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(headers)
+	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(baseHeaders)
 	proxySetHeaders := make([]http.Header, 0, headerLen)
 	if len(headerFilter.Add) > 0 {
 		addHeaders := createHeadersWithVarName(headerFilter.Add)
@@ -803,7 +772,7 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 		})
 	}
 
-	return append(proxySetHeaders, headers...)
+	return append(proxySetHeaders, baseHeaders...)
 }
 
 func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
@@ -886,4 +855,49 @@ func getRewriteClientIPSettings(rewriteIPConfig dataplane.RewriteClientIPSetting
 		Recursive:     rewriteIPConfig.IPRecursive,
 		ProxyProtocol: proxyProtocol,
 	}
+}
+
+func createBaseProxySetHeaders(extraHeaders ...http.Header) []http.Header {
+	baseHeaders := []http.Header{
+		{
+			Name:  "Host",
+			Value: "$gw_api_compliant_host",
+		},
+		{
+			Name:  "X-Forwarded-For",
+			Value: "$proxy_add_x_forwarded_for",
+		},
+		{
+			Name:  "X-Real-IP",
+			Value: "$remote_addr",
+		},
+		{
+			Name:  "X-Forwarded-Proto",
+			Value: "$scheme",
+		},
+		{
+			Name:  "X-Forwarded-Host",
+			Value: "$host",
+		},
+		{
+			Name:  "X-Forwarded-Port",
+			Value: "$server_port",
+		},
+	}
+
+	baseHeaders = append(baseHeaders, extraHeaders...)
+
+	return baseHeaders
+}
+
+func getConnectionHeader(um UpstreamMap, backends []dataplane.Backend) http.Header {
+	for _, backend := range backends {
+		if um.keepAliveEnabled(backend.UpstreamName) {
+			// if keep-alive settings are enabled on any upstream, the connection header value
+			// must be empty for the location
+			return unsetHTTPConnectionHeader
+		}
+	}
+
+	return httpConnectionHeader
 }
