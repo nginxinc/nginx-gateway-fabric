@@ -169,15 +169,10 @@ func (g GeneratorImpl) createUpstream(
 	}
 
 	return http.Upstream{
-		Name:     up.Name,
-		ZoneSize: zoneSize,
-		Servers:  upstreamServers,
-		KeepAlive: http.UpstreamKeepAlive{
-			Connections: upstreamPolicySettings.KeepAlive.Connections,
-			Requests:    upstreamPolicySettings.KeepAlive.Requests,
-			Time:        upstreamPolicySettings.KeepAlive.Time,
-			Timeout:     upstreamPolicySettings.KeepAlive.Timeout,
-		},
+		Name:      up.Name,
+		ZoneSize:  zoneSize,
+		Servers:   upstreamServers,
+		KeepAlive: upstreamPolicySettings.KeepAlive,
 	}
 }
 
