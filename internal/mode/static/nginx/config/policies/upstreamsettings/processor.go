@@ -2,11 +2,20 @@ package upstreamsettings
 
 import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 )
 
-// Processor processes UpstreamSettingsPolicies. It implements policies.UpstreamSettingsProcessor.
+// Processor processes UpstreamSettingsPolicies.
 type Processor struct{}
+
+// UpstreamSettings contains settings from UpstreamSettingsPolicy.
+type UpstreamSettings struct {
+	// ZoneSize is the zone size setting.
+	ZoneSize string
+	// KeepAlive contains the keepalive settings.
+	KeepAlive http.UpstreamKeepAlive
+}
 
 // NewProcessor returns a new Processor.
 func NewProcessor() Processor {
@@ -16,12 +25,12 @@ func NewProcessor() Processor {
 // Process processes policies into an UpstreamSettings object. The policies are already validated and are guaranteed
 // to not contain overlapping settings. This method merges all fields in the policies into a single UpstreamSettings
 // object.
-func (g Processor) Process(pols []policies.Policy) policies.UpstreamSettings {
+func (g Processor) Process(pols []policies.Policy) UpstreamSettings {
 	return processPolicies(pols)
 }
 
-func processPolicies(pols []policies.Policy) policies.UpstreamSettings {
-	upstreamSettings := policies.UpstreamSettings{}
+func processPolicies(pols []policies.Policy) UpstreamSettings {
+	upstreamSettings := UpstreamSettings{}
 
 	for _, pol := range pols {
 		usp, ok := pol.(*ngfAPI.UpstreamSettingsPolicy)

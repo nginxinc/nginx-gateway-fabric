@@ -8,6 +8,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 )
 
@@ -16,7 +17,7 @@ func TestProcess(t *testing.T) {
 
 	tests := []struct {
 		name                string
-		expUpstreamSettings policies.UpstreamSettings
+		expUpstreamSettings UpstreamSettings
 		policies            []policies.Policy
 	}{
 		{
@@ -38,9 +39,9 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
+			expUpstreamSettings: UpstreamSettings{
 				ZoneSize: "2m",
-				KeepAlive: policies.KeepAlive{
+				KeepAlive: http.UpstreamKeepAlive{
 					Connections: 1,
 					Requests:    1,
 					Time:        "5s",
@@ -61,7 +62,7 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
+			expUpstreamSettings: UpstreamSettings{
 				ZoneSize: "2m",
 			},
 		},
@@ -80,8 +81,8 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAlive: policies.KeepAlive{
+			expUpstreamSettings: UpstreamSettings{
+				KeepAlive: http.UpstreamKeepAlive{
 					Connections: 1,
 				},
 			},
@@ -101,8 +102,8 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAlive: policies.KeepAlive{
+			expUpstreamSettings: UpstreamSettings{
+				KeepAlive: http.UpstreamKeepAlive{
 					Requests: 1,
 				},
 			},
@@ -122,8 +123,8 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAlive: policies.KeepAlive{
+			expUpstreamSettings: UpstreamSettings{
+				KeepAlive: http.UpstreamKeepAlive{
 					Time: "5s",
 				},
 			},
@@ -143,8 +144,8 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
-				KeepAlive: policies.KeepAlive{
+			expUpstreamSettings: UpstreamSettings{
+				KeepAlive: http.UpstreamKeepAlive{
 					Timeout: "10s",
 				},
 			},
@@ -160,7 +161,7 @@ func TestProcess(t *testing.T) {
 					Spec: ngfAPI.UpstreamSettingsPolicySpec{},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{},
+			expUpstreamSettings: UpstreamSettings{},
 		},
 		{
 			name: "multiple UpstreamSettingsPolicies",
@@ -219,9 +220,9 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
+			expUpstreamSettings: UpstreamSettings{
 				ZoneSize: "2m",
-				KeepAlive: policies.KeepAlive{
+				KeepAlive: http.UpstreamKeepAlive{
 					Connections: 1,
 					Requests:    1,
 					Time:        "5s",
@@ -309,9 +310,9 @@ func TestProcess(t *testing.T) {
 					},
 				},
 			},
-			expUpstreamSettings: policies.UpstreamSettings{
+			expUpstreamSettings: UpstreamSettings{
 				ZoneSize: "2m",
-				KeepAlive: policies.KeepAlive{
+				KeepAlive: http.UpstreamKeepAlive{
 					Connections: 1,
 					Requests:    1,
 					Time:        "5s",

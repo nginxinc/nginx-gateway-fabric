@@ -6,7 +6,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -116,7 +116,7 @@ func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstre
 
 func (g GeneratorImpl) createUpstreams(
 	upstreams []dataplane.Upstream,
-	processor policies.UpstreamSettingsProcessor,
+	processor upstreamsettings.Processor,
 ) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
@@ -132,7 +132,7 @@ func (g GeneratorImpl) createUpstreams(
 
 func (g GeneratorImpl) createUpstream(
 	up dataplane.Upstream,
-	processor policies.UpstreamSettingsProcessor,
+	processor upstreamsettings.Processor,
 ) http.Upstream {
 	upstreamPolicySettings := processor.Process(up.Policies)
 
