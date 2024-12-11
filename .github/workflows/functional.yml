@@ -104,7 +104,7 @@ jobs:
       - name: Setup license file for plus
         if: ${{ inputs.image == 'plus' }}
         env:
-          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REGISTRY }}
+          PLUS_LICENSE: ${{ secrets.JWT_PLUS_REPORTING }}
         run: echo "${PLUS_LICENSE}" > license.jwt
 
       - name: Install cloud-provider-kind
@@ -125,6 +125,7 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          export PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests
 
@@ -132,6 +133,7 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          export PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=graceful-recovery GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests
 
@@ -139,5 +141,6 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          export PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests

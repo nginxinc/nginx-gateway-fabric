@@ -62,6 +62,7 @@ var (
 	isGKEInternalLB          = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
 	plusEnabled              = flag.Bool("plus-enabled", false, "Is NGINX Plus enabled")
 	plusLicenseFileName      = flag.String("plus-license-file-name", "", "File name containing the NGINX Plus JWT")
+	plusUsageEndpoint        = flag.String("plus-usage-endpoint", "", "Endpoint for reporting NGINX Plus usage")
 	clusterName              = flag.String("cluster-name", "kind", "Cluster name")
 )
 
@@ -190,12 +191,13 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 
 func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framework.InstallationConfig {
 	installCfg := framework.InstallationConfig{
-		ReleaseName:     cfg.releaseName,
-		Namespace:       ngfNamespace,
-		ChartPath:       cfg.chartPath,
-		ServiceType:     *serviceType,
-		IsGKEInternalLB: *isGKEInternalLB,
-		Plus:            *plusEnabled,
+		ReleaseName:       cfg.releaseName,
+		Namespace:         ngfNamespace,
+		ChartPath:         cfg.chartPath,
+		ServiceType:       *serviceType,
+		IsGKEInternalLB:   *isGKEInternalLB,
+		Plus:              *plusEnabled,
+		PlusUsageEndpoint: *plusUsageEndpoint,
 	}
 
 	// if we aren't installing from the public charts, then set the custom images
