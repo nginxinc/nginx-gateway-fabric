@@ -134,9 +134,9 @@ func (g GeneratorImpl) executeConfigTemplates(
 	fileBytes := make(map[string][]byte)
 
 	httpUpstreams := g.createUpstreams(conf.Upstreams, upstreamsettings.NewProcessor())
-	upstreamMap := g.createUpstreamMap(httpUpstreams)
+	keepAliveCheck := newKeepAliveChecker(httpUpstreams)
 
-	for _, execute := range g.getExecuteFuncs(generator, httpUpstreams, upstreamMap) {
+	for _, execute := range g.getExecuteFuncs(generator, httpUpstreams, keepAliveCheck) {
 		results := execute(conf)
 		for _, res := range results {
 			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
@@ -164,12 +164,12 @@ func (g GeneratorImpl) executeConfigTemplates(
 func (g GeneratorImpl) getExecuteFuncs(
 	generator policies.Generator,
 	upstreams []http.Upstream,
-	upstreamMap UpstreamMap,
+	keepAliveCheck keepAliveChecker,
 ) []executeFunc {
 	return []executeFunc{
 		executeMainConfig,
 		executeBaseHTTPConfig,
-		g.newExecuteServersFunc(generator, upstreamMap),
+		g.newExecuteServersFunc(generator, keepAliveCheck),
 		newExecuteUpstreamsFunc(upstreams),
 		executeSplitClients,
 		executeMaps,

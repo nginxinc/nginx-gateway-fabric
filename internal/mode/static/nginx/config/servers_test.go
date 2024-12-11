@@ -187,7 +187,7 @@ func TestExecuteServers(t *testing.T) {
 	)
 
 	gen := GeneratorImpl{}
-	results := gen.executeServers(conf, fakeGenerator, UpstreamMap{})
+	results := gen.executeServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
 	g.Expect(results).To(HaveLen(len(expectedResults)))
 
 	for _, res := range results {
@@ -326,7 +326,11 @@ func TestExecuteServers_IPFamily(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
+			results := gen.executeServers(
+				test.config,
+				&policiesfakes.FakeGenerator{},
+				newKeepAliveChecker([]http.Upstream{}),
+			)
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -444,7 +448,11 @@ func TestExecuteServers_RewriteClientIP(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			results := gen.executeServers(test.config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
+			results := gen.executeServers(
+				test.config,
+				&policiesfakes.FakeGenerator{},
+				newKeepAliveChecker([]http.Upstream{}),
+			)
 			g.Expect(results).To(HaveLen(2))
 			serverConf := string(results[0].data)
 			httpMatchConf := string(results[1].data)
@@ -486,7 +494,7 @@ func TestExecuteServers_Plus(t *testing.T) {
 	g := NewWithT(t)
 
 	gen := GeneratorImpl{plus: true}
-	results := gen.executeServers(config, &policiesfakes.FakeGenerator{}, UpstreamMap{})
+	results := gen.executeServers(config, &policiesfakes.FakeGenerator{}, newKeepAliveChecker([]http.Upstream{}))
 	g.Expect(results).To(HaveLen(2))
 
 	serverConf := string(results[0].data)
@@ -570,7 +578,11 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			g := NewWithT(t)
 
 			gen := GeneratorImpl{}
-			serverResults := gen.executeServers(tc.conf, &policiesfakes.FakeGenerator{}, UpstreamMap{})
+			serverResults := gen.executeServers(
+				tc.conf,
+				&policiesfakes.FakeGenerator{},
+				newKeepAliveChecker([]http.Upstream{}),
+			)
 			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
@@ -1481,7 +1493,7 @@ func TestCreateServers(t *testing.T) {
 			Content: []byte("include-1"),
 		},
 	})
-	result, httpMatchPair := createServers(conf, fakeGenerator, UpstreamMap{})
+	result, httpMatchPair := createServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
 
 	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -1702,7 +1714,7 @@ func TestCreateServersConflicts(t *testing.T) {
 			result, _ := createServers(
 				dataplane.Configuration{HTTPServers: httpServers},
 				&policiesfakes.FakeGenerator{},
-				UpstreamMap{},
+				newKeepAliveChecker([]http.Upstream{}),
 			)
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 		})
@@ -1853,7 +1865,7 @@ func TestCreateServers_Includes(t *testing.T) {
 
 	conf := dataplane.Configuration{HTTPServers: httpServers, SSLServers: sslServers}
 
-	actualServers, matchPairs := createServers(conf, fakeGenerator, UpstreamMap{})
+	actualServers, matchPairs := createServers(conf, fakeGenerator, newKeepAliveChecker([]http.Upstream{}))
 	g.Expect(matchPairs).To(BeEmpty())
 	g.Expect(actualServers).To(HaveLen(len(expServers)))
 
@@ -2014,7 +2026,12 @@ func TestCreateLocations_Includes(t *testing.T) {
 		},
 	})
 
-	locations, matches, grpc := createLocations(&httpServer, "1", fakeGenerator, UpstreamMap{})
+	locations, matches, grpc := createLocations(
+		&httpServer,
+		"1",
+		fakeGenerator,
+		newKeepAliveChecker([]http.Upstream{}),
+	)
 
 	g := NewWithT(t)
 	g.Expect(grpc).To(BeFalse())
@@ -2204,7 +2221,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				},
 				"1",
 				&policiesfakes.FakeGenerator{},
-				UpstreamMap{},
+				newKeepAliveChecker([]http.Upstream{}),
 			)
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
@@ -3056,23 +3073,21 @@ func TestGetConnectionHeader(t *testing.T) {
 
 	tests := []struct {
 		msg                 string
-		upstreamMap         UpstreamMap
+		upstreams           []http.Upstream
 		expConnectionHeader http.Header
 		backends            []dataplane.Backend
 	}{
 		{
 			msg: "no upstreams with keepAlive enabled",
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream1": {
-						Name: "upstream1",
-					},
-					"upstream2": {
-						Name: "upstream2",
-					},
-					"upstream3": {
-						Name: "upstream3",
-					},
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+				},
+				{
+					Name: "upstream2",
+				},
+				{
+					Name: "upstream3",
 				},
 			},
 			backends: []dataplane.Backend{
@@ -3090,13 +3105,11 @@ func TestGetConnectionHeader(t *testing.T) {
 		},
 		{
 			msg: "upstream with keepAlive enabled",
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream": {
-						Name: "upstream",
-						KeepAlive: http.UpstreamKeepAlive{
-							Connections: 1,
-						},
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
 					},
 				},
 			},
@@ -3109,25 +3122,25 @@ func TestGetConnectionHeader(t *testing.T) {
 		},
 		{
 			msg: "multiple upstreams with keepAlive enabled",
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream1": {
-						Name: "upstream1",
-						KeepAlive: http.UpstreamKeepAlive{
-							Connections: 1,
-						},
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
 					},
-					"upstream2": {
-						Name: "upstream2",
-						KeepAlive: http.UpstreamKeepAlive{
-							Requests: 1,
-						},
+				},
+				{
+					Name: "upstream2",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 2,
+						Requests:    1,
 					},
-					"upstream3": {
-						Name: "upstream3",
-						KeepAlive: http.UpstreamKeepAlive{
-							Time: "5s",
-						},
+				},
+				{
+					Name: "upstream3",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 3,
+						Time:        "5s",
 					},
 				},
 			},
@@ -3147,18 +3160,15 @@ func TestGetConnectionHeader(t *testing.T) {
 		{
 			msg:                 "mix of upstreams with keepAlive enabled and disabled",
 			expConnectionHeader: unsetHTTPConnectionHeader,
-			upstreamMap: UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					"upstream1": {
-						Name: "upstream1",
-						KeepAlive: http.UpstreamKeepAlive{
-							Connections: 1,
-						},
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
 					},
-					"upstream2": {
-						Name:     "upstream2",
-						ZoneSize: "2m",
-					},
+				},
+				{
+					Name: "upstream2",
 				},
 			},
 			backends: []dataplane.Backend{
@@ -3177,7 +3187,9 @@ func TestGetConnectionHeader(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			connectionHeader := getConnectionHeader(tc.upstreamMap, tc.backends)
+			keepAliveCheck := newKeepAliveChecker(tc.upstreams)
+
+			connectionHeader := getConnectionHeader(keepAliveCheck, tc.backends)
 			g.Expect(connectionHeader).To(Equal(tc.expConnectionHeader))
 		})
 	}

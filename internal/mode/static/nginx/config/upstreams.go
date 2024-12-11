@@ -33,20 +33,23 @@ const (
 	plusZoneSizeStream = "1m"
 )
 
-// UpstreamMap holds a map which maps upstream name to http.Upstream.
-type UpstreamMap struct {
-	nameToUpstream map[string]http.Upstream
-}
+// keepAliveChecker takes an upstream name and returns if it has keep alive settings enabled.
+type keepAliveChecker func(upstreamName string) bool
 
-func (um UpstreamMap) keepAliveEnabled(name string) bool {
-	if upstream, exists := um.nameToUpstream[name]; exists {
-		return upstream.KeepAlive.Connections != 0 ||
-			upstream.KeepAlive.Requests != 0 ||
-			upstream.KeepAlive.Time != "" ||
-			upstream.KeepAlive.Timeout != ""
+func newKeepAliveChecker(upstreams []http.Upstream) keepAliveChecker {
+	upstreamMap := make(map[string]http.Upstream)
+
+	for _, upstream := range upstreams {
+		upstreamMap[upstream.Name] = upstream
 	}
 
-	return false
+	return func(upstreamName string) bool {
+		if upstream, exists := upstreamMap[upstreamName]; exists {
+			return upstream.KeepAlive.Connections != 0
+		}
+
+		return false
+	}
 }
 
 func newExecuteUpstreamsFunc(upstreams []http.Upstream) executeFunc {
@@ -62,16 +65,6 @@ func executeUpstreams(upstreams []http.Upstream) []executeResult {
 	}
 
 	return []executeResult{result}
-}
-
-func (g GeneratorImpl) createUpstreamMap(upstreams []http.Upstream) UpstreamMap {
-	upstreamMap := UpstreamMap{nameToUpstream: make(map[string]http.Upstream)}
-
-	for _, upstream := range upstreams {
-		upstreamMap.nameToUpstream[upstream.Name] = upstream
-	}
-
-	return upstreamMap
 }
 
 func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []executeResult {

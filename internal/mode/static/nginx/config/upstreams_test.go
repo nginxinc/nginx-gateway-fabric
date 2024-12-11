@@ -759,115 +759,201 @@ func TestCreateStreamUpstreamPlus(t *testing.T) {
 	g.Expect(result).To(Equal(expectedUpstream))
 }
 
-func TestCreateUpstreamMap(t *testing.T) {
-	t.Parallel()
-	gen := GeneratorImpl{}
-
-	up1 := http.Upstream{
-		Name: "up1",
-	}
-
-	up2 := http.Upstream{
-		Name: "up2",
-	}
-
-	up3 := http.Upstream{
-		Name: "up3",
-	}
-
-	upstreamMap := gen.createUpstreamMap([]http.Upstream{up1, up2, up3})
-	expUpstreamMap := UpstreamMap{
-		nameToUpstream: map[string]http.Upstream{
-			"up1": up1,
-			"up2": up2,
-			"up3": up3,
-		},
-	}
-
-	g := NewWithT(t)
-	g.Expect(upstreamMap).To(Equal(expUpstreamMap))
-}
-
-func TestKeepAliveEnabled(t *testing.T) {
+func TestKeepAliveChecker(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		msg                 string
-		upstream            http.Upstream
-		expKeepAliveEnabled bool
+		upstreams           []http.Upstream
+		expKeepAliveEnabled []bool
 	}{
 		{
 			msg: "upstream with all keepAlive fields set",
-			upstream: http.Upstream{
-				Name: "upAllKeepAliveFieldsSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Connections: 1,
-					Requests:    1,
-					Time:        "5s",
-					Timeout:     "10s",
+			upstreams: []http.Upstream{
+				{
+					Name: "upAllKeepAliveFieldsSet",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
 				},
 			},
-			expKeepAliveEnabled: true,
+			expKeepAliveEnabled: []bool{
+				true,
+			},
 		},
 		{
 			msg: "upstream with keepAlive connection field set",
-			upstream: http.Upstream{
-				Name: "upKeepAliveConnectionsSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Connections: 1,
+			upstreams: []http.Upstream{
+				{
+					Name: "upKeepAliveConnectionsSet",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+					},
 				},
 			},
-			expKeepAliveEnabled: true,
+			expKeepAliveEnabled: []bool{
+				true,
+			},
 		},
 		{
 			msg: "upstream with keepAlive requests field set",
-			upstream: http.Upstream{
-				Name: "upKeepAliveRequestsSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Requests: 1,
+			upstreams: []http.Upstream{
+				{
+					Name: "upKeepAliveRequestsSet",
+					KeepAlive: http.UpstreamKeepAlive{
+						Requests: 1,
+					},
 				},
 			},
-			expKeepAliveEnabled: true,
+			expKeepAliveEnabled: []bool{
+				false,
+			},
 		},
 		{
 			msg: "upstream with keepAlive time field set",
-			upstream: http.Upstream{
-				Name: "upKeepAliveTimeSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Time: "5s",
+			upstreams: []http.Upstream{
+				{
+					Name: "upKeepAliveTimeSet",
+					KeepAlive: http.UpstreamKeepAlive{
+						Time: "5s",
+					},
 				},
 			},
-			expKeepAliveEnabled: true,
+			expKeepAliveEnabled: []bool{
+				false,
+			},
 		},
 		{
 			msg: "upstream with keepAlive timeout field set",
-			upstream: http.Upstream{
-				Name: "upKeepAliveTimeoutSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Timeout: "10s",
+			upstreams: []http.Upstream{
+				{
+					Name: "upKeepAliveTimeoutSet",
+					KeepAlive: http.UpstreamKeepAlive{
+						Timeout: "10s",
+					},
 				},
 			},
-			expKeepAliveEnabled: true,
+			expKeepAliveEnabled: []bool{
+				false,
+			},
 		},
 		{
 			msg: "upstream with no keepAlive fields set",
-			upstream: http.Upstream{
-				Name: "upNoKeepAliveFieldsSet",
+			upstreams: []http.Upstream{
+				{
+					Name: "upNoKeepAliveFieldsSet",
+				},
 			},
-			expKeepAliveEnabled: false,
+			expKeepAliveEnabled: []bool{
+				false,
+			},
 		},
 		{
 			msg: "upstream with keepAlive fields set to empty values",
-			upstream: http.Upstream{
-				Name: "upNoKeepAliveFieldsSet",
-				KeepAlive: http.UpstreamKeepAlive{
-					Connections: 0,
-					Requests:    0,
-					Time:        "",
-					Timeout:     "",
+			upstreams: []http.Upstream{
+				{
+					Name: "upKeepAliveFieldsEmpty",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 0,
+						Requests:    0,
+						Time:        "",
+						Timeout:     "",
+					},
 				},
 			},
-			expKeepAliveEnabled: false,
+			expKeepAliveEnabled: []bool{
+				false,
+			},
+		},
+		{
+			msg: "multiple upstreams with keepAlive fields set",
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
+				},
+				{
+					Name: "upstream2",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
+				},
+				{
+					Name: "upstream3",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
+				},
+			},
+			expKeepAliveEnabled: []bool{
+				true,
+				true,
+				true,
+			},
+		},
+		{
+			msg: "mix of keepAlive enabled upstreams and disabled upstreams",
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
+				},
+				{
+					Name: "upstream2",
+				},
+				{
+					Name: "upstream3",
+					KeepAlive: http.UpstreamKeepAlive{
+						Connections: 1,
+						Requests:    1,
+						Time:        "5s",
+						Timeout:     "10s",
+					},
+				},
+			},
+			expKeepAliveEnabled: []bool{
+				true,
+				false,
+				true,
+			},
+		},
+		{
+			msg: "all upstreams without keepAlive fields set",
+			upstreams: []http.Upstream{
+				{
+					Name: "upstream1",
+				},
+				{
+					Name: "upstream2",
+				},
+				{
+					Name: "upstream3",
+				},
+			},
+			expKeepAliveEnabled: []bool{
+				false,
+				false,
+				false,
+			},
 		},
 	}
 
@@ -876,13 +962,11 @@ func TestKeepAliveEnabled(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			upstreamMap := UpstreamMap{
-				nameToUpstream: map[string]http.Upstream{
-					test.upstream.Name: test.upstream,
-				},
-			}
+			keepAliveCheck := newKeepAliveChecker(test.upstreams)
 
-			g.Expect(upstreamMap.keepAliveEnabled(test.upstream.Name)).To(Equal(test.expKeepAliveEnabled))
+			for index, upstream := range test.upstreams {
+				g.Expect(keepAliveCheck(upstream.Name)).To(Equal(test.expKeepAliveEnabled[index]))
+			}
 		})
 	}
 }
