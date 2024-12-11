@@ -237,10 +237,12 @@ func TestCreateUpstreams(t *testing.T) {
 					Address: "12.0.0.0:80",
 				},
 			},
-			KeepAliveConnections: 1,
-			KeepAliveRequests:    1,
-			KeepAliveTime:        "5s",
-			KeepAliveTimeout:     "10s",
+			KeepAlive: http.UpstreamKeepAlive{
+				Connections: 1,
+				Requests:    1,
+				Time:        "5s",
+				Timeout:     "10s",
+			},
 		},
 		{
 			Name: invalidBackendRef,
@@ -262,8 +264,8 @@ func TestCreateUpstream(t *testing.T) {
 	gen := GeneratorImpl{}
 	tests := []struct {
 		msg              string
-		stateUpstream    dataplane.Upstream
 		expectedUpstream http.Upstream
+		stateUpstream    dataplane.Upstream
 	}{
 		{
 			stateUpstream: dataplane.Upstream{
@@ -389,10 +391,12 @@ func TestCreateUpstream(t *testing.T) {
 						Address: "10.0.0.1:80",
 					},
 				},
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 			msg: "single upstreamSettingsPolicy",
 		},
@@ -441,10 +445,12 @@ func TestCreateUpstream(t *testing.T) {
 						Address: "10.0.0.1:80",
 					},
 				},
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 			msg: "multiple upstreamSettingsPolicies",
 		},
@@ -511,10 +517,12 @@ func TestCreateUpstream(t *testing.T) {
 						Address: "10.0.0.1:80",
 					},
 				},
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 			msg: "upstreamSettingsPolicy with only keep alive settings",
 		},
@@ -791,43 +799,53 @@ func TestKeepAliveEnabled(t *testing.T) {
 		{
 			msg: "upstream with all keepAlive fields set",
 			upstream: http.Upstream{
-				Name:                 "upAllKeepAliveFieldsSet",
-				KeepAliveConnections: 1,
-				KeepAliveRequests:    1,
-				KeepAliveTime:        "5s",
-				KeepAliveTimeout:     "10s",
+				Name: "upAllKeepAliveFieldsSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 1,
+					Requests:    1,
+					Time:        "5s",
+					Timeout:     "10s",
+				},
 			},
 			expKeepAliveEnabled: true,
 		},
 		{
 			msg: "upstream with keepAlive connection field set",
 			upstream: http.Upstream{
-				Name:                 "upKeepAliveConnectionsSet",
-				KeepAliveConnections: 1,
+				Name: "upKeepAliveConnectionsSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 1,
+				},
 			},
 			expKeepAliveEnabled: true,
 		},
 		{
 			msg: "upstream with keepAlive requests field set",
 			upstream: http.Upstream{
-				Name:              "upKeepAliveRequestsSet",
-				KeepAliveRequests: 1,
+				Name: "upKeepAliveRequestsSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Requests: 1,
+				},
 			},
 			expKeepAliveEnabled: true,
 		},
 		{
 			msg: "upstream with keepAlive time field set",
 			upstream: http.Upstream{
-				Name:          "upKeepAliveTimeSet",
-				KeepAliveTime: "5s",
+				Name: "upKeepAliveTimeSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Time: "5s",
+				},
 			},
 			expKeepAliveEnabled: true,
 		},
 		{
 			msg: "upstream with keepAlive timeout field set",
 			upstream: http.Upstream{
-				Name:             "upKeepAliveTimeoutSet",
-				KeepAliveTimeout: "10s",
+				Name: "upKeepAliveTimeoutSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Timeout: "10s",
+				},
 			},
 			expKeepAliveEnabled: true,
 		},
@@ -841,11 +859,13 @@ func TestKeepAliveEnabled(t *testing.T) {
 		{
 			msg: "upstream with keepAlive fields set to empty values",
 			upstream: http.Upstream{
-				Name:                 "upNoKeepAliveFieldsSet",
-				KeepAliveConnections: 0,
-				KeepAliveRequests:    0,
-				KeepAliveTime:        "",
-				KeepAliveTimeout:     "",
+				Name: "upNoKeepAliveFieldsSet",
+				KeepAlive: http.UpstreamKeepAlive{
+					Connections: 0,
+					Requests:    0,
+					Time:        "",
+					Timeout:     "",
+				},
 			},
 			expKeepAliveEnabled: false,
 		},

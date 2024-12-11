@@ -3093,8 +3093,10 @@ func TestGetConnectionHeader(t *testing.T) {
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream": {
-						Name:                 "upstream",
-						KeepAliveConnections: 1,
+						Name: "upstream",
+						KeepAlive: http.UpstreamKeepAlive{
+							Connections: 1,
+						},
 					},
 				},
 			},
@@ -3110,16 +3112,22 @@ func TestGetConnectionHeader(t *testing.T) {
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream1": {
-						Name:                 "upstream1",
-						KeepAliveConnections: 1,
+						Name: "upstream1",
+						KeepAlive: http.UpstreamKeepAlive{
+							Connections: 1,
+						},
 					},
 					"upstream2": {
-						Name:              "upstream2",
-						KeepAliveRequests: 1,
+						Name: "upstream2",
+						KeepAlive: http.UpstreamKeepAlive{
+							Requests: 1,
+						},
 					},
 					"upstream3": {
-						Name:          "upstream3",
-						KeepAliveTime: "5s",
+						Name: "upstream3",
+						KeepAlive: http.UpstreamKeepAlive{
+							Time: "5s",
+						},
 					},
 				},
 			},
@@ -3142,8 +3150,10 @@ func TestGetConnectionHeader(t *testing.T) {
 			upstreamMap: UpstreamMap{
 				nameToUpstream: map[string]http.Upstream{
 					"upstream1": {
-						Name:                 "upstream1",
-						KeepAliveConnections: 1,
+						Name: "upstream1",
+						KeepAlive: http.UpstreamKeepAlive{
+							Connections: 1,
+						},
 					},
 					"upstream2": {
 						Name:     "upstream2",

@@ -40,10 +40,10 @@ type UpstreamMap struct {
 
 func (um UpstreamMap) keepAliveEnabled(name string) bool {
 	if upstream, exists := um.nameToUpstream[name]; exists {
-		return upstream.KeepAliveConnections != 0 ||
-			upstream.KeepAliveRequests != 0 ||
-			upstream.KeepAliveTime != "" ||
-			upstream.KeepAliveTimeout != ""
+		return upstream.KeepAlive.Connections != 0 ||
+			upstream.KeepAlive.Requests != 0 ||
+			upstream.KeepAlive.Time != "" ||
+			upstream.KeepAlive.Timeout != ""
 	}
 
 	return false
@@ -176,13 +176,15 @@ func (g GeneratorImpl) createUpstream(
 	}
 
 	return http.Upstream{
-		Name:                 up.Name,
-		ZoneSize:             zoneSize,
-		Servers:              upstreamServers,
-		KeepAliveConnections: upstreamPolicySettings.KeepAlive.Connections,
-		KeepAliveRequests:    upstreamPolicySettings.KeepAlive.Requests,
-		KeepAliveTime:        upstreamPolicySettings.KeepAlive.Time,
-		KeepAliveTimeout:     upstreamPolicySettings.KeepAlive.Timeout,
+		Name:     up.Name,
+		ZoneSize: zoneSize,
+		Servers:  upstreamServers,
+		KeepAlive: http.UpstreamKeepAlive{
+			Connections: upstreamPolicySettings.KeepAlive.Connections,
+			Requests:    upstreamPolicySettings.KeepAlive.Requests,
+			Time:        upstreamPolicySettings.KeepAlive.Time,
+			Timeout:     upstreamPolicySettings.KeepAlive.Timeout,
+		},
 	}
 }
 

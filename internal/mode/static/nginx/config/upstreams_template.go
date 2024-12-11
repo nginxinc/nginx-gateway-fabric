@@ -16,17 +16,17 @@ upstream {{ $u.Name }} {
     {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
-    {{ if $u.KeepAliveConnections -}}
-    keepalive {{ $u.KeepAliveConnections }};
+    {{ if $u.KeepAlive.Connections -}}
+    keepalive {{ $u.KeepAlive.Connections }};
     {{- end }}
-    {{ if $u.KeepAliveRequests -}}
-    keepalive_requests {{ $u.KeepAliveRequests }};
+    {{ if $u.KeepAlive.Requests -}}
+    keepalive_requests {{ $u.KeepAlive.Requests }};
     {{- end }}
-    {{ if $u.KeepAliveTime -}}
-    keepalive_time {{ $u.KeepAliveTime }};
+    {{ if $u.KeepAlive.Time -}}
+    keepalive_time {{ $u.KeepAlive.Time }};
     {{- end }}
-    {{ if $u.KeepAliveTimeout -}}
-    keepalive_timeout {{ $u.KeepAliveTimeout }};
+    {{ if $u.KeepAlive.Timeout -}}
+    keepalive_timeout {{ $u.KeepAlive.Timeout }};
     {{- end }}
 }
 {{ end -}}
