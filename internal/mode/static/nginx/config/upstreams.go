@@ -6,11 +6,15 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/stream"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
-var upstreamsTemplate = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))
+var (
+	upstreamsTemplate       = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))
+	streamUpstreamsTemplate = gotemplate.Must(gotemplate.New("streamUpstreams").Parse(streamUpstreamsTemplateText))
+)
 
 const (
 	// nginx503Server is used as a backend for services that cannot be resolved (have no IP address).
@@ -29,9 +33,32 @@ const (
 	plusZoneSizeStream = "1m"
 )
 
-func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
-	upstreams := g.createUpstreams(conf.Upstreams)
+// keepAliveChecker takes an upstream name and returns if it has keep alive settings enabled.
+type keepAliveChecker func(upstreamName string) bool
 
+func newKeepAliveChecker(upstreams []http.Upstream) keepAliveChecker {
+	upstreamMap := make(map[string]http.Upstream)
+
+	for _, upstream := range upstreams {
+		upstreamMap[upstream.Name] = upstream
+	}
+
+	return func(upstreamName string) bool {
+		if upstream, exists := upstreamMap[upstreamName]; exists {
+			return upstream.KeepAlive.Connections != 0
+		}
+
+		return false
+	}
+}
+
+func newExecuteUpstreamsFunc(upstreams []http.Upstream) executeFunc {
+	return func(_ dataplane.Configuration) []executeResult {
+		return executeUpstreams(upstreams)
+	}
+}
+
+func executeUpstreams(upstreams []http.Upstream) []executeResult {
 	result := executeResult{
 		dest: httpConfigFile,
 		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),
@@ -45,7 +72,7 @@ func (g GeneratorImpl) executeStreamUpstreams(conf dataplane.Configuration) []ex
 
 	result := executeResult{
 		dest: streamConfigFile,
-		data: helpers.MustExecuteTemplate(upstreamsTemplate, upstreams),
+		data: helpers.MustExecuteTemplate(streamUpstreamsTemplate, upstreams),
 	}
 
 	return []executeResult{result}
@@ -87,12 +114,15 @@ func (g GeneratorImpl) createStreamUpstream(up dataplane.Upstream) stream.Upstre
 	}
 }
 
-func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
+func (g GeneratorImpl) createUpstreams(
+	upstreams []dataplane.Upstream,
+	processor upstreamsettings.Processor,
+) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, g.createUpstream(u))
+		ups = append(ups, g.createUpstream(u, processor))
 	}
 
 	ups = append(ups, createInvalidBackendRefUpstream())
@@ -100,10 +130,19 @@ func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Up
 	return ups
 }
 
-func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
+func (g GeneratorImpl) createUpstream(
+	up dataplane.Upstream,
+	processor upstreamsettings.Processor,
+) http.Upstream {
+	upstreamPolicySettings := processor.Process(up.Policies)
+
 	zoneSize := ossZoneSize
 	if g.plus {
 		zoneSize = plusZoneSize
+	}
+
+	if upstreamPolicySettings.ZoneSize != "" {
+		zoneSize = upstreamPolicySettings.ZoneSize
 	}
 
 	if len(up.Endpoints) == 0 {
@@ -130,9 +169,10 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 	}
 
 	return http.Upstream{
-		Name:     up.Name,
-		ZoneSize: zoneSize,
-		Servers:  upstreamServers,
+		Name:      up.Name,
+		ZoneSize:  zoneSize,
+		Servers:   upstreamServers,
+		KeepAlive: upstreamPolicySettings.KeepAlive,
 	}
 }
 
