@@ -105,16 +105,6 @@ func (v Validator) validateUpstreamKeepAlive(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if keepAlive.Connections != nil && *keepAlive.Connections < 1 {
-		path := fieldPath.Child("connections")
-		allErrs = append(allErrs, field.Invalid(path, *keepAlive.Connections, "must be greater than or equal to 1"))
-	}
-
-	if keepAlive.Requests != nil && *keepAlive.Requests < 0 {
-		path := fieldPath.Child("requests")
-		allErrs = append(allErrs, field.Invalid(path, *keepAlive.Requests, "must be greater than or equal to 0"))
-	}
-
 	if keepAlive.Time != nil {
 		if err := v.genericValidator.ValidateNginxDuration(string(*keepAlive.Time)); err != nil {
 			path := fieldPath.Child("time")

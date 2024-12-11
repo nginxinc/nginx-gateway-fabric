@@ -102,26 +102,6 @@ func TestValidator_Validate(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid keepalive connections",
-			policy: createModifiedPolicy(func(p *ngfAPI.UpstreamSettingsPolicy) *ngfAPI.UpstreamSettingsPolicy {
-				p.Spec.KeepAlive.Connections = helpers.GetPointer[int32](0)
-				return p
-			}),
-			expConditions: []conditions.Condition{
-				staticConds.NewPolicyInvalid("spec.keepAlive.connections: Invalid value: 0: must be greater than or equal to 1"),
-			},
-		},
-		{
-			name: "invalid keepalive requests",
-			policy: createModifiedPolicy(func(p *ngfAPI.UpstreamSettingsPolicy) *ngfAPI.UpstreamSettingsPolicy {
-				p.Spec.KeepAlive.Requests = helpers.GetPointer[int32](-10)
-				return p
-			}),
-			expConditions: []conditions.Condition{
-				staticConds.NewPolicyInvalid("spec.keepAlive.requests: Invalid value: -10: must be greater than or equal to 0"),
-			},
-		},
-		{
 			name: "invalid durations",
 			policy: createModifiedPolicy(func(p *ngfAPI.UpstreamSettingsPolicy) *ngfAPI.UpstreamSettingsPolicy {
 				p.Spec.KeepAlive.Time = helpers.GetPointer[ngfAPI.Duration]("invalid")
