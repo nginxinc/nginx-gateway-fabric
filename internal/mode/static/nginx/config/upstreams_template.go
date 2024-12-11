@@ -5,14 +5,15 @@ package config
 // NGINX Plus needs 1m to support roughly the same amount of http servers (556 upstream servers).
 // For stream upstream servers, 512k will support 576 in OSS and 1m will support 991 in NGINX Plus
 // https://github.com/nginxinc/nginx-gateway-fabric/issues/483
+//
+// if the keepalive directive is present, it is necessary to activate the load balancing method before the directive.
 const upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {
-    # if the keepalive directive us present, it is necessary to activate the load balancing method before the directive
     random two least_conn;
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
-    {{ end -}}
+    {{- end }}
     {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
@@ -38,7 +39,7 @@ upstream {{ $u.Name }} {
     random two least_conn;
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
-    {{ end -}}
+    {{- end }}
     {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
