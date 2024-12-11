@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 //counterfeiter:generate io/fs.DirEntry
@@ -21,9 +22,12 @@ type ClearFoldersOSFileManager interface {
 
 // These files are needed on startup, so skip deleting them.
 const (
-	mainConf = "/etc/nginx/main-includes/main.conf"
-	mgmtConf = "/etc/nginx/main-includes/mgmt.conf"
+	mainConf  = "/etc/nginx/main-includes/main.conf"
+	mgmtConf  = "/etc/nginx/main-includes/mgmt.conf"
+	deployCtx = "/etc/nginx/main-includes/deployment_ctx.json"
 )
+
+var ignoreFilePaths = []string{mainConf, mgmtConf, deployCtx}
 
 // ClearFolders removes all files in the given folders and returns the removed files' full paths.
 func ClearFolders(fileMgr ClearFoldersOSFileManager, paths []string) (removedFiles []string, e error) {
@@ -36,7 +40,7 @@ func ClearFolders(fileMgr ClearFoldersOSFileManager, paths []string) (removedFil
 		for _, entry := range entries {
 			entryPath := filepath.Join(path, entry.Name())
 
-			if entryPath == mainConf || entryPath == mgmtConf {
+			if slices.Contains(ignoreFilePaths, entryPath) {
 				continue
 			}
 
