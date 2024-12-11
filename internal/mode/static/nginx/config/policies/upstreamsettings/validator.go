@@ -46,7 +46,7 @@ func (v Validator) Validate(policy policies.Policy, _ *policies.GlobalSettings) 
 	return nil
 }
 
-// Conflicts returns true if the two ClientSettingsPolicies conflict.
+// Conflicts returns true if the two UpstreamsSettingsPolicies conflict.
 func (v Validator) Conflicts(polA, polB policies.Policy) bool {
 	cspA := helpers.MustCastObject[*ngfAPI.UpstreamSettingsPolicy](polA)
 	cspB := helpers.MustCastObject[*ngfAPI.UpstreamSettingsPolicy](polB)
