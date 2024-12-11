@@ -41,6 +41,43 @@ func TestClearFoldersRemoves(t *testing.T) {
 	g.Expect(entries).To(BeEmpty())
 }
 
+func TestClearFoldersIgnoresPaths(t *testing.T) {
+	t.Parallel()
+	g := NewWithT(t)
+
+	fakeFileMgr := &filefakes.FakeClearFoldersOSFileManager{
+		ReadDirStub: func(_ string) ([]os.DirEntry, error) {
+			return []os.DirEntry{
+				&filefakes.FakeDirEntry{
+					NameStub: func() string {
+						return "deployment_ctx.json"
+					},
+				},
+				&filefakes.FakeDirEntry{
+					NameStub: func() string {
+						return "mgmt.conf"
+					},
+				},
+				&filefakes.FakeDirEntry{
+					NameStub: func() string {
+						return "main.conf"
+					},
+				},
+				&filefakes.FakeDirEntry{
+					NameStub: func() string {
+						return "can-be-removed.conf"
+					},
+				},
+			}, nil
+		},
+	}
+
+	removed, err := file.ClearFolders(fakeFileMgr, []string{"/etc/nginx/main-includes"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(removed).To(HaveLen(1))
+	g.Expect(removed[0]).To(Equal("/etc/nginx/main-includes/can-be-removed.conf"))
+}
+
 func TestClearFoldersFails(t *testing.T) {
 	t.Parallel()
 	files := []string{"file"}

@@ -3,9 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -16,14 +14,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog/v2"
+	ctlr "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
+	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
+// These flags are shared by multiple commands.
 const (
 	domain                = "gateway.nginx.org"
 	gatewayClassFlag      = "gatewayclass"
@@ -32,6 +36,7 @@ const (
 	gatewayCtlrNameFlag     = "gateway-ctlr-name"
 	gatewayCtlrNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
+	plusFlag = "nginx-plus"
 )
 
 func createRootCommand() *cobra.Command {
@@ -47,7 +52,6 @@ func createRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-//nolint:gocyclo
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
@@ -63,7 +67,6 @@ func createStaticModeCommand() *cobra.Command {
 		leaderElectionDisableFlag      = "leader-election-disable"
 		leaderElectionLockNameFlag     = "leader-election-lock-name"
 		productTelemetryDisableFlag    = "product-telemetry-disable"
-		plusFlag                       = "nginx-plus"
 		gwAPIExperimentalFlag          = "gateway-api-experimental-features"
 		usageReportSecretFlag          = "usage-report-secret"
 		usageReportEndpointFlag        = "usage-report-endpoint"
@@ -159,21 +162,6 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating ports: %w", err)
 			}
 
-			podIP := os.Getenv("POD_IP")
-			if err := validateIP(podIP); err != nil {
-				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
-			}
-
-			namespace := os.Getenv("POD_NAMESPACE")
-			if namespace == "" {
-				return errors.New("POD_NAMESPACE environment variable must be set")
-			}
-
-			podName := os.Getenv("POD_NAME")
-			if podName == "" {
-				return errors.New("POD_NAME environment variable must be set")
-			}
-
 			imageSource := os.Getenv("BUILD_AGENT")
 			if imageSource != "gha" && imageSource != "local" {
 				imageSource = "unknown"
@@ -218,6 +206,11 @@ func createStaticModeCommand() *cobra.Command {
 
 			flagKeys, flagValues := parseFlags(cmd.Flags())
 
+			podConfig, err := createGatewayPodConfig(serviceName.value)
+			if err != nil {
+				return fmt.Errorf("error creating gateway pod config: %w", err)
+			}
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -226,12 +219,7 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayClassName:         gatewayClassName.value,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
-				GatewayPodConfig: config.GatewayPodConfig{
-					PodIP:       podIP,
-					ServiceName: serviceName.value,
-					Namespace:   namespace,
-					Name:        podName,
-				},
+				GatewayPodConfig:         podConfig,
 				HealthConfig: config.HealthConfig{
 					Enabled: !disableHealth,
 					Port:    healthListenPort.value,
@@ -244,7 +232,7 @@ func createStaticModeCommand() *cobra.Command {
 				LeaderElection: config.LeaderElectionConfig{
 					Enabled:  !disableLeaderElection,
 					LockName: leaderElectionLockName.String(),
-					Identity: podName,
+					Identity: podConfig.Name,
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
@@ -524,29 +512,63 @@ func createSleepCommand() *cobra.Command {
 	return cmd
 }
 
-func createCopyCommand() *cobra.Command {
+func createInitializeCommand() *cobra.Command {
 	// flag names
 	const srcFlag = "source"
 	const destFlag = "destination"
+
 	// flag values
 	var srcFiles []string
 	var dest string
+	var plus bool
 
 	cmd := &cobra.Command{
-		Use:   "copy",
-		Short: "Copy files to another directory",
+		Use:   "initialize",
+		Short: "Write initial configuration files",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := validateSleepArgs(srcFiles, dest); err != nil {
+			if err := validateCopyArgs(srcFiles, dest); err != nil {
 				return err
 			}
 
-			for _, src := range srcFiles {
-				if err := copyFile(src, dest); err != nil {
-					return err
-				}
+			podUID, err := getValueFromEnv("POD_UID")
+			if err != nil {
+				return fmt.Errorf("could not get pod UID: %w", err)
 			}
 
-			return nil
+			clusterCfg := ctlr.GetConfigOrDie()
+			k8sReader, err := client.New(clusterCfg, client.Options{})
+			if err != nil {
+				return fmt.Errorf("unable to initialize k8s client: %w", err)
+			}
+
+			logger := ctlrZap.New()
+			klog.SetLogger(logger)
+			logger.Info(
+				"Starting init container",
+				"source filenames to copy", srcFiles,
+				"destination directory", dest,
+				"nginx-plus",
+				plus,
+			)
+			log.SetLogger(logger)
+
+			dcc := licensing.NewDeploymentContextCollector(licensing.DeploymentContextCollectorConfig{
+				K8sClientReader: k8sReader,
+				PodUID:          podUID,
+				Logger:          logger.WithName("deployCtxCollector"),
+			})
+
+			return initialize(initializeConfig{
+				fileManager:   file.NewStdLibOSFileManager(),
+				fileGenerator: ngxConfig.NewGeneratorImpl(plus, nil, logger.WithName("generator")),
+				logger:        logger,
+				plus:          plus,
+				collector:     dcc,
+				copy: copyFiles{
+					srcFileNames: srcFiles,
+					destDirName:  dest,
+				},
+			})
 		},
 	}
 
@@ -564,29 +586,16 @@ func createCopyCommand() *cobra.Command {
 		"The destination directory for the source files to be copied to",
 	)
 
+	cmd.Flags().BoolVar(
+		&plus,
+		plusFlag,
+		false,
+		"Use NGINX Plus",
+	)
+
 	cmd.MarkFlagsRequiredTogether(srcFlag, destFlag)
 
 	return cmd
-}
-
-func copyFile(src, dest string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error opening source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(filepath.Join(dest, filepath.Base(src)))
-	if err != nil {
-		return fmt.Errorf("error creating destination file: %w", err)
-	}
-	defer destFile.Close()
-
-	if _, err := io.Copy(destFile, srcFile); err != nil {
-		return fmt.Errorf("error copying file contents: %w", err)
-	}
-
-	return nil
 }
 
 func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
@@ -633,4 +642,45 @@ func getBuildInfo() (commitHash string, commitTime string, dirtyBuild string) {
 	}
 
 	return
+}
+
+func createGatewayPodConfig(svcName string) (config.GatewayPodConfig, error) {
+	podIP, err := getValueFromEnv("POD_IP")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	podUID, err := getValueFromEnv("POD_UID")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	ns, err := getValueFromEnv("POD_NAMESPACE")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	name, err := getValueFromEnv("POD_NAME")
+	if err != nil {
+		return config.GatewayPodConfig{}, err
+	}
+
+	c := config.GatewayPodConfig{
+		PodIP:       podIP,
+		ServiceName: svcName,
+		Namespace:   ns,
+		Name:        name,
+		UID:         podUID,
+	}
+
+	return c, nil
+}
+
+func getValueFromEnv(key string) (string, error) {
+	val := os.Getenv(key)
+	if val == "" {
+		return "", fmt.Errorf("environment variable %s not set", key)
+	}
+
+	return val, nil
 }

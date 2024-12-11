@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -43,7 +42,6 @@ type mgmtConf struct {
 	Endpoint          string
 	Resolver          string
 	LicenseTokenFile  string
-	DeploymentCtxFile string
 	CACertFile        string
 	ClientSSLCertFile string
 	ClientSSLKeyFile  string
@@ -106,17 +104,10 @@ func (g GeneratorImpl) generateMgmtFiles(conf dataplane.Configuration) []file.Fi
 		files = append(files, keyFile)
 	}
 
-	depCtx, err := json.Marshal(conf.DeploymentContext)
+	deploymentCtxFile, err := g.GenerateDeploymentContext(conf.DeploymentContext)
 	if err != nil {
 		g.logger.Error(err, "error building deployment context for mgmt block")
 	} else {
-		deploymentCtxFile := file.File{
-			Content: depCtx,
-			Path:    mainIncludesFolder + "/deployment_ctx.json",
-			Type:    file.TypeRegular,
-		}
-
-		cfg.DeploymentCtxFile = deploymentCtxFile.Path
 		files = append(files, deploymentCtxFile)
 	}
 

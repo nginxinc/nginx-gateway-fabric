@@ -34,20 +34,26 @@ spec:
         {{- toYaml .Values.topologySpreadConstraints | nindent 8 }}
       {{- end }}
       initContainers:
-      - name: copy-nginx-config
+      - name: init
         image: {{ .Values.nginxGateway.image.repository }}:{{ default .Chart.AppVersion .Values.nginxGateway.image.tag }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         command:
         - /usr/bin/gateway
-        - copy
+        - initialize
         - --source
         - /includes/main.conf
         {{- if .Values.nginx.plus }}
         - --source
         - /includes/mgmt.conf
+        - --nginx-plus
         {{- end }}
         - --destination
         - /etc/nginx/main-includes
+        env:
+          - name: POD_UID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.uid
         securityContext:
           seccompProfile:
             type: RuntimeDefault
@@ -132,6 +138,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         image: {{ .Values.nginxGateway.image.repository }}:{{ default .Chart.AppVersion .Values.nginxGateway.image.tag }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         name: nginx-gateway
