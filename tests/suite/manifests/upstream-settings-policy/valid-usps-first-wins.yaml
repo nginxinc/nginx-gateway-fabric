@@ -1,0 +1,21 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: coffee-svc-usp-1
+spec:
+  zoneSize: 64k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: coffee-svc-usp-2
+spec:
+  zoneSize: 128k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
