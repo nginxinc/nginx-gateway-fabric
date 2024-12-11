@@ -1,0 +1,15 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: latte-svc-usp
+spec:
+  zoneSize: 512k
+  targetRefs:
+  - group: core
+    kind: Service
+    name: latte
+  keepAlive:
+    connections: 10
+    requests: 3
+    time: 10s
+    timeout: 50s
