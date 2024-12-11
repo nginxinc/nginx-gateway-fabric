@@ -27,11 +27,12 @@ var _ = Describe("NGINX Runtime Manager", func() {
 	})
 
 	var (
-		err             error
-		manager         runtime.Manager
-		upstreamServers []ngxclient.UpstreamServer
-		ngxPlusClient   *runtimefakes.FakeNginxPlusClient
-		process         *runtimefakes.FakeProcessHandler
+		err                   error
+		manager               runtime.Manager
+		upstreamServers       []ngxclient.UpstreamServer
+		streamUpstreamServers []ngxclient.StreamUpstreamServer
+		ngxPlusClient         *runtimefakes.FakeNginxPlusClient
+		process               *runtimefakes.FakeProcessHandler
 
 		metrics      *runtimefakes.FakeMetricsCollector
 		verifyClient *runtimefakes.FakeVerifyClient
@@ -39,6 +40,9 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 	BeforeEach(func() {
 		upstreamServers = []ngxclient.UpstreamServer{
+			{},
+		}
+		streamUpstreamServers = []ngxclient.StreamUpstreamServer{
 			{},
 		}
 	})
@@ -150,11 +154,16 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
 		})
 
+		It("successfully updates stream server upstream", func() {
+			Expect(manager.UpdateStreamServers("test", streamUpstreamServers)).To(Succeed())
+		})
+
 		It("returns no upstreams from NGINX Plus API when upstreams are nil", func() {
-			upstreams, err := manager.GetUpstreams()
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
 
 			Expect(err).To(HaveOccurred())
 			Expect(upstreams).To(BeEmpty())
+			Expect(streamUpstreams).To(BeEmpty())
 		})
 
 		It("successfully returns server upstreams", func() {
@@ -177,22 +186,54 @@ var _ = Describe("NGINX Runtime Manager", func() {
 				},
 			}
 
-			ngxPlusClient.GetUpstreamsReturns(&expUpstreams, nil)
+			expStreamUpstreams := ngxclient.StreamUpstreams{
+				"upstream1": {
+					Zone: "zone1",
+					Peers: []ngxclient.StreamPeer{
+						{ID: 1, Name: "peer1-name"},
+					},
+					Zombies: 2,
+				},
+				"upstream2": {
+					Zone: "zone2",
+					Peers: []ngxclient.StreamPeer{
+						{ID: 2, Name: "peer2-name"},
+					},
+					Zombies: 1,
+				},
+			}
 
-			upstreams, err := manager.GetUpstreams()
+			ngxPlusClient.GetUpstreamsReturns(&expUpstreams, nil)
+			ngxPlusClient.GetStreamUpstreamsReturns(&expStreamUpstreams, nil)
+
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expUpstreams).To(Equal(upstreams))
+			Expect(expStreamUpstreams).To(Equal(streamUpstreams))
 		})
 
 		It("returns an error when GetUpstreams fails", func() {
 			ngxPlusClient.GetUpstreamsReturns(nil, errors.New("failed to get upstreams"))
 
-			upstreams, err := manager.GetUpstreams()
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to get upstreams"))
 			Expect(upstreams).To(BeNil())
+			Expect(streamUpstreams).To(BeNil())
+		})
+
+		It("returns an error when GetStreamUpstreams fails", func() {
+			ngxPlusClient.GetUpstreamsReturns(&ngxclient.Upstreams{}, nil)
+			ngxPlusClient.GetStreamUpstreamsReturns(nil, errors.New("failed to get upstreams"))
+
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("failed to get upstreams"))
+			Expect(upstreams).To(BeNil())
+			Expect(streamUpstreams).To(BeNil())
 		})
 	})
 
@@ -200,6 +241,15 @@ var _ = Describe("NGINX Runtime Manager", func() {
 		BeforeEach(func() {
 			ngxPlusClient = nil
 			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
+		})
+
+		It("should panic when fetching upstream servers", func() {
+			upstreams := func() {
+				_, _, err = manager.GetUpstreams()
+			}
+
+			Expect(upstreams).To(Panic())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should panic when updating HTTP upstream servers", func() {
@@ -211,12 +261,12 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should panic when fetching HTTP upstream servers", func() {
-			upstreams := func() {
-				_, err = manager.GetUpstreams()
+		It("should panic when updating stream upstream servers", func() {
+			updateServers := func() {
+				err = manager.UpdateStreamServers("test", streamUpstreamServers)
 			}
 
-			Expect(upstreams).To(Panic())
+			Expect(updateServers).To(Panic())
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

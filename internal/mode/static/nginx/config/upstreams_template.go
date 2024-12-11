@@ -12,8 +12,13 @@ upstream {{ $u.Name }} {
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
     {{ end -}}
-    {{ range $server := $u.Servers }}
+
+    {{- if $u.StateFile }}
+    state {{ $u.StateFile }};
+    {{- else }}
+        {{ range $server := $u.Servers }}
     server {{ $server.Address }};
+        {{- end }}
     {{- end }}
 }
 {{ end -}}
