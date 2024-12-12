@@ -396,5 +396,5 @@ func TestGetUniqueAttachedParentGateways(t *testing.T) {
 	}
 
 	uniqueAttachedRefs := getUniqueAttachedParentGateways(parentRefs)
-	g.Expect(uniqueAttachedRefs).To(Equal(expectedNsNames))
+	g.Expect(uniqueAttachedRefs).To(ConsistOf(expectedNsNames))
 }
