@@ -505,19 +505,29 @@ var _ = Describe("eventHandler", func() {
 			})
 
 			It("should update servers using the NGINX Plus API", func() {
-				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).To(Succeed())
+				Expect(handler.updateUpstreamServers(conf)).To(Succeed())
 				Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(1))
 			})
 
 			It("should return error when GET API returns an error", func() {
 				fakeNginxRuntimeMgr.GetUpstreamsReturns(nil, nil, errors.New("error"))
-				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).ToNot(Succeed())
+				Expect(handler.updateUpstreamServers(conf)).ToNot(Succeed())
+			})
+
+			It("should return error when UpdateHTTPServers API returns an error", func() {
+				fakeNginxRuntimeMgr.UpdateHTTPServersReturns(errors.New("error"))
+				Expect(handler.updateUpstreamServers(conf)).ToNot(Succeed())
+			})
+
+			It("should return error when UpdateStreamServers API returns an error", func() {
+				fakeNginxRuntimeMgr.UpdateStreamServersReturns(errors.New("error"))
+				Expect(handler.updateUpstreamServers(conf)).ToNot(Succeed())
 			})
 		})
 
 		When("not running NGINX Plus", func() {
 			It("should not do anything", func() {
-				Expect(handler.updateUpstreamServers(ctlrZap.New(), conf)).To(Succeed())
+				Expect(handler.updateUpstreamServers(conf)).To(Succeed())
 
 				Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(0))
 			})

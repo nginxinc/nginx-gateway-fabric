@@ -224,6 +224,17 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			Expect(streamUpstreams).To(BeNil())
 		})
 
+		It("returns an error when GetUpstreams returns nil", func() {
+			ngxPlusClient.GetUpstreamsReturns(nil, nil)
+
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("GET upstreams returned nil value"))
+			Expect(upstreams).To(BeNil())
+			Expect(streamUpstreams).To(BeNil())
+		})
+
 		It("returns an error when GetStreamUpstreams fails", func() {
 			ngxPlusClient.GetUpstreamsReturns(&ngxclient.Upstreams{}, nil)
 			ngxPlusClient.GetStreamUpstreamsReturns(nil, errors.New("failed to get upstreams"))
@@ -232,6 +243,18 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to get upstreams"))
+			Expect(upstreams).To(BeNil())
+			Expect(streamUpstreams).To(BeNil())
+		})
+
+		It("returns an error when GetStreamUpstreams returns nil", func() {
+			ngxPlusClient.GetUpstreamsReturns(&ngxclient.Upstreams{}, nil)
+			ngxPlusClient.GetStreamUpstreamsReturns(nil, nil)
+
+			upstreams, streamUpstreams, err := manager.GetUpstreams()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("GET stream upstreams returned nil value"))
 			Expect(upstreams).To(BeNil())
 			Expect(streamUpstreams).To(BeNil())
 		})

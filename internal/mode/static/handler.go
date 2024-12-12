@@ -2,6 +2,7 @@ package static
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -183,9 +184,9 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		h.setLatestConfiguration(&cfg)
 
 		if h.cfg.plus {
-			err = h.updateUpstreamServers(logger, cfg)
+			err = h.updateUpstreamServers(cfg)
 		} else {
-			err = h.updateNginxConf(ctx, logger, cfg)
+			err = h.updateNginxConf(ctx, cfg)
 		}
 	case state.ClusterStateChange:
 		h.version++
@@ -198,7 +199,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 		h.setLatestConfiguration(&cfg)
 
-		err = h.updateNginxConf(ctx, logger, cfg)
+		err = h.updateNginxConf(ctx, cfg)
 	}
 
 	var nginxReloadRes status.NginxReloadResult
@@ -305,7 +306,6 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 // updateNginxConf updates nginx conf files and reloads nginx.
 func (h *eventHandlerImpl) updateNginxConf(
 	ctx context.Context,
-	logger logr.Logger,
 	conf dataplane.Configuration,
 ) error {
 	files := h.cfg.generator.Generate(conf)
@@ -318,7 +318,7 @@ func (h *eventHandlerImpl) updateNginxConf(
 	}
 
 	// If using NGINX Plus, update upstream servers using the API.
-	if err := h.updateUpstreamServers(logger, conf); err != nil {
+	if err := h.updateUpstreamServers(conf); err != nil {
 		return fmt.Errorf("failed to update upstream servers: %w", err)
 	}
 
@@ -327,7 +327,7 @@ func (h *eventHandlerImpl) updateNginxConf(
 
 // updateUpstreamServers determines which servers have changed and uses the NGINX Plus API to update them.
 // Only applicable when using NGINX Plus.
-func (h *eventHandlerImpl) updateUpstreamServers(logger logr.Logger, conf dataplane.Configuration) error {
+func (h *eventHandlerImpl) updateUpstreamServers(conf dataplane.Configuration) error {
 	if !h.cfg.plus {
 		return nil
 	}
@@ -375,19 +375,22 @@ func (h *eventHandlerImpl) updateUpstreamServers(logger logr.Logger, conf datapl
 		}
 	}
 
+	var updateErr error
 	for _, upstream := range upstreams {
 		if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
-			logger.Error(err, "couldn't update upstream via the API", "upstreamName", upstream.name)
+			updateErr = errors.Join(updateErr, fmt.Errorf(
+				"couldn't update upstream %q via the API: %w", upstream.name, err))
 		}
 	}
 
 	for _, upstream := range streamUpstreams {
 		if err := h.cfg.nginxRuntimeMgr.UpdateStreamServers(upstream.name, upstream.servers); err != nil {
-			logger.Error(err, "couldn't update stream upstream via the API", "upstreamName", upstream.name)
+			updateErr = errors.Join(updateErr, fmt.Errorf(
+				"couldn't update stream upstream %q via the API: %w", upstream.name, err))
 		}
 	}
 
-	return nil
+	return updateErr
 }
 
 // serversEqual accepts lists of either UpstreamServer/Peer or StreamUpstreamServer/StreamPeer and determines
