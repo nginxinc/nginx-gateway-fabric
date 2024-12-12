@@ -171,7 +171,7 @@ jobs:
           fail-build: false
 
       - name: Upload scan result to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@aa578102511db1f4524ed59b8cc2bae4f6e88195 # v3.27.6
+        uses: github/codeql-action/upload-sarif@8a93837afdf1873301a68d777844b43e98cd4313 # v3.27.8
         continue-on-error: true
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
