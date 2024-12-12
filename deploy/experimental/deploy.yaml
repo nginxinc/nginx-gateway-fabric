@@ -233,6 +233,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: nginx-gateway
@@ -309,14 +313,19 @@ spec:
       initContainers:
       - command:
         - /usr/bin/gateway
-        - copy
+        - initialize
         - --source
         - /includes/main.conf
         - --destination
         - /etc/nginx/main-includes
+        env:
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
-        name: copy-nginx-config
+        name: init
         securityContext:
           capabilities:
             add:

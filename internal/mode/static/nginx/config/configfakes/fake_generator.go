@@ -21,6 +21,19 @@ type FakeGenerator struct {
 	generateReturnsOnCall map[int]struct {
 		result1 []file.File
 	}
+	GenerateDeploymentContextStub        func(dataplane.DeploymentContext) (file.File, error)
+	generateDeploymentContextMutex       sync.RWMutex
+	generateDeploymentContextArgsForCall []struct {
+		arg1 dataplane.DeploymentContext
+	}
+	generateDeploymentContextReturns struct {
+		result1 file.File
+		result2 error
+	}
+	generateDeploymentContextReturnsOnCall map[int]struct {
+		result1 file.File
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -86,11 +99,77 @@ func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []file.File) {
 	}{result1}
 }
 
+func (fake *FakeGenerator) GenerateDeploymentContext(arg1 dataplane.DeploymentContext) (file.File, error) {
+	fake.generateDeploymentContextMutex.Lock()
+	ret, specificReturn := fake.generateDeploymentContextReturnsOnCall[len(fake.generateDeploymentContextArgsForCall)]
+	fake.generateDeploymentContextArgsForCall = append(fake.generateDeploymentContextArgsForCall, struct {
+		arg1 dataplane.DeploymentContext
+	}{arg1})
+	stub := fake.GenerateDeploymentContextStub
+	fakeReturns := fake.generateDeploymentContextReturns
+	fake.recordInvocation("GenerateDeploymentContext", []interface{}{arg1})
+	fake.generateDeploymentContextMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGenerator) GenerateDeploymentContextCallCount() int {
+	fake.generateDeploymentContextMutex.RLock()
+	defer fake.generateDeploymentContextMutex.RUnlock()
+	return len(fake.generateDeploymentContextArgsForCall)
+}
+
+func (fake *FakeGenerator) GenerateDeploymentContextCalls(stub func(dataplane.DeploymentContext) (file.File, error)) {
+	fake.generateDeploymentContextMutex.Lock()
+	defer fake.generateDeploymentContextMutex.Unlock()
+	fake.GenerateDeploymentContextStub = stub
+}
+
+func (fake *FakeGenerator) GenerateDeploymentContextArgsForCall(i int) dataplane.DeploymentContext {
+	fake.generateDeploymentContextMutex.RLock()
+	defer fake.generateDeploymentContextMutex.RUnlock()
+	argsForCall := fake.generateDeploymentContextArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenerator) GenerateDeploymentContextReturns(result1 file.File, result2 error) {
+	fake.generateDeploymentContextMutex.Lock()
+	defer fake.generateDeploymentContextMutex.Unlock()
+	fake.GenerateDeploymentContextStub = nil
+	fake.generateDeploymentContextReturns = struct {
+		result1 file.File
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGenerator) GenerateDeploymentContextReturnsOnCall(i int, result1 file.File, result2 error) {
+	fake.generateDeploymentContextMutex.Lock()
+	defer fake.generateDeploymentContextMutex.Unlock()
+	fake.GenerateDeploymentContextStub = nil
+	if fake.generateDeploymentContextReturnsOnCall == nil {
+		fake.generateDeploymentContextReturnsOnCall = make(map[int]struct {
+			result1 file.File
+			result2 error
+		})
+	}
+	fake.generateDeploymentContextReturnsOnCall[i] = struct {
+		result1 file.File
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeGenerator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
+	fake.generateDeploymentContextMutex.RLock()
+	defer fake.generateDeploymentContextMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
