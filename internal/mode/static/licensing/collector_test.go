@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -37,9 +38,9 @@ var _ = Describe("DeploymentContextCollector", func() {
 
 		expCtx := dataplane.DeploymentContext{
 			Integration:      "ngf",
-			ClusterID:        clusterID,
-			InstallationID:   "pod-uid",
-			ClusterNodeCount: 1,
+			ClusterID:        &clusterID,
+			InstallationID:   helpers.GetPointer("pod-uid"),
+			ClusterNodeCount: helpers.GetPointer(1),
 		}
 
 		depCtx, err := collector.Collect(context.Background())
@@ -55,7 +56,7 @@ var _ = Describe("DeploymentContextCollector", func() {
 
 		expCtx := dataplane.DeploymentContext{
 			Integration:    "ngf",
-			InstallationID: "pod-uid",
+			InstallationID: helpers.GetPointer("pod-uid"),
 		}
 
 		depCtx, err := collector.Collect(context.Background())
