@@ -51,7 +51,7 @@ func NewDeploymentContextCollector(
 func (c *DeploymentContextCollector) Collect(ctx context.Context) (dataplane.DeploymentContext, error) {
 	depCtx := dataplane.DeploymentContext{
 		Integration:    integrationID,
-		InstallationID: c.cfg.PodUID,
+		InstallationID: &c.cfg.PodUID,
 	}
 
 	clusterInfo, err := telemetry.CollectClusterInformation(ctx, c.cfg.K8sClientReader)
@@ -59,8 +59,8 @@ func (c *DeploymentContextCollector) Collect(ctx context.Context) (dataplane.Dep
 		return depCtx, fmt.Errorf("error collecting cluster ID and cluster node count: %w", err)
 	}
 
-	depCtx.ClusterID = clusterInfo.ClusterID
-	depCtx.ClusterNodeCount = clusterInfo.NodeCount
+	depCtx.ClusterID = &clusterInfo.ClusterID
+	depCtx.ClusterNodeCount = &clusterInfo.NodeCount
 
 	return depCtx, nil
 }

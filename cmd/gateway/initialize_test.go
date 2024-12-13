@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing/licensingfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -80,9 +81,9 @@ func TestInitialize_Plus(t *testing.T) {
 			collectErr: nil,
 			depCtx: dataplane.DeploymentContext{
 				Integration:      "ngf",
-				ClusterID:        "cluster-id",
-				InstallationID:   "install-id",
-				ClusterNodeCount: 2,
+				ClusterID:        helpers.GetPointer("cluster-id"),
+				InstallationID:   helpers.GetPointer("install-id"),
+				ClusterNodeCount: helpers.GetPointer(2),
 			},
 		},
 		{
@@ -90,7 +91,7 @@ func TestInitialize_Plus(t *testing.T) {
 			collectErr: errors.New("collect error"),
 			depCtx: dataplane.DeploymentContext{
 				Integration:    "ngf",
-				InstallationID: "install-id",
+				InstallationID: helpers.GetPointer("install-id"),
 			},
 		},
 	}
