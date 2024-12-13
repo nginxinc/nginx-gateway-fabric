@@ -33,8 +33,9 @@ type InstallationConfig struct {
 	ImageTag             string
 	ImagePullPolicy      string
 	ServiceType          string
-	IsGKEInternalLB      bool
+	PlusUsageEndpoint    string
 	Plus                 bool
+	IsGKEInternalLB      bool
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
@@ -78,6 +79,7 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args = append(args, setImageArgs(cfg)...)
+	args = append(args, setPlusUsageEndpointArg(cfg)...)
 	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Installing NGF with command: helm %v\n", strings.Join(fullArgs, " "))
@@ -221,6 +223,15 @@ func setImageArgs(cfg InstallationConfig) []string {
 				args,
 				formatValueSet(`service.annotations.networking\.gke\.io\/load-balancer-type`, "Internal")...)
 		}
+	}
+
+	return args
+}
+
+func setPlusUsageEndpointArg(cfg InstallationConfig) []string {
+	var args []string
+	if cfg.Plus && cfg.PlusUsageEndpoint != "" {
+		args = append(args, formatValueSet("nginx.usage.endpoint", cfg.PlusUsageEndpoint)...)
 	}
 
 	return args
