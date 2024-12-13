@@ -894,12 +894,8 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(ns): ns,
 			},
 			ReferencedServices: map[types.NamespacedName]*ReferencedService{
-				client.ObjectKeyFromObject(svc): {
-					ParentGateways: []types.NamespacedName{{Namespace: gw1.Namespace, Name: gw1.Name}},
-				},
-				client.ObjectKeyFromObject(svc1): {
-					ParentGateways: []types.NamespacedName{{Namespace: gw1.Namespace, Name: gw1.Name}},
-				},
+				client.ObjectKeyFromObject(svc):  {},
+				client.ObjectKeyFromObject(svc1): {},
 			},
 			ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
 				client.ObjectKeyFromObject(cm): {

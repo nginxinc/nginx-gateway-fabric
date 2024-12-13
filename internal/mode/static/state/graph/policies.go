@@ -102,33 +102,21 @@ func attachPolicyToService(
 	gw *Gateway,
 	ctlrName string,
 ) {
-	var ancestor *PolicyAncestor
-
-	for _, parentGw := range svc.ParentGateways {
-		if parentGw != client.ObjectKeyFromObject(gw.Source) {
-			continue
-		}
-		// Once we support multiple Gateways, this will turn into a list.
-		ancestor = &PolicyAncestor{
-			Ancestor: createParentReference(v1.GroupName, kinds.Gateway, parentGw),
-		}
-	}
-
-	if ancestor == nil {
-		return
-	}
-
 	if ngfPolicyAncestorsFull(policy, ctlrName) {
 		return
 	}
 
+	ancestor := PolicyAncestor{
+		Ancestor: createParentReference(v1.GroupName, kinds.Gateway, client.ObjectKeyFromObject(gw.Source)),
+	}
+
 	if !gw.Valid {
 		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("Parent Gateway is invalid")}
-		policy.Ancestors = append(policy.Ancestors, *ancestor)
+		policy.Ancestors = append(policy.Ancestors, ancestor)
 		return
 	}
 
-	policy.Ancestors = append(policy.Ancestors, *ancestor)
+	policy.Ancestors = append(policy.Ancestors, ancestor)
 	svc.Policies = append(svc.Policies, policy)
 }
 

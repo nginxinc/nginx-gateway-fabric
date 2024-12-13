@@ -258,7 +258,7 @@ func BuildGraph(
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServices := buildReferencedServices(routes, l4routes)
+	referencedServices := buildReferencedServices(routes, l4routes, gw)
 
 	// policies must be processed last because they rely on the state of the other resources in the graph
 	processedPolicies := processPolicies(

@@ -158,11 +158,7 @@ func TestAttachPolicies(t *testing.T) {
 
 	getServices := func() map[types.NamespacedName]*ReferencedService {
 		return map[types.NamespacedName]*ReferencedService{
-			{Namespace: testNs, Name: "svc-1"}: {
-				ParentGateways: []types.NamespacedName{
-					{Namespace: testNs, Name: "gateway"},
-				},
-			},
+			{Namespace: testNs, Name: "svc-1"}: {},
 		}
 	}
 
@@ -542,15 +538,14 @@ func TestAttachPolicyToGateway(t *testing.T) {
 func TestAttachPolicyToService(t *testing.T) {
 	t.Parallel()
 
-	winningGwNsName := types.NamespacedName{Namespace: testNs, Name: "gateway"}
-	ignoredGwNsName := types.NamespacedName{Namespace: testNs, Name: "ignored-gateway"}
+	gwNsname := types.NamespacedName{Namespace: testNs, Name: "gateway"}
 
 	getGateway := func(valid bool) *Gateway {
 		return &Gateway{
 			Source: &v1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      winningGwNsName.Name,
-					Namespace: winningGwNsName.Namespace,
+					Name:      gwNsname.Name,
+					Namespace: gwNsname.Namespace,
 				},
 			},
 			Valid: valid,
@@ -568,44 +563,24 @@ func TestAttachPolicyToService(t *testing.T) {
 		{
 			name:        "attachment",
 			policy:      &Policy{Source: &policiesfakes.FakePolicy{}},
-			svc:         &ReferencedService{ParentGateways: []types.NamespacedName{winningGwNsName}},
+			svc:         &ReferencedService{},
 			gw:          getGateway(true /*valid*/),
 			expAttached: true,
 			expAncestors: []PolicyAncestor{
 				{
-					Ancestor: getGatewayParentRef(winningGwNsName),
+					Ancestor: getGatewayParentRef(gwNsname),
 				},
 			},
-		},
-		{
-			name:        "attachment; multiple parent refs - one is winning gateway",
-			policy:      &Policy{Source: &policiesfakes.FakePolicy{}},
-			svc:         &ReferencedService{ParentGateways: []types.NamespacedName{ignoredGwNsName, winningGwNsName}},
-			gw:          getGateway(true /*valid*/),
-			expAttached: true,
-			expAncestors: []PolicyAncestor{
-				{
-					Ancestor: getGatewayParentRef(winningGwNsName),
-				},
-			},
-		},
-		{
-			name:         "no attachment; parent gateway is not winning gateway",
-			policy:       &Policy{Source: &policiesfakes.FakePolicy{}},
-			svc:          &ReferencedService{ParentGateways: []types.NamespacedName{ignoredGwNsName}},
-			gw:           getGateway(true /*valid*/),
-			expAttached:  false,
-			expAncestors: nil,
 		},
 		{
 			name:        "no attachment; gateway is invalid",
 			policy:      &Policy{Source: &policiesfakes.FakePolicy{}},
-			svc:         &ReferencedService{ParentGateways: []types.NamespacedName{winningGwNsName}},
+			svc:         &ReferencedService{},
 			gw:          getGateway(false /*invalid*/),
 			expAttached: false,
 			expAncestors: []PolicyAncestor{
 				{
-					Ancestor:   getGatewayParentRef(winningGwNsName),
+					Ancestor:   getGatewayParentRef(gwNsname),
 					Conditions: []conditions.Condition{staticConds.NewPolicyTargetNotFound("Parent Gateway is invalid")},
 				},
 			},
@@ -613,7 +588,7 @@ func TestAttachPolicyToService(t *testing.T) {
 		{
 			name:         "no attachment; max ancestor",
 			policy:       &Policy{Source: createTestPolicyWithAncestors(16)},
-			svc:          &ReferencedService{ParentGateways: []types.NamespacedName{winningGwNsName}},
+			svc:          &ReferencedService{},
 			gw:           getGateway(true /*valid*/),
 			expAttached:  false,
 			expAncestors: nil,

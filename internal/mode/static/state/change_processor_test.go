@@ -739,12 +739,8 @@ var _ = Describe("ChangeProcessor", func() {
 					Routes:            map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
 					ReferencedServices: map[types.NamespacedName]*graph.ReferencedService{
-						refSvc: {
-							ParentGateways: []types.NamespacedName{{Namespace: "test", Name: "gateway-1"}},
-						},
-						refTLSSvc: {
-							ParentGateways: []types.NamespacedName{{Namespace: "test", Name: "gateway-1"}},
-						},
+						refSvc:    {},
+						refTLSSvc: {},
 					},
 				}
 			})
@@ -1257,9 +1253,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServices[refTLSSvc].ParentGateways = []types.NamespacedName{
-						client.ObjectKeyFromObject(gw2),
-					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1304,9 +1297,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 					delete(expGraph.ReferencedServices, expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName)
 					expRouteHR1.Spec.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServices[refTLSSvc].ParentGateways = []types.NamespacedName{
-						client.ObjectKeyFromObject(gw2),
-					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
