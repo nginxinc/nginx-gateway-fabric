@@ -47,6 +47,16 @@ type NginxPlusClient interface {
 		err error,
 	)
 	GetUpstreams() (*ngxclient.Upstreams, error)
+	UpdateStreamServers(
+		upstream string,
+		servers []ngxclient.StreamUpstreamServer,
+	) (
+		added []ngxclient.StreamUpstreamServer,
+		deleted []ngxclient.StreamUpstreamServer,
+		updated []ngxclient.StreamUpstreamServer,
+		err error,
+	)
+	GetStreamUpstreams() (*ngxclient.StreamUpstreams, error)
 }
 
 //counterfeiter:generate . Manager
@@ -57,12 +67,15 @@ type Manager interface {
 	Reload(ctx context.Context, configVersion int) error
 	// IsPlus returns whether or not we are running NGINX plus.
 	IsPlus() bool
-	// UpdateHTTPServers uses the NGINX Plus API to update HTTP servers.
-	// Only usable if running NGINX Plus.
-	UpdateHTTPServers(string, []ngxclient.UpstreamServer) error
 	// GetUpstreams uses the NGINX Plus API to get the upstreams.
 	// Only usable if running NGINX Plus.
-	GetUpstreams() (ngxclient.Upstreams, error)
+	GetUpstreams() (ngxclient.Upstreams, ngxclient.StreamUpstreams, error)
+	// UpdateHTTPServers uses the NGINX Plus API to update HTTP upstream servers.
+	// Only usable if running NGINX Plus.
+	UpdateHTTPServers(string, []ngxclient.UpstreamServer) error
+	// UpdateStreamServers uses the NGINX Plus API to update stream upstream servers.
+	// Only usable if running NGINX Plus.
+	UpdateStreamServers(string, []ngxclient.StreamUpstreamServer) error
 }
 
 // MetricsCollector is an interface for the metrics of the NGINX runtime manager.
@@ -143,6 +156,34 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	return nil
 }
 
+// GetUpstreams uses the NGINX Plus API to get the upstreams.
+// Only usable if running NGINX Plus.
+func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, ngxclient.StreamUpstreams, error) {
+	if !m.IsPlus() {
+		panic("cannot get upstream servers: NGINX Plus not enabled")
+	}
+
+	upstreams, err := m.ngxPlusClient.GetUpstreams()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if upstreams == nil {
+		return nil, nil, errors.New("GET upstreams returned nil value")
+	}
+
+	streamUpstreams, err := m.ngxPlusClient.GetStreamUpstreams()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if streamUpstreams == nil {
+		return nil, nil, errors.New("GET stream upstreams returned nil value")
+	}
+
+	return *upstreams, *streamUpstreams, nil
+}
+
 // UpdateHTTPServers uses the NGINX Plus API to update HTTP upstream servers.
 // Only usable if running NGINX Plus.
 func (m *ManagerImpl) UpdateHTTPServers(upstream string, servers []ngxclient.UpstreamServer) error {
@@ -158,23 +199,19 @@ func (m *ManagerImpl) UpdateHTTPServers(upstream string, servers []ngxclient.Ups
 	return err
 }
 
-// GetUpstreams uses the NGINX Plus API to get the upstreams.
+// UpdateStreamServers uses the NGINX Plus API to update stream upstream servers.
 // Only usable if running NGINX Plus.
-func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
+func (m *ManagerImpl) UpdateStreamServers(upstream string, servers []ngxclient.StreamUpstreamServer) error {
 	if !m.IsPlus() {
-		panic("cannot get HTTP upstream servers: NGINX Plus not enabled")
+		panic("cannot update stream upstream servers: NGINX Plus not enabled")
 	}
 
-	upstreams, err := m.ngxPlusClient.GetUpstreams()
-	if err != nil {
-		return nil, err
-	}
+	added, deleted, updated, err := m.ngxPlusClient.UpdateStreamServers(upstream, servers)
+	m.logger.V(1).Info("Added stream upstream servers", "count", len(added))
+	m.logger.V(1).Info("Deleted stream upstream servers", "count", len(deleted))
+	m.logger.V(1).Info("Updated stream upstream servers", "count", len(updated))
 
-	if upstreams == nil {
-		return nil, errors.New("GET upstreams returned nil value")
-	}
-
-	return *upstreams, nil
+	return err
 }
 
 //counterfeiter:generate . ProcessHandler

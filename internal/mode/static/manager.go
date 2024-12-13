@@ -172,15 +172,17 @@ func StartManager(cfg config.Config) error {
 	)
 
 	var ngxPlusClient ngxruntime.NginxPlusClient
+	if cfg.Plus {
+		ngxPlusClient, err = ngxruntime.CreatePlusClient()
+		if err != nil {
+			return fmt.Errorf("error creating NGINX plus client: %w", err)
+		}
+	}
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
 		var ngxCollector prometheus.Collector
 		if cfg.Plus {
-			ngxPlusClient, err = ngxruntime.CreatePlusClient()
-			if err != nil {
-				return fmt.Errorf("error creating NGINX plus client: %w", err)
-			}
 			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(ngxPlusClient, constLabels, promLogger)
 		} else {
 			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)

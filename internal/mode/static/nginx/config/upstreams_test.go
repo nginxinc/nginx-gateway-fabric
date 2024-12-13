@@ -289,29 +289,60 @@ func TestCreateUpstreamPlus(t *testing.T) {
 	t.Parallel()
 	gen := GeneratorImpl{plus: true}
 
-	stateUpstream := dataplane.Upstream{
-		Name: "multiple-endpoints",
-		Endpoints: []resolver.Endpoint{
-			{
-				Address: "10.0.0.1",
-				Port:    80,
+	tests := []struct {
+		msg              string
+		stateUpstream    dataplane.Upstream
+		expectedUpstream http.Upstream
+	}{
+		{
+			msg: "with endpoints",
+			stateUpstream: dataplane.Upstream{
+				Name: "endpoints",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+				},
+			},
+			expectedUpstream: http.Upstream{
+				Name:      "endpoints",
+				ZoneSize:  plusZoneSize,
+				StateFile: stateDir + "/endpoints.conf",
+				Servers: []http.UpstreamServer{
+					{
+						Address: "10.0.0.1:80",
+					},
+				},
 			},
 		},
-	}
-	expectedUpstream := http.Upstream{
-		Name:     "multiple-endpoints",
-		ZoneSize: plusZoneSize,
-		Servers: []http.UpstreamServer{
-			{
-				Address: "10.0.0.1:80",
+		{
+			msg: "no endpoints",
+			stateUpstream: dataplane.Upstream{
+				Name:      "no-endpoints",
+				Endpoints: []resolver.Endpoint{},
+			},
+			expectedUpstream: http.Upstream{
+				Name:      "no-endpoints",
+				ZoneSize:  plusZoneSize,
+				StateFile: stateDir + "/no-endpoints.conf",
+				Servers: []http.UpstreamServer{
+					{
+						Address: nginx503Server,
+					},
+				},
 			},
 		},
 	}
 
-	result := gen.createUpstream(stateUpstream)
-
-	g := NewWithT(t)
-	g.Expect(result).To(Equal(expectedUpstream))
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+			result := gen.createUpstream(test.stateUpstream)
+			g.Expect(result).To(Equal(test.expectedUpstream))
+		})
+	}
 }
 
 func TestExecuteStreamUpstreams(t *testing.T) {
@@ -491,8 +522,9 @@ func TestCreateStreamUpstreamPlus(t *testing.T) {
 		},
 	}
 	expectedUpstream := stream.Upstream{
-		Name:     "multiple-endpoints",
-		ZoneSize: plusZoneSize,
+		Name:      "multiple-endpoints",
+		ZoneSize:  plusZoneSize,
+		StateFile: stateDir + "/multiple-endpoints.conf",
 		Servers: []stream.UpstreamServer{
 			{
 				Address: "10.0.0.1:80",
