@@ -30,7 +30,7 @@ type ExpectedNginxField struct {
 	Location string
 	// Servers are the server names that the directive should exist in.
 	Servers []string
-	// Upstream are the upstream names that the directive should exist in.
+	// Upstreams are the upstream names that the directive should exist in.
 	Upstreams []string
 	// ValueSubstringAllowed allows the expected value to be a substring of the real value.
 	// This makes it easier for cases when real values are complex file names or contain things we
@@ -54,13 +54,11 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 				continue
 			}
 
-			err := validateServerBlockDirectives(expFieldCfg, *directive)
-			if err != nil {
+			if err := validateServerBlockDirectives(expFieldCfg, *directive); err != nil {
 				return err
 			}
 
-			err = validateUpstreamDirectives(expFieldCfg, directive)
-			if err != nil {
+			if err := validateUpstreamDirectives(expFieldCfg, directive); err != nil {
 				return err
 			}
 		}
@@ -78,29 +76,29 @@ func validateServerBlockDirectives(expFieldCfg ExpectedNginxField, directive Dir
 	for _, serverName := range expFieldCfg.Servers {
 		if directive.Directive == "server" && getServerName(directive.Block) == serverName {
 			for _, serverDirective := range directive.Block {
-				if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
-					return nil
+				if expFieldCfg.Location == "" && !expFieldCfg.fieldFound(serverDirective) {
+					return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, serverDirective.Directive)
 				} else if serverDirective.Directive == "location" &&
-					fieldExistsInLocation(serverDirective, expFieldCfg) {
-					return nil
+					!fieldExistsInLocation(serverDirective, expFieldCfg) {
+					return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, serverDirective.Directive)
 				}
 			}
 		}
 	}
-	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, directive.Directive)
+	return nil
 }
 
 func validateUpstreamDirectives(expFieldCfg ExpectedNginxField, directive *Directive) error {
 	for _, upstreamName := range expFieldCfg.Upstreams {
 		if directive.Directive == "upstream" && directive.Args[0] == upstreamName {
 			for _, upstreamDirective := range directive.Block {
-				if expFieldCfg.fieldFound(upstreamDirective) {
-					return nil
+				if !expFieldCfg.fieldFound(upstreamDirective) {
+					return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, upstreamDirective.Directive)
 				}
 			}
 		}
 	}
-	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, directive.Directive)
+	return nil
 }
 
 func getServerName(serverBlock Directives) string {
