@@ -146,8 +146,8 @@ test: build-crossplane-image ## Runs the functional tests on your kind k8s clust
 		--plus-license-file-name=$(PLUS_LICENSE_FILE) --plus-usage-endpoint=$(PLUS_USAGE_ENDPOINT)
 
 .PHONY: test-with-plus
-test-with-plus: check-for-plus-usage-endpoint PLUS_ENABLED=true
-test-with-plus: test ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
+test-with-plus: PLUS_ENABLED=true
+test-with-plus: check-for-plus-usage-endpoint test ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
 
 .PHONY: cleanup-gcp
 cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
