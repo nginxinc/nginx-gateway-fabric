@@ -3,7 +3,7 @@ kind: UpstreamSettingsPolicy
 metadata:
   name: coffee-svc-usp-1
 spec:
-  zoneSize: 64k
+  zoneSize: 1g
   targetRefs:
     - group: core
       kind: Service

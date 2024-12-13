@@ -3,7 +3,6 @@ kind: UpstreamSettingsPolicy
 metadata:
   name: multiple-http-svc-usp
 spec:
-  zoneSize: 512k
   targetRefs:
     - group: core
       kind: Service
@@ -26,8 +25,9 @@ spec:
     group: core
     kind: Service
     name: grpc-backend
+  zoneSize: 64k
   keepAlive:
-    connections: 10
-    requests: 3
-    time: 10s
-    timeout: 50s
+    connections: 100
+    requests: 45
+    time: 1m
+    timeout: 5h

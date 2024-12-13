@@ -1,7 +1,7 @@
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: coffee-svc-usp-1
+  name: z-coffee-svc-usp
 spec:
   zoneSize: 64k
   targetRefs:
@@ -12,7 +12,7 @@ spec:
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: coffee-svc-usp-2
+  name: a-coffee-svc-usp
 spec:
   zoneSize: 128k
   targetRefs:
