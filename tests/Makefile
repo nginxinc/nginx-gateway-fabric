@@ -133,7 +133,7 @@ stop-longevity-test: nfr-test ## Stop the longevity test and collects results
 		--plus-license-file-name=$(PLUS_LICENSE_FILE) --plus-usage-endpoint=$(PLUS_USAGE_ENDPOINT)
 
 .PHONY: test
-test: check-for-plus-usage-endpoint build-crossplane-image ## Runs the functional tests on your kind k8s cluster
+test: build-crossplane-image ## Runs the functional tests on your kind k8s cluster
 	kind load docker-image nginx-crossplane:latest --name $(CLUSTER_NAME)
 	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending \
 		--trace -r -v --buildvcs --force-newlines $(GITHUB_OUTPUT) \
@@ -146,7 +146,7 @@ test: check-for-plus-usage-endpoint build-crossplane-image ## Runs the functiona
 		--plus-license-file-name=$(PLUS_LICENSE_FILE) --plus-usage-endpoint=$(PLUS_USAGE_ENDPOINT)
 
 .PHONY: test-with-plus
-test-with-plus: PLUS_ENABLED=true
+test-with-plus: check-for-plus-usage-endpoint PLUS_ENABLED=true
 test-with-plus: test ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
 
 .PHONY: cleanup-gcp
