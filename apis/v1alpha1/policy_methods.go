@@ -31,7 +31,3 @@ func (p *ObservabilityPolicy) GetPolicyStatus() v1alpha2.PolicyStatus {
 func (p *ObservabilityPolicy) SetPolicyStatus(status v1alpha2.PolicyStatus) {
 	p.Status = status
 }
-
-func (p *UpstreamSettingsPolicy) GetTargetRefs() []v1alpha2.LocalPolicyTargetReference {
-	return p.Spec.TargetRefs
-}

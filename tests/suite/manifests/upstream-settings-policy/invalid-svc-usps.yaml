@@ -1,7 +1,7 @@
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: latte-svc-usp
+  name: does-not-exist
 spec:
   zoneSize: 512k
   targetRefs:
