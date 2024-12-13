@@ -2,6 +2,7 @@ package static
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -182,11 +183,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 		h.setLatestConfiguration(&cfg)
 
-		err = h.updateUpstreamServers(
-			ctx,
-			logger,
-			cfg,
-		)
+		if h.cfg.plus {
+			err = h.updateUpstreamServers(cfg)
+		} else {
+			err = h.updateNginxConf(ctx, cfg)
+		}
 	case state.ClusterStateChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
@@ -198,10 +199,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 		h.setLatestConfiguration(&cfg)
 
-		err = h.updateNginxConf(
-			ctx,
-			cfg,
-		)
+		err = h.updateNginxConf(ctx, cfg)
 	}
 
 	var nginxReloadRes status.NginxReloadResult
@@ -306,7 +304,10 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 }
 
 // updateNginxConf updates nginx conf files and reloads nginx.
-func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.Configuration) error {
+func (h *eventHandlerImpl) updateNginxConf(
+	ctx context.Context,
+	conf dataplane.Configuration,
+) error {
 	files := h.cfg.generator.Generate(conf)
 	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
@@ -316,89 +317,114 @@ func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.C
 		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 
+	// If using NGINX Plus, update upstream servers using the API.
+	if err := h.updateUpstreamServers(conf); err != nil {
+		return fmt.Errorf("failed to update upstream servers: %w", err)
+	}
+
 	return nil
 }
 
-// updateUpstreamServers is called only when endpoints have changed. It updates nginx conf files and then:
-// - if using NGINX Plus, determines which servers have changed and uses the N+ API to update them;
-// - otherwise if not using NGINX Plus, or an error was returned from the API, reloads nginx.
-func (h *eventHandlerImpl) updateUpstreamServers(
-	ctx context.Context,
-	logger logr.Logger,
-	conf dataplane.Configuration,
-) error {
-	isPlus := h.cfg.nginxRuntimeMgr.IsPlus()
-
-	files := h.cfg.generator.Generate(conf)
-	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
-		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
-	}
-
-	reload := func() error {
-		if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
-			return fmt.Errorf("failed to reload NGINX: %w", err)
-		}
-
+// updateUpstreamServers determines which servers have changed and uses the NGINX Plus API to update them.
+// Only applicable when using NGINX Plus.
+func (h *eventHandlerImpl) updateUpstreamServers(conf dataplane.Configuration) error {
+	if !h.cfg.plus {
 		return nil
 	}
 
-	if isPlus {
-		type upstream struct {
-			name    string
-			servers []ngxclient.UpstreamServer
-		}
-		var upstreams []upstream
+	prevUpstreams, prevStreamUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
+	if err != nil {
+		return fmt.Errorf("failed to get upstreams from API: %w", err)
+	}
 
-		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
-		if err != nil {
-			logger.Error(err, "failed to get upstreams from API, reloading configuration instead")
-			return reload()
+	type upstream struct {
+		name    string
+		servers []ngxclient.UpstreamServer
+	}
+	var upstreams []upstream
+
+	for _, u := range conf.Upstreams {
+		confUpstream := upstream{
+			name:    u.Name,
+			servers: ngxConfig.ConvertEndpoints(u.Endpoints),
 		}
 
-		for _, u := range conf.Upstreams {
-			confUpstream := upstream{
-				name:    u.Name,
-				servers: ngxConfig.ConvertEndpoints(u.Endpoints),
+		if u, ok := prevUpstreams[confUpstream.name]; ok {
+			if !serversEqual(confUpstream.servers, u.Peers) {
+				upstreams = append(upstreams, confUpstream)
 			}
-
-			if u, ok := prevUpstreams[confUpstream.name]; ok {
-				if !serversEqual(confUpstream.servers, u.Peers) {
-					upstreams = append(upstreams, confUpstream)
-				}
-			}
-		}
-
-		var reloadPlus bool
-		for _, upstream := range upstreams {
-			if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
-				logger.Error(
-					err, "couldn't update upstream via the API, reloading configuration instead",
-					"upstreamName", upstream.name,
-				)
-				reloadPlus = true
-			}
-		}
-
-		if !reloadPlus {
-			return nil
 		}
 	}
 
-	return reload()
+	type streamUpstream struct {
+		name    string
+		servers []ngxclient.StreamUpstreamServer
+	}
+	var streamUpstreams []streamUpstream
+
+	for _, u := range conf.StreamUpstreams {
+		confUpstream := streamUpstream{
+			name:    u.Name,
+			servers: ngxConfig.ConvertStreamEndpoints(u.Endpoints),
+		}
+
+		if u, ok := prevStreamUpstreams[confUpstream.name]; ok {
+			if !serversEqual(confUpstream.servers, u.Peers) {
+				streamUpstreams = append(streamUpstreams, confUpstream)
+			}
+		}
+	}
+
+	var updateErr error
+	for _, upstream := range upstreams {
+		if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
+			updateErr = errors.Join(updateErr, fmt.Errorf(
+				"couldn't update upstream %q via the API: %w", upstream.name, err))
+		}
+	}
+
+	for _, upstream := range streamUpstreams {
+		if err := h.cfg.nginxRuntimeMgr.UpdateStreamServers(upstream.name, upstream.servers); err != nil {
+			updateErr = errors.Join(updateErr, fmt.Errorf(
+				"couldn't update stream upstream %q via the API: %w", upstream.name, err))
+		}
+	}
+
+	return updateErr
 }
 
-func serversEqual(newServers []ngxclient.UpstreamServer, oldServers []ngxclient.Peer) bool {
+// serversEqual accepts lists of either UpstreamServer/Peer or StreamUpstreamServer/StreamPeer and determines
+// if the server names within these lists are equal.
+func serversEqual[
+	upstreamServer ngxclient.UpstreamServer | ngxclient.StreamUpstreamServer,
+	peer ngxclient.Peer | ngxclient.StreamPeer,
+](newServers []upstreamServer, oldServers []peer) bool {
 	if len(newServers) != len(oldServers) {
 		return false
 	}
 
+	getServerVal := func(T any) string {
+		var server string
+		switch t := T.(type) {
+		case ngxclient.UpstreamServer:
+			server = t.Server
+		case ngxclient.StreamUpstreamServer:
+			server = t.Server
+		case ngxclient.Peer:
+			server = t.Server
+		case ngxclient.StreamPeer:
+			server = t.Server
+		}
+		return server
+	}
+
 	diff := make(map[string]struct{}, len(newServers))
 	for _, s := range newServers {
-		diff[s.Server] = struct{}{}
+		diff[getServerVal(s)] = struct{}{}
 	}
 
 	for _, s := range oldServers {
-		if _, ok := diff[s.Server]; !ok {
+		if _, ok := diff[getServerVal(s)]; !ok {
 			return false
 		}
 	}
