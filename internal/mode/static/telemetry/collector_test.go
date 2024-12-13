@@ -302,7 +302,7 @@ var _ = Describe("Collector", Ordered, func() {
 						},
 						client.ObjectKeyFromObject(nilsecret): nil,
 					},
-					ReferencedServices: map[types.NamespacedName]struct{}{
+					ReferencedServices: map[types.NamespacedName]*graph.ReferencedService{
 						client.ObjectKeyFromObject(svc1):   {},
 						client.ObjectKeyFromObject(svc2):   {},
 						client.ObjectKeyFromObject(nilsvc): {},
@@ -583,7 +583,7 @@ var _ = Describe("Collector", Ordered, func() {
 						Source: secret,
 					},
 				},
-				ReferencedServices: map[types.NamespacedName]struct{}{
+				ReferencedServices: map[types.NamespacedName]*graph.ReferencedService{
 					client.ObjectKeyFromObject(svc): {},
 				},
 				NGFPolicies: map[graph.PolicyKey]*graph.Policy{

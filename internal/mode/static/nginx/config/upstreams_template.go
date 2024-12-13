@@ -14,7 +14,7 @@ upstream {{ $u.Name }} {
     {{ if $u.ZoneSize -}}
     zone {{ $u.Name }} {{ $u.ZoneSize }};
     {{- end }}
-    {{ range $server := $u.Servers }}
+    {{ range $server := $u.Servers -}}
     server {{ $server.Address }};
     {{- end }}
     {{ if $u.KeepAlive.Connections -}}

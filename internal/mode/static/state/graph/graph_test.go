@@ -33,7 +33,6 @@ func TestBuildGraph(t *testing.T) {
 	const (
 		gcName         = "my-class"
 		controllerName = "my.controller"
-		testNS         = "test"
 	)
 
 	protectedPorts := ProtectedPorts{
@@ -894,7 +893,7 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 				client.ObjectKeyFromObject(ns): ns,
 			},
-			ReferencedServices: map[types.NamespacedName]struct{}{
+			ReferencedServices: map[types.NamespacedName]*ReferencedService{
 				client.ObjectKeyFromObject(svc):  {},
 				client.ObjectKeyFromObject(svc1): {},
 			},
@@ -1157,7 +1156,7 @@ func TestIsReferenced(t *testing.T) {
 		ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 			client.ObjectKeyFromObject(nsInGraph): nsInGraph,
 		},
-		ReferencedServices: map[types.NamespacedName]struct{}{
+		ReferencedServices: map[types.NamespacedName]*ReferencedService{
 			client.ObjectKeyFromObject(serviceInGraph): {},
 		},
 		ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
@@ -1359,6 +1358,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 					Source: &policiesfakes.FakePolicy{},
 				},
 			},
+			ReferencedServices: nil,
 		}
 	}
 
@@ -1467,6 +1467,46 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 			}),
 			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw-source"},
+			expRelevant: false,
+		},
+		{
+			name: "relevant; policy references a Service that is referenced by a route, group core is inferred",
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.ReferencedServices = map[types.NamespacedName]*ReferencedService{
+					{Namespace: "test", Name: "ref-service"}: {},
+				}
+
+				return g
+			}),
+			policy:      getPolicy(createTestRef(kinds.Service, "", "ref-service")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "policy-for-svc"},
+			expRelevant: true,
+		},
+		{
+			name: "relevant; policy references a Service that is referenced by a route, group core is explicit",
+			graph: getModifiedGraph(func(g *Graph) *Graph {
+				g.ReferencedServices = map[types.NamespacedName]*ReferencedService{
+					{Namespace: "test", Name: "ref-service"}: {},
+				}
+
+				return g
+			}),
+			policy:      getPolicy(createTestRef(kinds.Service, "core", "ref-service")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "policy-for-svc"},
+			expRelevant: true,
+		},
+		{
+			name:        "irrelevant; policy references a Service that is not referenced by a route, group core is inferred",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Service, "", "not-ref-service")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "policy-for-not-ref-svc"},
+			expRelevant: false,
+		},
+		{
+			name:        "irrelevant; policy references a Service that is not referenced by a route, group core is explicit",
+			graph:       getGraph(),
+			policy:      getPolicy(createTestRef(kinds.Service, "core", "not-ref-service")),
+			nsname:      types.NamespacedName{Namespace: "test", Name: "policy-for-not-ref-svc"},
 			expRelevant: false,
 		},
 	}

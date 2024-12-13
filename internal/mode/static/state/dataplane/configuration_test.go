@@ -81,6 +81,7 @@ func getNormalGraph() *graph.Graph {
 		Routes:                     map[graph.RouteKey]*graph.L7Route{},
 		ReferencedSecrets:          map[types.NamespacedName]*graph.Secret{},
 		ReferencedCaCertConfigMaps: map[types.NamespacedName]*graph.CaCertConfigMap{},
+		ReferencedServices:         map[types.NamespacedName]*graph.ReferencedService{},
 	}
 }
 
@@ -2804,6 +2805,13 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
+	policyEndpoints := []resolver.Endpoint{
+		{
+			Address: "16.0.0.0",
+			Port:    80,
+		},
+	}
+
 	createBackendRefs := func(serviceNames ...string) []graph.BackendRef {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
@@ -2835,6 +2843,8 @@ func TestBuildUpstreams(t *testing.T) {
 	nonExistingRefs := createBackendRefs("non-existing")
 
 	invalidHRRefs := createBackendRefs("abc")
+
+	refsWithPolicies := createBackendRefs("policies")
 
 	routes := map[graph.RouteKey]*graph.L7Route{
 		{NamespacedName: types.NamespacedName{Name: "hr1", Namespace: "test"}}: {
@@ -2893,6 +2903,15 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
+	routesWithPolicies := map[graph.RouteKey]*graph.L7Route{
+		{NamespacedName: types.NamespacedName{Name: "policies", Namespace: "test"}}: {
+			Valid: true,
+			Spec: graph.L7RouteSpec{
+				Rules: refsToValidRules(refsWithPolicies),
+			},
+		},
+	}
+
 	listeners := []*graph.Listener{
 		{
 			Name:   "invalid-listener",
@@ -2918,6 +2937,41 @@ func TestBuildUpstreams(t *testing.T) {
 			Name:   "listener-4",
 			Valid:  true,
 			Routes: routes3,
+		},
+		{
+			Name:   "listener-5",
+			Valid:  true,
+			Routes: routesWithPolicies,
+		},
+	}
+
+	validPolicy1 := &policiesfakes.FakePolicy{}
+	validPolicy2 := &policiesfakes.FakePolicy{}
+	invalidPolicy := &policiesfakes.FakePolicy{}
+
+	referencedServices := map[types.NamespacedName]*graph.ReferencedService{
+		{Name: "bar", Namespace: "test"}:             {},
+		{Name: "baz", Namespace: "test"}:             {},
+		{Name: "baz2", Namespace: "test"}:            {},
+		{Name: "foo", Namespace: "test"}:             {},
+		{Name: "empty-endpoints", Namespace: "test"}: {},
+		{Name: "nil-endpoints", Namespace: "test"}:   {},
+		{Name: "ipv6-endpoints", Namespace: "test"}:  {},
+		{Name: "policies", Namespace: "test"}: {
+			Policies: []*graph.Policy{
+				{
+					Valid:  true,
+					Source: validPolicy1,
+				},
+				{
+					Valid:  false,
+					Source: invalidPolicy,
+				},
+				{
+					Valid:  true,
+					Source: validPolicy2,
+				},
+			},
 		},
 	}
 
@@ -2955,6 +3009,11 @@ func TestBuildUpstreams(t *testing.T) {
 			Name:      "test_ipv6-endpoints_80",
 			Endpoints: ipv6Endpoints,
 		},
+		{
+			Name:      "test_policies_80",
+			Endpoints: policyEndpoints,
+			Policies:  []policies.Policy{validPolicy1, validPolicy2},
+		},
 	}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
@@ -2981,6 +3040,8 @@ func TestBuildUpstreams(t *testing.T) {
 			return abcEndpoints, nil
 		case "ipv6-endpoints":
 			return ipv6Endpoints, nil
+		case "policies":
+			return policyEndpoints, nil
 		default:
 			return nil, fmt.Errorf("unexpected service %s", svcNsName.Name)
 		}
@@ -2988,7 +3049,7 @@ func TestBuildUpstreams(t *testing.T) {
 
 	g := NewWithT(t)
 
-	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver, Dual)
+	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver, referencedServices, Dual)
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
 }
 

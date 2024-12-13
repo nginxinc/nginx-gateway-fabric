@@ -52,6 +52,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
@@ -311,6 +312,10 @@ func createPolicyManager(
 			GVK:       mustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
 			Validator: observability.NewValidator(validator),
 		},
+		{
+			GVK:       mustExtractGVK(&ngfAPI.UpstreamSettingsPolicy{}),
+			Validator: upstreamsettings.NewValidator(validator),
+		},
 	}
 
 	return policies.NewManager(mustExtractGVK, cfgs...)
@@ -488,6 +493,12 @@ func registerControllers(
 		},
 		{
 			objectType: &ngfAPI.ObservabilityPolicy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
+		{
+			objectType: &ngfAPI.UpstreamSettingsPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
@@ -728,6 +739,7 @@ func prepareFirstEventBatchPreparerArgs(cfg config.Config) ([]client.Object, []c
 		&gatewayv1.GRPCRouteList{},
 		&ngfAPI.ClientSettingsPolicyList{},
 		&ngfAPI.ObservabilityPolicyList{},
+		&ngfAPI.UpstreamSettingsPolicyList{},
 		partialObjectMetadataList,
 	}
 

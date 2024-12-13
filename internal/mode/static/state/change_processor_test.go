@@ -213,13 +213,11 @@ func createHTTPBackendRef(
 	}
 }
 
-func createTLSBackendRef(
-	name v1.ObjectName,
-	namespace v1.Namespace,
-) v1.BackendRef {
+func createTLSBackendRef(name, namespace string) v1.BackendRef {
 	kindSvc := v1.Kind("Service")
+	ns := v1.Namespace(namespace)
 	return v1.BackendRef{
-		BackendObjectReference: createBackendRefObj(&kindSvc, name, &namespace),
+		BackendObjectReference: createBackendRefObj(&kindSvc, v1.ObjectName(name), &ns),
 	}
 }
 
@@ -371,17 +369,21 @@ var _ = Describe("ChangeProcessor", func() {
 				gatewayAPICRD, gatewayAPICRDUpdated                  *metav1.PartialObjectMetadata
 				routeKey1, routeKey2                                 graph.RouteKey
 				trKey1, trKey2                                       graph.L4RouteKey
+				refSvc, refTLSSvc                                    types.NamespacedName
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
 				gcUpdated.Generation++
 
+				refSvc = types.NamespacedName{Namespace: "service-ns", Name: "service"}
+				refTLSSvc = types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"}
+
 				crossNsBackendRef := v1.HTTPBackendRef{
 					BackendRef: v1.BackendRef{
 						BackendObjectReference: v1.BackendObjectReference{
 							Kind:      helpers.GetPointer[v1.Kind]("Service"),
-							Name:      "service",
-							Namespace: helpers.GetPointer[v1.Namespace]("service-ns"),
+							Name:      v1.ObjectName(refSvc.Name),
+							Namespace: helpers.GetPointer(v1.Namespace(refSvc.Namespace)),
 							Port:      helpers.GetPointer[v1.PortNumber](80),
 						},
 					},
@@ -398,7 +400,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				routeKey2 = graph.CreateRouteKey(hr2)
 
-				tlsBackendRef := createTLSBackendRef("tls-service", "tls-service-ns")
+				tlsBackendRef := createTLSBackendRef(refTLSSvc.Name, refTLSSvc.Namespace)
 
 				tr1 = createTLSRoute("tr-1", "gateway-1", "foo.tls.com", tlsBackendRef)
 
@@ -562,7 +564,7 @@ var _ = Describe("ChangeProcessor", func() {
 							{
 								BackendRefs: []graph.BackendRef{
 									{
-										SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+										SvcNsName: refSvc,
 										Weight:    1,
 									},
 								},
@@ -642,7 +644,7 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: graph.L4RouteSpec{
 						Hostnames: tr1.Spec.Hostnames,
 						BackendRef: graph.BackendRef{
-							SvcNsName: types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"},
+							SvcNsName: refTLSSvc,
 							Valid:     false,
 						},
 					},
@@ -670,7 +672,7 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: graph.L4RouteSpec{
 						Hostnames: tr2.Spec.Hostnames,
 						BackendRef: graph.BackendRef{
-							SvcNsName: types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"},
+							SvcNsName: refTLSSvc,
 							Valid:     false,
 						},
 					},
@@ -736,15 +738,9 @@ var _ = Describe("ChangeProcessor", func() {
 					L4Routes:          map[graph.L4RouteKey]*graph.L4Route{trKey1: expRouteTR1},
 					Routes:            map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
-					ReferencedServices: map[types.NamespacedName]struct{}{
-						{
-							Namespace: "service-ns",
-							Name:      "service",
-						}: {},
-						{
-							Namespace: "tls-service-ns",
-							Name:      "tls-service",
-						}: {},
+					ReferencedServices: map[types.NamespacedName]*graph.ReferencedService{
+						refSvc:    {},
+						refTLSSvc: {},
 					},
 				}
 			})
@@ -953,7 +949,7 @@ var _ = Describe("ChangeProcessor", func() {
 							"Backend ref to Service tls-service-ns/tls-service not permitted by any ReferenceGrant",
 						),
 					}
-					delete(expGraph.ReferencedServices, types.NamespacedName{Namespace: "tls-service-ns", Name: "tls-service"})
+					delete(expGraph.ReferencedServices, refTLSSvc)
 					expRouteTR1.Spec.BackendRef.SvcNsName = types.NamespacedName{}
 
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
@@ -1996,11 +1992,13 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("NGF Policy resource changes", Ordered, func() {
 			var (
-				gw              *v1.Gateway
-				route           *v1.HTTPRoute
-				csp, cspUpdated *ngfAPI.ClientSettingsPolicy
-				obs, obsUpdated *ngfAPI.ObservabilityPolicy
-				cspKey, obsKey  graph.PolicyKey
+				gw                     *v1.Gateway
+				route                  *v1.HTTPRoute
+				svc                    *apiv1.Service
+				csp, cspUpdated        *ngfAPI.ClientSettingsPolicy
+				obs, obsUpdated        *ngfAPI.ObservabilityPolicy
+				usp, uspUpdated        *ngfAPI.UpstreamSettingsPolicy
+				cspKey, obsKey, uspKey graph.PolicyKey
 			)
 
 			BeforeAll(func() {
@@ -2011,7 +2009,27 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(newGraph.NGFPolicies).To(BeEmpty())
 
 				gw = createGateway("gw", createHTTPListener())
-				route = createRoute("hr-1", "gw", "foo.example.com", v1.HTTPBackendRef{})
+				route = createRoute(
+					"hr-1",
+					"gw",
+					"foo.example.com",
+					v1.HTTPBackendRef{
+						BackendRef: v1.BackendRef{
+							BackendObjectReference: v1.BackendObjectReference{
+								Group: helpers.GetPointer[v1.Group](""),
+								Kind:  helpers.GetPointer[v1.Kind](kinds.Service),
+								Name:  "svc",
+								Port:  helpers.GetPointer[v1.PortNumber](80),
+							},
+						},
+					},
+				)
+				svc = &apiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc",
+						Namespace: "test",
+					},
+				}
 
 				csp = &ngfAPI.ClientSettingsPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2072,6 +2090,35 @@ var _ = Describe("ChangeProcessor", func() {
 						Version: "v1alpha1",
 					},
 				}
+
+				usp = &ngfAPI.UpstreamSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "usp",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.UpstreamSettingsPolicySpec{
+						ZoneSize: helpers.GetPointer[ngfAPI.Size]("10m"),
+						TargetRefs: []v1alpha2.LocalPolicyTargetReference{
+							{
+								Group: "core",
+								Kind:  kinds.Service,
+								Name:  "svc",
+							},
+						},
+					},
+				}
+
+				uspUpdated = usp.DeepCopy()
+				uspUpdated.Spec.ZoneSize = helpers.GetPointer[ngfAPI.Size]("20m")
+
+				uspKey = graph.PolicyKey{
+					NsName: types.NamespacedName{Name: "usp", Namespace: "test"},
+					GVK: schema.GroupVersionKind{
+						Group:   ngfAPI.GroupName,
+						Kind:    kinds.UpstreamSettingsPolicy,
+						Version: "v1alpha1",
+					},
+				}
 			})
 
 			/*
@@ -2084,6 +2131,7 @@ var _ = Describe("ChangeProcessor", func() {
 				It("reports no changes", func() {
 					processor.CaptureUpsertChange(csp)
 					processor.CaptureUpsertChange(obs)
+					processor.CaptureUpsertChange(usp)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
@@ -2104,12 +2152,19 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(graph.NGFPolicies).To(HaveKey(obsKey))
 					Expect(graph.NGFPolicies[obsKey].Source).To(Equal(obs))
+
+					processor.CaptureUpsertChange(svc)
+					changed, graph = processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+					Expect(graph.NGFPolicies).To(HaveKey(uspKey))
+					Expect(graph.NGFPolicies[uspKey].Source).To(Equal(usp))
 				})
 			})
 			When("the policy is updated", func() {
 				It("captures changes for a policy", func() {
 					processor.CaptureUpsertChange(cspUpdated)
 					processor.CaptureUpsertChange(obsUpdated)
+					processor.CaptureUpsertChange(uspUpdated)
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -2117,12 +2172,15 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(graph.NGFPolicies[cspKey].Source).To(Equal(cspUpdated))
 					Expect(graph.NGFPolicies).To(HaveKey(obsKey))
 					Expect(graph.NGFPolicies[obsKey].Source).To(Equal(obsUpdated))
+					Expect(graph.NGFPolicies).To(HaveKey(uspKey))
+					Expect(graph.NGFPolicies[uspKey].Source).To(Equal(uspUpdated))
 				})
 			})
 			When("the policy is deleted", func() {
 				It("removes the policy from the graph", func() {
 					processor.CaptureDeleteChange(&ngfAPI.ClientSettingsPolicy{}, client.ObjectKeyFromObject(csp))
 					processor.CaptureDeleteChange(&ngfAPI.ObservabilityPolicy{}, client.ObjectKeyFromObject(obs))
+					processor.CaptureDeleteChange(&ngfAPI.UpstreamSettingsPolicy{}, client.ObjectKeyFromObject(usp))
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))

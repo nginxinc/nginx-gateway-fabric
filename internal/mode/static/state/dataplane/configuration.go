@@ -41,12 +41,19 @@ func BuildConfiguration(
 
 	httpServers, sslServers := buildServers(g)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
+	upstreams := buildUpstreams(
+		ctx,
+		g.Gateway.Listeners,
+		serviceResolver,
+		g.ReferencedServices,
+		baseHTTPConfig.IPFamily,
+	)
 
 	config := Configuration{
 		HTTPServers:           httpServers,
 		SSLServers:            sslServers,
 		TLSPassthroughServers: buildPassthroughServers(g),
-		Upstreams:             buildUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
+		Upstreams:             upstreams,
 		StreamUpstreams:       buildStreamUpstreams(ctx, g.Gateway.Listeners, serviceResolver, baseHTTPConfig.IPFamily),
 		BackendGroups:         backendGroups,
 		SSLKeyPairs:           buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners),
@@ -602,6 +609,7 @@ func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
 	svcResolver resolver.ServiceResolver,
+	referencedServices map[types.NamespacedName]*graph.ReferencedService,
 	ipFamily IPFamilyType,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
@@ -642,10 +650,16 @@ func buildUpstreams(
 							errMsg = err.Error()
 						}
 
+						var upstreamPolicies []policies.Policy
+						if graphSvc, exists := referencedServices[br.SvcNsName]; exists {
+							upstreamPolicies = buildPolicies(graphSvc.Policies)
+						}
+
 						uniqueUpstreams[upstreamName] = Upstream{
 							Name:      upstreamName,
 							Endpoints: eps,
 							ErrorMsg:  errMsg,
+							Policies:  upstreamPolicies,
 						}
 					}
 				}

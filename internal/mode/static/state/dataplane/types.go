@@ -111,7 +111,7 @@ type Upstream struct {
 	ErrorMsg string
 	// Endpoints are the endpoints of the Upstream.
 	Endpoints []resolver.Endpoint
-	// Policies contains the list of policies that are applied to this Upstream.
+	// Policies holds all the valid policies that apply to the Upstream.
 	Policies []policies.Policy
 }
 
