@@ -98,6 +98,7 @@ rules:
   - nginxproxies
   - clientsettingspolicies
   - observabilitypolicies
+  - upstreamsettingspolicies
   - snippetsfilters
   verbs:
   - list
@@ -108,6 +109,7 @@ rules:
   - nginxgateways/status
   - clientsettingspolicies/status
   - observabilitypolicies/status
+  - upstreamsettingspolicies/status
   - snippetsfilters/status
   verbs:
   - update

@@ -24,9 +24,9 @@ type Policy interface {
 // GlobalSettings contains global settings from the current state of the graph that may be
 // needed for policy validation or generation if certain policies rely on those global settings.
 type GlobalSettings struct {
-	// NginxProxyValid is whether or not the NginxProxy resource is valid.
+	// NginxProxyValid is whether the NginxProxy resource is valid.
 	NginxProxyValid bool
-	// TelemetryEnabled is whether or not telemetry is enabled in the NginxProxy resource.
+	// TelemetryEnabled is whether telemetry is enabled in the NginxProxy resource.
 	TelemetryEnabled bool
 }
 
@@ -34,15 +34,16 @@ type GlobalSettings struct {
 func ValidateTargetRef(
 	ref v1alpha2.LocalPolicyTargetReference,
 	basePath *field.Path,
+	groups []gatewayv1.Group,
 	supportedKinds []gatewayv1.Kind,
 ) error {
-	if ref.Group != gatewayv1.GroupName {
+	if !slices.Contains(groups, ref.Group) {
 		path := basePath.Child("group")
 
 		return field.NotSupported(
 			path,
 			ref.Group,
-			[]string{gatewayv1.GroupName},
+			groups,
 		)
 	}
 

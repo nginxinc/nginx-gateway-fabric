@@ -11,9 +11,9 @@ import (
 
 // Gateway API Kinds.
 const (
-	// Gateway is the Gateway Kind.
+	// Gateway is the Gateway kind.
 	Gateway = "Gateway"
-	// GatewayClass is the GatewayClass Kind.
+	// GatewayClass is the GatewayClass kind.
 	GatewayClass = "GatewayClass"
 	// HTTPRoute is the HTTPRoute kind.
 	HTTPRoute = "HTTPRoute"
@@ -21,6 +21,12 @@ const (
 	GRPCRoute = "GRPCRoute"
 	// TLSRoute is the TLSRoute kind.
 	TLSRoute = "TLSRoute"
+)
+
+// Core API Kinds.
+const (
+	// Service is the Service kind.
+	Service = "Service"
 )
 
 // NGINX Gateway Fabric kinds.
@@ -33,6 +39,8 @@ const (
 	NginxProxy = "NginxProxy"
 	// SnippetsFilter is the SnippetsFilter kind.
 	SnippetsFilter = "SnippetsFilter"
+	// UpstreamSettingsPolicy is the UpstreamSettingsPolicy kind.
+	UpstreamSettingsPolicy = "UpstreamSettingsPolicy"
 )
 
 // MustExtractGVK is a function that extracts the GroupVersionKind (GVK) of a client.object.

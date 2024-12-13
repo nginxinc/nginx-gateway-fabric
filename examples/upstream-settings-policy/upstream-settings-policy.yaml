@@ -7,7 +7,7 @@ spec:
   targetRefs:
     - group: core
       kind: Service
-      name: service
+      name: coffee
   keepAlive:
     connections: 32
     requests: 1001
