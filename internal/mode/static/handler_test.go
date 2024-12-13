@@ -754,9 +754,9 @@ var _ = Describe("getDeploymentContext", func() {
 		It("returns deployment context", func() {
 			expDepCtx := dataplane.DeploymentContext{
 				Integration:      "ngf",
-				ClusterID:        "cluster-id",
-				InstallationID:   "installation-id",
-				ClusterNodeCount: 1,
+				ClusterID:        helpers.GetPointer("cluster-id"),
+				InstallationID:   helpers.GetPointer("installation-id"),
+				ClusterNodeCount: helpers.GetPointer(1),
 			}
 
 			handler := newEventHandlerImpl(eventHandlerConfig{
