@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -121,9 +122,9 @@ func TestGenerate(t *testing.T) {
 		},
 		DeploymentContext: dataplane.DeploymentContext{
 			Integration:      "ngf",
-			ClusterID:        "test-uid",
-			InstallationID:   "test-uid-replicaSet",
-			ClusterNodeCount: 1,
+			ClusterID:        helpers.GetPointer("test-uid"),
+			InstallationID:   helpers.GetPointer("test-uid-replicaSet"),
+			ClusterNodeCount: helpers.GetPointer(1),
 		},
 		AuxiliarySecrets: map[graph.SecretFileType][]byte{
 			graph.PlusReportJWTToken:             []byte("license"),

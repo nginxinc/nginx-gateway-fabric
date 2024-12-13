@@ -399,12 +399,12 @@ type Logging struct {
 // DeploymentContext contains metadata about NGF and the cluster.
 // This is JSON marshaled into a file created by the generator, hence the json tags.
 type DeploymentContext struct {
+	// ClusterID is the ID of the kube-system namespace.
+	ClusterID *string `json:"cluster_id,omitempty"`
+	// InstallationID is the ID of the NGF deployment.
+	InstallationID *string `json:"installation_id,omitempty"`
+	// ClusterNodeCount is the count of nodes in the cluster.
+	ClusterNodeCount *int `json:"cluster_node_count,omitempty"`
 	// Integration is "ngf".
 	Integration string `json:"integration"`
-	// ClusterID is the ID of the kube-system namespace.
-	ClusterID string `json:"cluster_id"`
-	// InstallationID is the ID of the NGF deployment.
-	InstallationID string `json:"installation_id"`
-	// ClusterNodeCount is the count of nodes in the cluster.
-	ClusterNodeCount int `json:"cluster_node_count"`
 }
