@@ -6,46 +6,31 @@ and includes links to all PRs that went into the release.
 
 ## Release 1.5.1
 
-n
-%%DATE%%
-
-FEATURES:
-
--
+_December 16, 2024_
 
 BUG FIXES:
 
--
-
-DOCUMENTATION:
-
--
+- Write deployment context in init container. [2905](https://github.com/nginxinc/nginx-gateway-fabric/pull/2905)
+- SnippetsFilter CRD missing from CRDs manifest. [2822](https://github.com/nginxinc/nginx-gateway-fabric/pull/2822)
+- Omit empty deployment context fields. [2910](https://github.com/nginxinc/nginx-gateway-fabric/pull/2910)
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.5.1
--
-
-UPGRADE:
-
--
-
-KNOWN ISSUES:
-
--
 
 COMPATIBILITY:
 
-- Gateway API version: ``
-- NGINX version: ``
-- NGINX Plus version: ``
-- Kubernetes version: ``
+- Gateway API version: `1.2.0`
+- NGINX version: `1.27.2`
+- NGINX Plus version: `R33`
+- Kubernetes version: `1.25+`
 
 CONTAINER IMAGES:
 
 - Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.5.1`
 - Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.5.1`
 - Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.5.1`
+
 ## Release 1.5.0
 
 _November 20, 2024_

@@ -9,7 +9,7 @@ docs: "DOCS-1429"
 
 Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Kubernetes manifests.
 
-{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.1 need to install an NGINX Plus JWT
+{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.x need to install an NGINX Plus JWT
 Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version. {{< /important >}}
 
 ## Before you begin
@@ -179,7 +179,7 @@ nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
 
 ## Upgrade NGINX Gateway Fabric
 
-{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.1 need to install an NGINX Plus JWT
+{{< important >}} NGINX Plus users that are upgrading from version 1.4.0 to 1.5.x need to install an NGINX Plus JWT
 Secret before upgrading. Follow the steps in the [Before you begin](#before-you-begin) section to create the Secret, which is referenced in the updated deployment manifest for the newest version. {{< /important >}}
 
 {{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}

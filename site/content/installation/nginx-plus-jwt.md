@@ -7,7 +7,7 @@ docs: "DOCS-000"
 
 ## Overview
 
-NGINX Gateway Fabric with NGINX Plus requires a valid JSON Web Token (JWT) to download the container image from the F5 registry. From version 1.5.1, this JWT token is also required to run NGINX Plus.
+NGINX Gateway Fabric with NGINX Plus requires a valid JSON Web Token (JWT) to download the container image from the F5 registry. From version 1.5.0, this JWT token is also required to run NGINX Plus.
 
 This requirement is part of F5’s broader licensing program and aligns with industry best practices. The JWT will streamline subscription renewals and usage reporting, helping you manage your NGINX Plus subscription more efficiently. The [telemetry](#telemetry) data we collect helps us improve our products and services to better meet your needs.
 
