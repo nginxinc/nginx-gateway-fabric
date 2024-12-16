@@ -8,7 +8,15 @@ on:
         required: true
         default: all
         type: choice
-        options: [performance, upgrade, scale, zero-downtime-scale, reconfiguration, all]
+        options:
+          [
+            performance,
+            upgrade,
+            scale,
+            zero-downtime-scale,
+            reconfiguration,
+            all,
+          ]
       version:
         description: Version of NGF under test
         required: true
@@ -110,6 +118,7 @@ jobs:
           echo "NGF_VERSION=${{ needs.vars.outputs.version }}" >> vars.env
           echo "GKE_NUM_NODES=12" >> vars.env
           echo "GKE_MACHINE_TYPE=n2d-standard-16" >> vars.env
+          echo "PLUS_USAGE_ENDPOINT=${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}" >> vars.env
 
       - name: Setup license file for plus
         if: matrix.type == 'plus'
