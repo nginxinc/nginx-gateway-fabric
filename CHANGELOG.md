@@ -10,9 +10,9 @@ _December 16, 2024_
 
 BUG FIXES:
 
-- Write deployment context in init container. [2905](https://github.com/nginxinc/nginx-gateway-fabric/pull/2905)
+- Write NGINX Plus R33 deployment context in init container. [2905](https://github.com/nginxinc/nginx-gateway-fabric/pull/2905)
 - SnippetsFilter CRD missing from CRDs manifest. [2822](https://github.com/nginxinc/nginx-gateway-fabric/pull/2822)
-- Omit empty deployment context fields. [2910](https://github.com/nginxinc/nginx-gateway-fabric/pull/2910)
+- Omit empty deployment context fields in NGINX Plus R33 reporting. [2910](https://github.com/nginxinc/nginx-gateway-fabric/pull/2910)
 
 HELM CHART:
 
