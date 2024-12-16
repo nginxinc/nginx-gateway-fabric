@@ -367,7 +367,7 @@ To **resolve** this issue you will need to set `allowPrivilegeEscalation` to `tr
 
 ##### NGINX Plus failure to start or traffic interruptions
 
-Beginning with NGINX Gateway Fabric 1.5.1, NGINX Plus requires a valid JSON Web Token (JWT) to run. If this is not set up properly, or your JWT token has expired, you may see errors in the NGINX logs that look like the following:
+Beginning with NGINX Gateway Fabric 1.5.0, NGINX Plus requires a valid JSON Web Token (JWT) to run. If this is not set up properly, or your JWT token has expired, you may see errors in the NGINX logs that look like the following:
 
 ```text
 nginx: [error] invalid license token
