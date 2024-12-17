@@ -88,6 +88,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 				"ObservabilityPolicyCount: Int(0)",
 				"NginxProxyCount: Int(0)",
 				"SnippetsFilterCount: Int(0)",
+				"UpstreamSettingsPolicyCount: Int(0)",
 				"NGFReplicaCount: Int(1)",
 			},
 		)
