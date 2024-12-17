@@ -551,7 +551,7 @@ func TestValidateRewriteClientIP(t *testing.T) {
 				},
 			},
 			expectErrCount: 1,
-			errorString:    "spec.rewriteClientIP.trustedAddresses: Too long: may not be longer than 16",
+			errorString:    "spec.rewriteClientIP.trustedAddresses: Too many: 21: must have at most 16 items",
 		},
 		{
 			name:      "invalid when mode is not proxyProtocol or XForwardedFor",
