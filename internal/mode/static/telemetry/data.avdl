@@ -99,6 +99,9 @@ attached at the Gateway level. */
 		/** SnippetsFilterCount is the number of SnippetsFilters. */
 		long? SnippetsFilterCount = null;
 		
+		/** UpstreamSettingsPolicyCount is the number of UpstreamSettingsPolicies. */
+		long? UpstreamSettingsPolicyCount = null;
+		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
 		

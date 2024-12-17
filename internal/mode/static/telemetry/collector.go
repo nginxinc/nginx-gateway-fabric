@@ -97,6 +97,8 @@ type NGFResourceCounts struct {
 	NginxProxyCount int64
 	// SnippetsFilterCount is the number of SnippetsFilters.
 	SnippetsFilterCount int64
+	// UpstreamSettingsPolicyCount is the number of UpstreamSettingsPolicies.
+	UpstreamSettingsPolicyCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -239,6 +241,8 @@ func collectGraphResourceCount(
 			}
 		case kinds.ObservabilityPolicy:
 			ngfResourceCounts.ObservabilityPolicyCount++
+		case kinds.UpstreamSettingsPolicy:
+			ngfResourceCounts.UpstreamSettingsPolicyCount++
 		}
 	}
 

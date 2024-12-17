@@ -329,6 +329,10 @@ var _ = Describe("Collector", Ordered, func() {
 							NsName: types.NamespacedName{Namespace: "test", Name: "ObservabilityPolicy-1"},
 							GVK:    schema.GroupVersionKind{Kind: kinds.ObservabilityPolicy},
 						}: {},
+						{
+							NsName: types.NamespacedName{Namespace: "test", Name: "UpstreamSettingsPolicy-1"},
+							GVK:    schema.GroupVersionKind{Kind: kinds.UpstreamSettingsPolicy},
+						}: {},
 					},
 					NginxProxy: &graph.NginxProxy{},
 					SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
@@ -412,6 +416,7 @@ var _ = Describe("Collector", Ordered, func() {
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
 					SnippetsFilterCount:                      3,
+					UpstreamSettingsPolicyCount:              1,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
@@ -603,6 +608,10 @@ var _ = Describe("Collector", Ordered, func() {
 						NsName: types.NamespacedName{Namespace: "test", Name: "ObservabilityPolicy-1"},
 						GVK:    schema.GroupVersionKind{Kind: kinds.ObservabilityPolicy},
 					}: {},
+					{
+						NsName: types.NamespacedName{Namespace: "test", Name: "UpstreamSettingsPolicy-1"},
+						GVK:    schema.GroupVersionKind{Kind: kinds.UpstreamSettingsPolicy},
+					}: {},
 				},
 				NginxProxy: &graph.NginxProxy{},
 				SnippetsFilters: map[types.NamespacedName]*graph.SnippetsFilter{
@@ -682,6 +691,7 @@ var _ = Describe("Collector", Ordered, func() {
 					ObservabilityPolicyCount:                 1,
 					NginxProxyCount:                          1,
 					SnippetsFilterCount:                      1,
+					UpstreamSettingsPolicyCount:              1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -693,22 +703,7 @@ var _ = Describe("Collector", Ordered, func() {
 			It("ignores invalid and empty upstreams", func(ctx SpecContext) {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
-				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					GatewayCount:                             0,
-					GatewayClassCount:                        0,
-					HTTPRouteCount:                           0,
-					TLSRouteCount:                            0,
-					SecretCount:                              0,
-					ServiceCount:                             0,
-					EndpointCount:                            0,
-					GRPCRouteCount:                           0,
-					BackendTLSPolicyCount:                    0,
-					GatewayAttachedClientSettingsPolicyCount: 0,
-					RouteAttachedClientSettingsPolicyCount:   0,
-					ObservabilityPolicyCount:                 0,
-					NginxProxyCount:                          0,
-					SnippetsFilterCount:                      0,
-				}
+				expData.NGFResourceCounts = telemetry.NGFResourceCounts{}
 
 				data, err := dataCollector.Collect(ctx)
 
