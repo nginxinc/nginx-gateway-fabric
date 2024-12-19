@@ -112,11 +112,18 @@ func attachPolicyToService(
 
 	if !gw.Valid {
 		ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("Parent Gateway is invalid")}
+		if ancestorsContainsAncestorRef(policy.Ancestors, ancestor.Ancestor) {
+			return
+		}
+
 		policy.Ancestors = append(policy.Ancestors, ancestor)
 		return
 	}
 
-	policy.Ancestors = append(policy.Ancestors, ancestor)
+	if !ancestorsContainsAncestorRef(policy.Ancestors, ancestor.Ancestor) {
+		policy.Ancestors = append(policy.Ancestors, ancestor)
+	}
+
 	svc.Policies = append(svc.Policies, policy)
 }
 

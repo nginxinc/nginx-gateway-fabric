@@ -539,6 +539,7 @@ func TestAttachPolicyToService(t *testing.T) {
 	t.Parallel()
 
 	gwNsname := types.NamespacedName{Namespace: testNs, Name: "gateway"}
+	gw2Nsname := types.NamespacedName{Namespace: testNs, Name: "gateway2"}
 
 	getGateway := func(valid bool) *Gateway {
 		return &Gateway{
@@ -567,6 +568,47 @@ func TestAttachPolicyToService(t *testing.T) {
 			gw:          getGateway(true /*valid*/),
 			expAttached: true,
 			expAncestors: []PolicyAncestor{
+				{
+					Ancestor: getGatewayParentRef(gwNsname),
+				},
+			},
+		},
+		{
+			name: "attachment; ancestor already exists so don't duplicate",
+			policy: &Policy{
+				Source: &policiesfakes.FakePolicy{},
+				Ancestors: []PolicyAncestor{
+					{
+						Ancestor: getGatewayParentRef(gwNsname),
+					},
+				},
+			},
+			svc:         &ReferencedService{},
+			gw:          getGateway(true /*valid*/),
+			expAttached: true,
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor: getGatewayParentRef(gwNsname), // only one ancestor per Gateway
+				},
+			},
+		},
+		{
+			name: "attachment; ancestor doesn't exists so add it",
+			policy: &Policy{
+				Source: &policiesfakes.FakePolicy{},
+				Ancestors: []PolicyAncestor{
+					{
+						Ancestor: getGatewayParentRef(gw2Nsname),
+					},
+				},
+			},
+			svc:         &ReferencedService{},
+			gw:          getGateway(true /*valid*/),
+			expAttached: true,
+			expAncestors: []PolicyAncestor{
+				{
+					Ancestor: getGatewayParentRef(gw2Nsname),
+				},
 				{
 					Ancestor: getGatewayParentRef(gwNsname),
 				},
