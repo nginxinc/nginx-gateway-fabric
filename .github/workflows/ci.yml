@@ -104,7 +104,7 @@ jobs:
         run: make unit-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -133,7 +133,7 @@ jobs:
         run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 

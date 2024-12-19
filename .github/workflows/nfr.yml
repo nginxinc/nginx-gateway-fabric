@@ -38,6 +38,9 @@ defaults:
   run:
     shell: bash
 
+env:
+  PLUS_USAGE_ENDPOINT: ${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
+
 concurrency:
   group: ${{ github.ref_name }}-nfr
   cancel-in-progress: true
