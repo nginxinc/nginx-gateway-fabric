@@ -4,12 +4,13 @@ metadata:
   name: gateway-not-valid
 spec:
   gatewayClassName: nginx
-  addresses: "10.0.0.1"
+  addresses:
+    - value: "10.0.0.1"
   listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    hostname: "soda.example.com"
+    - name: http
+      port: 80
+      protocol: HTTP
+      hostname: "soda.example.com"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,10 +27,10 @@ spec:
         app: soda
     spec:
       containers:
-      - name: soda
-        image: nginxdemos/nginx-hello:plain-text
-        ports:
-        - containerPort: 8080
+        - name: soda
+          image: nginxdemos/nginx-hello:plain-text
+          ports:
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -37,31 +38,31 @@ metadata:
   name: soda
 spec:
   ports:
-  - port: 80
-    targetPort: 8080
-    protocol: TCP
-    name: http
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
   selector:
     app: soda
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: soda
+  name: sode
 spec:
   parentRefs:
-  - name: gateway-httproute-allowed
-    sectionName: http
+    - name: gateway-not-valid
+      sectionName: http
   hostnames:
-  - "soda.example.com"
+    - "soda.example.com"
   rules:
-  - matches:
-    - path:
-        type: Exact
-        value: /soda
-    backendRefs:
-    - name: soda
-      port: 80
+    - matches:
+        - path:
+            type: Exact
+            value: /soda
+      backendRefs:
+        - name: soda
+          port: 80
 ---
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
@@ -70,9 +71,9 @@ metadata:
 spec:
   zoneSize: 512k
   targetRefs:
-  - group: core
-    kind: Service
-    name: soda
+    - group: core
+      kind: Service
+      name: soda
   keepAlive:
     connections: 10
     requests: 3

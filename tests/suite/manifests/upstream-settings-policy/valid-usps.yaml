@@ -21,10 +21,10 @@ kind: UpstreamSettingsPolicy
 metadata:
   name: grpc-svc-usp
 spec:
-  targetRef:
-    group: core
-    kind: Service
-    name: grpc-backend
+  targetRefs:
+    - group: core
+      kind: Service
+      name: grpc-backend
   zoneSize: 64k
   keepAlive:
     connections: 100

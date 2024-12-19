@@ -149,7 +149,7 @@ var _ = Describe("SnippetsFilter", Ordered, Label("functional", "snippets-filter
 					{
 						Directive: "include",
 						Value:     fmt.Sprintf("%s%s", httpServerContext, httpRouteSuffix),
-						Servers:   []string{"cafe.example.com"},
+						Server:    "cafe.example.com",
 						File:      "http.conf",
 					},
 					{
@@ -157,7 +157,7 @@ var _ = Describe("SnippetsFilter", Ordered, Label("functional", "snippets-filter
 						Value:     fmt.Sprintf("%s%s", httpServerLocationContext, httpRouteSuffix),
 						File:      "http.conf",
 						Location:  "/coffee",
-						Servers:   []string{"cafe.example.com"},
+						Server:    "cafe.example.com",
 					},
 					{
 						Directive: "keepalive_time",
@@ -194,7 +194,7 @@ var _ = Describe("SnippetsFilter", Ordered, Label("functional", "snippets-filter
 					{
 						Directive: "include",
 						Value:     fmt.Sprintf("%s%s", httpServerContext, grpcRouteSuffix),
-						Servers:   []string{"*.example.com"},
+						Server:    "*.example.com",
 						File:      "http.conf",
 					},
 					{
@@ -207,7 +207,7 @@ var _ = Describe("SnippetsFilter", Ordered, Label("functional", "snippets-filter
 						Value:     fmt.Sprintf("%s%s", httpServerLocationContext, grpcRouteSuffix),
 						File:      "http.conf",
 						Location:  "/helloworld.Greeter/SayHello",
-						Servers:   []string{"*.example.com"},
+						Server:    "*.example.com",
 					},
 				}),
 			)

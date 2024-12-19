@@ -117,7 +117,13 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 						Directive: "include",
 						Value:     fmt.Sprintf("%s_gw-csp.conf", filePrefix),
 						File:      "http.conf",
-						Servers:   []string{"*.example.com", "cafe.example.com"},
+						Server:    "*.example.com",
+					},
+					{
+						Directive: "include",
+						Value:     fmt.Sprintf("%s_gw-csp.conf", filePrefix),
+						File:      "http.conf",
+						Server:    "cafe.example.com",
 					},
 					{
 						Directive: "client_max_body_size",
@@ -150,7 +156,7 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 						Directive: "include",
 						Value:     fmt.Sprintf("%s_coffee-route-csp.conf", filePrefix),
 						File:      "http.conf",
-						Servers:   []string{"cafe.example.com"},
+						Server:    "cafe.example.com",
 						Location:  "/coffee",
 					},
 					{
@@ -164,7 +170,7 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 						Directive: "include",
 						Value:     fmt.Sprintf("%s_tea-route-csp.conf", filePrefix),
 						File:      "http.conf",
-						Servers:   []string{"cafe.example.com"},
+						Server:    "cafe.example.com",
 						Location:  "/tea",
 					},
 					{
@@ -178,7 +184,7 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 						Directive: "include",
 						Value:     fmt.Sprintf("%s_soda-route-csp.conf", filePrefix),
 						File:      "http.conf",
-						Servers:   []string{"cafe.example.com"},
+						Server:    "cafe.example.com",
 						Location:  "/soda",
 					},
 					{
@@ -192,7 +198,7 @@ var _ = Describe("ClientSettingsPolicy", Ordered, Label("functional", "cspolicy"
 						Directive: "include",
 						Value:     fmt.Sprintf("%s_grpc-route-csp.conf", filePrefix),
 						File:      "http.conf",
-						Servers:   []string{"*.example.com"},
+						Server:    "*.example.com",
 						Location:  "/helloworld.Greeter/SayHello",
 					},
 					{

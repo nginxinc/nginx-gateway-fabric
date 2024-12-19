@@ -1,18 +1,20 @@
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: coffee-svc-usp-1
+  name: merge-usp-1
 spec:
-  zoneSize: 1g
   targetRefs:
     - group: core
       kind: Service
       name: coffee
+  keepAlive:
+    time: 1m
+    timeout: 5h
 ---
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: coffee-svc-usp-2
+  name: merge-usp-2
 spec:
   targetRefs:
     - group: core
@@ -21,5 +23,25 @@ spec:
   keepAlive:
     connections: 100
     requests: 55
-    time: 1m
-    timeout: 5h
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: z-usp-wins
+spec:
+  zoneSize: 64k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: tea
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: a-usp
+spec:
+  zoneSize: 128k
+  targetRefs:
+    - group: core
+      kind: Service
+      name: tea
