@@ -41,8 +41,6 @@ type ExpectedNginxField struct {
 // ValidateNginxFieldExists accepts the nginx config and the configuration for the expected field,
 // and returns whether or not that field exists where it should.
 func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) error {
-	var directiveFoundInServer, directiveFoundInUpstream bool
-
 	b, err := json.Marshal(conf)
 	if err != nil {
 		return fmt.Errorf("error marshaling nginx config: %w", err)
@@ -61,15 +59,11 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 				continue
 			}
 
-			directiveFoundInServer = validateServerBlockDirectives(expFieldCfg, *directive)
-
-			directiveFoundInUpstream = validateUpstreamDirectives(expFieldCfg, *directive)
-
-			if len(expFieldCfg.Server) > 0 && directiveFoundInServer {
+			if len(expFieldCfg.Server) > 0 && fieldExistsInServer(expFieldCfg, *directive) {
 				return nil
 			}
 
-			if len(expFieldCfg.Upstream) > 0 && directiveFoundInUpstream {
+			if len(expFieldCfg.Upstream) > 0 && fieldExistsInUpstream(expFieldCfg, *directive) {
 				return nil
 			}
 		}
@@ -78,37 +72,35 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 	return fmt.Errorf("directive %s not found in: nginx config %s", expFieldCfg.Directive, string(b))
 }
 
-func validateServerBlockDirectives(
+func fieldExistsInServer(
 	expFieldCfg ExpectedNginxField,
 	directive Directive,
 ) bool {
-	var fieldFound bool
 	if directive.Directive == "server" && getServerName(directive.Block) == expFieldCfg.Server {
 		for _, serverDirective := range directive.Block {
 			if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
-				fieldFound = true
+				return true
 			} else if serverDirective.Directive == "location" &&
 				fieldExistsInLocation(serverDirective, expFieldCfg) {
-				fieldFound = true
+				return true
 			}
 		}
 	}
-	return fieldFound
+	return false
 }
 
-func validateUpstreamDirectives(
+func fieldExistsInUpstream(
 	expFieldCfg ExpectedNginxField,
 	directive Directive,
 ) bool {
-	var fieldFound bool
 	if directive.Directive == "upstream" && directive.Args[0] == expFieldCfg.Upstream {
 		for _, directive := range directive.Block {
 			if expFieldCfg.fieldFound(directive) {
-				fieldFound = true
+				return true
 			}
 		}
 	}
-	return fieldFound
+	return false
 }
 
 func getServerName(serverBlock Directives) string {
