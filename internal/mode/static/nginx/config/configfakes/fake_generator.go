@@ -4,8 +4,8 @@ package configfakes
 import (
 	"sync"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
