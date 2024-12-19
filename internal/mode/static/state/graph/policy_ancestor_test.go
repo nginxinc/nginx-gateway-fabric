@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/types"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 func TestBackendTLSPolicyAncestorsFull(t *testing.T) {
@@ -166,6 +168,114 @@ func TestNGFPolicyAncestorsFull(t *testing.T) {
 			policy := createPolicy(test.cfg)
 			full := ngfPolicyAncestorsFull(policy, "nginx-gateway")
 			g.Expect(full).To(Equal(test.expFull))
+		})
+	}
+}
+
+func TestAncestorContainsAncestorRef(t *testing.T) {
+	t.Parallel()
+
+	gw1 := types.NamespacedName{Namespace: testNs, Name: "gw1"}
+	gw2 := types.NamespacedName{Namespace: testNs, Name: "gw2"}
+	route := types.NamespacedName{Namespace: testNs, Name: "route"}
+	newRoute := types.NamespacedName{Namespace: testNs, Name: "new-route"}
+
+	ancestors := []PolicyAncestor{
+		{
+			Ancestor: createParentReference(v1.GroupName, kinds.Gateway, gw1),
+		},
+		{
+			Ancestor: createParentReference(v1.GroupName, kinds.Gateway, gw2),
+		},
+		{
+			Ancestor: createParentReference(v1.GroupName, kinds.HTTPRoute, route),
+		},
+	}
+
+	tests := []struct {
+		ref      v1.ParentReference
+		name     string
+		contains bool
+	}{
+		{
+			name:     "contains Gateway ref",
+			ref:      createParentReference(v1.GroupName, kinds.Gateway, gw1),
+			contains: true,
+		},
+		{
+			name:     "contains Route ref",
+			ref:      createParentReference(v1.GroupName, kinds.HTTPRoute, route),
+			contains: true,
+		},
+		{
+			name:     "does not contain ref",
+			ref:      createParentReference(v1.GroupName, kinds.HTTPRoute, newRoute),
+			contains: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			g.Expect(ancestorsContainsAncestorRef(ancestors, test.ref)).To(Equal(test.contains))
+		})
+	}
+}
+
+func TestParentRefEqual(t *testing.T) {
+	t.Parallel()
+	ref1NsName := types.NamespacedName{Namespace: testNs, Name: "ref1"}
+
+	ref1 := createParentReference(v1.GroupName, kinds.HTTPRoute, ref1NsName)
+
+	tests := []struct {
+		ref   v1.ParentReference
+		name  string
+		equal bool
+	}{
+		{
+			name:  "kinds different",
+			ref:   createParentReference(v1.GroupName, kinds.Gateway, ref1NsName),
+			equal: false,
+		},
+		{
+			name:  "groups different",
+			ref:   createParentReference("diff-group", kinds.HTTPRoute, ref1NsName),
+			equal: false,
+		},
+		{
+			name: "namespace different",
+			ref: createParentReference(
+				v1.GroupName,
+				kinds.HTTPRoute,
+				types.NamespacedName{Namespace: "diff-ns", Name: "ref1"},
+			),
+			equal: false,
+		},
+		{
+			name: "name different",
+			ref: createParentReference(
+				v1.GroupName,
+				kinds.HTTPRoute,
+				types.NamespacedName{Namespace: testNs, Name: "diff-name"},
+			),
+			equal: false,
+		},
+		{
+			name:  "equal",
+			ref:   createParentReference(v1.GroupName, kinds.HTTPRoute, ref1NsName),
+			equal: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := NewWithT(t)
+
+			g.Expect(parentRefEqual(ref1, test.ref)).To(Equal(test.equal))
 		})
 	}
 }
