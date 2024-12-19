@@ -9,10 +9,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"

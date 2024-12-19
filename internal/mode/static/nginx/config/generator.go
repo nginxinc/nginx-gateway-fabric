@@ -7,11 +7,11 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/file"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
