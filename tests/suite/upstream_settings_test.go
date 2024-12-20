@@ -33,6 +33,11 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 		gatewayName = "gateway"
 	)
 
+	zoneSize := "512k"
+	if *plusEnabled {
+		zoneSize = "1m"
+	}
+
 	BeforeAll(func() {
 		ns := &core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -141,13 +146,13 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 					},
 					{
 						Directive: "zone",
-						Value:     "uspolicy_coffee_80 512k",
+						Value:     fmt.Sprintf("uspolicy_coffee_80 %s", zoneSize),
 						Upstream:  "uspolicy_coffee_80",
 						File:      "http.conf",
 					},
 					{
 						Directive: "zone",
-						Value:     "uspolicy_tea_80 512k",
+						Value:     fmt.Sprintf("uspolicy_tea_80 %s", zoneSize),
 						Upstream:  "uspolicy_tea_80",
 						File:      "http.conf",
 					},
@@ -321,7 +326,7 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 					},
 					{
 						Directive: "zone",
-						Value:     "uspolicy_coffee_80 512k",
+						Value:     fmt.Sprintf("uspolicy_coffee_80 %s", zoneSize),
 						Upstream:  "uspolicy_coffee_80",
 						File:      "http.conf",
 					},
@@ -410,7 +415,7 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 })
 
 func usPolicyHasNoAncestors(usPolicyNsName types.NamespacedName) bool {
-	GinkgoWriter.Printf("Checking that UpstreamSettingsPolicy %q has no ancestors in status", usPolicyNsName)
+	GinkgoWriter.Printf("Checking that UpstreamSettingsPolicy %q has no ancestors in status\n", usPolicyNsName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetStatusTimeout)
 	defer cancel()
