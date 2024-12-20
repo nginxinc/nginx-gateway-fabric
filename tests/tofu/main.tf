@@ -48,10 +48,10 @@ resource "google_container_cluster" "primary" {
       display_name = "local-ip"
     }
 
-    # cidr_blocks {
-    #   cidr_block   = google_compute_subnetwork.subnet.ip_cidr_range
-    #   display_name = "vpc"
-    # }
+    cidr_blocks {
+      cidr_block   = google_compute_subnetwork.subnet.ip_cidr_range
+      display_name = "vpc"
+    }
   }
 
   private_cluster_config {
