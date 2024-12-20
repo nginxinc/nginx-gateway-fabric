@@ -7,11 +7,11 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/file"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -45,9 +45,6 @@ const (
 	// streamConfigFile is the path to the configuration file with Stream configuration.
 	streamConfigFile = streamFolder + "/stream.conf"
 
-	// configVersionFile is the path to the config version configuration file.
-	configVersionFile = httpFolder + "/config-version.conf"
-
 	// httpMatchVarsFile is the path to the http_match pairs configuration file.
 	httpMatchVarsFile = httpFolder + "/matches.json"
 
@@ -57,10 +54,6 @@ const (
 	// mgmtIncludesFile is the path to the file containing the NGINX Plus mgmt config.
 	mgmtIncludesFile = mainIncludesFolder + "/mgmt.conf"
 )
-
-// ConfigFolders is a list of folders where NGINX configuration files are stored.
-// Volumes here also need to be added to our crossplane ephemeral test container.
-var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder, mainIncludesFolder, streamFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -189,7 +182,6 @@ func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFu
 		g.executeStreamServers,
 		g.executeStreamUpstreams,
 		executeStreamMaps,
-		executeVersion,
 	}
 }
 
