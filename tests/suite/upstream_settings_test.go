@@ -202,6 +202,11 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 				}),
 				Entry("GRPC upstreams", []framework.ExpectedNginxField{
 					{
+						Directive: "upstream",
+						Value:     "uspolicy_grpc-backend_8080",
+						File:      "http.conf",
+					},
+					{
 						Directive: "zone",
 						Value:     "uspolicy_grpc-backend_8080 64k",
 						Upstream:  "uspolicy_grpc-backend_8080",
@@ -251,8 +256,8 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 
 		DescribeTable("upstreamSettingsPolicy status is set as expected",
 			func(name string, status metav1.ConditionStatus, condReason v1alpha2.PolicyConditionReason) {
-				nsname := types.NamespacedName{Name: name, Namespace: namespace}
-				Expect(waitForUSPolicyStatus(nsname, gatewayName, status, condReason)).To(Succeed())
+				uspolicyNsName := types.NamespacedName{Name: name, Namespace: namespace}
+				Expect(waitForUSPolicyStatus(uspolicyNsName, gatewayName, status, condReason)).To(Succeed())
 			},
 			Entry("uspolicy merge-usp-1", "merge-usp-1", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted),
 			Entry("uspolicy merge-usp-2", "merge-usp-2", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted),
@@ -310,6 +315,11 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 				},
 				Entry("Coffee upstream", []framework.ExpectedNginxField{
 					{
+						Directive: "upstream",
+						Value:     "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
 						Directive: "zone",
 						Value:     "uspolicy_coffee_80 512k",
 						Upstream:  "uspolicy_coffee_80",
@@ -347,23 +357,27 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 						Upstream:  "uspolicy_tea_80",
 						File:      "http.conf",
 					},
+					{
+						Directive: "upstream",
+						Value:     "uspolicy_tea_80",
+						File:      "http.conf",
+					},
 				}),
 			)
 		})
 	})
 
-	When("UpstreamSettingsPolicy targets a Service that does not exists", func() {
+	When("UpstreamSettingsPolicy targets a Service that does not exist", func() {
 		Specify("upstreamSettingsPolicy sets no condition", func() {
 			files := []string{"upstream-settings-policy/invalid-svc-usps.yaml"}
 
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
-			nsname := types.NamespacedName{Name: "usps-target-not-found", Namespace: namespace}
+			uspolicyNsName := types.NamespacedName{Name: "usps-target-not-found", Namespace: namespace}
+
 			Consistently(
 				func() bool {
-					return waitForUSPolicyToHaveAncestor(
-						nsname,
-					) != nil
+					return usPolicyHasNoAncestors(uspolicyNsName)
 				}).WithTimeout(timeoutConfig.GetTimeout).
 				WithPolling(500 * time.Millisecond).
 				Should(BeTrue())
@@ -373,7 +387,7 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 	})
 
 	When("UpstreamSettingsPolicy targets a Service that is owned by an invalid Gateway", func() {
-		Specify("upstreamSettingsPolicy has no condition set", func() {
+		Specify("upstreamSettingsPolicy is not Accepted with the reason TargetNotFound", func() {
 			// delete existing gateway
 			gatewayFileName := "upstream-settings-policy/gateway.yaml"
 			Expect(resourceManager.DeleteFromFiles([]string{gatewayFileName}, namespace)).To(Succeed())
@@ -381,10 +395,10 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 			files := []string{"upstream-settings-policy/invalid-target-usps.yaml"}
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
-			nsname := types.NamespacedName{Name: "soda-svc-usp", Namespace: namespace}
+			uspolicyNsName := types.NamespacedName{Name: "soda-svc-usp", Namespace: namespace}
 			gatewayName = "gateway-not-valid"
 			Expect(waitForUSPolicyStatus(
-				nsname,
+				uspolicyNsName,
 				gatewayName,
 				metav1.ConditionFalse,
 				v1alpha2.PolicyReasonTargetNotFound,
@@ -395,30 +409,19 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 	})
 })
 
-func waitForUSPolicyToHaveAncestor(usPolicyNsName types.NamespacedName) error {
+func usPolicyHasNoAncestors(usPolicyNsName types.NamespacedName) bool {
+	GinkgoWriter.Printf("Checking that UpstreamSettingsPolicy %q has no ancestors in status", usPolicyNsName)
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetStatusTimeout)
 	defer cancel()
 
-	GinkgoWriter.Printf("Polling for UpstreamSettings Policy %q to not have a condition", usPolicyNsName)
+	var usPolicy ngfAPI.UpstreamSettingsPolicy
+	if err := k8sClient.Get(ctx, usPolicyNsName, &usPolicy); err != nil {
+		GinkgoWriter.Printf("Failed to get UpstreamSettingsPolicy %q: %s", usPolicyNsName, err.Error())
+		return false
+	}
 
-	return wait.PollUntilContextCancel(
-		ctx,
-		timeoutConfig.GetStatusTimeout,
-		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
-			var usPolicy ngfAPI.UpstreamSettingsPolicy
-			var err error
-			if err = k8sClient.Get(ctx, usPolicyNsName, &usPolicy); err != nil {
-				return false, err
-			}
-
-			if len(usPolicy.Status.Ancestors) == 0 {
-				return false, nil
-			}
-
-			return errors.Is(err, context.DeadlineExceeded), nil
-		},
-	)
+	return len(usPolicy.Status.Ancestors) == 0
 }
 
 func waitForUSPolicyStatus(
