@@ -27,26 +27,14 @@ resource "google_compute_router_nat" "nat" {
   }
 }
 
-resource "google_compute_firewall" "firewall" {
-  name    = "${var.gke_cluster_name}-firewall"
+resource "google_compute_firewall" "ssh" {
+  name    = "${var.gke_cluster_name}-ssh"
   network = google_compute_network.vpc.self_link
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
   source_ranges = ["${chomp(data.http.myip.response_body)}/32"]
-}
-
-resource "google_compute_firewall" "deny_exkubelet" {
-  name      = "${var.gke_cluster_name}-deny-exkubelet"
-  network   = google_compute_network.vpc.self_link
-  direction = "INGRESS"
-  deny {
-    protocol = "tcp"
-    ports    = ["10255"]
-  }
-  source_ranges = ["0.0.0.0/0"]
-
 }
 
 resource "google_compute_address" "vpc-ip" {

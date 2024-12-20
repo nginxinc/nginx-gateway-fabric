@@ -11,7 +11,7 @@ locals {
         name = google_container_cluster.primary.name
         context = {
           cluster = google_container_cluster.primary.name
-          user    = var.gke_nodes_service_account
+          user    = google_container_cluster.primary.name
         }
       }
     ]
@@ -26,7 +26,7 @@ locals {
     ]
     users = [
       {
-        name = var.gke_nodes_service_account
+        name = google_container_cluster.primary.name
         user = {
           exec = {
             apiVersion         = "client.authentication.k8s.io/v1beta1"
