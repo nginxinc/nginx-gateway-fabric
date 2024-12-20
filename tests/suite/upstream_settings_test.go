@@ -64,7 +64,7 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 
 		Specify("they are accepted", func() {
 			usPolicies := []string{
-				// "multiple-http-svc-usp",
+				"multiple-http-svc-usp",
 				"grpc-svc-usp",
 			}
 
@@ -81,32 +81,32 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 			}
 		})
 
-		// Context("verify working traffic", func() {
-		// 	It("should return a 200 response for HTTPRoutes", func() {
-		// 		port := 80
-		// 		if portFwdPort != 0 {
-		// 			port = portFwdPort
-		// 		}
-		// 		baseCoffeeURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
-		// 		baseTeaURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/tea")
+		Context("verify working traffic", func() {
+			It("should return a 200 response for HTTPRoutes", func() {
+				port := 80
+				if portFwdPort != 0 {
+					port = portFwdPort
+				}
+				baseCoffeeURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
+				baseTeaURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/tea")
 
-		// 		Eventually(
-		// 			func() error {
-		// 				return expectRequestToSucceed(baseCoffeeURL, address, "URI: /coffee")
-		// 			}).
-		// 			WithTimeout(timeoutConfig.RequestTimeout).
-		// 			WithPolling(500 * time.Millisecond).
-		// 			Should(Succeed())
+				Eventually(
+					func() error {
+						return expectRequestToSucceed(baseCoffeeURL, address, "URI: /coffee")
+					}).
+					WithTimeout(timeoutConfig.RequestTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(Succeed())
 
-		// 		Eventually(
-		// 			func() error {
-		// 				return expectRequestToSucceed(baseTeaURL, address, "URI: /tea")
-		// 			}).
-		// 			WithTimeout(timeoutConfig.RequestTimeout).
-		// 			WithPolling(500 * time.Millisecond).
-		// 			Should(Succeed())
-		// 	})
-		// })
+				Eventually(
+					func() error {
+						return expectRequestToSucceed(baseTeaURL, address, "URI: /tea")
+					}).
+					WithTimeout(timeoutConfig.RequestTimeout).
+					WithPolling(500 * time.Millisecond).
+					Should(Succeed())
+			})
+		})
 
 		Context("nginx directives", func() {
 			var conf *framework.Payload
@@ -128,78 +128,78 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 						Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
 					}
 				},
-				// Entry("HTTP upstreams", []framework.ExpectedNginxField{
-				// 	{
-				// 		Directive: "upstream",
-				// 		Value:     "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "upstream",
-				// 		Value:     "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "zone",
-				// 		Value:     "uspolicy_coffee_80 512k",
-				// 		Upstream:  "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "zone",
-				// 		Value:     "uspolicy_tea_80 512k",
-				// 		Upstream:  "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive",
-				// 		Value:     "10",
-				// 		Upstream:  "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive",
-				// 		Value:     "10",
-				// 		Upstream:  "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_requests",
-				// 		Value:     "3",
-				// 		Upstream:  "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_requests",
-				// 		Value:     "3",
-				// 		Upstream:  "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_time",
-				// 		Value:     "10s",
-				// 		Upstream:  "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_time",
-				// 		Value:     "10s",
-				// 		Upstream:  "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_timeout",
-				// 		Value:     "50s",
-				// 		Upstream:  "uspolicy_coffee_80",
-				// 		File:      "http.conf",
-				// 	},
-				// 	{
-				// 		Directive: "keepalive_timeout",
-				// 		Value:     "50s",
-				// 		Upstream:  "uspolicy_tea_80",
-				// 		File:      "http.conf",
-				// 	},
-				// }),
+				Entry("HTTP upstreams", []framework.ExpectedNginxField{
+					{
+						Directive: "upstream",
+						Value:     "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "upstream",
+						Value:     "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "zone",
+						Value:     "uspolicy_coffee_80 512k",
+						Upstream:  "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "zone",
+						Value:     "uspolicy_tea_80 512k",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive",
+						Value:     "10",
+						Upstream:  "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive",
+						Value:     "10",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_requests",
+						Value:     "3",
+						Upstream:  "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_requests",
+						Value:     "3",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_time",
+						Value:     "10s",
+						Upstream:  "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_time",
+						Value:     "10s",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_timeout",
+						Value:     "50s",
+						Upstream:  "uspolicy_coffee_80",
+						File:      "http.conf",
+					},
+					{
+						Directive: "keepalive_timeout",
+						Value:     "50s",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+				}),
 				Entry("GRPC upstreams", []framework.ExpectedNginxField{
 					{
 						Directive: "zone",

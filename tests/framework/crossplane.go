@@ -52,18 +52,18 @@ func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) err
 		}
 
 		for _, directive := range config.Parsed {
-			if len(expFieldCfg.Server) == 0 && len(expFieldCfg.Upstream) == 0 {
+			if expFieldCfg.Server == "" && expFieldCfg.Upstream == "" {
 				if expFieldCfg.fieldFound(directive) {
 					return nil
 				}
 				continue
 			}
 
-			if len(expFieldCfg.Server) > 0 && fieldExistsInServer(expFieldCfg, *directive) {
+			if expFieldCfg.Server != "" && fieldExistsInServer(expFieldCfg, *directive) {
 				return nil
 			}
 
-			if len(expFieldCfg.Upstream) > 0 && fieldExistsInUpstream(expFieldCfg, *directive) {
+			if expFieldCfg.Upstream != "" && fieldExistsInUpstream(expFieldCfg, *directive) {
 				return nil
 			}
 		}
