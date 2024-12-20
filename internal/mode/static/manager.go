@@ -177,7 +177,10 @@ func StartManager(cfg config.Config) error {
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		nginxUpdater:     &agent.NginxUpdaterImpl{},
+		nginxUpdater: &agent.NginxUpdaterImpl{
+			Logger: cfg.Logger.WithName("nginxUpdater"),
+			Plus:   cfg.Plus,
+		},
 		metricsCollector: handlerCollector,
 		statusUpdater:    groupStatusUpdater,
 		processor:        processor,

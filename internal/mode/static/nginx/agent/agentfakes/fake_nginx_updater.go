@@ -8,9 +8,9 @@ import (
 )
 
 type FakeNginxUpdater struct {
-	UpdateNginxConfigStub        func(int)
-	updateNginxConfigMutex       sync.RWMutex
-	updateNginxConfigArgsForCall []struct {
+	UpdateConfigStub        func(int)
+	updateConfigMutex       sync.RWMutex
+	updateConfigArgsForCall []struct {
 		arg1 int
 	}
 	UpdateUpstreamServersStub        func()
@@ -21,35 +21,35 @@ type FakeNginxUpdater struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNginxUpdater) UpdateNginxConfig(arg1 int) {
-	fake.updateNginxConfigMutex.Lock()
-	fake.updateNginxConfigArgsForCall = append(fake.updateNginxConfigArgsForCall, struct {
+func (fake *FakeNginxUpdater) UpdateConfig(arg1 int) {
+	fake.updateConfigMutex.Lock()
+	fake.updateConfigArgsForCall = append(fake.updateConfigArgsForCall, struct {
 		arg1 int
 	}{arg1})
-	stub := fake.UpdateNginxConfigStub
-	fake.recordInvocation("UpdateNginxConfig", []interface{}{arg1})
-	fake.updateNginxConfigMutex.Unlock()
+	stub := fake.UpdateConfigStub
+	fake.recordInvocation("UpdateConfig", []interface{}{arg1})
+	fake.updateConfigMutex.Unlock()
 	if stub != nil {
-		fake.UpdateNginxConfigStub(arg1)
+		fake.UpdateConfigStub(arg1)
 	}
 }
 
-func (fake *FakeNginxUpdater) UpdateNginxConfigCallCount() int {
-	fake.updateNginxConfigMutex.RLock()
-	defer fake.updateNginxConfigMutex.RUnlock()
-	return len(fake.updateNginxConfigArgsForCall)
+func (fake *FakeNginxUpdater) UpdateConfigCallCount() int {
+	fake.updateConfigMutex.RLock()
+	defer fake.updateConfigMutex.RUnlock()
+	return len(fake.updateConfigArgsForCall)
 }
 
-func (fake *FakeNginxUpdater) UpdateNginxConfigCalls(stub func(int)) {
-	fake.updateNginxConfigMutex.Lock()
-	defer fake.updateNginxConfigMutex.Unlock()
-	fake.UpdateNginxConfigStub = stub
+func (fake *FakeNginxUpdater) UpdateConfigCalls(stub func(int)) {
+	fake.updateConfigMutex.Lock()
+	defer fake.updateConfigMutex.Unlock()
+	fake.UpdateConfigStub = stub
 }
 
-func (fake *FakeNginxUpdater) UpdateNginxConfigArgsForCall(i int) int {
-	fake.updateNginxConfigMutex.RLock()
-	defer fake.updateNginxConfigMutex.RUnlock()
-	argsForCall := fake.updateNginxConfigArgsForCall[i]
+func (fake *FakeNginxUpdater) UpdateConfigArgsForCall(i int) int {
+	fake.updateConfigMutex.RLock()
+	defer fake.updateConfigMutex.RUnlock()
+	argsForCall := fake.updateConfigArgsForCall[i]
 	return argsForCall.arg1
 }
 
@@ -80,8 +80,8 @@ func (fake *FakeNginxUpdater) UpdateUpstreamServersCalls(stub func()) {
 func (fake *FakeNginxUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.updateNginxConfigMutex.RLock()
-	defer fake.updateNginxConfigMutex.RUnlock()
+	fake.updateConfigMutex.RLock()
+	defer fake.updateConfigMutex.RUnlock()
 	fake.updateUpstreamServersMutex.RLock()
 	defer fake.updateUpstreamServersMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

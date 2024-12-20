@@ -64,8 +64,8 @@ var _ = Describe("eventHandler", func() {
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
 		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(expectedConf))
 
-		Expect(fakeNginxUpdater.UpdateNginxConfigCallCount()).Should(Equal(1))
-		lenFiles := fakeNginxUpdater.UpdateNginxConfigArgsForCall(0)
+		Expect(fakeNginxUpdater.UpdateConfigCallCount()).Should(Equal(1))
+		lenFiles := fakeNginxUpdater.UpdateConfigArgsForCall(0)
 		Expect(expectedFiles).To(HaveLen(lenFiles))
 
 		Expect(fakeStatusUpdater.UpdateGroupCallCount()).Should(Equal(2))
@@ -433,7 +433,7 @@ var _ = Describe("eventHandler", func() {
 				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dcfg)).To(BeEmpty())
 
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
-				Expect(fakeNginxUpdater.UpdateNginxConfigCallCount()).To(Equal(1))
+				Expect(fakeNginxUpdater.UpdateConfigCallCount()).To(Equal(1))
 				Expect(fakeNginxUpdater.UpdateUpstreamServersCallCount()).To(Equal(0))
 			})
 		})
