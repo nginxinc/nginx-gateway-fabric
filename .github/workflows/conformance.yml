@@ -19,6 +19,7 @@ defaults:
 
 env:
   PLUS_USAGE_ENDPOINT: ${{ secrets.JWT_PLUS_REPORTING_ENDPOINT }}
+  ENABLE_EXPERIMENTAL: ${{ inputs.enable-experimental }}
 
 permissions:
   contents: read
@@ -79,7 +80,6 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make generate-static-deployment PLUS_ENABLED=${{ inputs.image == 'plus' && 'true' || 'false' }} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
@@ -150,22 +150,27 @@ jobs:
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
-          if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make helm-install-local${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
           make deploy-updated-provisioner PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
       - name: Run conformance tests
         run: |
-          if [ ${{ inputs.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make run-conformance-tests CONFORMANCE_TAG=${{ github.sha }} NGF_VERSION=${{ github.ref_name }} CLUSTER_NAME=${{ github.run_id }}
           core_result=$(cat conformance-profile.yaml | yq '.profiles[0].core.result')
           extended_result=$(cat conformance-profile.yaml | yq '.profiles[0].extended.result')
           if [ "${core_result}" == "failure" ] || [ "${extended_result}" == "failure" ]; then echo "Conformance test failed, see above for details." && exit 2; fi
         working-directory: ./tests
 
+      - name: Upload profile to GitHub
+        if: ${{ inputs.enable-experimental }}
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: conformance-profile-${{ inputs.image }}-${{ inputs.k8s-version }}
+          path: ./tests/conformance-profile.yaml
+
       - name: Upload profile to release
-        if: ${{ startsWith(github.ref, 'refs/tags/') && inputs.enable-experimental == 'true' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && inputs.enable-experimental }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.ref_name }} conformance-profile.yaml --clobber
