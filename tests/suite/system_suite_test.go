@@ -123,6 +123,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	var err error
 	k8sClient, err = client.New(k8sConfig, options)
 	Expect(err).ToNot(HaveOccurred())
+	log.Log.Info(k8sConfig.String())
 
 	clientGoClient, err := kubernetes.NewForConfig(k8sConfig)
 	Expect(err).ToNot(HaveOccurred())
