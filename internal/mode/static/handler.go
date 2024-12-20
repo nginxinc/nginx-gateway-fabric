@@ -300,7 +300,7 @@ func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr
 func (h *eventHandlerImpl) updateNginxConf(conf dataplane.Configuration) error {
 	files := h.cfg.generator.Generate(conf)
 
-	h.cfg.nginxUpdater.UpdateNginxConfig(len(files))
+	h.cfg.nginxUpdater.UpdateConfig(len(files))
 
 	// If using NGINX Plus, update upstream servers using the API.
 	if h.cfg.plus {
