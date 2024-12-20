@@ -22,7 +22,7 @@ type NginxUpdaterImpl struct {
 
 // UpdateConfig sends the nginx configuration to the agent.
 func (n *NginxUpdaterImpl) UpdateConfig(files int) {
-	n.Logger.Info("Sending nginx configuration to agent.", "numFiles", files)
+	n.Logger.Info("Sending nginx configuration to agent", "numFiles", files)
 }
 
 // UpdateUpstreamServers sends an APIRequest to the agent to update upstream servers using the NGINX Plus API.
@@ -32,5 +32,5 @@ func (n *NginxUpdaterImpl) UpdateUpstreamServers() {
 		return
 	}
 
-	n.Logger.Info("Updating upstream servers using NGINX Plus API.")
+	n.Logger.Info("Updating upstream servers using NGINX Plus API")
 }
