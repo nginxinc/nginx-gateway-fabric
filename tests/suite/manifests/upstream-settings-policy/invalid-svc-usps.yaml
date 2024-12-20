@@ -1,13 +1,13 @@
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: does-not-exist
+  name: usps-target-not-found
 spec:
   zoneSize: 512k
   targetRefs:
   - group: core
     kind: Service
-    name: latte
+    name: targeted-svc-dne
   keepAlive:
     connections: 10
     requests: 3

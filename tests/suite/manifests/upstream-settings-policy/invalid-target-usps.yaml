@@ -48,7 +48,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: sode
+  name: soda
 spec:
   parentRefs:
     - name: gateway-not-valid

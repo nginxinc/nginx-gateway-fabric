@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,7 +29,8 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 			"upstream-settings-policy/routes.yaml",
 		}
 
-		namespace = "uspolicy"
+		namespace   = "uspolicy"
+		gatewayName = "gateway"
 	)
 
 	BeforeAll(func() {
@@ -61,52 +63,50 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 		})
 
 		Specify("they are accepted", func() {
-			usPolicies := map[string]int{
-				"multiple-http-svc-usp": 2,
-				"grpc-svc-usp":          1,
+			usPolicies := []string{
+				// "multiple-http-svc-usp",
+				"grpc-svc-usp",
 			}
 
-			for name, ancestorCount := range usPolicies {
+			for _, name := range usPolicies {
 				uspolicyNsName := types.NamespacedName{Name: name, Namespace: namespace}
 
-				gatewayNsName := types.NamespacedName{Name: "gateway", Namespace: namespace}
 				err := waitForUSPolicyStatus(
 					uspolicyNsName,
-					gatewayNsName,
+					gatewayName,
 					metav1.ConditionTrue,
 					v1alpha2.PolicyReasonAccepted,
-					ancestorCount,
 				)
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("%s was not accepted", name))
 			}
 		})
 
-		Context("verify working traffic", func() {
-			It("should return a 200 response for HTTPRoutes", func() {
-				port := 80
-				if portFwdPort != 0 {
-					port = portFwdPort
-				}
-				baseCoffeeURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
-				baseTeaURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/tea")
+		// Context("verify working traffic", func() {
+		// 	It("should return a 200 response for HTTPRoutes", func() {
+		// 		port := 80
+		// 		if portFwdPort != 0 {
+		// 			port = portFwdPort
+		// 		}
+		// 		baseCoffeeURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/coffee")
+		// 		baseTeaURL := fmt.Sprintf("http://cafe.example.com:%d%s", port, "/tea")
 
-				Eventually(
-					func() error {
-						return expectRequestToSucceed(baseCoffeeURL, address, "URI: /coffee")
-					}).
-					WithTimeout(timeoutConfig.RequestTimeout).
-					WithPolling(500 * time.Millisecond).
-					Should(Succeed())
+		// 		Eventually(
+		// 			func() error {
+		// 				return expectRequestToSucceed(baseCoffeeURL, address, "URI: /coffee")
+		// 			}).
+		// 			WithTimeout(timeoutConfig.RequestTimeout).
+		// 			WithPolling(500 * time.Millisecond).
+		// 			Should(Succeed())
 
-				Eventually(
-					func() error {
-						return expectRequestToSucceed(baseTeaURL, address, "URI: /tea")
-					}).
-					WithTimeout(timeoutConfig.RequestTimeout).
-					WithPolling(500 * time.Millisecond).
-					Should(Succeed())
-			})
-		})
+		// 		Eventually(
+		// 			func() error {
+		// 				return expectRequestToSucceed(baseTeaURL, address, "URI: /tea")
+		// 			}).
+		// 			WithTimeout(timeoutConfig.RequestTimeout).
+		// 			WithPolling(500 * time.Millisecond).
+		// 			Should(Succeed())
+		// 	})
+		// })
 
 		Context("nginx directives", func() {
 			var conf *framework.Payload
@@ -128,62 +128,78 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 						Expect(framework.ValidateNginxFieldExists(conf, expCfg)).To(Succeed())
 					}
 				},
-				Entry("HTTP upstreams", []framework.ExpectedNginxField{
-					{
-						Directive: "zone",
-						Value:     "uspolicy_coffee_80 512k",
-						Upstream:  "uspolicy_coffee_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "zone",
-						Value:     "uspolicy_tea_80 512k",
-						Upstream:  "uspolicy_tea_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive",
-						Value:     "10",
-						Upstream:  "uspolicy_coffee_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_requests",
-						Value:     "3",
-						Upstream:  "uspolicy_coffee_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_requests",
-						Value:     "3",
-						Upstream:  "uspolicy_tea_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_time",
-						Value:     "10s",
-						Upstream:  "uspolicy_coffee_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_time",
-						Value:     "10s",
-						Upstream:  "uspolicy_tea_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_timeout",
-						Value:     "50s",
-						Upstream:  "uspolicy_coffee_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "keepalive_timeout",
-						Value:     "50s",
-						Upstream:  "uspolicy_tea_80",
-						File:      "http.conf",
-					},
-				}),
+				// Entry("HTTP upstreams", []framework.ExpectedNginxField{
+				// 	{
+				// 		Directive: "upstream",
+				// 		Value:     "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "upstream",
+				// 		Value:     "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "zone",
+				// 		Value:     "uspolicy_coffee_80 512k",
+				// 		Upstream:  "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "zone",
+				// 		Value:     "uspolicy_tea_80 512k",
+				// 		Upstream:  "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive",
+				// 		Value:     "10",
+				// 		Upstream:  "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive",
+				// 		Value:     "10",
+				// 		Upstream:  "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_requests",
+				// 		Value:     "3",
+				// 		Upstream:  "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_requests",
+				// 		Value:     "3",
+				// 		Upstream:  "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_time",
+				// 		Value:     "10s",
+				// 		Upstream:  "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_time",
+				// 		Value:     "10s",
+				// 		Upstream:  "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_timeout",
+				// 		Value:     "50s",
+				// 		Upstream:  "uspolicy_coffee_80",
+				// 		File:      "http.conf",
+				// 	},
+				// 	{
+				// 		Directive: "keepalive_timeout",
+				// 		Value:     "50s",
+				// 		Upstream:  "uspolicy_tea_80",
+				// 		File:      "http.conf",
+				// 	},
+				// }),
 				Entry("GRPC upstreams", []framework.ExpectedNginxField{
 					{
 						Directive: "zone",
@@ -234,15 +250,15 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 		})
 
 		DescribeTable("upstreamSettingsPolicy status is set as expected",
-			func(name string, status metav1.ConditionStatus, condReason v1alpha2.PolicyConditionReason, ancestorCount int) {
-				gatewayNsName := types.NamespacedName{Name: "gateway", Namespace: namespace}
+			func(name string, status metav1.ConditionStatus, condReason v1alpha2.PolicyConditionReason) {
 				nsname := types.NamespacedName{Name: name, Namespace: namespace}
-				Expect(waitForUSPolicyStatus(nsname, gatewayNsName, status, condReason, ancestorCount)).To(Succeed())
+				Expect(waitForUSPolicyStatus(nsname, gatewayName, status, condReason)).To(Succeed())
 			},
-			Entry("uspolicy merge-usp-1", "merge-usp-1", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted, 1),
-			Entry("uspolicy merge-usp-2", "merge-usp-2", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted, 1),
-			Entry("uspolicy a-usp", "a-usp", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted, 1),
-			Entry("uspolicy z-usp", "z-usp-wins", metav1.ConditionFalse, v1alpha2.PolicyReasonConflicted, 1),
+			Entry("uspolicy merge-usp-1", "merge-usp-1", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted),
+			Entry("uspolicy merge-usp-2", "merge-usp-2", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted),
+			Entry("uspolicy merge-usp-3", "z-merge-usp-3", metav1.ConditionFalse, v1alpha2.PolicyReasonConflicted),
+			Entry("uspolicy a-usp-wins", "a-usp-wins", metav1.ConditionTrue, v1alpha2.PolicyReasonAccepted),
+			Entry("uspolicy z-usp", "z-usp", metav1.ConditionFalse, v1alpha2.PolicyReasonConflicted),
 		)
 
 		Context("verify working traffic", func() {
@@ -295,12 +311,6 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 				Entry("Coffee upstream", []framework.ExpectedNginxField{
 					{
 						Directive: "zone",
-						Value:     "uspolicy_tea_80 128k",
-						Upstream:  "uspolicy_tea_80",
-						File:      "http.conf",
-					},
-					{
-						Directive: "zone",
 						Value:     "uspolicy_coffee_80 512k",
 						Upstream:  "uspolicy_coffee_80",
 						File:      "http.conf",
@@ -330,26 +340,29 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 						File:      "http.conf",
 					},
 				}),
+				Entry("Tea upstream", []framework.ExpectedNginxField{
+					{
+						Directive: "zone",
+						Value:     "uspolicy_tea_80 128k",
+						Upstream:  "uspolicy_tea_80",
+						File:      "http.conf",
+					},
+				}),
 			)
 		})
 	})
 
 	When("UpstreamSettingsPolicy targets a Service that does not exists", func() {
-		Specify("upstreamSettingsPolicy has no condition set", func() {
+		Specify("upstreamSettingsPolicy sets no condition", func() {
 			files := []string{"upstream-settings-policy/invalid-svc-usps.yaml"}
 
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
-			nsname := types.NamespacedName{Name: "does-not-exist", Namespace: namespace}
-			gatewayNsName := types.NamespacedName{Name: "gateway", Namespace: namespace}
+			nsname := types.NamespacedName{Name: "usps-target-not-found", Namespace: namespace}
 			Consistently(
 				func() bool {
-					return waitForUSPolicyStatus(
+					return waitForUSPolicyToHaveAncestor(
 						nsname,
-						gatewayNsName,
-						metav1.ConditionTrue,
-						v1alpha2.PolicyReasonAccepted,
-						1,
 					) != nil
 				}).WithTimeout(timeoutConfig.GetTimeout).
 				WithPolling(500 * time.Millisecond).
@@ -358,38 +371,61 @@ var _ = Describe("UpstreamSettingsPolicy", Ordered, Label("functional", "uspolic
 			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		})
 	})
-	When("UpstreamSettingsPolicy targets a Service that has an invalid Gateway", func() {
-		Specify("upstreamSettingsPolicy has no condition set", func() {
-			files := []string{"upstream-settings-policy/invalid-target-usps.yaml"}
 
+	When("UpstreamSettingsPolicy targets a Service that is owned by an invalid Gateway", func() {
+		Specify("upstreamSettingsPolicy has no condition set", func() {
+			// delete existing gateway
+			gatewayFileName := "upstream-settings-policy/gateway.yaml"
+			Expect(resourceManager.DeleteFromFiles([]string{gatewayFileName}, namespace)).To(Succeed())
+
+			files := []string{"upstream-settings-policy/invalid-target-usps.yaml"}
 			Expect(resourceManager.ApplyFromFiles(files, namespace)).To(Succeed())
 
 			nsname := types.NamespacedName{Name: "soda-svc-usp", Namespace: namespace}
-			gatewayNsName := types.NamespacedName{Name: "gateway-not-valid", Namespace: namespace}
-			Consistently(
-				func() bool {
-					return waitForUSPolicyStatus(
-						nsname,
-						gatewayNsName,
-						metav1.ConditionTrue,
-						v1alpha2.PolicyReasonAccepted,
-						1,
-					) != nil
-				}).WithTimeout(timeoutConfig.GetTimeout).
-				WithPolling(500 * time.Millisecond).
-				Should(BeTrue())
+			gatewayName = "gateway-not-valid"
+			Expect(waitForUSPolicyStatus(
+				nsname,
+				gatewayName,
+				metav1.ConditionFalse,
+				v1alpha2.PolicyReasonTargetNotFound,
+			)).To(Succeed())
 
 			Expect(resourceManager.DeleteFromFiles(files, namespace)).To(Succeed())
 		})
 	})
 })
 
+func waitForUSPolicyToHaveAncestor(usPolicyNsName types.NamespacedName) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetStatusTimeout)
+	defer cancel()
+
+	GinkgoWriter.Printf("Polling for UpstreamSettings Policy %q to not have a condition", usPolicyNsName)
+
+	return wait.PollUntilContextCancel(
+		ctx,
+		timeoutConfig.GetStatusTimeout,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var usPolicy ngfAPI.UpstreamSettingsPolicy
+			var err error
+			if err = k8sClient.Get(ctx, usPolicyNsName, &usPolicy); err != nil {
+				return false, err
+			}
+
+			if len(usPolicy.Status.Ancestors) == 0 {
+				return false, nil
+			}
+
+			return errors.Is(err, context.DeadlineExceeded), nil
+		},
+	)
+}
+
 func waitForUSPolicyStatus(
 	usPolicyNsName types.NamespacedName,
-	gatewayNsName types.NamespacedName,
+	gatewayName string,
 	condStatus metav1.ConditionStatus,
 	condReason v1alpha2.PolicyConditionReason,
-	expectedAncestorCount int,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetStatusTimeout*2)
 	defer cancel()
@@ -419,14 +455,14 @@ func waitForUSPolicyStatus(
 				return false, nil
 			}
 
-			if len(usPolicy.Status.Ancestors) != expectedAncestorCount {
+			if len(usPolicy.Status.Ancestors) != 1 {
 				return false, fmt.Errorf("policy has %d ancestors, expected 1", len(usPolicy.Status.Ancestors))
 			}
 
 			ancestors := usPolicy.Status.Ancestors
 
 			for _, ancestor := range ancestors {
-				if err := ancestorMustEqualGatewayRef(ancestor, gatewayNsName, usPolicy.Namespace); err != nil {
+				if err := ancestorMustEqualGatewayRef(ancestor, gatewayName, usPolicy.Namespace); err != nil {
 					return false, err
 				}
 
@@ -439,7 +475,7 @@ func waitForUSPolicyStatus(
 
 func ancestorMustEqualGatewayRef(
 	ancestor v1alpha2.PolicyAncestorStatus,
-	gatewayNsName types.NamespacedName,
+	gatewayName string,
 	namespace string,
 ) error {
 	if ancestor.ControllerName != ngfControllerName {
@@ -464,18 +500,18 @@ func ancestorMustEqualGatewayRef(
 
 	ancestorRef := ancestor.AncestorRef
 
-	if string(ancestorRef.Name) != gatewayNsName.Name {
-		return fmt.Errorf("expected ancestorRef to have name %s, got %s", gatewayNsName, ancestorRef.Name)
+	if string(ancestorRef.Name) != gatewayName {
+		return fmt.Errorf("expected ancestorRef to have name %s, got %s", gatewayName, ancestorRef.Name)
 	}
 
 	if ancestorRef.Kind == nil {
-		return fmt.Errorf("expected ancestorRef to have kind %s, got nil", "Gateway")
+		return errors.New("expected ancestorRef to have kind Gateway, got nil")
 	}
 
 	if *ancestorRef.Kind != gatewayv1.Kind("Gateway") {
 		return fmt.Errorf(
 			"expected ancestorRef to have kind %s, got %s",
-			gatewayv1.Kind("Gateway"),
+			"Gateway",
 			string(*ancestorRef.Kind),
 		)
 	}

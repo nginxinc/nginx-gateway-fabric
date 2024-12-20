@@ -27,7 +27,20 @@ spec:
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: z-usp-wins
+  name: z-merge-usp-3
+spec:
+  targetRefs:
+    - group: core
+      kind: Service
+      name: coffee
+  keepAlive:
+    connections: 11
+    requests: 15
+---
+apiVersion: gateway.nginx.org/v1alpha1
+kind: UpstreamSettingsPolicy
+metadata:
+  name: z-usp
 spec:
   zoneSize: 64k
   targetRefs:
@@ -38,7 +51,7 @@ spec:
 apiVersion: gateway.nginx.org/v1alpha1
 kind: UpstreamSettingsPolicy
 metadata:
-  name: a-usp
+  name: a-usp-wins
 spec:
   zoneSize: 128k
   targetRefs:
