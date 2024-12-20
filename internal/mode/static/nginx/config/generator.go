@@ -8,9 +8,11 @@ import (
 	"github.com/go-logr/logr"
 
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -152,7 +154,10 @@ func (g GeneratorImpl) executeConfigTemplates(
 ) []file.File {
 	fileBytes := make(map[string][]byte)
 
-	for _, execute := range g.getExecuteFuncs(generator) {
+	httpUpstreams := g.createUpstreams(conf.Upstreams, upstreamsettings.NewProcessor())
+	keepAliveCheck := newKeepAliveChecker(httpUpstreams)
+
+	for _, execute := range g.getExecuteFuncs(generator, httpUpstreams, keepAliveCheck) {
 		results := execute(conf)
 		for _, res := range results {
 			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
@@ -177,12 +182,16 @@ func (g GeneratorImpl) executeConfigTemplates(
 	return files
 }
 
-func (g GeneratorImpl) getExecuteFuncs(generator policies.Generator) []executeFunc {
+func (g GeneratorImpl) getExecuteFuncs(
+	generator policies.Generator,
+	upstreams []http.Upstream,
+	keepAliveCheck keepAliveChecker,
+) []executeFunc {
 	return []executeFunc{
 		executeMainConfig,
 		executeBaseHTTPConfig,
-		g.newExecuteServersFunc(generator),
-		g.executeUpstreams,
+		g.newExecuteServersFunc(generator, keepAliveCheck),
+		newExecuteUpstreamsFunc(upstreams),
 		executeSplitClients,
 		executeMaps,
 		executeTelemetry,

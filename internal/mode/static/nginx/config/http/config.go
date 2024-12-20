@@ -1,6 +1,8 @@
 package http
 
-import "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+import (
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+)
 
 const (
 	InternalRoutePathPrefix = "/_ngf-internal"
@@ -85,7 +87,16 @@ type Upstream struct {
 	Name      string
 	ZoneSize  string // format: 512k, 1m
 	StateFile string
+	KeepAlive UpstreamKeepAlive
 	Servers   []UpstreamServer
+}
+
+// UpstreamKeepAlive holds the keepalive configuration for an HTTP upstream.
+type UpstreamKeepAlive struct {
+	Time        string
+	Timeout     string
+	Connections int32
+	Requests    int32
 }
 
 // UpstreamServer holds all configuration for an HTTP upstream server.

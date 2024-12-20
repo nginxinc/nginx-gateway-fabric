@@ -39,6 +39,7 @@ func TestDataAttributes(t *testing.T) {
 			ObservabilityPolicyCount:                 11,
 			NginxProxyCount:                          12,
 			SnippetsFilterCount:                      13,
+			UpstreamSettingsPolicyCount:              14,
 		},
 		NGFReplicaCount:                3,
 		SnippetsFiltersDirectives:      []string{"main-three-count", "http-two-count", "server-one-count"},
@@ -77,6 +78,7 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("ObservabilityPolicyCount", 11),
 		attribute.Int64("NginxProxyCount", 12),
 		attribute.Int64("SnippetsFilterCount", 13),
+		attribute.Int64("UpstreamSettingsPolicyCount", 14),
 		attribute.Int64("NGFReplicaCount", 3),
 	}
 
@@ -119,6 +121,7 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("ObservabilityPolicyCount", 0),
 		attribute.Int64("NginxProxyCount", 0),
 		attribute.Int64("SnippetsFilterCount", 0),
+		attribute.Int64("UpstreamSettingsPolicyCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
 	}
 

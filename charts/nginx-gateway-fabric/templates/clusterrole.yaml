@@ -104,6 +104,7 @@ rules:
   - nginxproxies
   - clientsettingspolicies
   - observabilitypolicies
+  - upstreamsettingspolicies
   {{- if .Values.nginxGateway.snippetsFilters.enable }}
   - snippetsfilters
   {{- end }}
@@ -116,6 +117,7 @@ rules:
   - nginxgateways/status
   - clientsettingspolicies/status
   - observabilitypolicies/status
+  - upstreamsettingspolicies/status
   {{- if .Values.nginxGateway.snippetsFilters.enable }}
   - snippetsfilters/status
   {{- end }}

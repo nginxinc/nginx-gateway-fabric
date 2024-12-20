@@ -45,8 +45,10 @@ func (v *Validator) Validate(
 
 	targetRefPath := field.NewPath("spec").Child("targetRefs")
 	supportedKinds := []gatewayv1.Kind{kinds.HTTPRoute, kinds.GRPCRoute}
+	supportedGroups := []gatewayv1.Group{gatewayv1.GroupName}
+
 	for _, ref := range obs.Spec.TargetRefs {
-		if err := policies.ValidateTargetRef(ref, targetRefPath, supportedKinds); err != nil {
+		if err := policies.ValidateTargetRef(ref, targetRefPath, supportedGroups, supportedKinds); err != nil {
 			return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
 		}
 	}

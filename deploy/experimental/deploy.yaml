@@ -103,6 +103,7 @@ rules:
   - nginxproxies
   - clientsettingspolicies
   - observabilitypolicies
+  - upstreamsettingspolicies
   verbs:
   - list
   - watch
@@ -112,6 +113,7 @@ rules:
   - nginxgateways/status
   - clientsettingspolicies/status
   - observabilitypolicies/status
+  - upstreamsettingspolicies/status
   verbs:
   - update
 - apiGroups:

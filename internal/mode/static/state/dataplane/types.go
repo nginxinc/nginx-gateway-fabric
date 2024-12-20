@@ -111,6 +111,8 @@ type Upstream struct {
 	ErrorMsg string
 	// Endpoints are the endpoints of the Upstream.
 	Endpoints []resolver.Endpoint
+	// Policies holds all the valid policies that apply to the Upstream.
+	Policies []policies.Policy
 }
 
 // SSL is the SSL configuration for a server.

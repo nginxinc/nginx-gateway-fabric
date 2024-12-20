@@ -28,8 +28,10 @@ type ExpectedNginxField struct {
 	File string
 	// Location is the location name that the directive should exist in.
 	Location string
-	// Servers are the server names that the directive should exist in.
-	Servers []string
+	// Server is the server name that the directive should exist in.
+	Server string
+	// Upstream is the upstream name that the directive should exist in.
+	Upstream string
 	// ValueSubstringAllowed allows the expected value to be a substring of the real value.
 	// This makes it easier for cases when real values are complex file names or contain things we
 	// don't care about, and we just want to check if a substring exists.
@@ -39,40 +41,66 @@ type ExpectedNginxField struct {
 // ValidateNginxFieldExists accepts the nginx config and the configuration for the expected field,
 // and returns whether or not that field exists where it should.
 func ValidateNginxFieldExists(conf *Payload, expFieldCfg ExpectedNginxField) error {
+	b, err := json.Marshal(conf)
+	if err != nil {
+		return fmt.Errorf("error marshaling nginx config: %w", err)
+	}
+
 	for _, config := range conf.Config {
 		if !strings.Contains(config.File, expFieldCfg.File) {
 			continue
 		}
 
 		for _, directive := range config.Parsed {
-			if len(expFieldCfg.Servers) == 0 {
+			if expFieldCfg.Server == "" && expFieldCfg.Upstream == "" {
 				if expFieldCfg.fieldFound(directive) {
 					return nil
 				}
 				continue
 			}
 
-			for _, serverName := range expFieldCfg.Servers {
-				if directive.Directive == "server" && getServerName(directive.Block) == serverName {
-					for _, serverDirective := range directive.Block {
-						if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
-							return nil
-						} else if serverDirective.Directive == "location" &&
-							fieldExistsInLocation(serverDirective, expFieldCfg) {
-							return nil
-						}
-					}
-				}
+			if expFieldCfg.Server != "" && fieldExistsInServer(expFieldCfg, *directive) {
+				return nil
+			}
+
+			if expFieldCfg.Upstream != "" && fieldExistsInUpstream(expFieldCfg, *directive) {
+				return nil
 			}
 		}
 	}
 
-	b, err := json.Marshal(conf)
-	if err != nil {
-		return fmt.Errorf("error marshaling nginx config: %w", err)
-	}
+	return fmt.Errorf("directive %s not found in: nginx config %s", expFieldCfg.Directive, string(b))
+}
 
-	return fmt.Errorf("field not found; expected: %+v\nNGINX conf: %s", expFieldCfg, string(b))
+func fieldExistsInServer(
+	expFieldCfg ExpectedNginxField,
+	directive Directive,
+) bool {
+	if directive.Directive == "server" && getServerName(directive.Block) == expFieldCfg.Server {
+		for _, serverDirective := range directive.Block {
+			if expFieldCfg.Location == "" && expFieldCfg.fieldFound(serverDirective) {
+				return true
+			} else if serverDirective.Directive == "location" &&
+				fieldExistsInLocation(serverDirective, expFieldCfg) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func fieldExistsInUpstream(
+	expFieldCfg ExpectedNginxField,
+	directive Directive,
+) bool {
+	if directive.Directive == "upstream" && directive.Args[0] == expFieldCfg.Upstream {
+		for _, directive := range directive.Block {
+			if expFieldCfg.fieldFound(directive) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func getServerName(serverBlock Directives) string {
