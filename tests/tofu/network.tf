@@ -49,6 +49,18 @@ resource "google_compute_firewall" "deny_exkubelet" {
 
 }
 
+resource "google_compute_firewall" "allow_inkublet" {
+  name      = "${var.gke_cluster_name}-allow-inkubelet"
+  network   = google_compute_network.vpc.self_link
+  direction = "INGRESS"
+  allow {
+    protocol = "tcp"
+    ports    = ["10255"]
+  }
+  source_tags = ["ngf-tests-${var.gke_cluster_name}-nodes", "ngf-tests-${var.gke_cluster_name}-vm"]
+
+}
+
 resource "google_compute_address" "vpc-ip" {
   name         = "${var.gke_cluster_name}-vpc-ip"
   address_type = "EXTERNAL"

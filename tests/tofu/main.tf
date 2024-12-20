@@ -67,6 +67,7 @@ resource "google_container_node_pool" "primary_nodes" {
       block-project-ssh-keys   = "TRUE"
       disable-legacy-endpoints = "true"
     }
+    tags = ["ngf-tests-${var.gke_cluster_name}-nodes"]
     shielded_instance_config {
       enable_secure_boot = true
     }
@@ -89,7 +90,7 @@ resource "google_compute_instance" "vm" {
   machine_type              = "n2-standard-2"
   zone                      = local.google_zone
   allow_stopping_for_update = true
-  tags                      = ["ngf-tests-vm"]
+  tags                      = ["ngf-tests-${var.gke_cluster_name}-vm"]
 
   boot_disk {
     initialize_params {
