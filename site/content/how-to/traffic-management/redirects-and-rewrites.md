@@ -189,6 +189,17 @@ URI: /beans
 ```
 
 ```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee/mocha\?test\=v1\&test\=v2
+```
+
+```text
+Server address: 10.244.0.235:8080
+Server name: coffee-6db967495b-twn6x
+...
+URI: /beans?test=v1&test=v2
+```
+
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/latte/prices
 ```
 
@@ -197,6 +208,18 @@ Server address: 10.244.0.6:8080
 Server name: coffee-6b8b6d6486-7fc78
 ...
 URI: /prices
+```
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/latte/prices\?test\=v1\&test\=v2
+```
+
+```text
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/latte/prices\?test\=v1\&test\=v2
+Server address: 10.244.0.235:8080
+Server name: coffee-6db967495b-twn6x
+...
+URI: /prices?test=v1&test=v2
 ```
 
 ## Further reading
