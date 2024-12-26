@@ -75,7 +75,7 @@ var _ = Describe("Write files", Ordered, func() {
 		files := []file.File{regular1, regular2, secret}
 
 		for _, f := range files {
-			Expect(file.WriteFile(mgr, f)).To(Succeed())
+			Expect(file.Write(mgr, f)).To(Succeed())
 		}
 
 		ensureFiles(files)
@@ -91,7 +91,7 @@ var _ = Describe("Write files", Ordered, func() {
 			}
 
 			replace := func() {
-				_ = file.WriteFile(mgr, f)
+				_ = file.Write(mgr, f)
 			}
 
 			Expect(replace).Should(Panic())
@@ -121,7 +121,7 @@ var _ = Describe("Write files", Ordered, func() {
 				mgr := fakeOSMgr
 
 				for _, f := range files {
-					err := file.WriteFile(mgr, f)
+					err := file.Write(mgr, f)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(errTest))
 				}

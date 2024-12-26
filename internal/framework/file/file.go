@@ -60,7 +60,7 @@ type OSFileManager interface {
 	Copy(dst io.Writer, src io.Reader) error
 }
 
-func WriteFile(fileMgr OSFileManager, file File) error {
+func Write(fileMgr OSFileManager, file File) error {
 	ensureType(file.Type)
 
 	f, err := fileMgr.Create(file.Path)
