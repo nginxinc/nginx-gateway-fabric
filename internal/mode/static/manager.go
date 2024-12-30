@@ -3,7 +3,6 @@ package static
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -49,14 +48,13 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/observability"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies/upstreamsettings"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -88,10 +86,9 @@ func init() {
 	utilruntime.Must(appsv1.AddToScheme(scheme))
 }
 
-//nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	nginxChecker := newNginxConfiguredOnStartChecker()
-	mgr, err := createManager(cfg, nginxChecker)
+	healthChecker := newGraphBuiltHealthChecker()
+	mgr, err := createManager(cfg, healthChecker)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
@@ -148,64 +145,20 @@ func StartManager(cfg config.Config) error {
 		PlusSecrets:    plusSecrets,
 	})
 
-	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
-	// (this assumes the folders are in a shared volume).
-	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
-	for _, path := range removedPaths {
-		cfg.Logger.Info("removed configuration file", "path", path)
-	}
-	if err != nil {
-		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
-	}
-
-	processHandler := ngxruntime.NewProcessHandlerImpl(os.ReadFile, os.Stat)
-
-	// Ensure NGINX is running before registering metrics & starting the manager.
-	p, err := processHandler.FindMainProcess(ctx, ngxruntime.PidFileTimeout)
-	if err != nil {
-		return fmt.Errorf("NGINX is not running: %w", err)
-	}
-	cfg.Logger.V(1).Info("NGINX is running with PID", "pid", p)
-
-	var (
-		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
-		handlerCollector    handlerMetricsCollector     = collectors.NewControllerNoopCollector()
-	)
-
-	var ngxPlusClient ngxruntime.NginxPlusClient
-	if cfg.Plus {
-		ngxPlusClient, err = ngxruntime.CreatePlusClient()
-		if err != nil {
-			return fmt.Errorf("error creating NGINX plus client: %w", err)
-		}
-	}
+	var handlerCollector handlerMetricsCollector = collectors.NewControllerNoopCollector()
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
-		var ngxCollector prometheus.Collector
-		if cfg.Plus {
-			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(ngxPlusClient, constLabels, promLogger)
-		} else {
-			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)
-		}
-		if err != nil {
-			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
-		}
 
-		ngxruntimeCollector = collectors.NewManagerMetricsCollector(constLabels)
+		ngxruntimeCollector := collectors.NewManagerMetricsCollector(constLabels)
 		handlerCollector = collectors.NewControllerCollector(constLabels)
 
-		ngxruntimeCollector, ok := ngxruntimeCollector.(prometheus.Collector)
-		if !ok {
-			return fmt.Errorf("ngxruntimeCollector is not a prometheus.Collector: %w", status.ErrFailedAssert)
-		}
 		handlerCollector, ok := handlerCollector.(prometheus.Collector)
 		if !ok {
 			return fmt.Errorf("handlerCollector is not a prometheus.Collector: %w", status.ErrFailedAssert)
 		}
 
 		metrics.Registry.MustRegister(
-			ngxCollector,
 			ngxruntimeCollector,
 			handlerCollector,
 		)
@@ -224,37 +177,30 @@ func StartManager(cfg config.Config) error {
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		nginxFileMgr: file.NewManagerImpl(
-			cfg.Logger.WithName("nginxFileManager"),
-			file.NewStdLibOSFileManager(),
-		),
+		nginxUpdater: &agent.NginxUpdaterImpl{
+			Logger: cfg.Logger.WithName("nginxUpdater"),
+			Plus:   cfg.Plus,
+		},
 		metricsCollector: handlerCollector,
-		nginxRuntimeMgr: ngxruntime.NewManagerImpl(
-			ngxPlusClient,
-			ngxruntimeCollector,
-			cfg.Logger.WithName("nginxRuntimeManager"),
-			processHandler,
-			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
-		),
-		statusUpdater:   groupStatusUpdater,
-		processor:       processor,
-		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		statusUpdater:    groupStatusUpdater,
+		processor:        processor,
+		serviceResolver:  resolver.NewServiceResolverImpl(mgr.GetClient()),
 		generator: ngxcfg.NewGeneratorImpl(
 			cfg.Plus,
 			&cfg.UsageReportConfig,
 			cfg.Logger.WithName("generator"),
 		),
-		k8sClient:                     mgr.GetClient(),
-		k8sReader:                     mgr.GetAPIReader(),
-		logLevelSetter:                logLevelSetter,
-		eventRecorder:                 recorder,
-		deployCtxCollector:            deployCtxCollector,
-		nginxConfiguredOnStartChecker: nginxChecker,
-		gatewayPodConfig:              cfg.GatewayPodConfig,
-		controlConfigNSName:           controlConfigNSName,
-		gatewayCtlrName:               cfg.GatewayCtlrName,
-		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
-		plus:                          cfg.Plus,
+		k8sClient:                mgr.GetClient(),
+		k8sReader:                mgr.GetAPIReader(),
+		logLevelSetter:           logLevelSetter,
+		eventRecorder:            recorder,
+		deployCtxCollector:       deployCtxCollector,
+		graphBuiltHealthChecker:  healthChecker,
+		gatewayPodConfig:         cfg.GatewayPodConfig,
+		controlConfigNSName:      controlConfigNSName,
+		gatewayCtlrName:          cfg.GatewayCtlrName,
+		updateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
+		plus:                     cfg.Plus,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg)
@@ -289,7 +235,7 @@ func StartManager(cfg config.Config) error {
 			Flags:       cfg.Flags,
 		})
 
-		job, err := createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())
+		job, err := createTelemetryJob(cfg, dataCollector, healthChecker.getReadyCh())
 		if err != nil {
 			return fmt.Errorf("cannot create telemetry job: %w", err)
 		}
@@ -330,7 +276,7 @@ func createPolicyManager(
 	return policies.NewManager(mustExtractGVK, cfgs...)
 }
 
-func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
+func createManager(cfg config.Config, healthChecker *graphBuiltHealthChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  cfg.Logger.V(1),
@@ -365,7 +311,7 @@ func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecke
 	}
 
 	if cfg.HealthConfig.Enabled {
-		if err := mgr.AddReadyzCheck("readyz", nginxChecker.readyCheck); err != nil {
+		if err := mgr.AddReadyzCheck("readyz", healthChecker.readyCheck); err != nil {
 			return nil, fmt.Errorf("error adding ready check: %w", err)
 		}
 	}
