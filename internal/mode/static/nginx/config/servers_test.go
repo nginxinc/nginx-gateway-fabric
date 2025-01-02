@@ -1307,7 +1307,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:            "/_ngf-internal-rule8-route0",
-				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
+				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers([^?]*)? /prefix-replacement$1?$args? break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 				Type:            http.InternalLocationType,
@@ -2427,7 +2427,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(.*)$ /prefix-path$1 break",
+				MainRewrite:     "^/original([^?]*)? /prefix-path$1?$args? break",
 			},
 			msg: "prefix path no trailing slashes",
 		},
@@ -2441,7 +2441,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+				MainRewrite:     "^/original(?:/([^?]*))? /$1?$args? break",
 			},
 			msg: "prefix path empty string",
 		},
@@ -2455,7 +2455,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+				MainRewrite:     "^/original(?:/([^?]*))? /$1?$args? break",
 			},
 			msg: "prefix path /",
 		},
@@ -2469,7 +2469,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /trailing/$1 break",
+				MainRewrite:     "^/original(?:/([^?]*))? /trailing/$1?$args? break",
 			},
 			msg: "prefix path replacement with trailing /",
 		},
@@ -2483,7 +2483,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original/(.*)$ /prefix-path/$1 break",
+				MainRewrite:     "^/original/([^?]*)? /prefix-path/$1?$args? break",
 			},
 			msg: "prefix path original with trailing /",
 		},
@@ -2497,7 +2497,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 			},
 			expected: &rewriteConfig{
 				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original/(.*)$ /trailing/$1 break",
+				MainRewrite:     "^/original/([^?]*)? /trailing/$1?$args? break",
 			},
 			msg: "prefix path both with trailing slashes",
 		},

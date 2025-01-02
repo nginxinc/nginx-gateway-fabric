@@ -606,22 +606,24 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 				filterPrefix = "/"
 			}
 
-			// capture everything after the configured prefix
-			regex := fmt.Sprintf("^%s(.*)$", path)
-			// replace the configured prefix with the filter prefix and append what was captured
-			replacement := fmt.Sprintf("%s$1", filterPrefix)
+			// capture everything following the configured prefix up to the first ?, if present.
+			regex := fmt.Sprintf("^%s([^?]*)?", path)
+			// replace the configured prefix with the filter prefix, append the captured segment,
+			// and include the request arguments stored in nginx variable $args.
+			// https://nginx.org/en/docs/http/ngx_http_core_module.html#var_args
+			replacement := fmt.Sprintf("%s$1?$args?", filterPrefix)
 
 			// if configured prefix does not end in /, but replacement prefix does end in /,
 			// then make sure that we *require* but *don't capture* a trailing slash in the request,
 			// otherwise we'll get duplicate slashes in the full replacement
 			if strings.HasSuffix(filterPrefix, "/") && !strings.HasSuffix(path, "/") {
-				regex = fmt.Sprintf("^%s(?:/(.*))?$", path)
+				regex = fmt.Sprintf("^%s(?:/([^?]*))?", path)
 			}
 
 			// if configured prefix ends in / we won't capture it for a request (since it's not in the regex),
 			// so append it to the replacement prefix if the replacement prefix doesn't already end in /
 			if strings.HasSuffix(path, "/") && !strings.HasSuffix(filterPrefix, "/") {
-				replacement = fmt.Sprintf("%s/$1", filterPrefix)
+				replacement = fmt.Sprintf("%s/$1?$args?", filterPrefix)
 			}
 
 			rewrites.MainRewrite = fmt.Sprintf("%s %s break", regex, replacement)
