@@ -209,8 +209,9 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		Telemetry:         cfg.telemetry,
 	}
 
+	switch {
 	// if we aren't installing from the public charts, then set the custom images
-	if !strings.HasPrefix(cfg.chartPath, "oci://") {
+	case !strings.HasPrefix(cfg.chartPath, "oci://"):
 		installCfg.NgfImageRepository = *ngfImageRepository
 		installCfg.NginxImageRepository = *nginxImageRepository
 		if *plusEnabled && cfg.nfr {
@@ -218,12 +219,14 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
-	} else {
+	case version == "edge":
 		chartVersion = "0.0.0-edge"
 		installCfg.ChartVersion = chartVersion
 		if *plusEnabled && cfg.nfr {
 			installCfg.NginxImageRepository = fmt.Sprintf(formatNginxPlusEdgeImagePath, *gkeProject)
 		}
+	case *plusEnabled && cfg.nfr:
+		installCfg.NginxImageRepository = fmt.Sprintf(formatNginxPlusEdgeImagePath, *gkeProject)
 	}
 
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
