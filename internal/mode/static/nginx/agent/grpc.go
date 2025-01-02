@@ -12,6 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	keepAliveTime    = 1 * time.Minute
+	keepAliveTimeout = 15 * time.Second
+)
+
 // GRPCServer is a gRPC server for communicating with the nginx agent.
 type GRPCServer struct {
 	Logger logr.Logger
@@ -32,8 +37,8 @@ func (g *GRPCServer) Start(ctx context.Context) error {
 	server := grpc.NewServer(
 		grpc.KeepaliveParams(
 			keepalive.ServerParameters{
-				Time:    1 * time.Minute,
-				Timeout: 15 * time.Second,
+				Time:    keepAliveTime,
+				Timeout: keepAliveTimeout,
 			},
 		),
 	)

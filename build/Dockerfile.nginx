@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.12
+# TODO(sberman): the commented out lines are for when we use the published agent release
 # FROM scratch AS nginx-files
 
 # # the following links can be replaced with local files if needed, i.e. ADD --chown=101:1001 <local_file> <container_file>
