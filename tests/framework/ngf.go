@@ -148,6 +148,7 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 
 	args = append(args, setImageArgs(cfg)...)
 	args = append(args, setTelemetryArgs(cfg)...)
+	args = append(args, setPlusUsageEndpointArg(cfg)...)
 	fullArgs := append(args, extraArgs...) //nolint:gocritic
 
 	GinkgoWriter.Printf("Upgrading NGF with command: helm %v\n", strings.Join(fullArgs, " "))
