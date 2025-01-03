@@ -46,9 +46,5 @@ func (c *ConnectionsTracker) GetConnection(address string) string {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if val, ok := c.connections[address]; ok {
-		return val
-	}
-
-	return ""
+	return c.connections[address]
 }

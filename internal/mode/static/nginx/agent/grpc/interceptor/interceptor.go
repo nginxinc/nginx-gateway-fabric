@@ -13,12 +13,6 @@ import (
 	grpcContext "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/grpc/context"
 )
 
-type ContextSetter struct{}
-
-func NewContextSetter() *ContextSetter {
-	return &ContextSetter{}
-}
-
 // streamHandler is a struct that implements StreamHandler, allowing the interceptor to replace the context.
 type streamHandler struct {
 	grpc.ServerStream
@@ -29,7 +23,13 @@ func (sh *streamHandler) Context() context.Context {
 	return sh.ctx
 }
 
-func (c *ContextSetter) Stream() grpc.StreamServerInterceptor {
+type ContextSetter struct{}
+
+func NewContextSetter() ContextSetter {
+	return ContextSetter{}
+}
+
+func (c ContextSetter) Stream() grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -47,7 +47,7 @@ func (c *ContextSetter) Stream() grpc.StreamServerInterceptor {
 	}
 }
 
-func (c *ContextSetter) Unary() grpc.UnaryServerInterceptor {
+func (c ContextSetter) Unary() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},

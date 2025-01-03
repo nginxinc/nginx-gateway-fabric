@@ -47,10 +47,10 @@ func (cs *commandService) CreateConnection(
 		return nil, agentgrpc.ErrStatusInvalidConnection
 	}
 
-	hostname := req.GetResource().GetContainerInfo().GetHostname()
+	podName := req.GetResource().GetContainerInfo().GetHostname()
 
-	cs.logger.Info(fmt.Sprintf("Creating connection for nginx pod: %s", hostname))
-	cs.connTracker.Track(gi.IPAddress, hostname)
+	cs.logger.Info(fmt.Sprintf("Creating connection for nginx pod: %s", podName))
+	cs.connTracker.Track(gi.IPAddress, podName)
 
 	return &pb.CreateConnectionResponse{
 		Response: &pb.CommandResponse{
@@ -72,7 +72,7 @@ func (cs *commandService) Subscribe(in pb.CommandService_SubscribeServer) error 
 
 	go cs.listenForDataPlaneResponse(ctx, in)
 
-	// wait for connection to be established
+	// wait for the agent to report itself
 	podName, err := cs.waitForConnection(ctx, gi)
 	if err != nil {
 		cs.logger.Error(err, "error waiting for connection")
