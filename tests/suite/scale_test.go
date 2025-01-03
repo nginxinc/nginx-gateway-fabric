@@ -368,7 +368,7 @@ The logs are attached only if there are errors.
 		)
 		nginxErrors := checkLogErrors(
 			"nginx",
-			[]string{"[error]", "[emerg]", "[crit]", "[alert]"},
+			[]string{framework.ErrorNGINXLog, framework.EmergNGINXLog, framework.CritNGINXLog, framework.AlertNGINXLog},
 			nil,
 			filepath.Join(testResultsDir, framework.CreateResultsFilename("log", "nginx", *plusEnabled)),
 		)

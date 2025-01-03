@@ -370,7 +370,13 @@ func getNginxErrorLogs(ngfPodName string) string {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	errPrefixes := []string{"[crit]", "[error]", "[warn]", "[alert]", "[emerg]"}
+	errPrefixes := []string{
+		framework.CritNGINXLog,
+		framework.ErrorNGINXLog,
+		framework.WarnNGINXLog,
+		framework.AlertNGINXLog,
+		framework.EmergNGINXLog,
+	}
 	errorLogs := ""
 
 	for _, line := range strings.Split(nginxLogs, "\n") {
