@@ -400,7 +400,6 @@ func getUnexpectedNginxErrorLogs(ngfPodName string) string {
 	errorLogs := getNginxErrorLogs(ngfPodName)
 
 	for _, line := range strings.Split(errorLogs, "\n") {
-
 		if !slices.ContainsFunc(expectedErrStrings, func(s string) bool {
 			return strings.Contains(line, s)
 		}) {
@@ -423,7 +422,6 @@ func checkNGFContainerLogsForErrors(ngfPodName string) {
 	for _, line := range strings.Split(ngfLogs, "\n") {
 		Expect(line).ToNot(ContainSubstring("\"level\":\"error\""), line)
 	}
-
 }
 
 func checkLeaderLeaseChange(originalLeaseName string) error {

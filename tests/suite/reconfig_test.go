@@ -598,12 +598,12 @@ type reconfigTestResults struct {
 	TestDescription      string
 	TimeToReadyTotal     string
 	TimeToReadyAvgSingle string
+	NGINXErrorLogs       string
 	EventsBuckets        []framework.Bucket
 	ReloadBuckets        []framework.Bucket
 	NumResources         int
 	NGINXReloads         int
 	NGINXReloadAvgTime   int
-	NGINXErrorLogs       string
 	EventsCount          int
 	EventsAvgTime        int
 }
