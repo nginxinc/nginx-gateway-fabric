@@ -27,7 +27,7 @@ repos:
         exclude: (^examples/|^docs/|.*_test.go$)
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.22.0
+    rev: v8.22.1
     hooks:
       - id: gitleaks
 
@@ -86,7 +86,7 @@ repos:
         args: [-w, -s, -i, "4"]
 
   - repo: https://github.com/dadav/helm-schema
-    rev: 0.17.0
+    rev: 0.18.1
     hooks:
       - id: helm-schema
         args:

@@ -37,7 +37,7 @@ NODE_VERSION = 22
 # renovate: datasource=docker depName=quay.io/helmpack/chart-testing
 CHART_TESTING_VERSION = v3.11.0
 # renovate: datasource=github-tags depName=dadav/helm-schema
-HELM_SCHEMA_VERSION = 0.17.0
+HELM_SCHEMA_VERSION = 0.18.1
 
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
