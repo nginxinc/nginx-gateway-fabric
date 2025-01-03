@@ -625,7 +625,7 @@ func bench(b *testing.B, svcNsName types.NamespacedName,
 	list discoveryV1.EndpointSliceList, initSet initEndpointSetFunc, n int,
 ) {
 	b.Helper()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet, dualAddressType)
 		if len(res) != n {
 			b.Fatalf("expected %d endpoints, got %d", n, len(res))
