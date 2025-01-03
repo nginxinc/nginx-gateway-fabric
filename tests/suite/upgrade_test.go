@@ -101,6 +101,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			ServiceType:          *serviceType,
 			IsGKEInternalLB:      *isGKEInternalLB,
 			Plus:                 *plusEnabled,
+			PlusUsageEndpoint:    *plusUsageEndpoint,
 		}
 
 		type metricsResults struct {

@@ -64,6 +64,7 @@ var (
 	plusLicenseFileName      = flag.String("plus-license-file-name", "", "File name containing the NGINX Plus JWT")
 	plusUsageEndpoint        = flag.String("plus-usage-endpoint", "", "Endpoint for reporting NGINX Plus usage")
 	clusterName              = flag.String("cluster-name", "kind", "Cluster name")
+	gkeProject               = flag.String("gke-project", "", "GKE Project name")
 )
 
 var (
@@ -83,6 +84,8 @@ var (
 	skipNFRTests      bool
 	logs              string
 )
+
+var formatNginxPlusEdgeImagePath = "us-docker.pkg.dev/%s/nginx-gateway-fabric/nginx-plus"
 
 const (
 	releaseName           = "ngf-test"
@@ -206,8 +209,9 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		Telemetry:         cfg.telemetry,
 	}
 
+	switch {
 	// if we aren't installing from the public charts, then set the custom images
-	if !strings.HasPrefix(cfg.chartPath, "oci://") {
+	case !strings.HasPrefix(cfg.chartPath, "oci://"):
 		installCfg.NgfImageRepository = *ngfImageRepository
 		installCfg.NginxImageRepository = *nginxImageRepository
 		if *plusEnabled && cfg.nfr {
@@ -215,9 +219,14 @@ func createNGFInstallConfig(cfg setupConfig, extraInstallArgs ...string) framewo
 		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
-	} else if version == "edge" {
+	case version == "edge":
 		chartVersion = "0.0.0-edge"
 		installCfg.ChartVersion = chartVersion
+		if *plusEnabled && cfg.nfr {
+			installCfg.NginxImageRepository = fmt.Sprintf(formatNginxPlusEdgeImagePath, *gkeProject)
+		}
+	case *plusEnabled && cfg.nfr:
+		installCfg.NginxImageRepository = fmt.Sprintf(formatNginxPlusEdgeImagePath, *gkeProject)
 	}
 
 	output, err := framework.InstallGatewayAPI(cfg.gwAPIVersion)
