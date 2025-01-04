@@ -405,7 +405,8 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("nfr", "r
 			).WithTimeout(metricExistTimeout).WithPolling(metricExistPolling).Should(Succeed())
 		}
 
-		checkContainerLogsForErrors(ngfPodName, false)
+		checkNGFContainerLogsForErrors(ngfPodName)
+		nginxErrorLogs := getNginxErrorLogs(ngfPodName)
 
 		reloadCount, err := framework.GetReloadCount(promInstance, ngfPodName)
 		Expect(err).ToNot(HaveOccurred())
@@ -447,6 +448,7 @@ var _ = Describe("Reconfiguration Performance Testing", Ordered, Label("nfr", "r
 			TimeToReadyAvgSingle: timeToReadyAvgSingle,
 			NGINXReloads:         int(reloadCount),
 			NGINXReloadAvgTime:   int(reloadAvgTime),
+			NGINXErrorLogs:       nginxErrorLogs,
 			EventsCount:          int(eventsCount),
 			EventsAvgTime:        int(eventsAvgTime),
 		}
@@ -596,6 +598,7 @@ type reconfigTestResults struct {
 	TestDescription      string
 	TimeToReadyTotal     string
 	TimeToReadyAvgSingle string
+	NGINXErrorLogs       string
 	EventsBuckets        []framework.Bucket
 	ReloadBuckets        []framework.Bucket
 	NumResources         int
@@ -627,6 +630,9 @@ const reconfigResultTemplate = `
 {{- range .EventsBuckets }}
 	- {{ .Le }}ms: {{ .Val }}
 {{- end }}
+
+### NGINX Error Logs
+{{ .NGINXErrorLogs }}
 `
 
 func writeReconfigResults(dest io.Writer, results reconfigTestResults) error {
