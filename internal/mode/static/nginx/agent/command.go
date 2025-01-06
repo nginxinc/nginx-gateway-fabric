@@ -18,7 +18,7 @@ import (
 type commandService struct {
 	pb.CommandServiceServer
 	connTracker *agentgrpc.ConnectionsTracker
-	// TODO(sberman): all logs are at Info level right now. Adjust appropriately.
+	// TODO(sjberman): all logs are at Info level right now. Adjust appropriately.
 	logger logr.Logger
 }
 
