@@ -80,7 +80,7 @@ repos:
           - --template-files=README.md.gotmpl
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.8.0-1
+    rev: v3.10.0-2
     hooks:
       - id: shfmt-src
         args: [-w, -s, -i, "4"]
