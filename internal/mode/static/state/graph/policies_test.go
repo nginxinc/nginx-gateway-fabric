@@ -593,7 +593,7 @@ func TestAttachPolicyToService(t *testing.T) {
 			},
 		},
 		{
-			name: "attachment; ancestor doesn't exists so add it",
+			name: "attachment; ancestor doesn't exist so add it",
 			policy: &Policy{
 				Source: &policiesfakes.FakePolicy{},
 				Ancestors: []PolicyAncestor{
