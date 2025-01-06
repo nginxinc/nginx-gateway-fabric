@@ -386,7 +386,7 @@ func validateFilterRewrite(
 		default:
 			msg := fmt.Sprintf("urlRewrite path type %s not supported", rewrite.Path.Type)
 			valErr := field.Invalid(rewritePath.Child("path"), *rewrite.Path, msg)
-			return append(allErrs, valErr)
+			allErrs = append(allErrs, valErr)
 		}
 
 		if err := validator.ValidatePath(path); err != nil {

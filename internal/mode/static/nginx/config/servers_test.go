@@ -999,7 +999,7 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path:     "/redirect",
+			Path:     "/redirect-with-path",
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
@@ -1483,7 +1483,7 @@ func TestCreateServers(t *testing.T) {
 				Includes:        externalIncludes,
 			},
 			{
-				Path: "/redirect/",
+				Path: "/redirect-with-path/",
 				Type: http.ExternalLocationType,
 				Return: &http.Return{
 					Code: 301,
@@ -1493,7 +1493,7 @@ func TestCreateServers(t *testing.T) {
 				Includes: externalIncludes,
 			},
 			{
-				Path: "= /redirect",
+				Path: "= /redirect-with-path",
 				Type: http.ExternalLocationType,
 				Return: &http.Return{
 					Code: 301,
@@ -2558,7 +2558,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			t.Parallel()
 			g := NewWithT(t)
 
-			result, rewriteConfig := createReturnValForRedirectFilter(test.filter, test.listenerPort, test.path)
+			result, rewriteConfig := createReturnAndRewriteConfigForRedirectFilter(test.filter, test.listenerPort, test.path)
 			g.Expect(helpers.Diff(test.expectedReturn, result)).To(BeEmpty())
 			g.Expect(helpers.Diff(test.expectedRewrite, rewriteConfig)).To(BeEmpty())
 		})

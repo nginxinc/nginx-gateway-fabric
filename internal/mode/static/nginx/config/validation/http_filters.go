@@ -11,7 +11,7 @@ type HTTPURLRewriteValidator struct{}
 // which in NGINX is done with the proxy_set_header directive.
 type HTTPHeaderValidator struct{}
 
-// HTTPCommonValidator validates values for path used in filters.
+// HTTPPathValidator validates values for path used in filters.
 type HTTPPathValidator struct{}
 
 var supportedRedirectSchemes = map[string]struct{}{

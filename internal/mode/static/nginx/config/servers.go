@@ -435,7 +435,7 @@ func updateLocation(
 	location.Includes = append(location.Includes, createIncludesFromLocationSnippetsFilters(filters.SnippetsFilters)...)
 
 	if filters.RequestRedirect != nil {
-		ret, rewrite := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort, path)
+		ret, rewrite := createReturnAndRewriteConfigForRedirectFilter(filters.RequestRedirect, listenerPort, path)
 		if rewrite.MainRewrite != "" {
 			location.Rewrites = append(location.Rewrites, rewrite.MainRewrite)
 		}
@@ -546,7 +546,7 @@ func createProxySSLVerify(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
 	}
 }
 
-func createReturnValForRedirectFilter(
+func createReturnAndRewriteConfigForRedirectFilter(
 	filter *dataplane.HTTPRequestRedirectFilter,
 	listenerPort int32,
 	path string,

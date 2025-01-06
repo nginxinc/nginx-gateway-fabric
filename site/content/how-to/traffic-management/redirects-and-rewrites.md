@@ -142,7 +142,7 @@ metadata:
   name: coffee
 spec:
   parentRefs:
-  - name: cafe
+  - name: gateway
     sectionName: http
   hostnames:
   - "cafe.example.com"
@@ -359,15 +359,17 @@ service/tea          ClusterIP   10.96.151.194   <none>        80/TCP    120m
 
 ### Configure a path redirect
 
-We will define two HTTPRoutes for the **tea** application: `tea`, which specifies the destination to handle redirected requests, and `tea-redirect` that redirect requests as follows:
+In this section, we'll define two HTTPRoutes for the tea and soda applications to demonstrate different types of request redirection using the `RequestRedirect` filter.
 
-- `http://cafe.example.com/tea` to `http://cafe.example.com/organic`
-- `http://cafe.example.com/tea/origin` to `http://cafe.example.com/organic/origin`
+1. The `tea-redirect` route uses the `ReplacePrefixMatch` type for path modification. This configuration matches the prefix of the original path and updates it to a new path, preserving the rest of the original URL structure. It will redirect request as follows:
 
-We will also define two HTTPRoutes defined for the **soda** application: `soda`, which specifies the destination to handle redirected requests, and `soda-redirect` that redirect requests as follows:
+    - `http://cafe.example.com/tea` to `http://cafe.example.com/organic`
+    - `http://cafe.example.com/tea/origin` to `http://cafe.example.com/organic/origin`
 
-- `http://cafe.example.com/soda` to `http://cafe.example.com/flavors`
-- `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors`
+2. The `soda-redirect` route uses the `ReplaceFullPath` type for path modification. This configuration updates the entire original path to the new location, effectively overwriting it. It will redirect request as follows:
+
+    - `http://cafe.example.com/soda` to `http://cafe.example.com/flavors`
+    - `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors`
 
 To create the httproute resource, copy and paste the following into your terminal:
 
@@ -399,25 +401,6 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: tea
-spec:
-  parentRefs:
-  - name: gateway
-    sectionName: http
-  hostnames:
-  - "cafe.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /organic
-    backendRefs:
-    - name: tea
-      port: 80
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
   name: soda-redirect
 spec:
   parentRefs:
@@ -437,25 +420,6 @@ spec:
           type: ReplaceFullPath
           replaceFullPath: /flavors
         port: 8080
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: soda
-spec:
-  parentRefs:
-  - name: gateway
-    sectionName: http
-  hostnames:
-  - "cafe.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /flavors
-    backendRefs:
-    - name: soda
-      port: 80
 EOF
 ```
 
@@ -463,14 +427,14 @@ EOF
 
 ### Send traffic
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea and soda applications to verify the redirect is successful. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header) and `-L` to follow redirects, ensuring that the user fetches the final destination after encountering HTTP 3xx redirect response.
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea and soda applications to verify the redirect is successful. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header).
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
 This example demonstrates a redirect from `http://cafe.example.com/tea` to `http://cafe.example.com/organic`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea --include
 ```
 
 Notice in the output that the URI has been redirected to the new location:
@@ -486,7 +450,7 @@ Other examples:
 This example demonstrates a redirect from `http://cafe.example.com/tea/type` to `http://cafe.example.com/organic/type`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type --include
 ```
 
 ```text
@@ -498,7 +462,7 @@ Location: http://cafe.example.com:8080/organic/type
 This example demonstrates a redirect from `http://cafe.example.com/tea/type` to `http://cafe.example.com/organic/type` and specifies query params `test=v1`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type\?test\=v1 --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type\?test\=v1 --include
 ```
 
 ```text
@@ -510,7 +474,7 @@ Location: http://cafe.example.com:8080/organic/type?test=v1
 This example demonstrates a redirect from `http://cafe.example.com/soda` to `http://cafe.example.com/flavors`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda --include
 ```
 
 ```text
@@ -522,7 +486,7 @@ Location: http://cafe.example.com:8080/flavors
 This example demonstrates a redirect from `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors/pepsi`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi --include
 ```
 
 ```text
@@ -534,7 +498,7 @@ Location: http://cafe.example.com:8080/flavors
 This example demonstrates a redirect from `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors/pepsi` and specifies query params `test=v1`.
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi\?test\=v1 --include
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi\?test\=v1 --include
 ```
 
 ```text
