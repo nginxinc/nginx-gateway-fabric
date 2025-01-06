@@ -11,7 +11,7 @@ Learn how to redirect or rewrite your HTTP traffic using NGINX Gateway Fabric.
 
 [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can be used to configure HTTP redirects or rewrites. Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. Rewrites modify components of a client request (such as hostname and/or path) before proxying it upstream.
 
-In this guide, we will set up the coffee application to demonstrate path URL rewriting and the tea and soda applications to showcase path-based request redirection.. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
+In this guide, we will set up the coffee application to demonstrate path URL rewriting, and the tea and soda applications to showcase path-based request redirection. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
 To see an example of a redirect using scheme and port, see the [HTTPS Termination]({{< relref "/how-to/traffic-management/https-termination.md" >}}) guide.
 
@@ -37,7 +37,7 @@ We will configure a common gateway for the `URLRewrite` and `RequestRedirect` fi
 
 ---
 
-### Deploy the Gateway API resources for the applications
+### Deploy the Gateway resource for the applications
 
 The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [Cluster Operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames. To deploy the Gateway:
 
@@ -60,11 +60,11 @@ EOF
 
 ## URLRewrite example
 
-This examples demonstrates how to rewrite the traffic uri for a simple coffee application. A HTTPRoute resource is used to define two `URLRewrite` filters that will rewrite requests. You can verify the server responds with the rewritten uri.
+This examples demonstrates how to rewrite the traffic URL for a simple coffee application. An HTTPRoute resource is used to define two `URLRewrite` filters that will rewrite requests. You can verify the server responds with the rewritten URL.
 
 ---
 
-### Setup
+### Deploy the coffee application
 
 Create the **coffee** application in Kubernetes by copying and pasting the following block into your terminal:
 
@@ -248,7 +248,7 @@ URI: /prices?test=v1&test=v2
 
 ## RequestRedirect example
 
-This example demonstrates how to redirect the traffic to a new location for a tea and soda applications. We'll examine how request redirects works using the `RequestRedirect` filter by creating four HTTPRoutes: two for redirecting requests to a new location and other two to define the destination location blocks for the redirected traffic.
+This example demonstrates how to redirect the traffic to a new location for the tea and soda applications, using `RequestRedirect` filters.
 
 ---
 
@@ -326,7 +326,7 @@ spec:
 EOF
 ```
 
-This will create the **tea** and **soda** service and a deployment. Run the following command to verify the resources were created:
+This will create the **tea** and **soda** services and deployments. Run the following command to verify the resources were created:
 
 ```shell
 kubectl get pods,svc
@@ -349,12 +349,12 @@ service/tea          ClusterIP   10.96.151.194   <none>        80/TCP    120m
 
 ### Configure a path redirect
 
-We will define two HTTPRoutes for **tea** application: `tea`, which specifies the destination location block to handle redirected requests, and `tea-redirect` that redirect requests as follows:
+We will define two HTTPRoutes for the **tea** application: `tea`, which specifies the destination to handle redirected requests, and `tea-redirect` that redirect requests as follows:
 
 - `http://cafe.example.com/tea` to `http://cafe.example.com/organic`
 - `http://cafe.example.com/tea/origin` to `http://cafe.example.com/organic/origin`
 
-The two HTTPRoutes defined for **soda** application: `soda`, which specifies the destination location block to handle redirected requests, and `soda-redirect` that redirect requests as follows:
+We will also define two HTTPRoutes defined for the **soda** application: `soda`, which specifies the destination to handle redirected requests, and `soda-redirect` that redirect requests as follows:
 
 - `http://cafe.example.com/soda` to `http://cafe.example.com/flavors`
 - `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors`
@@ -453,7 +453,7 @@ EOF
 
 ### Send traffic
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea and soda application to verify the redirect is successful. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header) and `-L` to follow redirects, ensuring that the user fetches the final destination after encountering HTTP 3xx redirect response.
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea and soda applications to verify the redirect is successful. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header) and `-L` to follow redirects, ensuring that the user fetches the final destination after encountering HTTP 3xx redirect response.
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
@@ -482,7 +482,7 @@ Location: http://cafe.example.com:8080/organic/type
 ```
 
 ```shell
-curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type\?test\=v1 --includ
+curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type\?test\=v1 --include
 ```
 
 ```text
