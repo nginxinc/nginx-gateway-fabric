@@ -93,6 +93,28 @@ func TestValidateRewritePath(t *testing.T) {
 	)
 }
 
+func TestValidateRedirectPath(t *testing.T) {
+	t.Parallel()
+	validator := HTTPRedirectValidator{}
+
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateRedirectPath,
+		"",
+		"/path",
+		"/longer/path",
+		"/trailing/",
+	)
+
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator.ValidateRedirectPath,
+		"path",
+		"$path",
+		"/path$",
+	)
+}
+
 func TestValidateFilterHeaderName(t *testing.T) {
 	t.Parallel()
 	validator := HTTPHeaderValidator{}

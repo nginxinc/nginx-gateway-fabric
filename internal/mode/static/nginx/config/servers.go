@@ -435,7 +435,10 @@ func updateLocation(
 	location.Includes = append(location.Includes, createIncludesFromLocationSnippetsFilters(filters.SnippetsFilters)...)
 
 	if filters.RequestRedirect != nil {
-		ret := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort)
+		ret, rewrite := createReturnValForRedirectFilter(filters.RequestRedirect, listenerPort, path)
+		if rewrite.MainRewrite != "" {
+			location.Rewrites = append(location.Rewrites, rewrite.MainRewrite)
+		}
 		location.Return = ret
 		return location
 	}
@@ -543,9 +546,13 @@ func createProxySSLVerify(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
 	}
 }
 
-func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
+func createReturnValForRedirectFilter(
+	filter *dataplane.HTTPRequestRedirectFilter,
+	listenerPort int32,
+	path string,
+) (*http.Return, *rewriteConfig) {
 	if filter == nil {
-		return nil
+		return nil, nil
 	}
 
 	hostname := "$host"
@@ -582,10 +589,55 @@ func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilte
 		}
 	}
 
+	body := fmt.Sprintf("%s://%s$request_uri", scheme, hostnamePort)
+
+	rewrites := &rewriteConfig{}
+	if filter.Path != nil {
+		rewrites.MainRewrite = createMainRewriteForFilters(filter.Path, path)
+		body = fmt.Sprintf("%s://%s$uri$is_args$args", scheme, hostnamePort)
+	}
+
 	return &http.Return{
 		Code: code,
-		Body: fmt.Sprintf("%s://%s$request_uri", scheme, hostnamePort),
+		Body: body,
+	}, rewrites
+}
+
+func createMainRewriteForFilters(pathModifier *dataplane.HTTPPathModifier, path string) string {
+	var mainRewrite string
+	switch pathModifier.Type {
+	case dataplane.ReplaceFullPath:
+		mainRewrite = fmt.Sprintf("^ %s", pathModifier.Replacement)
+	case dataplane.ReplacePrefixMatch:
+		filterPrefix := pathModifier.Replacement
+		if filterPrefix == "" {
+			filterPrefix = "/"
+		}
+
+		// capture everything following the configured prefix up to the first ?, if present.
+		regex := fmt.Sprintf("^%s([^?]*)?", path)
+		// replace the configured prefix with the filter prefix, append the captured segment,
+		// and include the request arguments stored in nginx variable $args.
+		// https://nginx.org/en/docs/http/ngx_http_core_module.html#var_args
+		replacement := fmt.Sprintf("%s$1?$args?", filterPrefix)
+
+		// if configured prefix does not end in /, but replacement prefix does end in /,
+		// then make sure that we *require* but *don't capture* a trailing slash in the request,
+		// otherwise we'll get duplicate slashes in the full replacement
+		if strings.HasSuffix(filterPrefix, "/") && !strings.HasSuffix(path, "/") {
+			regex = fmt.Sprintf("^%s(?:/([^?]*))?", path)
+		}
+
+		// if configured prefix ends in / we won't capture it for a request (since it's not in the regex),
+		// so append it to the replacement prefix if the replacement prefix doesn't already end in /
+		if strings.HasSuffix(path, "/") && !strings.HasSuffix(filterPrefix, "/") {
+			replacement = fmt.Sprintf("%s/$1?$args?", filterPrefix)
+		}
+
+		mainRewrite = fmt.Sprintf("%s %s", regex, replacement)
 	}
+
+	return mainRewrite
 }
 
 func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, path string) *rewriteConfig {
@@ -594,40 +646,11 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 	}
 
 	rewrites := &rewriteConfig{}
-
 	if filter.Path != nil {
 		rewrites.InternalRewrite = "^ $request_uri"
-		switch filter.Path.Type {
-		case dataplane.ReplaceFullPath:
-			rewrites.MainRewrite = fmt.Sprintf("^ %s break", filter.Path.Replacement)
-		case dataplane.ReplacePrefixMatch:
-			filterPrefix := filter.Path.Replacement
-			if filterPrefix == "" {
-				filterPrefix = "/"
-			}
 
-			// capture everything following the configured prefix up to the first ?, if present.
-			regex := fmt.Sprintf("^%s([^?]*)?", path)
-			// replace the configured prefix with the filter prefix, append the captured segment,
-			// and include the request arguments stored in nginx variable $args.
-			// https://nginx.org/en/docs/http/ngx_http_core_module.html#var_args
-			replacement := fmt.Sprintf("%s$1?$args?", filterPrefix)
-
-			// if configured prefix does not end in /, but replacement prefix does end in /,
-			// then make sure that we *require* but *don't capture* a trailing slash in the request,
-			// otherwise we'll get duplicate slashes in the full replacement
-			if strings.HasSuffix(filterPrefix, "/") && !strings.HasSuffix(path, "/") {
-				regex = fmt.Sprintf("^%s(?:/([^?]*))?", path)
-			}
-
-			// if configured prefix ends in / we won't capture it for a request (since it's not in the regex),
-			// so append it to the replacement prefix if the replacement prefix doesn't already end in /
-			if strings.HasSuffix(path, "/") && !strings.HasSuffix(filterPrefix, "/") {
-				replacement = fmt.Sprintf("%s/$1?$args?", filterPrefix)
-			}
-
-			rewrites.MainRewrite = fmt.Sprintf("%s %s break", regex, replacement)
-		}
+		// for URLRewriteFilter, we add a break to the rewrite to prevent further processing of the request.
+		rewrites.MainRewrite = fmt.Sprintf("%s break", createMainRewriteForFilters(filter.Path, path))
 	}
 
 	return rewrites

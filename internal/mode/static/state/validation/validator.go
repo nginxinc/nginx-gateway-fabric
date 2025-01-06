@@ -31,6 +31,7 @@ type HTTPFieldsValidator interface {
 	ValidateRedirectScheme(scheme string) (valid bool, supportedValues []string)
 	ValidateRedirectPort(port int32) error
 	ValidateRedirectStatusCode(statusCode int) (valid bool, supportedValues []string)
+	ValidateRedirectPath(path string) error
 	ValidateHostname(hostname string) error
 	ValidateRewritePath(path string) error
 	ValidateFilterHeaderName(name string) error

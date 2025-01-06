@@ -139,6 +139,52 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 		},
 		{
 			filter: &v1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("http"),
+				Hostname:   helpers.GetPointer[v1.PreciseHostname]("example.com"),
+				Port:       helpers.GetPointer[v1.PortNumber](8080),
+				StatusCode: helpers.GetPointer(302),
+				Path: &v1.HTTPPathModifier{
+					Type:            v1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
+				},
+			},
+			expected: &HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("http"),
+				Hostname:   helpers.GetPointer("example.com"),
+				Port:       helpers.GetPointer[int32](8080),
+				StatusCode: helpers.GetPointer(302),
+				Path: &HTTPPathModifier{
+					Type:        ReplaceFullPath,
+					Replacement: "/path",
+				},
+			},
+			name: "request redirect with ReplaceFullPath modifier",
+		},
+		{
+			filter: &v1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer[v1.PreciseHostname]("example.com"),
+				Port:       helpers.GetPointer[v1.PortNumber](8443),
+				StatusCode: helpers.GetPointer(302),
+				Path: &v1.HTTPPathModifier{
+					Type:               v1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/prefix"),
+				},
+			},
+			expected: &HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer("example.com"),
+				Port:       helpers.GetPointer[int32](8443),
+				StatusCode: helpers.GetPointer(302),
+				Path: &HTTPPathModifier{
+					Type:        ReplacePrefixMatch,
+					Replacement: "/prefix",
+				},
+			},
+			name: "request redirect with ReplacePrefixMatch modifier",
+		},
+		{
+			filter: &v1.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
 				Hostname:   helpers.GetPointer[v1.PreciseHostname]("example.com"),
 				Port:       helpers.GetPointer[v1.PortNumber](8443),
