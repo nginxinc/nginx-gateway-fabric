@@ -9,7 +9,7 @@ branch. This way ephemeral developer branches will remain outside the main repos
 
 Below is an example of following the merge and fork process. Developer Alice:
 
-- Forks `github.com/nginxinc/nginx-gateway-fabric` → `github.com/<alice-user-id>/nginx-gateway-fabric`
+- Forks `github.com/nginx/nginx-gateway-fabric` → `github.com/<alice-user-id>/nginx-gateway-fabric`
 - Adds upstream:
 
   ```shell
@@ -33,7 +33,7 @@ Below is an example of following the merge and fork process. Developer Alice:
 
 - Alice develops a feature or bugfix - using as many ephemeral branches as she needs.
 - Alice creates a
-  PR `github.com/<alice-user-id>/nginx-gateway-fabric:feature/some-feature` → `github.com/nginxinc/nginx-gateway-fabric:main`
+  PR `github.com/<alice-user-id>/nginx-gateway-fabric:feature/some-feature` → `github.com/nginx/nginx-gateway-fabric:main`
 - Alice keeps her fork up to date by running:
 
   ```shell

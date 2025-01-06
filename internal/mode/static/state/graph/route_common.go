@@ -13,11 +13,11 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	v1alpha "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	ngfSort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
-	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/kinds"
+	ngfSort "github.com/nginx/nginx-gateway-fabric/internal/mode/static/sort"
+	staticConds "github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 const wildcardHostname = "~^"
@@ -93,7 +93,7 @@ type L4RouteSpec struct {
 	// Hostnames defines a set of hostnames used to select a Route used to process the request.
 	Hostnames []v1.Hostname
 	// FIXME (sarthyparty): change to slice of BackendRef, as for now we are only supporting one BackendRef.
-	// We will eventually support multiple BackendRef https://github.com/nginxinc/nginx-gateway-fabric/issues/2184
+	// We will eventually support multiple BackendRef https://github.com/nginx/nginx-gateway-fabric/issues/2184
 	BackendRef BackendRef
 }
 

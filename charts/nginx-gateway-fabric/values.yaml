@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=values.schema.json
 
 nginxGateway:
-  # FIXME(lucacome): https://github.com/nginxinc/nginx-gateway-fabric/issues/2490
+  # FIXME(lucacome): https://github.com/nginx/nginx-gateway-fabric/issues/2490
 
   # @schema
   # const: deployment

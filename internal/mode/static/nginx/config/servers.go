@@ -8,11 +8,11 @@ import (
 	"strings"
 	gotemplate "text/template"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/nginx/config/shared"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
@@ -299,7 +299,7 @@ func createLocations(
 		for i := range extLocations {
 			// FIXME(sberman): De-dupe matches and associated locations
 			// so we don't need nginx/njs to perform unnecessary matching.
-			// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
+			// https://github.com/nginx/nginx-gateway-fabric/issues/662
 			extLocations[i].HTTPMatchKey = httpMatchKey
 			matchPairs[extLocations[i].HTTPMatchKey] = matches
 		}

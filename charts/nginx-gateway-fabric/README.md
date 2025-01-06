@@ -41,10 +41,10 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > The [Gateway API resources](https://github.com/kubernetes-sigs/gateway-api) from the standard channel must be
 > installed before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure
 > they are the correct version as supported by the NGINX Gateway Fabric -
-> [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
+> [see the Technical Specifications](https://github.com/nginx/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
 ```shell
-kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
+kubectl kustomize https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
 ```
 
 ## Requirements
@@ -136,7 +136,7 @@ Gateway Fabric - [see the Technical Specifications](../../README.md#technical-sp
 To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
+kubectl kustomize https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl apply -f -
 ```
 
 ### Upgrading the CRDs
@@ -246,7 +246,7 @@ These commands remove all the Kubernetes components associated with the release 
 To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl kustomize https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl delete -f -
+kubectl kustomize https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard | kubectl delete -f -
 ```
 
 ## Configuration

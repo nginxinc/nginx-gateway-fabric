@@ -26,7 +26,7 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.5.1
+   git clone https://github.com/nginx/nginx-gateway-fabric.git --branch v1.5.1
    cd nginx-gateway-fabric
    ```
 

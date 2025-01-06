@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestConvertMatch(t *testing.T) {

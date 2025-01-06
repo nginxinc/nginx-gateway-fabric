@@ -13,11 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
+	ngfAPI "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 const (
@@ -804,7 +804,7 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 
 	tel.SpanAttributes = setSpanAttributes(telemetry.SpanAttributes)
 
-	// FIXME(sberman): https://github.com/nginxinc/nginx-gateway-fabric/issues/2038
+	// FIXME(sberman): https://github.com/nginx/nginx-gateway-fabric/issues/2038
 	// Find a generic way to include relevant policy info at the http context so we don't need policy-specific
 	// logic in this function
 	ratioMap := make(map[string]int32)

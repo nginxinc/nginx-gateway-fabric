@@ -158,7 +158,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 
 #### Examples
 
-You can find several examples of configuration options of the `values.yaml` file in the [helm examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.5.1/examples/helm) directory.
+You can find several examples of configuration options of the `values.yaml` file in the [helm examples](https://github.com/nginx/nginx-gateway-fabric/tree/v1.5.1/examples/helm) directory.
 
 ### Access NGINX Gateway Fabric
 
@@ -179,13 +179,13 @@ To upgrade your Gateway API resources, take the following steps:
 - To upgrade the Gateway API resources, run:
 
   ```shell
-  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
+  kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
   ```
 
   or, if you installed the from the experimental channel:
 
   ```shell
-  kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
+  kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
   ```
 
 ### Upgrade NGINX Gateway Fabric CRDs
@@ -327,4 +327,4 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
 ## Additional configuration
 
-For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginxinc/nginx-gateway-fabric/blob/v1.5.1/charts/nginx-gateway-fabric/README.md#configuration).
+For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginx/nginx-gateway-fabric/blob/v1.5.1/charts/nginx-gateway-fabric/README.md#configuration).
