@@ -164,6 +164,8 @@ func validateBackendTLSCACertRef(btp *v1alpha3.BackendTLSPolicy, configMapResolv
 			path := field.NewPath("tls.cacertrefs[0]")
 			return field.Invalid(path, selectedCertRef, err.Error())
 		}
+	} else {
+		return fmt.Errorf("`%s` invalid certificate reference supported", selectedCertRef.Kind)
 	}
 	return nil
 }
