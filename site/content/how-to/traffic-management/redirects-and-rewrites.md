@@ -184,6 +184,8 @@ Using the external IP address and port for NGINX Gateway Fabric, we can send tra
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
+This example demonstrates a rewrite from `http://cafe.example.com/coffee/flavors` to `http://cafe.example.com/beans`.
+
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee/flavors
 ```
@@ -199,6 +201,8 @@ URI: /beans
 
 Other examples:
 
+This example demonstrates a rewrite from `http://cafe.example.com/coffee` to `http://cafe.example.com/beans`.
+
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
@@ -209,6 +213,8 @@ Server name: coffee-6b8b6d6486-7fc78
 ...
 URI: /beans
 ```
+
+This example demonstrates a rewrite from `http://cafe.example.com/coffee/mocha` to `http://cafe.example.com/beans` and specifies query parameters `test=v1&test=v2`.
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee/mocha\?test\=v1\&test\=v2
@@ -221,6 +227,8 @@ Server name: coffee-6db967495b-twn6x
 URI: /beans?test=v1&test=v2
 ```
 
+This example demonstrates a rewrite from `http://cafe.example.com/latte/prices` to `http://cafe.example.com/prices`.
+
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/latte/prices
 ```
@@ -231,6 +239,8 @@ Server name: coffee-6b8b6d6486-7fc78
 ...
 URI: /prices
 ```
+
+This example demonstrates a rewrite from `http://cafe.example.com/coffee/latte/prices` to `http://cafe.example.com/prices` and specifies query parameters `test=v1&test=v2`.
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/latte/prices\?test\=v1\&test\=v2
@@ -457,6 +467,8 @@ Using the external IP address and port for NGINX Gateway Fabric, we can send tra
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
+This example demonstrates a redirect from `http://cafe.example.com/tea` to `http://cafe.example.com/organic`.
+
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea --include
 ```
@@ -471,6 +483,8 @@ Location: http://cafe.example.com:8080/organic
 
 Other examples:
 
+This example demonstrates a redirect from `http://cafe.example.com/tea/type` to `http://cafe.example.com/organic/type`.
+
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type --include
 ```
@@ -480,6 +494,8 @@ HTTP/1.1 302 Moved Temporarily
 ..
 Location: http://cafe.example.com:8080/organic/type
 ```
+
+This example demonstrates a redirect from `http://cafe.example.com/tea/type` to `http://cafe.example.com/organic/type` and specifies query params `test=v1`.
 
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea/type\?test\=v1 --include
@@ -491,6 +507,8 @@ HTTP/1.1 302 Moved Temporarily
 Location: http://cafe.example.com:8080/organic/type?test=v1
 ```
 
+This example demonstrates a redirect from `http://cafe.example.com/soda` to `http://cafe.example.com/flavors`.
+
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda --include
 ```
@@ -501,6 +519,8 @@ HTTP/1.1 302 Moved Temporarily
 Location: http://cafe.example.com:8080/flavors
 ```
 
+This example demonstrates a redirect from `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors/pepsi`.
+
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi --include
 ```
@@ -510,6 +530,8 @@ HTTP/1.1 302 Moved Temporarily
 ..
 Location: http://cafe.example.com:8080/flavors
 ```
+
+This example demonstrates a redirect from `http://cafe.example.com/soda/pepsi` to `http://cafe.example.com/flavors/pepsi` and specifies query params `test=v1`.
 
 ```shell
 curl -L --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/soda/pepsi\?test\=v1 --include

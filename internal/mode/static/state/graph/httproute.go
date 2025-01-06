@@ -340,7 +340,7 @@ func validateFilterRedirect(
 			return append(allErrs, valErr)
 		}
 
-		if err := validator.ValidateRedirectPath(path); err != nil {
+		if err := validator.ValidatePath(path); err != nil {
 			valErr := field.Invalid(redirectPath.Child("path"), *redirect.Path, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
@@ -389,7 +389,7 @@ func validateFilterRewrite(
 			return append(allErrs, valErr)
 		}
 
-		if err := validator.ValidateRewritePath(path); err != nil {
+		if err := validator.ValidatePath(path); err != nil {
 			valErr := field.Invalid(rewritePath.Child("path"), *rewrite.Path, err.Error())
 			allErrs = append(allErrs, valErr)
 		}

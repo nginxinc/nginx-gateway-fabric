@@ -75,7 +75,7 @@ func TestValidateValidHeaderName(t *testing.T) {
 	)
 }
 
-func TestValidatePath(t *testing.T) {
+func TestValidatePathForFilters(t *testing.T) {
 	t.Parallel()
 	validator := validatePath
 

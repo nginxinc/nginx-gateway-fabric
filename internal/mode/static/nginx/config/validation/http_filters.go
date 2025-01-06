@@ -11,6 +11,9 @@ type HTTPURLRewriteValidator struct{}
 // which in NGINX is done with the proxy_set_header directive.
 type HTTPHeaderValidator struct{}
 
+// HTTPCommonValidator validates values for path used in filters.
+type HTTPPathValidator struct{}
+
 var supportedRedirectSchemes = map[string]struct{}{
 	"http":  {},
 	"https": {},
@@ -47,13 +50,8 @@ func (HTTPRedirectValidator) ValidateHostname(hostname string) error {
 	return validateEscapedStringNoVarExpansion(hostname, hostnameExamples)
 }
 
-// ValidateRewritePath validates a path used in a URL Rewrite filter.
-func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
-	return validatePath(path)
-}
-
-// ValidateRedirectPath validates a path used in a Request Redirect filter.
-func (HTTPRedirectValidator) ValidateRedirectPath(path string) error {
+// ValidatePath validates a path used in filters.
+func (HTTPPathValidator) ValidatePath(path string) error {
 	return validatePath(path)
 }
 

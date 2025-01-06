@@ -1274,7 +1274,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := &validationfakes.FakeHTTPFieldsValidator{}
-				validator.ValidateRedirectPathReturns(errors.New("invalid path value"))
+				validator.ValidatePathReturns(errors.New("invalid path value"))
 				return validator
 			}(),
 			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
@@ -1289,7 +1289,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := &validationfakes.FakeHTTPFieldsValidator{}
-				validator.ValidateRedirectPathReturns(errors.New("invalid path"))
+				validator.ValidatePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
 			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
@@ -1403,7 +1403,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := &validationfakes.FakeHTTPFieldsValidator{}
-				validator.ValidateRewritePathReturns(errors.New("invalid path value"))
+				validator.ValidatePathReturns(errors.New("invalid path value"))
 				return validator
 			}(),
 			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
@@ -1418,7 +1418,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := &validationfakes.FakeHTTPFieldsValidator{}
-				validator.ValidateRewritePathReturns(errors.New("invalid path"))
+				validator.ValidatePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
 			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
@@ -1434,7 +1434,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := &validationfakes.FakeHTTPFieldsValidator{}
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
-				validator.ValidateRewritePathReturns(errors.New("invalid path"))
+				validator.ValidatePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
 			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
