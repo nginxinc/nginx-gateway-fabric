@@ -39,7 +39,7 @@ repos:
           - javascript
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.63.3
+    rev: v1.63.4
     hooks:
       - id: golangci-lint-full
         name: golangci-lint-root
@@ -80,7 +80,7 @@ repos:
           - --template-files=README.md.gotmpl
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.8.0-1
+    rev: v3.10.0-2
     hooks:
       - id: shfmt-src
         args: [-w, -s, -i, "4"]
