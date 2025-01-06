@@ -138,7 +138,7 @@ func validateBackendTLSCACertRef(btp *v1alpha3.BackendTLSPolicy, configMapResolv
 	selectedCertRef := btp.Spec.Validation.CACertificateRefs[0]
 	allowedCaCertKinds := []v1.Kind{"ConfigMap", "Secret"}
 
-	if slices.Contains(allowedCaCertKinds, selectedCertRef.Kind) {
+	if !slices.Contains(allowedCaCertKinds, selectedCertRef.Kind) {
 		path := field.NewPath("tls.cacertrefs[0].kind")
 		valErr := field.NotSupported(path, btp.Spec.Validation.CACertificateRefs[0].Kind, allowedCaCertKinds)
 		return valErr
