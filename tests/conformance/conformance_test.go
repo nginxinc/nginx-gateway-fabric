@@ -45,10 +45,10 @@ func TestConformance(t *testing.T) {
 	opts.Implementation = conf_v1.Implementation{
 		Organization: "nginxinc",
 		Project:      "nginx-gateway-fabric",
-		URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
+		URL:          "https://github.com/nginx/nginx-gateway-fabric",
 		Version:      *flags.ImplementationVersion,
 		Contact: []string{
-			"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
+			"https://github.com/nginx/nginx-gateway-fabric/discussions/new/choose",
 		},
 	}
 

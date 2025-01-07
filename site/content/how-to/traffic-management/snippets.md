@@ -417,7 +417,7 @@ with the last valid configuration and an event with the error will be outputted.
 An example of an error from the NGINX Gateway Fabric `nginx-gateway` container logs:
 
 ```text
-{"level":"error","ts":"2024-10-29T22:19:41Z","logger":"eventLoop.eventHandler","msg":"Failed to update NGINX configuration","batchID":156,"error":"failed to reload NGINX: reload unsuccessful: no new NGINX worker processes started for config version 141. Please check the NGINX container logs for possible configuration issues: context deadline exceeded","stacktrace":"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static.(*eventHandlerImpl).HandleEventBatch\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/handler.go:219\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events.(*EventLoop).Start.func1.1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events/loop.go:74"}
+{"level":"error","ts":"2024-10-29T22:19:41Z","logger":"eventLoop.eventHandler","msg":"Failed to update NGINX configuration","batchID":156,"error":"failed to reload NGINX: reload unsuccessful: no new NGINX worker processes started for config version 141. Please check the NGINX container logs for possible configuration issues: context deadline exceeded","stacktrace":"github.com/nginx/nginx-gateway-fabric/internal/mode/static.(*eventHandlerImpl).HandleEventBatch\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/mode/static/handler.go:219\ngithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events.(*EventLoop).Start.func1.1\n\tgithub.com/nginxinc/nginx-gateway-fabric/internal/framework/events/loop.go:74"}
 ```
 
 An example of an error from the NGINX Gateway Fabric `nginx` container logs:
@@ -464,7 +464,7 @@ Conditions:
 ```
 
 {{< note >}} If you run into situations where an NGINX directive fails to be applied and the troubleshooting information here isn't sufficient, please create an issue in the
-[NGINX Gateway Fabric Github repository](https://github.com/nginxinc/nginx-gateway-fabric). {{< /note >}}
+[NGINX Gateway Fabric Github repository](https://github.com/nginx/nginx-gateway-fabric). {{< /note >}}
 
 ---
 

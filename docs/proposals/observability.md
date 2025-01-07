@@ -1,6 +1,6 @@
 # Enhancement Proposal-1778: Observability Policy
 
-- Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1778
+- Issue: https://github.com/nginx/nginx-gateway-fabric/issues/1778
 - Status: Completed
 
 ## Summary

@@ -49,7 +49,7 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric
+            name=ghcr.io/nginx/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
             type=schedule
@@ -62,7 +62,7 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
+            name=ghcr.io/nginx/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -126,21 +126,21 @@ jobs:
 
       - name: Run functional telemetry tests
         run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_prefix=ghcr.io/nginx/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests
 
       - name: Run functional graceful-recovery tests
         run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_prefix=ghcr.io/nginx/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=graceful-recovery GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests
 
       - name: Run functional tests
         run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_prefix=ghcr.io/nginx/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GW_SERVICE_TYPE=LoadBalancer CLUSTER_NAME=${{ github.run_id }} CI=true
         working-directory: ./tests

@@ -55,7 +55,7 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric
+            name=ghcr.io/nginx/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -68,7 +68,7 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
+            name=ghcr.io/nginx/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -78,7 +78,7 @@ jobs:
 
       - name: Generate static deployment
         run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_prefix=ghcr.io/nginx/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           make generate-static-deployment PLUS_ENABLED=${{ inputs.image == 'plus' && 'true' || 'false' }} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
@@ -147,7 +147,7 @@ jobs:
 
       - name: Setup conformance tests
         run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
+          ngf_prefix=ghcr.io/nginx/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           make helm-install-local${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}

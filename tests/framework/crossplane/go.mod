@@ -1,4 +1,4 @@
-module github.com/nginxinc/nginx-gateway-fabric/tests/framework/crossplane
+module github.com/nginx/nginx-gateway-fabric/tests/framework/crossplane
 
 go 1.23.1
 
