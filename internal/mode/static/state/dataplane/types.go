@@ -193,6 +193,8 @@ type HTTPRequestRedirectFilter struct {
 	Port *int32
 	// StatusCode is the HTTP status code of the redirect.
 	StatusCode *int
+	// Path is the path of the redirect.
+	Path *HTTPPathModifier
 }
 
 // HTTPURLRewriteFilter rewrites HTTP requests.

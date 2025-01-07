@@ -32,9 +32,9 @@ type HTTPFieldsValidator interface {
 	ValidateRedirectPort(port int32) error
 	ValidateRedirectStatusCode(statusCode int) (valid bool, supportedValues []string)
 	ValidateHostname(hostname string) error
-	ValidateRewritePath(path string) error
 	ValidateFilterHeaderName(name string) error
 	ValidateFilterHeaderValue(value string) error
+	ValidatePath(path string) error
 }
 
 // GenericValidator validates any generic values from NGF API resources from the perspective of a data-plane.

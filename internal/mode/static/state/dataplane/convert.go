@@ -47,6 +47,7 @@ func convertHTTPRequestRedirectFilter(filter *v1.HTTPRequestRedirectFilter) *HTT
 		Hostname:   (*string)(filter.Hostname),
 		Port:       (*int32)(filter.Port),
 		StatusCode: filter.StatusCode,
+		Path:       convertPathModifier(filter.Path),
 	}
 }
 
