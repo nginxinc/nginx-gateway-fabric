@@ -58,7 +58,7 @@ Kubernetes: `>= 1.25.0-0`
 To install the latest stable release of NGINX Gateway Fabric in the `nginx-gateway` namespace, run the following command:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
 ```
 
 `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
@@ -77,7 +77,7 @@ kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric -
 #### Pulling the Chart
 
 ```shell
-helm pull oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --untar
+helm pull oci://ghcr.io/nginx/charts/nginx-gateway-fabric --untar
 cd nginx-gateway-fabric
 ```
 
@@ -112,13 +112,13 @@ By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
 To use a NodePort Service instead:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
 ```
 
 To disable the creation of a Service:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
 ```
 
 ## Upgrading the Chart
@@ -159,7 +159,7 @@ Warning: kubectl apply should be used on resource created by either kubectl crea
 To upgrade the release `ngf`, run:
 
 ```shell
-helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+helm upgrade ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric -n nginx-gateway
 ```
 
 This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch, specify

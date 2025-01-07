@@ -49,7 +49,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 		cfg := setupConfig{
 			releaseName:   releaseName,
-			chartPath:     "oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric",
+			chartPath:     "oci://ghcr.io/nginx/charts/nginx-gateway-fabric",
 			gwAPIVersion:  *gatewayAPIPrevVersion,
 			deploy:        true,
 			nfr:           true,

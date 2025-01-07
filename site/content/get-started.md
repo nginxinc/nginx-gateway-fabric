@@ -115,11 +115,11 @@ kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gate
 Use `helm` to install NGINX Gateway Fabric with the following command:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
 ```
 
 ```text
-Pulled: ghcr.io/nginxinc/charts/nginx-gateway-fabric:1.5.1
+Pulled: ghcr.io/nginx/charts/nginx-gateway-fabric:1.5.1
 Digest: sha256:9bbd1a2fcbfd5407ad6be39f796f582e6263512f1f3a8969b427d39063cc6fee
 NAME: ngf
 LAST DEPLOYED: Mon Oct 21 14:45:14 2024
@@ -133,7 +133,7 @@ TEST SUITE: None
 If you installed the API resources from the experimental channel during the last step, you will need to enable the _nginxGateway.gwAPIExperimentalFeatures_ option:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false --set nginxGateway.gwAPIExperimentalFeatures.enable=true
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false --set nginxGateway.gwAPIExperimentalFeatures.enable=true
 ```
 
 {{< /note >}}
