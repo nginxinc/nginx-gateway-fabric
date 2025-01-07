@@ -359,7 +359,7 @@ If you have any issues while testing the configuration, try the following to deb
 
 {{< note >}}The entire configuration is not shown because it is subject to change. Ellipses indicate that there's configuration not shown.{{< /note >}}
 
-If your issue persists, [contact us](https://github.com/nginxinc/nginx-gateway-fabric#contacts).
+If your issue persists, [contact us](https://github.com/nginx/nginx-gateway-fabric#contacts).
 
 ## Further reading
 

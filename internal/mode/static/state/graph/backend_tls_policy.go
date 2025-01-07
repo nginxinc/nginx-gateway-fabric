@@ -7,8 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/conditions"
+	staticConds "github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 type BackendTLSPolicy struct {
@@ -73,7 +73,7 @@ func validateBackendTLSPolicy(
 	valid = true
 	ignored = false
 
-	// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
+	// FIXME (kate-osborn): https://github.com/nginx/nginx-gateway-fabric/issues/1987
 	if backendTLSPolicyAncestorsFull(backendTLSPolicy.Status.Ancestors, ctlrName) {
 		valid = false
 		ignored = true

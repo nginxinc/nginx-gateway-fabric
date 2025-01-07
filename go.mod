@@ -1,4 +1,4 @@
-module github.com/nginxinc/nginx-gateway-fabric
+module github.com/nginx/nginx-gateway-fabric
 
 go 1.23.0
 

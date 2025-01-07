@@ -16,13 +16,13 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
-	ngftypes "github.com/nginxinc/nginx-gateway-fabric/internal/framework/types"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	ngfAPI "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/kinds"
+	ngftypes "github.com/nginx/nginx-gateway-fabric/internal/framework/types"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -245,9 +245,9 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 // belong to the NGINX Gateway Fabric or an HTTPRoute that doesn't belong to any of the Gateways of the
 // NGINX Gateway Fabric. Find a way to ignore changes that don't affect the configuration and/or statuses of
 // the resources.
-// Tracking issues: https://github.com/nginxinc/nginx-gateway-fabric/issues/1123,
-// https://github.com/nginxinc/nginx-gateway-fabric/issues/1124,
-// https://github.com/nginxinc/nginx-gateway-fabric/issues/1577
+// Tracking issues: https://github.com/nginx/nginx-gateway-fabric/issues/1123,
+// https://github.com/nginx/nginx-gateway-fabric/issues/1124,
+// https://github.com/nginx/nginx-gateway-fabric/issues/1577
 
 // FIXME(pleshakov)
 // Remove CaptureUpsertChange() and CaptureDeleteChange() from ChangeProcessor and pass all changes directly to

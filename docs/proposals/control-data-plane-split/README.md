@@ -2,7 +2,7 @@
 
 This document proposes a design for separating the control and data planes.
 
-- Issue https://github.com/nginxinc/nginx-gateway-fabric/issues/1508
+- Issue https://github.com/nginx/nginx-gateway-fabric/issues/1508
 - Status: Implementable
 
 ## Background

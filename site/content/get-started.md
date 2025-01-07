@@ -8,7 +8,7 @@ docs: DOCS-000
 This is a guide for getting started with NGINX Gateway Fabric. It explains how to:
 
 - Set up a [kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/) cluster
-- Install [NGINX Gateway Fabric](https://github.com/nginxinc/nginx-gateway-fabric) with [NGINX](https://nginx.org/)
+- Install [NGINX Gateway Fabric](https://github.com/nginx/nginx-gateway-fabric) with [NGINX](https://nginx.org/)
 - Test NGINX Gateway Fabric with an example application
 
 By following the steps in order, you will finish with a functional NGINX Gateway Fabric cluster.
@@ -71,7 +71,7 @@ Thanks for using kind! 😊
 ```
 
 {{< note >}}
-If you have cloned [the NGINX Gateway Fabric repository](https://github.com/nginxinc/nginx-gateway-fabric/tree/main), you can also create a kind cluster from the root folder with the following *make* command:
+If you have cloned [the NGINX Gateway Fabric repository](https://github.com/nginx/nginx-gateway-fabric/tree/main), you can also create a kind cluster from the root folder with the following *make* command:
 
 ```shell
 make create-kind-cluster
@@ -88,7 +88,7 @@ make create-kind-cluster
 Use `kubectl` to add the API resources for NGINX Gateway Fabric with the following command:
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
+kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
 ```
 
 ```text
@@ -103,7 +103,7 @@ customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking
 To use experimental features, you'll need to install the API resources from the experimental channel instead.
 
 ```shell
-kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
+kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
 ```
 
 {{< /note >}}
@@ -199,7 +199,7 @@ If you are making customizations, ensure your `labels:` and `selectors:` also ma
 In the previous section, you deployed NGINX Gateway Fabric to a local cluster. This section shows you how to deploy a simple web application to test that NGINX Gateway Fabric works.
 
 {{< note >}}
-The YAML code in the following sections can be found in the [cafe-example folder](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples/cafe-example) of the GitHub repository.
+The YAML code in the following sections can be found in the [cafe-example folder](https://github.com/nginx/nginx-gateway-fabric/tree/main/examples/cafe-example) of the GitHub repository.
 {{< /note >}}
 
 ---

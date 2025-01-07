@@ -5,10 +5,10 @@ type: application
 version: 1.5.1
 appVersion: "edge"
 kubeVersion: ">= 1.25.0-0"
-home: https://github.com/nginxinc/nginx-gateway-fabric
+home: https://github.com/nginx/nginx-gateway-fabric
 icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/charts/nginx-gateway-fabric/chart-icon.png
 sources:
-  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/charts/nginx-gateway-fabric
+  - https://github.com/nginx/nginx-gateway-fabric/tree/main/charts/nginx-gateway-fabric
 keywords:
   - kubernetes
   - gateway

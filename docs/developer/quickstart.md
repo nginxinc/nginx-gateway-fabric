@@ -50,7 +50,7 @@ Follow these steps to set up your development environment.
    brew install pre-commit
    ```
 
-2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
+2. [Fork the project repository](https://github.com/nginx/nginx-gateway-fabric/fork)
 3. Clone your repository with ssh, and install the project dependencies:
 
    ```shell
