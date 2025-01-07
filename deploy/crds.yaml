@@ -874,6 +874,9 @@ spec:
                   TargetRefs identifies the API object(s) to apply the policy to.
                   Objects must be in the same namespace as the policy.
                   Support: HTTPRoute, GRPCRoute.
+
+                  TargetRefs must be _distinct_. This means that the multi-part key defined by `kind` and `name` must
+                  be unique across all targetRef entries in the ObservabilityPolicy.
                 items:
                   description: |-
                     LocalPolicyTargetReference identifies an API object to apply a direct or
@@ -909,8 +912,11 @@ spec:
                 x-kubernetes-validations:
                 - message: 'TargetRef Kind must be: HTTPRoute or GRPCRoute'
                   rule: (self.exists(t, t.kind=='HTTPRoute') || self.exists(t, t.kind=='GRPCRoute'))
-                - message: TargetRef Group must be gateway.networking.k8s.io.
+                - message: TargetRef Group must be gateway.networking.k8s.io
                   rule: self.all(t, t.group=='gateway.networking.k8s.io')
+                - message: TargetRef Kind and Name combination must be unique
+                  rule: self.all(p1, self.exists_one(p2, (p1.name == p2.name) && (p1.kind
+                    == p2.kind)))
               tracing:
                 description: Tracing allows for enabling and configuring tracing.
                 properties:
@@ -1574,6 +1580,8 @@ spec:
                   TargetRefs identifies API object(s) to apply the policy to.
                   Objects must be in the same namespace as the policy.
                   Support: Service
+
+                  TargetRefs must be _distinct_. The `name` field must be unique for all targetRef entries in the UpstreamSettingsPolicy.
                 items:
                   description: |-
                     LocalPolicyTargetReference identifies an API object to apply a direct or
@@ -1611,6 +1619,8 @@ spec:
                   rule: self.all(t, t.kind=='Service')
                 - message: TargetRefs Group must be core
                   rule: self.exists(t, t.group=='') || self.exists(t, t.group=='core')
+                - message: TargetRef Name must be unique
+                  rule: self.all(p1, self.exists_one(p2, p1.name == p2.name))
               zoneSize:
                 description: |-
                   ZoneSize is the size of the shared memory zone used by the upstream. This memory zone is used to share

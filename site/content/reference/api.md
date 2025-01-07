@@ -465,6 +465,8 @@ Tracing
 <p>TargetRefs identifies the API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
 Support: HTTPRoute, GRPCRoute.</p>
+<p>TargetRefs must be <em>distinct</em>. This means that the multi-part key defined by <code>kind</code> and <code>name</code> must
+be unique across all targetRef entries in the ObservabilityPolicy.</p>
 </td>
 </tr>
 </table>
@@ -683,6 +685,7 @@ UpstreamKeepAlive
 <p>TargetRefs identifies API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
 Support: Service</p>
+<p>TargetRefs must be <em>distinct</em>. The <code>name</code> field must be unique for all targetRef entries in the UpstreamSettingsPolicy.</p>
 </td>
 </tr>
 </table>
@@ -1530,6 +1533,8 @@ Tracing
 <p>TargetRefs identifies the API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
 Support: HTTPRoute, GRPCRoute.</p>
+<p>TargetRefs must be <em>distinct</em>. This means that the multi-part key defined by <code>kind</code> and <code>name</code> must
+be unique across all targetRef entries in the ObservabilityPolicy.</p>
 </td>
 </tr>
 </tbody>
@@ -2290,6 +2295,7 @@ UpstreamKeepAlive
 <p>TargetRefs identifies API object(s) to apply the policy to.
 Objects must be in the same namespace as the policy.
 Support: Service</p>
+<p>TargetRefs must be <em>distinct</em>. The <code>name</code> field must be unique for all targetRef entries in the UpstreamSettingsPolicy.</p>
 </td>
 </tr>
 </tbody>
