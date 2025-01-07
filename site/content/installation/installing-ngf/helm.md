@@ -58,7 +58,7 @@ The following steps install NGINX Gateway Fabric directly from the OCI helm regi
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
 ```
 
 {{% /tab %}}
@@ -70,7 +70,7 @@ helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-nam
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
 ```
 
 {{% /tab %}}
@@ -136,13 +136,13 @@ By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
 To use a NodePort Service instead:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
 ```
 
 To disable the creation of a Service:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
 ```
 
 #### Experimental features
@@ -151,7 +151,7 @@ We support a subset of the additional features provided by the Gateway API exper
 experimental features of Gateway API which are supported by NGINX Gateway Fabric:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.gwAPIExperimentalFeatures.enable=true
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.gwAPIExperimentalFeatures.enable=true
 ```
 
 {{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
@@ -199,7 +199,7 @@ To upgrade the CRDs, take the following steps:
 2. Upgrade the CRDs:
 
    ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
    ```
 
    {{<note>}}Ignore the following warning, as it is expected.{{</note>}}
@@ -220,7 +220,7 @@ There are two possible ways to upgrade NGINX Gateway Fabric. You can either upgr
 - To upgrade to the latest stable release of NGINX Gateway Fabric, run:
 
   ```shell
-  helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+  helm upgrade ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric -n nginx-gateway
   ```
 
   If needed, replace `ngf` with your chosen release name.
@@ -246,7 +246,7 @@ There are two possible ways to upgrade NGINX Gateway Fabric. You can either upgr
   {{< important >}}Ensure that you [Create the required JWT Secrets]({{< relref "installation/nginx-plus-jwt.md" >}}) before installing.{{< /important >}}
 
   ```shell
-  helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
+  helm upgrade ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret -n nginx-gateway
   ```
 
   If needed, replace `ngf` with your chosen release name.
@@ -318,7 +318,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
      ```shell
      kubectl delete ns nginx-gateway
-     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
+     kubectl delete -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
      ```
 
 3. **Remove the Gateway API resources:**
