@@ -267,7 +267,7 @@ To enable tracing for the coffee HTTPRoute, create the following policy:
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.nginx.org/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha2
 kind: ObservabilityPolicy
 metadata:
   name: coffee
