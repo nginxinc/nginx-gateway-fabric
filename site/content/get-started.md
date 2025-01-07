@@ -208,7 +208,7 @@ The YAML code in the following sections can be found in the [cafe-example folder
 
 Create the file _cafe.yaml_ with the following contents:
 
-{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml`>}}
+{{< ghcode `https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe.yaml`>}}
 
 Apply it using `kubectl`:
 
@@ -241,7 +241,7 @@ tea-7b7d6c947d-d4qcf      1/1     Running   0          10s
 
 Create the file _gateway.yaml_ with the following contents:
 
-{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml`>}}
+{{< ghcode `https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/gateway.yaml`>}}
 
 Apply it using `kubectl`:
 
@@ -255,7 +255,7 @@ gateway.gateway.networking.k8s.io/gateway created
 
 Create the file _cafe-routes.yaml_ with the following contents:
 
-{{< ghcode `https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml`>}}
+{{< ghcode `https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/refs/heads/main/examples/cafe-example/cafe-routes.yaml`>}}
 
 Apply it using `kubectl`:
 

@@ -27,7 +27,7 @@ jobs:
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       packages: write # for docker/build-push-action to push to GHCR
       id-token: write # for docker/login to login to NGINX registry
-    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'kic-plus' || 'ubuntu-24.04' }}
+    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'nginx-plus' || 'ubuntu-24.04' }}
     services:
       registry:
         image: registry:2
@@ -123,7 +123,7 @@ jobs:
           annotations: |
             org.opencontainers.image.documentation=https://docs.nginx.com/nginx-gateway-fabric
             org.opencontainers.image.vendor=NGINX Inc <kubernetes@nginx.com>
-            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/README.md
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/main/README.md
             io.artifacthub.package.logo-url=https://docs.nginx.com/nginx-gateway-fabric/images/icons/NGINX-product-icon.svg
             io.artifacthub.package.maintainers=[{"name":"NGINX Inc","email":"kubernetes@nginx.com"}]
             io.artifacthub.package.license=Apache-2.0

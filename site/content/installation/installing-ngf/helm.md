@@ -199,7 +199,7 @@ To upgrade the CRDs, take the following steps:
 2. Upgrade the CRDs:
 
    ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
    ```
 
    {{<note>}}Ignore the following warning, as it is expected.{{</note>}}
@@ -318,7 +318,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
      ```shell
      kubectl delete ns nginx-gateway
-     kubectl delete -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
+     kubectl delete -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
      ```
 
 3. **Remove the Gateway API resources:**

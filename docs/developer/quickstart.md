@@ -73,7 +73,7 @@ Follow these steps to set up your development environment.
 4. Finally, add the original project repository as the remote upstream:
 
    ```shell
-   git remote add upstream git@github.com:nginxinc/nginx-gateway-fabric.git
+   git remote add upstream git@github.com:nginx/nginx-gateway-fabric.git
    ```
 
 
