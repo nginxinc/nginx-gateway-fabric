@@ -264,7 +264,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginx.debug` | Enable debugging for NGINX. Uses the nginx-debug binary. The NGINX error log level should be set to debug in the NginxProxy resource. | bool | `false` |
 | `nginx.extraVolumeMounts` | extraVolumeMounts are the additional volume mounts for the nginx container. | list | `[]` |
 | `nginx.image.pullPolicy` |  | string | `"Always"` |
-| `nginx.image.repository` | The NGINX image to use. | string | `"ghcr.io/nginxinc/nginx-gateway-fabric/nginx"` |
+| `nginx.image.repository` | The NGINX image to use. | string | `"ghcr.io/nginx/nginx-gateway-fabric/nginx"` |
 | `nginx.image.tag` |  | string | `"edge"` |
 | `nginx.lifecycle` | The lifecycle of the nginx container. | object | `{}` |
 | `nginx.plus` | Is NGINX Plus image being used | bool | `false` |
@@ -282,7 +282,7 @@ The following table lists the configurable parameters of the NGINX Gateway Fabri
 | `nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org. | string | `"gateway.nginx.org/nginx-gateway-controller"` |
 | `nginxGateway.gwAPIExperimentalFeatures.enable` | Enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric. Requires the Gateway APIs installed from the experimental channel. | bool | `false` |
 | `nginxGateway.image.pullPolicy` |  | string | `"Always"` |
-| `nginxGateway.image.repository` | The NGINX Gateway Fabric image to use | string | `"ghcr.io/nginxinc/nginx-gateway-fabric"` |
+| `nginxGateway.image.repository` | The NGINX Gateway Fabric image to use | string | `"ghcr.io/nginx/nginx-gateway-fabric"` |
 | `nginxGateway.image.tag` |  | string | `"edge"` |
 | `nginxGateway.kind` | The kind of the NGINX Gateway Fabric installation - currently, only deployment is supported. | string | `"deployment"` |
 | `nginxGateway.leaderElection.enable` | Enable leader election. Leader election is used to avoid multiple replicas of the NGINX Gateway Fabric reporting the status of the Gateway API resources. If not enabled, all replicas of NGINX Gateway Fabric will update the statuses of the Gateway API resources. | bool | `true` |

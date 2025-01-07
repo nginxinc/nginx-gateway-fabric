@@ -95,7 +95,7 @@ For example to retrieve the SBOM for `linux/amd64` and analyze it using [grype](
 can run the following command:
 
 ```shell
-docker buildx imagetools inspect ghcr.io/nginxinc/nginx-gateway-fabric:edge --format '{{ json (index .SBOM "linux/amd64").SPDX }}' | grype
+docker buildx imagetools inspect ghcr.io/nginx/nginx-gateway-fabric:edge --format '{{ json (index .SBOM "linux/amd64").SPDX }}' | grype
 ```
 
 ## Troubleshooting
