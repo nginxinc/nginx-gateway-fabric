@@ -92,7 +92,7 @@ The span attribute will be added to all tracing spans.
 To install:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway -f values.yaml
+helm install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway -f values.yaml
 ```
 
 You should see the following configuration:
