@@ -28,6 +28,8 @@ This guide will show you how to use the `UpstreamSettingsPolicy` API to configur
 
 For all the possible configuration options for `UpstreamSettingsPolicy`, see the [API reference]({{< relref "reference/api.md" >}}).
 
+---
+
 ## Before you begin
 
 - [Install]({{< relref "/installation/" >}}) NGINX Gateway Fabric.
@@ -39,6 +41,8 @@ For all the possible configuration options for `UpstreamSettingsPolicy`, see the
   ```
 
   {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
+
+---
 
 ## Setup
 
@@ -221,6 +225,8 @@ This request should receive a response from the `tea` Pod:
 Server address: 10.244.0.9:8080
 Server name: tea-76c7c85bbd-cf8nz
 ```
+
+---
 
 ## Configure upstream zone size
 
