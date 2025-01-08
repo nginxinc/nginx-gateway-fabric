@@ -8,6 +8,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	ngfAPIv1alpha1 "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
 	ngfAPIv1alpha2 "github.com/nginx/nginx-gateway-fabric/apis/v1alpha2"
 	"github.com/nginx/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginx/nginx-gateway-fabric/internal/framework/helpers"
@@ -38,7 +39,7 @@ func createValidPolicy() *ngfAPIv1alpha2.ObservabilityPolicy {
 				Strategy: ngfAPIv1alpha2.TraceStrategyRatio,
 				Context:  helpers.GetPointer(ngfAPIv1alpha2.TraceContextExtract),
 				SpanName: helpers.GetPointer("spanName"),
-				SpanAttributes: []ngfAPIv1alpha2.SpanAttribute{
+				SpanAttributes: []ngfAPIv1alpha1.SpanAttribute{
 					{Key: "key", Value: "value"},
 				},
 			},

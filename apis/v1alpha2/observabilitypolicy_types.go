@@ -3,6 +3,8 @@ package v1alpha2
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	ngfAPIv1alpha1 "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
 )
 
 // +genclient
@@ -100,7 +102,7 @@ type Tracing struct {
 	// +listType=map
 	// +listMapKey=key
 	// +kubebuilder:validation:MaxItems=64
-	SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
+	SpanAttributes []ngfAPIv1alpha1.SpanAttribute `json:"spanAttributes,omitempty"`
 }
 
 // TraceStrategy defines the tracing strategy.

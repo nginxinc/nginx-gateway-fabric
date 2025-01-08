@@ -162,7 +162,7 @@ func TestGenerate(t *testing.T) {
 			policy: &ngfAPIv1alpha2.ObservabilityPolicy{
 				Spec: ngfAPIv1alpha2.ObservabilityPolicySpec{
 					Tracing: &ngfAPIv1alpha2.Tracing{
-						SpanAttributes: []ngfAPIv1alpha2.SpanAttribute{
+						SpanAttributes: []ngfAPIv1alpha1.SpanAttribute{
 							{Key: "test-key", Value: "test-value"},
 						},
 					},
@@ -212,7 +212,7 @@ func TestGenerate(t *testing.T) {
 						Strategy: ngfAPIv1alpha2.TraceStrategyRatio,
 						Context:  context,
 						SpanName: spanName,
-						SpanAttributes: []ngfAPIv1alpha2.SpanAttribute{
+						SpanAttributes: []ngfAPIv1alpha1.SpanAttribute{
 							{Key: "test-key", Value: "test-value"},
 						},
 					},

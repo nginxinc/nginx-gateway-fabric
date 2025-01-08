@@ -1829,7 +1829,8 @@ and the status of the SnippetsFilter with respect to each controller.</p>
 <p>
 (<em>Appears on: </em>
 <a href="#gateway.nginx.org/v1alpha1.Telemetry">Telemetry</a>,
-<a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>)
+<a href="#gateway.nginx.org/v1alpha1.Tracing">Tracing</a>,
+<a href="#gateway.nginx.org/v1alpha2.Tracing">Tracing</a>)
 </p>
 <p>
 <p>SpanAttribute is a key value pair to be added to a tracing span.</p>
@@ -2419,15 +2420,6 @@ sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus
 </tr>
 </tbody>
 </table>
-<h3 id="gateway.nginx.org/v1alpha2.Duration">Duration
-(<code>string</code> alias)</p><a class="headerlink" href="#gateway.nginx.org%2fv1alpha2.Duration" title="Permanent link">¶</a>
-</h3>
-<p>
-<p>Duration is a string value representing a duration in time.
-Duration can be specified in milliseconds (ms), seconds (s), minutes (m), hours (h).
-A value without a suffix is seconds.
-Examples: 120s, 50ms, 5m, 1h.</p>
-</p>
 <h3 id="gateway.nginx.org/v1alpha2.ObservabilityPolicySpec">ObservabilityPolicySpec
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha2.ObservabilityPolicySpec" title="Permanent link">¶</a>
 </h3>
@@ -2475,50 +2467,6 @@ Objects must be in the same namespace as the policy.
 Support: HTTPRoute, GRPCRoute.</p>
 <p>TargetRefs must be <em>distinct</em>. This means that the multi-part key defined by <code>kind</code> and <code>name</code> must
 be unique across all targetRef entries in the ObservabilityPolicy.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="gateway.nginx.org/v1alpha2.SpanAttribute">SpanAttribute
-<a class="headerlink" href="#gateway.nginx.org%2fv1alpha2.SpanAttribute" title="Permanent link">¶</a>
-</h3>
-<p>
-(<em>Appears on: </em>
-<a href="#gateway.nginx.org/v1alpha2.Tracing">Tracing</a>)
-</p>
-<p>
-<p>SpanAttribute is a key value pair to be added to a tracing span.</p>
-</p>
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>key</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Key is the key for a span attribute.
-Format: must have all &lsquo;&ldquo;&rsquo; escaped and must not contain any &lsquo;$&rsquo; or end with an unescaped &lsquo;\&rsquo;</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>value</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Value is the value for a span attribute.
-Format: must have all &lsquo;&ldquo;&rsquo; escaped and must not contain any &lsquo;$&rsquo; or end with an unescaped &lsquo;\&rsquo;</p>
 </td>
 </tr>
 </tbody>
@@ -2659,7 +2607,7 @@ Examples of invalid names: some-$value, quoted-&ldquo;value&rdquo;-name, unescap
 <td>
 <code>spanAttributes</code><br/>
 <em>
-<a href="#gateway.nginx.org/v1alpha2.SpanAttribute">
+<a href="#gateway.nginx.org/v1alpha1.SpanAttribute">
 []SpanAttribute
 </a>
 </em>
