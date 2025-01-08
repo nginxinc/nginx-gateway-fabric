@@ -8,7 +8,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	ngfAPI "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
+	ngfAPIv1alpha2 "github.com/nginx/nginx-gateway-fabric/apis/v1alpha2"
 	"github.com/nginx/nginx-gateway-fabric/internal/framework/kinds"
 )
 
@@ -90,7 +90,7 @@ func TestNGFPolicyAncestorsFull(t *testing.T) {
 		}
 
 		return &Policy{
-			Source: &ngfAPI.ObservabilityPolicy{
+			Source: &ngfAPIv1alpha2.ObservabilityPolicy{
 				Status: v1alpha2.PolicyStatus{
 					Ancestors: currAncestors,
 				},
