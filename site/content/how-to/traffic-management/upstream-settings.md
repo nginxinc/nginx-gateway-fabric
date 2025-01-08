@@ -40,6 +40,12 @@ For all the possible configuration options for `UpstreamSettingsPolicy`, see the
   GW_PORT=<port number>
   ```
 
+- Lookup the name of the NGINX Gateway Fabric pod and save into shell variable:
+
+  ```text
+  NGF_POD_NAME=<NGF Pod>
+  ```
+
   {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
 
 ---
@@ -279,14 +285,7 @@ Status:
 Events:                      <none>
 ```
 
-Next, verify that the policy has been applied to the `coffee` and `tea` upstreams by inspecting the NGINX configuration.
-To do this, first save the NGINX Gateway Fabric pod name in a shell variable:
-
-```shell
-NGF_POD_NAME=<NGF Pod>
-```
-
-Then, exec into the pod and print the NGINX configuration:
+Next, verify that the policy has been applied to the `coffee` and `tea` upstreams by inspecting the NGINX configuration:
 
 ```shell
 kubectl exec -it -n nginx-gateway $NGF_POD_NAME -c nginx -- nginx -T
@@ -359,14 +358,7 @@ Status:
 Events:                      <none>
 ```
 
-Next, verify that the policy has been applied to the `coffee` upstreams, by inspecting the NGINX configuration.
-To do this, first save the NGINX Gateway Fabric pod name in a shell variable:
-
-```shell
-NGF_POD_NAME=<NGF Pod>
-```
-
-Then, exec into the pod and print the NGINX configuration:
+Next, verify that the policy has been applied to the `coffee` upstreams, by inspecting the NGINX configuration:
 
 ```shell
 kubectl exec -it -n nginx-gateway $NGF_POD_NAME -c nginx -- nginx -T
