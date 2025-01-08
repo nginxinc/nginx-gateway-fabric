@@ -387,6 +387,8 @@ upstream default_tea_80 {
 }
 ```
 
+---
+
 ## Further reading
 
 - [Custom policies]({{< relref "overview/custom-policies.md" >}}): learn about how NGINX Gateway Fabric custom policies work.
