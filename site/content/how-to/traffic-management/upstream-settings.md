@@ -273,7 +273,7 @@ Status:
 Events:                      <none>
 ```
 
-Next, verify that the policy has been applied to the `coffee` and `tea` upstreams, by inspecting the NGINX configuration.
+Next, verify that the policy has been applied to the `coffee` and `tea` upstreams by inspecting the NGINX configuration.
 To do this, first save the NGINX Gateway Fabric pod name in a shell variable:
 
 ```shell
