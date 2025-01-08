@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	keepAliveTime    = 10 * time.Second
+	keepAliveTime    = 15 * time.Second
 	keepAliveTimeout = 10 * time.Second
 )
 
