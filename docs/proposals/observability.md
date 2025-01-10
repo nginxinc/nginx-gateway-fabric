@@ -148,7 +148,7 @@ type SpanAttribute struct {
 Below is an example YAML version of an `ObservabilityPolicy`:
 
 ```yaml
-apiVersion: gateway.nginx.org/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha2
 kind: ObservabilityPolicy
 metadata:
   name: example-observability-policy

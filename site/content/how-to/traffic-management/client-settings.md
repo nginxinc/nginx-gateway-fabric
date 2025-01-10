@@ -19,7 +19,7 @@ The settings in `ClientSettingsPolicy` correspond to the following NGINX directi
 - [`keepalive_time`](<https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time>)
 - [`keepalive_timeout`](<https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout>)
 
-`ClientSettingsPolicy` is an [Inherited PolicyAttachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that can be applied to a Gateway, HTTPRoute, or GRPCRoute in the same namespace as the `ClientSettingsPolicy`.
+`ClientSettingsPolicy` is an [Inherited Policy Attachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) that can be applied to a Gateway, HTTPRoute, or GRPCRoute in the same namespace as the `ClientSettingsPolicy`.
 
 When applied to a Gateway, the settings specified in the `ClientSettingsPolicy` affect all HTTPRoutes and GRPCRoutes attached to the Gateway. This allows Cluster Operators to set defaults for all applications using the Gateway.
 
