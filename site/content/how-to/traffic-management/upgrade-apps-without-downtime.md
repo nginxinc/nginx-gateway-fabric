@@ -1,7 +1,7 @@
 ---
 title: "Upgrade applications without downtime"
-weight: 100
 toc: true
+weight: 300
 type: how-to
 product: NGF
 docs: "DOCS-1420"

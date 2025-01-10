@@ -1,7 +1,7 @@
 ---
 title: "Application routes using HTTP matching conditions"
 toc: true
-weight: 300
+weight: 200
 type: how-to
 product: NGF
 docs: DOCS-1422

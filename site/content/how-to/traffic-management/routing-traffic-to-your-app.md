@@ -1,7 +1,7 @@
 ---
 title: "Routing traffic to applications"
 toc: true
-weight: 200
+weight: 100
 type: how-to
 product: NGF
 docs: DOCS-1426
