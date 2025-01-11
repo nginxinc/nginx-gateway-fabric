@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/telemetry"
-	telemetrya "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
+	telemetrya "github.com/nginx/telemetry-exporter/pkg/telemetry"
 )
 
 type FakeExporter struct {
