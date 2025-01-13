@@ -80,7 +80,9 @@ func (in *ObservabilityPolicySpec) DeepCopyInto(out *ObservabilityPolicySpec) {
 	if in.TargetRefs != nil {
 		in, out := &in.TargetRefs, &out.TargetRefs
 		*out = make([]apisv1alpha2.LocalPolicyTargetReference, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
