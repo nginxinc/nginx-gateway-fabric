@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,22 +21,13 @@ type FirstEventBatchPreparer interface {
 	Prepare(ctx context.Context) (EventBatch, error)
 }
 
-//counterfeiter:generate . Reader
-
-// Reader allows getting and listing resources from a cache.
-// This interface is introduced for testing to mock the methods from
-// sigs.k8s.io/controller-runtime/pkg/client.Reader.
-type Reader interface {
-	client.Reader
-}
-
 // EachListItemFunc lists each item of a client.ObjectList.
 // It is from k8s.io/apimachinery/pkg/api/meta.
 type EachListItemFunc func(obj runtime.Object, fn func(runtime.Object) error) error
 
 // FirstEventBatchPreparerImpl is an implementation of FirstEventBatchPreparer.
 type FirstEventBatchPreparerImpl struct {
-	reader       Reader
+	reader       kubernetes.Reader
 	eachListItem EachListItemFunc
 	objects      []client.Object
 	objectLists  []client.ObjectList
@@ -48,7 +40,7 @@ type FirstEventBatchPreparerImpl struct {
 // For each list from objectLists, FirstEventBatchPreparerImpl will list the resources of the corresponding type from
 // the reader.
 func NewFirstEventBatchPreparerImpl(
-	reader Reader,
+	reader kubernetes.Reader,
 	objects []client.Object,
 	objectLists []client.ObjectList,
 ) *FirstEventBatchPreparerImpl {
