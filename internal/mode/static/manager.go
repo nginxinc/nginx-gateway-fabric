@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	tel "github.com/nginx/telemetry-exporter/pkg/telemetry"
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	appsv1 "k8s.io/api/apps/v1"

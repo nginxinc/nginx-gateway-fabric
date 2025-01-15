@@ -43,7 +43,7 @@ func TestConformance(t *testing.T) {
 
 	opts := conformance.DefaultOptions(t)
 	opts.Implementation = conf_v1.Implementation{
-		Organization: "nginx",
+		Organization: "nginxinc",
 		Project:      "nginx-gateway-fabric",
 		URL:          "https://github.com/nginx/nginx-gateway-fabric",
 		Version:      *flags.ImplementationVersion,

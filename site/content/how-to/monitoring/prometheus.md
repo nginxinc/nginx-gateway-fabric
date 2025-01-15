@@ -72,7 +72,7 @@ NGINX Gateway Fabric provides a variety of metrics for monitoring and analyzing 
 
 ### NGINX/NGINX Plus metrics
 
-NGINX metrics cover specific NGINX operations such as the total number of accepted client connections. For a complete list of available NGINX/NGINX Plus metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginx/nginx-prometheus-exporter#exported-metrics).
+NGINX metrics cover specific NGINX operations such as the total number of accepted client connections. For a complete list of available NGINX/NGINX Plus metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#exported-metrics).
 
 These metrics use the `nginx_gateway_fabric` namespace and include the `class` label, indicating the NGINX Gateway class. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
 
