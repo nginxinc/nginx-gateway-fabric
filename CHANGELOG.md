@@ -6,50 +6,44 @@ and includes links to all PRs that went into the release.
 
 ## Release 1.6.0
 
-* NGINX Plus R33 support by @sjberman in https://github.com/nginx/nginx-gateway-fabric/pull/2760
-* Update ObservabilityPolicy API to have minimum one target ref by @salonichf5 in https://github.com/nginx/nginx-gateway-fabric/pull/2753
-* Use state file for updating N+ upstreams by @sjberman in https://github.com/nginx/nginx-gateway-fabric/pull/2897
-* Add guide for UpstreamSettingsPolicy by @kate-osborn in https://github.com/nginx/nginx-gateway-fabric/pull/2987
-
-%%DATE%%
+_January 15, 2025_
 
 FEATURES:
 
--
+- Add UpstreamSetttingsPolicy. [2941](https://github.com/nginx/nginx-gateway-fabric/pull/2941)
+- Add path support for RequestRedirect Filter. [2979](https://github.com/nginx/nginx-gateway-fabric/pull/2979)
 
 BUG FIXES:
 
--
+- Fix rewrite path for ReplacePrefixMatch to parse request arguments correctly. [2951](https://github.com/nginx/nginx-gateway-fabric/pull/2951)
 
 DOCUMENTATION:
 
--
+- Docs: Update support referencing support package tool. [2789](https://github.com/nginx/nginx-gateway-fabric/pull/2789). Thanks to [mrajagopal](https://github.com/mrajagopal).
+- Add guide for UpstreamSettingsPolicy. [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.6.0
--
 
 UPGRADE:
 
--
-
-KNOWN ISSUES:
-
--
+- The Gateway API version has been updated to 1.2.1. [2868](https://github.com/nginx/nginx-gateway-fabric/pull/2868)
+- ObservabilityPolicy API version has been increased to `v1alpha2` due to a strengthening of validation rules. [2998](https://github.com/nginx/nginx-gateway-fabric/pull/2998)
 
 COMPATIBILITY:
 
-- Gateway API version: ``
-- NGINX version: ``
-- NGINX Plus version: ``
-- Kubernetes version: ``
+- Gateway API version: `1.2.1`
+- NGINX version: `1.27.3`
+- NGINX Plus version: `R33`
+- Kubernetes version: `1.25+`
 
 CONTAINER IMAGES:
 
 - Control plane: `ghcr.io/nginx/nginx-gateway-fabric:1.6.0`
 - Data plane: `ghcr.io/nginx/nginx-gateway-fabric/nginx:1.6.0`
 - Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.6.0`
+
 ## Release 1.5.1
 
 _December 16, 2024_
