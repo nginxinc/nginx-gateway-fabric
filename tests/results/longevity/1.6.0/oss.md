@@ -93,5 +93,5 @@ Reload time distribution - counts:
 ## Comparison with previous results
 
 Graphs look similar to 1.5.0 results. There is a color change swap in a few graphs which is a little confusing.
-NGINX container memory increased dramatically. NGINX Stub Status graph is confusing to interpret, which can make it seem
+NGINX container memory decreased dramatically. NGINX Stub Status graph is confusing to interpret, which can make it seem
 quite different to the 1.5.0 results, but it is similar, only with an increase in requests.

@@ -116,8 +116,8 @@ Reload time distribution - counts:
 
 ## Comparison with previous results
 
-Graphs look similar to 1.4.0 results. CPU usage increased slightly. There was a noticeable error sometime two days in
-where memory usage dipped heavily and so did the NGINX plus status, which could a test error instead of product error.
+Graphs look similar to 1.5.0 results. CPU usage increased slightly. There was a noticeable error sometime two days in
+where memory usage dipped heavily and so did the NGINX plus status, which could be a test error instead of product error.
 There looked to be a reload event where past results didn't have one. NGINX errors differ from previous results errors but
-are consistent with errors seen in the 1.6.0 test suite. NGF error is something to keep an eye on. The NGINX errors did not coincide
+are consistent with errors seen in the 1.5.0 test suite. NGF error is something to keep an eye on. The NGINX errors did not coincide
 with the abnormalities on any of the graphs.
