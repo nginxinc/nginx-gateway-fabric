@@ -4,6 +4,49 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginx/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.6.0
+
+_January 15, 2025_
+
+FEATURES:
+
+- Add UpstreamSettingsPolicy to allow users to configure upstream settings for Services. [2941](https://github.com/nginx/nginx-gateway-fabric/pull/2941)
+- Add path support for RequestRedirect Filter. [2979](https://github.com/nginx/nginx-gateway-fabric/pull/2979)
+- Use state files for NGINX Plus upstream servers instead of the NGINX config. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
+
+BUG FIXES:
+
+- Fix rewrite path for ReplacePrefixMatch to parse request arguments correctly. [2951](https://github.com/nginx/nginx-gateway-fabric/pull/2951)
+- Fix an issue where updating upstreams with the NGINX Plus API would not occur if metrics were disabled. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
+- Support updating stream upstreams with the NGINX Plus API instead of reloading NGINX. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
+
+DOCUMENTATION:
+
+- Docs: Update support referencing support package tool. [2789](https://github.com/nginx/nginx-gateway-fabric/pull/2789). Thanks to [mrajagopal](https://github.com/mrajagopal).
+- Add how-to guide for configuring upstream settings for services using the UpstreamSettingsPolicy API. Find it [here](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/upstream-settings/). [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.6.0
+
+UPGRADE:
+
+- The Gateway API version has been updated to 1.2.1. [2868](https://github.com/nginx/nginx-gateway-fabric/pull/2868)
+- ObservabilityPolicy API version has been increased to `v1alpha2` due to a strengthening of validation rules. [2998](https://github.com/nginx/nginx-gateway-fabric/pull/2998)
+
+COMPATIBILITY:
+
+- Gateway API version: `1.2.1`
+- NGINX version: `1.27.3`
+- NGINX Plus version: `R33`
+- Kubernetes version: `1.25+`
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginx/nginx-gateway-fabric:1.6.0`
+- Data plane: `ghcr.io/nginx/nginx-gateway-fabric/nginx:1.6.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.6.0`
+
 ## Release 1.5.1
 
 _December 16, 2024_
