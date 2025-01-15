@@ -10,17 +10,20 @@ _January 15, 2025_
 
 FEATURES:
 
-- Add UpstreamSetttingsPolicy. [2941](https://github.com/nginx/nginx-gateway-fabric/pull/2941)
+- Add UpstreamSettingsPolicy to allow users to configure upstream settings for Services. [2941](https://github.com/nginx/nginx-gateway-fabric/pull/2941)
 - Add path support for RequestRedirect Filter. [2979](https://github.com/nginx/nginx-gateway-fabric/pull/2979)
+- Use state files for NGINX Plus upstream servers instead of the NGINX config. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
 
 BUG FIXES:
 
 - Fix rewrite path for ReplacePrefixMatch to parse request arguments correctly. [2951](https://github.com/nginx/nginx-gateway-fabric/pull/2951)
+- Fix an issue where updating upstreams with the NGINX Plus API would not occur if metrics were disabled. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
+- Support updating stream upstreams with the NGINX Plus API instead of reloading NGINX. [2897](https://github.com/nginx/nginx-gateway-fabric/pull/2897)
 
 DOCUMENTATION:
 
 - Docs: Update support referencing support package tool. [2789](https://github.com/nginx/nginx-gateway-fabric/pull/2789). Thanks to [mrajagopal](https://github.com/mrajagopal).
-- Add guide for UpstreamSettingsPolicy. [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
+- Add how-to guide for configuring upstream settings for services using the UpstreamSettingsPolicy API. [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
 
 HELM CHART:
 
