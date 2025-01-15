@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nginx/nginx-gateway-fabric/internal/framework/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/kubernetes"
 )
 
 //counterfeiter:generate . FirstEventBatchPreparer
