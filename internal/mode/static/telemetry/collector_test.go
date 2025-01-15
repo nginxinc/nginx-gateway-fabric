@@ -18,8 +18,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginx/nginx-gateway-fabric/apis/v1alpha1"
-	"github.com/nginx/nginx-gateway-fabric/internal/framework/events/eventsfakes"
 	"github.com/nginx/nginx-gateway-fabric/internal/framework/kinds"
+	"github.com/nginx/nginx-gateway-fabric/internal/framework/kubernetes/kubernetesfakes"
 	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginx/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -73,7 +73,7 @@ func createGetCallsFunc(objects ...client.Object) getCallsFunc {
 
 var _ = Describe("Collector", Ordered, func() {
 	var (
-		k8sClientReader         *eventsfakes.FakeReader
+		k8sClientReader         *kubernetesfakes.FakeReader
 		fakeGraphGetter         *telemetryfakes.FakeGraphGetter
 		fakeConfigurationGetter *telemetryfakes.FakeConfigurationGetter
 		dataCollector           telemetry.DataCollector
@@ -178,7 +178,7 @@ var _ = Describe("Collector", Ordered, func() {
 			SnippetsFiltersDirectivesCount: []int64{},
 		}
 
-		k8sClientReader = &eventsfakes.FakeReader{}
+		k8sClientReader = &kubernetesfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
 		fakeConfigurationGetter = &telemetryfakes.FakeConfigurationGetter{}
 
