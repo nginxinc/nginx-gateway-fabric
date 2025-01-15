@@ -23,7 +23,7 @@ BUG FIXES:
 DOCUMENTATION:
 
 - Docs: Update support referencing support package tool. [2789](https://github.com/nginx/nginx-gateway-fabric/pull/2789). Thanks to [mrajagopal](https://github.com/mrajagopal).
-- Add how-to guide for configuring upstream settings for services using the UpstreamSettingsPolicy API. [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
+- Add how-to guide for configuring upstream settings for services using the UpstreamSettingsPolicy API. Find it [here](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/upstream-settings/). [2987](https://github.com/nginx/nginx-gateway-fabric/pull/2987)
 
 HELM CHART:
 
