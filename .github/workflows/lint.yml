@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Lint Actions
-        uses: reviewdog/action-actionlint@af17f9e3640ac863dbcc515d45f5f35d708d0faf # v1.62.0
+        uses: reviewdog/action-actionlint@f3dcc52bc6039e5d736486952379dce3e869e8a2 # v1.63.0
         with:
           actionlint_flags: -shellcheck ""
 
@@ -114,7 +114,7 @@ jobs:
       - name: Set up chart-testing
         uses: helm/chart-testing-action@e6669bcd63d7cb57cb4380c33043eebe5d111992 # v2.6.1
         with:
-          version: 3.11.0 # renovate: datasource=github-tags depName=helm/chart-testing
+          version: 3.12.0 # renovate: datasource=github-tags depName=helm/chart-testing
 
       - name: Run chart-testing
         run: ct lint --print-config --config .ct.yaml
