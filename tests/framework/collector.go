@@ -12,7 +12,7 @@ const (
 	collectorChartReleaseName = "otel-collector"
 	//nolint:lll
 	// renovate: datasource=helm depName=opentelemetry-collector registryUrl=https://open-telemetry.github.io/opentelemetry-helm-charts
-	collectorChartVersion = "0.111.1"
+	collectorChartVersion = "0.111.2"
 )
 
 // InstallCollector installs the otel-collector.
