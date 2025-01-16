@@ -12,7 +12,7 @@ data "google_client_config" "current" {}
 data "google_compute_zones" "available" {}
 
 locals {
-  google_zone = data.google_compute_zones.available.names[0]
+  google_zone = data.google_compute_zones.available.names[1]
 }
 
 resource "google_container_cluster" "primary" {
