@@ -9,6 +9,8 @@ resource "google_compute_subnetwork" "subnet" {
   network                  = google_compute_network.vpc.self_link
   ip_cidr_range            = "10.10.0.0/24"
   private_ip_google_access = true
+  stack_type = "IPV4_IPV6"
+  ipv6_access_type = "EXTERNAL"
 }
 
 resource "google_compute_router" "router" {
