@@ -55,7 +55,7 @@ resource "google_container_cluster" "primary" {
 
   private_cluster_config {
     enable_private_nodes        = true
-    private_endpoint_subnetwork = google_compute_subnetwork.subnet.self_link
+    # private_endpoint_subnetwork = google_compute_subnetwork.subnet.self_link
     master_ipv4_cidr_block = "172.16.0.0/28"
   }
   ip_allocation_policy {
