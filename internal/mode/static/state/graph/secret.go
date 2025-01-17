@@ -64,10 +64,10 @@ func (r *secretResolver) resolve(nsname types.NamespacedName) error {
 		// Not always guaranteed to have a ca certificate in the secret.
 		if _, exists := secret.Data[CAKey]; exists {
 			cert.CACert = secret.Data[CAKey]
+			validationErr = validateCA(cert.CACert)
 		}
 
 		validationErr = validateTLS(cert.TLSCert, cert.TLSPrivateKey)
-		validationErr = validateCA(cert.CACert)
 
 		certBundle = NewCertificateBundle(nsname, secret.Kind, cert)
 	}

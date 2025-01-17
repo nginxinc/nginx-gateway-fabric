@@ -900,7 +900,9 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
 				client.ObjectKeyFromObject(cm): {
 					Source: cm,
-					CACert: []byte(caBlock),
+					CertBundle: NewCertificateBundle(client.ObjectKeyFromObject(cm), "ConfigMap", &Certificate{
+						CACert: []byte(caBlock),
+					}),
 				},
 			},
 			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
@@ -1162,7 +1164,9 @@ func TestIsReferenced(t *testing.T) {
 		ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
 			client.ObjectKeyFromObject(baseConfigMap): {
 				Source: baseConfigMap,
-				CACert: []byte(caBlock),
+				CertBundle: NewCertificateBundle(client.ObjectKeyFromObject(baseConfigMap), "ConfigMap", &Certificate{
+					CACert: []byte(caBlock),
+				}),
 			},
 		},
 	}

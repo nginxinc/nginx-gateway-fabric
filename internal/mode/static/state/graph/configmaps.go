@@ -11,9 +11,7 @@ import (
 // CaCertConfigMap represents a ConfigMap resource that holds CA Cert data.
 type CaCertConfigMap struct {
 	// Source holds the actual ConfigMap resource. Can be nil if the ConfigMap does not exist.
-	Source *apiv1.ConfigMap
-	// CACert holds the actual CA Cert data.
-	CACert     []byte
+	Source     *apiv1.ConfigMap
 	CertBundle *CertificateBundle
 }
 
