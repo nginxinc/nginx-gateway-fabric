@@ -56,17 +56,20 @@ func (r *secretResolver) resolve(nsname types.NamespacedName) error {
 
 	default:
 		// A TLS Secret is guaranteed to have these data fields.
-		certBundle = &CertificateBundle{
+		cert := &Certificate{
 			TLSCert:       secret.Data[apiv1.TLSCertKey],
 			TLSPrivateKey: secret.Data[apiv1.TLSPrivateKeyKey],
 		}
 
 		// Not always guaranteed to have a ca certificate in the secret.
 		if _, exists := secret.Data[CAKey]; exists {
-			certBundle.CACert = secret.Data[CAKey]
+			cert.CACert = secret.Data[CAKey]
 		}
 
-		validationErr = certBundle.validate()
+		validationErr = validateTLS(cert.TLSCert, cert.TLSPrivateKey)
+		validationErr = validateCA(cert.CACert)
+
+		certBundle = NewCertificateBundle(nsname, secret.Kind, cert)
 	}
 
 	r.resolvedSecrets[nsname] = &secretEntry{

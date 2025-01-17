@@ -16,29 +16,33 @@ const CAKey = "ca.crt"
 type CertificateBundle struct {
 	Name types.NamespacedName
 	Kind v1.Kind
-
-	// Required ...
-	TLSCert       []byte
-	TLSPrivateKey []byte
-
-	// Optional
-	CACert []byte
+	Cert *Certificate
 }
 
-func (cb *CertificateBundle) validate() error {
-	_, err := tls.X509KeyPair(cb.TLSCert, cb.TLSPrivateKey)
+type Certificate struct {
+	TLSCert       []byte
+	TLSPrivateKey []byte
+	CACert        []byte
+}
+
+func NewCertificateBundle(name types.NamespacedName, kind string, cert *Certificate) *CertificateBundle {
+	return &CertificateBundle{
+		Name: name,
+		Kind: v1.Kind(kind),
+		Cert: cert,
+	}
+}
+
+func validateTLS(tlsCert, tlsPrivateKey []byte) error {
+	_, err := tls.X509KeyPair(tlsCert, tlsPrivateKey)
 	if err != nil {
 		return fmt.Errorf("TLS secret is invalid: %w", err)
-	}
-
-	if err = validateCA(cb.CACert); len(cb.CACert) >= 1 && err != nil {
-		return fmt.Errorf("Certificate in secret is invalid: %w", err)
 	}
 
 	return nil
 }
 
-// validateCA validates the ca.crt entry in the ConfigMap. If it is valid, the function returns nil.
+// validateCA validates the ca.crt entry in the Certificate. If it is valid, the function returns nil.
 func validateCA(caData []byte) error {
 	data := make([]byte, base64.StdEncoding.DecodedLen(len(caData)))
 	_, err := base64.StdEncoding.Decode(data, caData)

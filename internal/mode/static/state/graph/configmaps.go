@@ -13,7 +13,8 @@ type CaCertConfigMap struct {
 	// Source holds the actual ConfigMap resource. Can be nil if the ConfigMap does not exist.
 	Source *apiv1.ConfigMap
 	// CACert holds the actual CA Cert data.
-	CACert []byte
+	CACert     []byte
+	CertBundle *CertificateBundle
 }
 
 type caCertConfigMapEntry struct {
@@ -44,7 +45,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 	cm, exist := r.clusterConfigMaps[nsname]
 
 	var validationErr error
-	var caCert []byte
+	cert := &Certificate{}
 
 	if !exist {
 		validationErr = errors.New("ConfigMap does not exist")
@@ -52,24 +53,24 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 		if cm.Data != nil {
 			if _, exists := cm.Data[CAKey]; exists {
 				validationErr = validateCA([]byte(cm.Data[CAKey]))
-				caCert = []byte(cm.Data[CAKey])
+				cert.CACert = []byte(cm.Data[CAKey])
 			}
 		}
 		if cm.BinaryData != nil {
 			if _, exists := cm.BinaryData[CAKey]; exists {
 				validationErr = validateCA(cm.BinaryData[CAKey])
-				caCert = cm.BinaryData[CAKey]
+				cert.CACert = cm.BinaryData[CAKey]
 			}
 		}
-		if len(caCert) == 0 {
+		if len(cert.CACert) == 0 {
 			validationErr = fmt.Errorf("ConfigMap does not have the data or binaryData field %v", CAKey)
 		}
 	}
 
 	r.resolvedCaCertConfigMaps[nsname] = &caCertConfigMapEntry{
 		caCertConfigMap: CaCertConfigMap{
-			Source: cm,
-			CACert: caCert,
+			Source:     cm,
+			CertBundle: NewCertificateBundle(nsname, "ConfigMap", cert),
 		},
 		err: validationErr,
 	}
