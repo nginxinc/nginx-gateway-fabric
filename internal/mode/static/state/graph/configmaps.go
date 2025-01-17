@@ -68,7 +68,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 	r.resolvedCaCertConfigMaps[nsname] = &caCertConfigMapEntry{
 		caCertConfigMap: CaCertConfigMap{
 			Source:     cm,
-			CertBundle: NewCertificateBundle(nsname, "ConfigMap", cert),
+			CertBundle: NewCertificateBundle(nsname, cm.Kind, cert),
 		},
 		err: validationErr,
 	}

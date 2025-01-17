@@ -41,6 +41,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	cm := &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "ConfigMap",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "configmap",
 			Namespace: "service",
@@ -338,6 +341,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "Secret",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNs,
 			Name:      "secret",

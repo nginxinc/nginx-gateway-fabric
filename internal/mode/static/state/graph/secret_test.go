@@ -208,10 +208,6 @@ func TestSecretResolver(t *testing.T) {
 		},
 		client.ObjectKeyFromObject(invalidSecretType): {
 			Source: invalidSecretType,
-			CertBundle: NewCertificateBundle(client.ObjectKeyFromObject(invalidSecretType), "Secret", &Certificate{
-				TLSCert:       cert,
-				TLSPrivateKey: key,
-			}),
 		},
 		client.ObjectKeyFromObject(invalidSecretCert): {
 			Source: invalidSecretCert,
