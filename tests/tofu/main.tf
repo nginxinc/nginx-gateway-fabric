@@ -59,7 +59,7 @@ resource "google_container_cluster" "primary" {
     master_ipv4_cidr_block = "172.16.0.0/28"
   }
   ip_allocation_policy {
-    cluster_ipv4_cidr_block = google_compute_subnetwork.subnet.ip_cidr_range
+    # cluster_ipv4_cidr_block = google_compute_subnetwork.subnet.ip_cidr_range
     stack_type = "IPV4_IPV6"
   }
   datapath_provider = "ADVANCED_DATAPATH"
