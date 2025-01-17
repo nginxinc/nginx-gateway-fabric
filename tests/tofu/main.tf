@@ -56,11 +56,12 @@ resource "google_container_cluster" "primary" {
   private_cluster_config {
     enable_private_nodes        = true
     private_endpoint_subnetwork = google_compute_subnetwork.subnet.self_link
+    master_ipv4_cidr_block = "172.16.0.0/28"
   }
   ip_allocation_policy {
     cluster_ipv4_cidr_block = google_compute_subnetwork.subnet.ip_cidr_range
-    cluster_secondary_range_name = google_compute_subnetwork.subnet.secondary_ip_range_name
-    services_secondary_range_name = google_compute_subnetwork.subnets.services_secondary_range_name
+    cluster_secondary_range_name = "pod-ranges"
+    services_secondary_range_name = google_compute_subnetwork.subnet.secondary_ip_range.0.range_name
     stack_type = "IPV4_IPV6"
   }
   datapath_provider = "ADVANCED_DATAPATH"
