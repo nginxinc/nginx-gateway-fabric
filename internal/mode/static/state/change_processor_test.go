@@ -1155,6 +1155,14 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,
+						CertBundle: graph.NewCertificateBundle(
+							types.NamespacedName{Namespace: diffNsTLSSecret.Namespace, Name: diffNsTLSSecret.Name},
+							"Secret",
+							&graph.Certificate{
+								TLSCert:       cert,
+								TLSPrivateKey: key,
+							},
+						),
 					}
 
 					expGraph.ReferencedServices = nil
