@@ -60,8 +60,6 @@ resource "google_container_cluster" "primary" {
   }
   ip_allocation_policy {
     cluster_ipv4_cidr_block = google_compute_subnetwork.subnet.ip_cidr_range
-    cluster_secondary_range_name = "pod-ranges"
-    services_secondary_range_name = google_compute_subnetwork.subnet.secondary_ip_range.0.range_name
     stack_type = "IPV4_IPV6"
   }
   datapath_provider = "ADVANCED_DATAPATH"
