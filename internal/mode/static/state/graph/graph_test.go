@@ -888,6 +888,10 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {
 					Source: secret,
+					CertBundle: NewCertificateBundle(client.ObjectKeyFromObject(secret), "Secret", &Certificate{
+						TLSCert:       cert,
+						TLSPrivateKey: key,
+					}),
 				},
 			},
 			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
