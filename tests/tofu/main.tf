@@ -57,6 +57,10 @@ resource "google_container_cluster" "primary" {
     enable_private_nodes        = true
     private_endpoint_subnetwork = google_compute_subnetwork.subnet.self_link
   }
+  ip_allocation_policy {
+    cluster_ipv4_cidr_block = google_compute_subnetwork.subnet.ip_cidr_range
+    stack_type = "IPV4_IPV6"
+  }
 }
 
 resource "google_container_node_pool" "primary_nodes" {
