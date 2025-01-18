@@ -232,11 +232,15 @@ func buildRefCertificateBundles(
 	bundles := []graph.CertificateBundle{}
 
 	for _, secret := range secrets {
-		bundles = append(bundles, *secret.CertBundle)
+		if secret.CertBundle != nil {
+			bundles = append(bundles, *secret.CertBundle)
+		}
 	}
 
 	for _, configMap := range configMaps {
-		bundles = append(bundles, *configMap.CertBundle)
+		if configMap.CertBundle != nil {
+			bundles = append(bundles, *configMap.CertBundle)
+		}
 	}
 
 	return bundles
