@@ -594,6 +594,9 @@ var _ = Describe("ChangeProcessor", func() {
 				}
 
 				diffNsTLSSecret = &apiv1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						Kind: "Secret",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "different-ns-tls-secret",
 						Namespace: "cert-ns",

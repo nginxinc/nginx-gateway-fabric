@@ -69,7 +69,7 @@ func (r *secretResolver) resolve(nsname types.NamespacedName) error {
 
 		validationErr = validateTLS(cert.TLSCert, cert.TLSPrivateKey)
 
-		certBundle = NewCertificateBundle(nsname, secret.Kind, cert)
+		certBundle = NewCertificateBundle(nsname, "Secret", cert)
 	}
 
 	r.resolvedSecrets[nsname] = &secretEntry{
