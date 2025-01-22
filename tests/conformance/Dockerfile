@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.13
 FROM golang:1.23
 
 WORKDIR /go/src/github.com/nginx/nginx-gateway-fabric/tests/conformance
