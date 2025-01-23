@@ -82,7 +82,7 @@ func (g *Server) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		g.logger.Info("Shutting down GRPC Server")
-		server.GracefulStop()
+		server.Stop()
 	}()
 
 	return server.Serve(listener)

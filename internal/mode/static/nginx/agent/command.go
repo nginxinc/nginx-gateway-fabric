@@ -193,8 +193,6 @@ func (cs *commandService) Subscribe(in pb.CommandService_SubscribeServer) error 
 	}
 }
 
-// TODO(sberman): current issue: when control plane restarts, agent doesn't re-establish a CreateConnection call,
-// so this fails.
 func (cs *commandService) waitForConnection(
 	ctx context.Context,
 	gi grpcContext.GrpcInfo,
