@@ -22,7 +22,7 @@ Learn about our [design principles](/docs/developer/design-principles.md) and [a
 
 ## Getting Started
 
-1. [Quick Start on a kind cluster](https://docs.nginx.com/nginx-gateway-fabric/get-started/).
+1. [Get started using a kind cluster](https://docs.nginx.com/nginx-gateway-fabric/get-started/).
 2. [Install](https://docs.nginx.com/nginx-gateway-fabric/installation/) NGINX Gateway Fabric.
 3. Deploy various [examples](examples).
 4. Read our [How-to guides](https://docs.nginx.com/nginx-gateway-fabric/how-to/).
