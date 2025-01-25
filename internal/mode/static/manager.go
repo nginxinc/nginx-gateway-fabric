@@ -34,7 +34,8 @@ import (
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	ngfAPIv1alpha1 "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	ngfAPIv1alpha2 "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha2"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/filter"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
@@ -84,7 +85,8 @@ func init() {
 	utilruntime.Must(gatewayv1alpha2.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
-	utilruntime.Must(ngfAPI.AddToScheme(scheme))
+	utilruntime.Must(ngfAPIv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(ngfAPIv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
 	utilruntime.Must(appsv1.AddToScheme(scheme))
 }
@@ -276,15 +278,15 @@ func createPolicyManager(
 ) *policies.CompositeValidator {
 	cfgs := []policies.ManagerConfig{
 		{
-			GVK:       mustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
+			GVK:       mustExtractGVK(&ngfAPIv1alpha1.ClientSettingsPolicy{}),
 			Validator: clientsettings.NewValidator(validator),
 		},
 		{
-			GVK:       mustExtractGVK(&ngfAPI.ObservabilityPolicy{}),
+			GVK:       mustExtractGVK(&ngfAPIv1alpha1.ObservabilityPolicy{}),
 			Validator: observability.NewValidator(validator),
 		},
 		{
-			GVK:       mustExtractGVK(&ngfAPI.UpstreamSettingsPolicy{}),
+			GVK:       mustExtractGVK(&ngfAPIv1alpha1.UpstreamSettingsPolicy{}),
 			Validator: upstreamsettings.NewValidator(validator),
 		},
 	}
@@ -445,7 +447,7 @@ func registerControllers(
 			},
 		},
 		{
-			objectType: &ngfAPI.NginxProxy{},
+			objectType: &ngfAPIv1alpha2.NginxProxy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
@@ -457,19 +459,19 @@ func registerControllers(
 			},
 		},
 		{
-			objectType: &ngfAPI.ClientSettingsPolicy{},
+			objectType: &ngfAPIv1alpha1.ClientSettingsPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
 		},
 		{
-			objectType: &ngfAPI.ObservabilityPolicy{},
+			objectType: &ngfAPIv1alpha1.ObservabilityPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
 		},
 		{
-			objectType: &ngfAPI.UpstreamSettingsPolicy{},
+			objectType: &ngfAPIv1alpha1.UpstreamSettingsPolicy{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
@@ -502,7 +504,7 @@ func registerControllers(
 	if cfg.ConfigName != "" {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
-				objectType: &ngfAPI.NginxGateway{},
+				objectType: &ngfAPIv1alpha1.NginxGateway{},
 				options: []controller.Option{
 					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(controlConfigNSName)),
 				},
@@ -521,7 +523,7 @@ func registerControllers(
 	if cfg.SnippetsFilters {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
-				objectType: &ngfAPI.SnippetsFilter{},
+				objectType: &ngfAPIv1alpha1.SnippetsFilter{},
 				options: []controller.Option{
 					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 				},
@@ -706,11 +708,11 @@ func prepareFirstEventBatchPreparerArgs(cfg config.Config) ([]client.Object, []c
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
-		&ngfAPI.NginxProxyList{},
+		&ngfAPIv1alpha2.NginxProxyList{},
 		&gatewayv1.GRPCRouteList{},
-		&ngfAPI.ClientSettingsPolicyList{},
-		&ngfAPI.ObservabilityPolicyList{},
-		&ngfAPI.UpstreamSettingsPolicyList{},
+		&ngfAPIv1alpha1.ClientSettingsPolicyList{},
+		&ngfAPIv1alpha1.ObservabilityPolicyList{},
+		&ngfAPIv1alpha1.UpstreamSettingsPolicyList{},
 		partialObjectMetadataList,
 	}
 
@@ -726,7 +728,7 @@ func prepareFirstEventBatchPreparerArgs(cfg config.Config) ([]client.Object, []c
 	if cfg.SnippetsFilters {
 		objectLists = append(
 			objectLists,
-			&ngfAPI.SnippetsFilterList{},
+			&ngfAPIv1alpha1.SnippetsFilterList{},
 		)
 	}
 
@@ -754,7 +756,7 @@ func setInitialConfig(
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var conf ngfAPI.NginxGateway
+	var conf ngfAPIv1alpha1.NginxGateway
 	// Polling to wait for CRD to exist if the Deployment is created first.
 	if err := wait.PollUntilContextCancel(
 		ctx,
