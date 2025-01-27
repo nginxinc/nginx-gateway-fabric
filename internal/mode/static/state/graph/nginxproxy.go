@@ -99,15 +99,11 @@ func nginxProxyValid(np *NginxProxy) bool {
 }
 
 func telemetryEnabledForNginxProxy(np *EffectiveNginxProxy) bool {
-	if np.Telemetry == nil || np.Telemetry.Exporter == nil {
+	if np.Telemetry == nil || np.Telemetry.Exporter == nil || np.Telemetry.Exporter.Endpoint == nil {
 		return false
 	}
 
 	if slices.Contains(np.Telemetry.DisabledFeatures, ngfAPIv1alpha2.DisableTracing) {
-		return false
-	}
-
-	if np.Telemetry.Exporter.Endpoint == nil {
 		return false
 	}
 
