@@ -991,7 +991,7 @@ func buildLogging(g *graph.Graph) Logging {
 	}
 
 	ngfProxy := g.Gateway.EffectiveNginxProxy
-	if ngfProxy != nil && ngfProxy.Logging != nil {
+	if ngfProxy.Logging != nil {
 		if ngfProxy.Logging.ErrorLevel != nil {
 			logSettings.ErrorLevel = string(*ngfProxy.Logging.ErrorLevel)
 		}
