@@ -29,38 +29,29 @@ func TestGetConnection(t *testing.T) {
 	g.Expect(nonExistent).To(Equal(agentgrpc.Connection{}))
 }
 
-func TestReady(t *testing.T) {
+func TestConnectionIsReady(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)
-
-	tracker := agentgrpc.NewConnectionsTracker()
 
 	conn := agentgrpc.Connection{
 		PodName:    "pod1",
 		InstanceID: "instance1",
 		Parent:     types.NamespacedName{Namespace: "default", Name: "parent1"},
 	}
-	tracker.Track("key1", conn)
 
-	trackedConn, ready := tracker.Ready("key1")
-	g.Expect(ready).To(BeTrue())
-	g.Expect(trackedConn).To(Equal(conn))
+	g.Expect(conn.Ready()).To(BeTrue())
 }
 
 func TestConnectionIsNotReady(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)
 
-	tracker := agentgrpc.NewConnectionsTracker()
-
 	conn := agentgrpc.Connection{
 		PodName: "pod1",
 		Parent:  types.NamespacedName{Namespace: "default", Name: "parent1"},
 	}
-	tracker.Track("key1", conn)
 
-	_, ready := tracker.Ready("key1")
-	g.Expect(ready).To(BeFalse())
+	g.Expect(conn.Ready()).To(BeFalse())
 }
 
 func TestSetInstanceID(t *testing.T) {
@@ -74,13 +65,13 @@ func TestSetInstanceID(t *testing.T) {
 	}
 	tracker.Track("key1", conn)
 
-	_, ready := tracker.Ready("key1")
-	g.Expect(ready).To(BeFalse())
+	trackedConn := tracker.GetConnection("key1")
+	g.Expect(trackedConn.Ready()).To(BeFalse())
 
 	tracker.SetInstanceID("key1", "instance1")
 
-	trackedConn, ready := tracker.Ready("key1")
-	g.Expect(ready).To(BeTrue())
+	trackedConn = tracker.GetConnection("key1")
+	g.Expect(trackedConn.Ready()).To(BeTrue())
 	g.Expect(trackedConn.InstanceID).To(Equal("instance1"))
 }
 

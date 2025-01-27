@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/broadcast/broadcastfakes"
 	agentgrpc "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/grpc"
 	grpcContext "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/grpc/context"
 	agentgrpcfakes "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/grpc/grpcfakes"
@@ -32,7 +31,7 @@ func TestGetFile(t *testing.T) {
 	connTracker.GetConnectionReturns(conn)
 
 	depStore := NewDeploymentStore(connTracker)
-	dep := depStore.GetOrStore(deploymentName, &broadcastfakes.FakeBroadcaster{})
+	dep := depStore.GetOrStore(deploymentName, nil)
 
 	fileMeta := &pb.FileMeta{
 		Name: "test.conf",
@@ -155,7 +154,7 @@ func TestGetFile_FileNotFound(t *testing.T) {
 	connTracker.GetConnectionReturns(conn)
 
 	depStore := NewDeploymentStore(connTracker)
-	depStore.GetOrStore(deploymentName, &broadcastfakes.FakeBroadcaster{})
+	depStore.GetOrStore(deploymentName, nil)
 
 	fs := newFileService(logr.Discard(), depStore, connTracker)
 

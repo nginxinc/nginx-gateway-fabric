@@ -218,7 +218,7 @@ func (cs *commandService) waitForConnection(
 		case <-timer.C:
 			return nil, nil, err
 		case <-ticker.C:
-			if conn, ok := cs.connTracker.Ready(gi.IPAddress); ok {
+			if conn := cs.connTracker.GetConnection(gi.IPAddress); conn.Ready() {
 				// connection has been established, now ensure that the deployment exists in the store
 				if deployment := cs.nginxDeployments.Get(conn.Parent); deployment != nil {
 					return &conn, deployment, nil

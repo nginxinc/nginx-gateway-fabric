@@ -122,13 +122,13 @@ func TestDeploymentStore(t *testing.T) {
 
 	nsName := types.NamespacedName{Namespace: "default", Name: "test-deployment"}
 
-	deployment := store.GetOrStore(nsName, &broadcastfakes.FakeBroadcaster{})
+	deployment := store.GetOrStore(nsName, nil)
 	g.Expect(deployment).ToNot(BeNil())
 
 	fetchedDeployment := store.Get(nsName)
 	g.Expect(fetchedDeployment).To(Equal(deployment))
 
-	deployment = store.GetOrStore(nsName, &broadcastfakes.FakeBroadcaster{})
+	deployment = store.GetOrStore(nsName, nil)
 	g.Expect(fetchedDeployment).To(Equal(deployment))
 
 	store.Remove(nsName)

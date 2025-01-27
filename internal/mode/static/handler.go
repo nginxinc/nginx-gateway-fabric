@@ -22,7 +22,6 @@ import (
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/licensing"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/agent/broadcast"
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -184,7 +183,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	// and Deployment.
 	// If fully deleted, then delete the deployment from the Store and close the stopCh.
 	stopCh := make(chan struct{})
-	deployment := h.cfg.nginxDeployments.GetOrStore(deploymentName, broadcast.NewDeploymentBroadcaster(stopCh))
+	deployment := h.cfg.nginxDeployments.GetOrStore(deploymentName, stopCh)
 	if deployment == nil {
 		panic("expected deployment, got nil")
 	}

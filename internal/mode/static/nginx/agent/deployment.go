@@ -58,7 +58,7 @@ type Deployment struct {
 	Lock sync.RWMutex
 }
 
-// newDeployment returns a new deployment object.
+// newDeployment returns a new Deployment object.
 func newDeployment(broadcaster broadcast.Broadcaster) *Deployment {
 	return &Deployment{
 		broadcaster: broadcaster,
@@ -227,11 +227,23 @@ func (d *DeploymentStore) Get(nsName types.NamespacedName) *Deployment {
 
 // GetOrStore returns the existing value for the key if present.
 // Otherwise, it stores and returns the given value.
-func (d *DeploymentStore) GetOrStore(nsName types.NamespacedName, broadcaster broadcast.Broadcaster) *Deployment {
+func (d *DeploymentStore) GetOrStore(nsName types.NamespacedName, stopCh chan struct{}) *Deployment {
 	if deployment := d.Get(nsName); deployment != nil {
 		return deployment
 	}
 
+	deployment := newDeployment(broadcast.NewDeploymentBroadcaster(stopCh))
+	d.deployments.Store(nsName, deployment)
+
+	return deployment
+}
+
+// StoreWithBroadcaster creates a new Deployment with the supplied broadcaster and stores it.
+// Used in unit tests to provide a mock broadcaster.
+func (d *DeploymentStore) StoreWithBroadcaster(
+	nsName types.NamespacedName,
+	broadcaster broadcast.Broadcaster,
+) *Deployment {
 	deployment := newDeployment(broadcaster)
 	d.deployments.Store(nsName, deployment)
 

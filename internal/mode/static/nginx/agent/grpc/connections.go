@@ -15,7 +15,6 @@ import (
 type ConnectionsTracker interface {
 	Track(key string, conn Connection)
 	GetConnection(key string) Connection
-	Ready(key string) (Connection, bool)
 	SetInstanceID(key, id string)
 	UntrackConnectionsForParent(parent types.NamespacedName)
 }
@@ -25,6 +24,12 @@ type Connection struct {
 	PodName    string
 	InstanceID string
 	Parent     types.NamespacedName
+}
+
+// Ready returns if the connection is ready to be used. In other words, agent
+// has registered itself and an nginx instance with the control plane.
+func (c *Connection) Ready() bool {
+	return c.InstanceID != ""
 }
 
 // AgentConnectionsTracker keeps track of all connections between the control plane and nginx agents.
@@ -59,16 +64,6 @@ func (c *AgentConnectionsTracker) GetConnection(key string) Connection {
 	defer c.lock.RUnlock()
 
 	return c.connections[key]
-}
-
-// ConnectionIsReady returns if the connection is ready to be used. In other words, agent
-// has registered itself and an nginx instance with the control plane.
-func (c *AgentConnectionsTracker) Ready(key string) (Connection, bool) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	conn, ok := c.connections[key]
-	return conn, ok && conn.InstanceID != ""
 }
 
 // SetInstanceID sets the nginx instanceID for a connection.

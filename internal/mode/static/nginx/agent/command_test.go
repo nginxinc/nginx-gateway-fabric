@@ -295,12 +295,13 @@ func TestSubscribe(t *testing.T) {
 		PodName:    "nginx-pod",
 		InstanceID: "nginx-id",
 	}
-	connTracker.ReadyReturns(conn, true)
+	connTracker.GetConnectionReturns(conn)
 
+	store := NewDeploymentStore(&connTracker)
 	cs := newCommandService(
 		logr.Discard(),
 		fake.NewFakeClient(),
-		NewDeploymentStore(&connTracker),
+		store,
 		&connTracker,
 		status.NewQueue(),
 	)
@@ -315,7 +316,7 @@ func TestSubscribe(t *testing.T) {
 	broadcaster.SubscribeReturns(subChannels)
 
 	// set the initial files and actions to be applied by the Subscription
-	deployment := cs.nginxDeployments.GetOrStore(conn.Parent, broadcaster)
+	deployment := store.StoreWithBroadcaster(conn.Parent, broadcaster)
 	files := []File{
 		{
 			Meta: &pb.FileMeta{
@@ -438,7 +439,7 @@ func TestSubscribe_Errors(t *testing.T) {
 				cs *commandService,
 				ct *agentgrpcfakes.FakeConnectionsTracker,
 			) {
-				ct.ReadyReturns(agentgrpc.Connection{}, true)
+				ct.GetConnectionReturns(agentgrpc.Connection{InstanceID: "nginx-id"})
 				cs.connectionTimeout = 1100 * time.Millisecond
 			},
 			errString: "timed out waiting for nginx deployment to be added to store",
@@ -581,8 +582,7 @@ func TestSetInitialConfig_Errors(t *testing.T) {
 				InstanceID: "nginx-id",
 			}
 
-			broadcaster := &broadcastfakes.FakeBroadcaster{}
-			deployment := cs.nginxDeployments.GetOrStore(conn.Parent, broadcaster)
+			deployment := newDeployment(&broadcastfakes.FakeBroadcaster{})
 
 			if test.setup != nil {
 				test.setup(msgr, deployment)
