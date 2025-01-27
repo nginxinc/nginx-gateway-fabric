@@ -1659,8 +1659,12 @@ Resource Types:
 <a class="headerlink" href="#gateway.nginx.org%2fv1alpha2.NginxProxy" title="Permanent link">¶</a>
 </h3>
 <p>
-<p>NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
-to configure global settings for all Gateways defined from the GatewayClass.</p>
+<p>NginxProxy is a configuration object that can be referenced from a GatewayClass parametersRef
+or a Gateway infrastructure.parametersRef. It provides a way to configure data plane settings.
+If referenced from a GatewayClass, the settings apply to all Gateways attached to the GatewayClass.
+If referenced from a Gateway, the settings apply to that Gateway alone. If both a Gateway and its GatewayClass
+reference an NginxProxy, the settings are merged. Settings specified on the Gateway NginxProxy override those
+set on the GatewayClass NginxProxy.</p>
 </p>
 <table class="table table-bordered table-striped">
 <thead>
