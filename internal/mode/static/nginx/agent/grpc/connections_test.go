@@ -29,7 +29,7 @@ func TestGetConnection(t *testing.T) {
 	g.Expect(nonExistent).To(Equal(agentgrpc.Connection{}))
 }
 
-func TestConnectionIsReady(t *testing.T) {
+func TestReady(t *testing.T) {
 	t.Parallel()
 	g := NewWithT(t)
 
@@ -42,7 +42,7 @@ func TestConnectionIsReady(t *testing.T) {
 	}
 	tracker.Track("key1", conn)
 
-	trackedConn, ready := tracker.ConnectionIsReady("key1")
+	trackedConn, ready := tracker.Ready("key1")
 	g.Expect(ready).To(BeTrue())
 	g.Expect(trackedConn).To(Equal(conn))
 }
@@ -59,7 +59,7 @@ func TestConnectionIsNotReady(t *testing.T) {
 	}
 	tracker.Track("key1", conn)
 
-	_, ready := tracker.ConnectionIsReady("key1")
+	_, ready := tracker.Ready("key1")
 	g.Expect(ready).To(BeFalse())
 }
 
@@ -74,12 +74,12 @@ func TestSetInstanceID(t *testing.T) {
 	}
 	tracker.Track("key1", conn)
 
-	_, ready := tracker.ConnectionIsReady("key1")
+	_, ready := tracker.Ready("key1")
 	g.Expect(ready).To(BeFalse())
 
 	tracker.SetInstanceID("key1", "instance1")
 
-	trackedConn, ready := tracker.ConnectionIsReady("key1")
+	trackedConn, ready := tracker.Ready("key1")
 	g.Expect(ready).To(BeTrue())
 	g.Expect(trackedConn.InstanceID).To(Equal("instance1"))
 }

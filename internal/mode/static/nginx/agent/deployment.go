@@ -164,6 +164,7 @@ func (d *Deployment) SetNGINXPlusActions(actions []*pb.NGINXPlusAction) {
 }
 
 // SetPodErrorStatus sets the error status of a Pod in this Deployment if applying the config failed.
+// Caller MUST lock the deployment before calling this function.
 func (d *Deployment) SetPodErrorStatus(pod string, err error) {
 	d.podStatuses[pod] = err
 }

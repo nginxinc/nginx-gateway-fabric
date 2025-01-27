@@ -182,17 +182,40 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 	// TODO(sberman): if nginx Deployment is scaled down, we should remove the pod from the ConnectionsTracker
 	// and Deployment.
-	// If fully deleted, then delete the deployment from the Store
-	var configApplied bool
-	deployment := h.cfg.nginxDeployments.GetOrStore(deploymentName, broadcast.NewDeploymentBroadcaster(ctx))
+	// If fully deleted, then delete the deployment from the Store and close the stopCh.
+	stopCh := make(chan struct{})
+	deployment := h.cfg.nginxDeployments.GetOrStore(deploymentName, broadcast.NewDeploymentBroadcaster(stopCh))
 	if deployment == nil {
 		panic("expected deployment, got nil")
 	}
 
+	configApplied := h.processStateAndBuildConfig(ctx, logger, gr, changeType, deployment)
+
+	configErr := deployment.GetLatestConfigError()
+	upstreamErr := deployment.GetLatestUpstreamError()
+	err := errors.Join(configErr, upstreamErr)
+
+	if configApplied || err != nil {
+		obj := &status.QueueObject{
+			Error:      err,
+			Deployment: deploymentName,
+		}
+		h.cfg.statusQueue.Enqueue(obj)
+	}
+}
+
+func (h *eventHandlerImpl) processStateAndBuildConfig(
+	ctx context.Context,
+	logger logr.Logger,
+	gr *graph.Graph,
+	changeType state.ChangeType,
+	deployment *agent.Deployment,
+) bool {
+	var configApplied bool
 	switch changeType {
 	case state.NoChange:
 		logger.Info("Handling events didn't result into NGINX configuration changes")
-		return
+		return false
 	case state.EndpointsOnlyChange:
 		h.version++
 		cfg := dataplane.BuildConfiguration(ctx, gr, h.cfg.serviceResolver, h.version)
@@ -227,17 +250,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		deployment.Lock.Unlock()
 	}
 
-	configErr := deployment.GetLatestConfigError()
-	upstreamErr := deployment.GetLatestUpstreamError()
-	err := errors.Join(configErr, upstreamErr)
-
-	if configApplied || err != nil {
-		obj := &status.QueueObject{
-			Error:      err,
-			Deployment: deploymentName,
-		}
-		h.cfg.statusQueue.Enqueue(obj)
-	}
+	return configApplied
 }
 
 func (h *eventHandlerImpl) waitForStatusUpdates(ctx context.Context) {

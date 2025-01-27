@@ -93,6 +93,7 @@ func (cs *commandService) CreateConnection(
 				Error:   err.Error(),
 			},
 		}
+		cs.logger.Error(err, "error getting pod owner")
 		return response, grpcStatus.Errorf(codes.Internal, "error getting pod owner %s", err.Error())
 	}
 
@@ -145,12 +146,12 @@ func (cs *commandService) Subscribe(in pb.CommandService_SubscribeServer) error 
 
 		return err
 	}
+	deployment.Lock.RUnlock()
 
 	// subscribe to the deployment broadcaster to get file updates
 	broadcaster := deployment.GetBroadcaster()
 	channels := broadcaster.Subscribe()
 	defer broadcaster.CancelSubscription(channels.ID)
-	deployment.Lock.RUnlock()
 
 	for {
 		select {
@@ -175,7 +176,10 @@ func (cs *commandService) Subscribe(in pb.CommandService_SubscribeServer) error 
 				return grpcStatus.Error(codes.Internal, err.Error())
 			}
 		case err = <-msgr.Errors():
-			cs.logger.Error(err, "connection error")
+			cs.logger.Error(err, "connection error", "pod", conn.PodName)
+			deployment.SetPodErrorStatus(conn.PodName, err)
+			channels.ResponseCh <- struct{}{}
+
 			if errors.Is(err, io.EOF) {
 				return grpcStatus.Error(codes.Aborted, err.Error())
 			}
@@ -214,7 +218,7 @@ func (cs *commandService) waitForConnection(
 		case <-timer.C:
 			return nil, nil, err
 		case <-ticker.C:
-			if conn, ok := cs.connTracker.ConnectionIsReady(gi.IPAddress); ok {
+			if conn, ok := cs.connTracker.Ready(gi.IPAddress); ok {
 				// connection has been established, now ensure that the deployment exists in the store
 				if deployment := cs.nginxDeployments.Get(conn.Parent); deployment != nil {
 					return &conn, deployment, nil
@@ -332,7 +336,7 @@ func (cs *commandService) logAndSendErrorStatus(deployment *Deployment, conn *ag
 	if err != nil {
 		cs.logger.Error(err, "error sending request to agent")
 	} else {
-		cs.logger.Info(fmt.Sprintf("Successfully configured nginx for new subscription %q", conn.PodName))
+		cs.logger.Info("Successfully configured nginx for new subscription", "pod", conn.PodName)
 	}
 	deployment.SetPodErrorStatus(conn.PodName, err)
 

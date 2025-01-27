@@ -227,8 +227,8 @@ func TestUpdateUpstreamServers(t *testing.T) {
 
 			if test.expErr {
 				expErr := errors.Join(
-					fmt.Errorf("couldn't update upstream \"test-upstream\" via the API: %w", testErr),
-					fmt.Errorf("couldn't update upstream \"test-stream-upstream\" via the API: %w", testErr),
+					fmt.Errorf("couldn't update upstream via the API: %w", testErr),
+					fmt.Errorf("couldn't update upstream via the API: %w", testErr),
 				)
 
 				g.Expect(deployment.GetLatestUpstreamError()).To(Equal(expErr))

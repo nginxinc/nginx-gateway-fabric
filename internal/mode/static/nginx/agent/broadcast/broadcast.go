@@ -1,7 +1,6 @@
 package broadcast
 
 import (
-	"context"
 	"sync"
 
 	pb "github.com/nginx/agent/v3/api/grpc/mpi/v1"
@@ -49,7 +48,7 @@ type DeploymentBroadcaster struct {
 }
 
 // NewDeploymentBroadcaster returns a new instance of a DeploymentBroadcaster.
-func NewDeploymentBroadcaster(ctx context.Context) *DeploymentBroadcaster {
+func NewDeploymentBroadcaster(stopCh chan struct{}) *DeploymentBroadcaster {
 	broadcaster := &DeploymentBroadcaster{
 		listeners: make(map[string]storedChannels),
 		publishCh: make(chan NginxAgentMessage),
@@ -57,7 +56,7 @@ func NewDeploymentBroadcaster(ctx context.Context) *DeploymentBroadcaster {
 		unsubCh:   make(chan string),
 		doneCh:    make(chan struct{}),
 	}
-	go broadcaster.run(ctx)
+	go broadcaster.run(stopCh)
 
 	return broadcaster
 }
@@ -99,14 +98,14 @@ func (b *DeploymentBroadcaster) CancelSubscription(id string) {
 }
 
 // run starts the broadcaster loop. It handles the following events:
-// - if context is canceled, return.
+// - if stopCh is closed, return.
 // - if receiving a new subscriber, add it to the subscriber list.
 // - if receiving a canceled subscription, remove it from the subscriber list.
 // - if receiving a message to publish, send it to all subscribers.
-func (b *DeploymentBroadcaster) run(ctx context.Context) {
+func (b *DeploymentBroadcaster) run(stopCh chan struct{}) {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-stopCh:
 			return
 		case channels := <-b.subCh:
 			b.listeners[channels.id] = channels

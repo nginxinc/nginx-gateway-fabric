@@ -9,19 +9,6 @@ import (
 )
 
 type FakeConnectionsTracker struct {
-	ConnectionIsReadyStub        func(string) (grpc.Connection, bool)
-	connectionIsReadyMutex       sync.RWMutex
-	connectionIsReadyArgsForCall []struct {
-		arg1 string
-	}
-	connectionIsReadyReturns struct {
-		result1 grpc.Connection
-		result2 bool
-	}
-	connectionIsReadyReturnsOnCall map[int]struct {
-		result1 grpc.Connection
-		result2 bool
-	}
 	GetConnectionStub        func(string) grpc.Connection
 	getConnectionMutex       sync.RWMutex
 	getConnectionArgsForCall []struct {
@@ -32,6 +19,19 @@ type FakeConnectionsTracker struct {
 	}
 	getConnectionReturnsOnCall map[int]struct {
 		result1 grpc.Connection
+	}
+	ReadyStub        func(string) (grpc.Connection, bool)
+	readyMutex       sync.RWMutex
+	readyArgsForCall []struct {
+		arg1 string
+	}
+	readyReturns struct {
+		result1 grpc.Connection
+		result2 bool
+	}
+	readyReturnsOnCall map[int]struct {
+		result1 grpc.Connection
+		result2 bool
 	}
 	SetInstanceIDStub        func(string, string)
 	setInstanceIDMutex       sync.RWMutex
@@ -52,70 +52,6 @@ type FakeConnectionsTracker struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReady(arg1 string) (grpc.Connection, bool) {
-	fake.connectionIsReadyMutex.Lock()
-	ret, specificReturn := fake.connectionIsReadyReturnsOnCall[len(fake.connectionIsReadyArgsForCall)]
-	fake.connectionIsReadyArgsForCall = append(fake.connectionIsReadyArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	stub := fake.ConnectionIsReadyStub
-	fakeReturns := fake.connectionIsReadyReturns
-	fake.recordInvocation("ConnectionIsReady", []interface{}{arg1})
-	fake.connectionIsReadyMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReadyCallCount() int {
-	fake.connectionIsReadyMutex.RLock()
-	defer fake.connectionIsReadyMutex.RUnlock()
-	return len(fake.connectionIsReadyArgsForCall)
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReadyCalls(stub func(string) (grpc.Connection, bool)) {
-	fake.connectionIsReadyMutex.Lock()
-	defer fake.connectionIsReadyMutex.Unlock()
-	fake.ConnectionIsReadyStub = stub
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReadyArgsForCall(i int) string {
-	fake.connectionIsReadyMutex.RLock()
-	defer fake.connectionIsReadyMutex.RUnlock()
-	argsForCall := fake.connectionIsReadyArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReadyReturns(result1 grpc.Connection, result2 bool) {
-	fake.connectionIsReadyMutex.Lock()
-	defer fake.connectionIsReadyMutex.Unlock()
-	fake.ConnectionIsReadyStub = nil
-	fake.connectionIsReadyReturns = struct {
-		result1 grpc.Connection
-		result2 bool
-	}{result1, result2}
-}
-
-func (fake *FakeConnectionsTracker) ConnectionIsReadyReturnsOnCall(i int, result1 grpc.Connection, result2 bool) {
-	fake.connectionIsReadyMutex.Lock()
-	defer fake.connectionIsReadyMutex.Unlock()
-	fake.ConnectionIsReadyStub = nil
-	if fake.connectionIsReadyReturnsOnCall == nil {
-		fake.connectionIsReadyReturnsOnCall = make(map[int]struct {
-			result1 grpc.Connection
-			result2 bool
-		})
-	}
-	fake.connectionIsReadyReturnsOnCall[i] = struct {
-		result1 grpc.Connection
-		result2 bool
-	}{result1, result2}
 }
 
 func (fake *FakeConnectionsTracker) GetConnection(arg1 string) grpc.Connection {
@@ -177,6 +113,70 @@ func (fake *FakeConnectionsTracker) GetConnectionReturnsOnCall(i int, result1 gr
 	fake.getConnectionReturnsOnCall[i] = struct {
 		result1 grpc.Connection
 	}{result1}
+}
+
+func (fake *FakeConnectionsTracker) Ready(arg1 string) (grpc.Connection, bool) {
+	fake.readyMutex.Lock()
+	ret, specificReturn := fake.readyReturnsOnCall[len(fake.readyArgsForCall)]
+	fake.readyArgsForCall = append(fake.readyArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ReadyStub
+	fakeReturns := fake.readyReturns
+	fake.recordInvocation("Ready", []interface{}{arg1})
+	fake.readyMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeConnectionsTracker) ReadyCallCount() int {
+	fake.readyMutex.RLock()
+	defer fake.readyMutex.RUnlock()
+	return len(fake.readyArgsForCall)
+}
+
+func (fake *FakeConnectionsTracker) ReadyCalls(stub func(string) (grpc.Connection, bool)) {
+	fake.readyMutex.Lock()
+	defer fake.readyMutex.Unlock()
+	fake.ReadyStub = stub
+}
+
+func (fake *FakeConnectionsTracker) ReadyArgsForCall(i int) string {
+	fake.readyMutex.RLock()
+	defer fake.readyMutex.RUnlock()
+	argsForCall := fake.readyArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConnectionsTracker) ReadyReturns(result1 grpc.Connection, result2 bool) {
+	fake.readyMutex.Lock()
+	defer fake.readyMutex.Unlock()
+	fake.ReadyStub = nil
+	fake.readyReturns = struct {
+		result1 grpc.Connection
+		result2 bool
+	}{result1, result2}
+}
+
+func (fake *FakeConnectionsTracker) ReadyReturnsOnCall(i int, result1 grpc.Connection, result2 bool) {
+	fake.readyMutex.Lock()
+	defer fake.readyMutex.Unlock()
+	fake.ReadyStub = nil
+	if fake.readyReturnsOnCall == nil {
+		fake.readyReturnsOnCall = make(map[int]struct {
+			result1 grpc.Connection
+			result2 bool
+		})
+	}
+	fake.readyReturnsOnCall[i] = struct {
+		result1 grpc.Connection
+		result2 bool
+	}{result1, result2}
 }
 
 func (fake *FakeConnectionsTracker) SetInstanceID(arg1 string, arg2 string) {
@@ -280,10 +280,10 @@ func (fake *FakeConnectionsTracker) UntrackConnectionsForParentArgsForCall(i int
 func (fake *FakeConnectionsTracker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.connectionIsReadyMutex.RLock()
-	defer fake.connectionIsReadyMutex.RUnlock()
 	fake.getConnectionMutex.RLock()
 	defer fake.getConnectionMutex.RUnlock()
+	fake.readyMutex.RLock()
+	defer fake.readyMutex.RUnlock()
 	fake.setInstanceIDMutex.RLock()
 	defer fake.setInstanceIDMutex.RUnlock()
 	fake.trackMutex.RLock()

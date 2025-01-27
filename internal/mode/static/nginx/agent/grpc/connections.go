@@ -15,7 +15,7 @@ import (
 type ConnectionsTracker interface {
 	Track(key string, conn Connection)
 	GetConnection(key string) Connection
-	ConnectionIsReady(key string) (Connection, bool)
+	Ready(key string) (Connection, bool)
 	SetInstanceID(key, id string)
 	UntrackConnectionsForParent(parent types.NamespacedName)
 }
@@ -63,7 +63,7 @@ func (c *AgentConnectionsTracker) GetConnection(key string) Connection {
 
 // ConnectionIsReady returns if the connection is ready to be used. In other words, agent
 // has registered itself and an nginx instance with the control plane.
-func (c *AgentConnectionsTracker) ConnectionIsReady(key string) (Connection, bool) {
+func (c *AgentConnectionsTracker) Ready(key string) (Connection, bool) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 

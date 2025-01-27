@@ -295,7 +295,7 @@ func TestSubscribe(t *testing.T) {
 		PodName:    "nginx-pod",
 		InstanceID: "nginx-id",
 	}
-	connTracker.ConnectionIsReadyReturns(conn, true)
+	connTracker.ReadyReturns(conn, true)
 
 	cs := newCommandService(
 		logr.Discard(),
@@ -438,7 +438,7 @@ func TestSubscribe_Errors(t *testing.T) {
 				cs *commandService,
 				ct *agentgrpcfakes.FakeConnectionsTracker,
 			) {
-				ct.ConnectionIsReadyReturns(agentgrpc.Connection{}, true)
+				ct.ReadyReturns(agentgrpc.Connection{}, true)
 				cs.connectionTimeout = 1100 * time.Millisecond
 			},
 			errString: "timed out waiting for nginx deployment to be added to store",

@@ -87,16 +87,10 @@ func (n *NginxUpdaterImpl) UpdateConfig(
 ) bool {
 	n.logger.Info("Sending nginx configuration to agent")
 
-	// reset the latest error to nil now that we're applying new config
-	deployment.SetLatestConfigError(nil)
-
 	msg := deployment.SetFiles(files)
 	applied := deployment.GetBroadcaster().Send(msg)
 
-	latestStatus := deployment.GetConfigurationStatus()
-	if latestStatus != nil {
-		deployment.SetLatestConfigError(latestStatus)
-	}
+	deployment.SetLatestConfigError(deployment.GetConfigurationStatus())
 
 	return applied
 }
@@ -131,18 +125,6 @@ func (n *NginxUpdaterImpl) UpdateUpstreamServers(
 			},
 		}
 		actions = append(actions, action)
-
-		msg := broadcast.NginxAgentMessage{
-			Type:            broadcast.APIRequest,
-			NGINXPlusAction: action,
-		}
-
-		requestApplied, err := n.sendRequest(broadcaster, msg, deployment)
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"couldn't update upstream %q via the API: %w", upstream.Name, deployment.GetConfigurationStatus()))
-		}
-		applied = applied || requestApplied
 	}
 
 	for _, upstream := range conf.StreamUpstreams {
@@ -152,7 +134,9 @@ func (n *NginxUpdaterImpl) UpdateUpstreamServers(
 			},
 		}
 		actions = append(actions, action)
+	}
 
+	for _, action := range actions {
 		msg := broadcast.NginxAgentMessage{
 			Type:            broadcast.APIRequest,
 			NGINXPlusAction: action,
@@ -161,7 +145,7 @@ func (n *NginxUpdaterImpl) UpdateUpstreamServers(
 		requestApplied, err := n.sendRequest(broadcaster, msg, deployment)
 		if err != nil {
 			errs = append(errs, fmt.Errorf(
-				"couldn't update upstream %q via the API: %w", upstream.Name, deployment.GetConfigurationStatus()))
+				"couldn't update upstream via the API: %w", deployment.GetConfigurationStatus()))
 		}
 		applied = applied || requestApplied
 	}
