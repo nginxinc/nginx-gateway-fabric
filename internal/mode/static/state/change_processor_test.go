@@ -2368,7 +2368,7 @@ var _ = Describe("ChangeProcessor", func() {
 							ParametersRef: &v1.LocalParametersReference{
 								Group: ngfAPIv1alpha1.GroupName,
 								Kind:  kinds.NginxProxy,
-								Name:  "np",
+								Name:  "np-gw",
 							},
 						},
 					},
@@ -2376,14 +2376,14 @@ var _ = Describe("ChangeProcessor", func() {
 
 				np := &ngfAPIv1alpha2.NginxProxy{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "np",
+						Name:      "np-gw",
 						Namespace: "test",
 					},
 				}
 
 				npUpdated := &ngfAPIv1alpha2.NginxProxy{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "np",
+						Name:      "np-gw",
 						Namespace: "test",
 					},
 					Spec: ngfAPIv1alpha2.NginxProxySpec{
@@ -2403,7 +2403,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(graph.GatewayClass.NginxProxy.Source).To(Equal(np))
+					Expect(graph.Gateway.NginxProxy.Source).To(Equal(np))
 				})
 				It("captures changes for an NginxProxy", func() {
 					processor.CaptureUpsertChange(npUpdated)
@@ -2411,14 +2411,14 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(graph.GatewayClass.NginxProxy.Source).To(Equal(npUpdated))
+					Expect(graph.Gateway.NginxProxy.Source).To(Equal(npUpdated))
 				})
 				It("handles deletes for an NginxProxy", func() {
 					processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))
 
 					changed, graph := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
-					Expect(graph.GatewayClass.NginxProxy).To(BeNil())
+					Expect(graph.Gateway.NginxProxy).To(BeNil())
 				})
 			})
 		})
