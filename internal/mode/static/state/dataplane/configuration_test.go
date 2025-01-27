@@ -3263,7 +3263,7 @@ func TestBuildTelemetry(t *testing.T) {
 				},
 			},
 			expTelemetry: Telemetry{},
-			msg:          "nil effective nginx proxy",
+			msg:          "nil effective NginxProxy",
 		},
 		{
 			g: &graph.Graph{
@@ -3959,7 +3959,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: defaultLogging,
 		},
 		{
-			msg: "Gateway has no effective nginx proxy",
+			msg: "Gateway has no effective NginxProxy",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: nil,
@@ -3968,7 +3968,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: defaultLogging,
 		},
 		{
-			msg: "Effective nginx proxy does not specify log level",
+			msg: "Effective NginxProxy does not specify log level",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -3979,7 +3979,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: defaultLogging,
 		},
 		{
-			msg: "Effective nginx proxy log level set to debug",
+			msg: "Effective NginxProxy log level set to debug",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -3992,7 +3992,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "debug"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to info",
+			msg: "Effective NginxProxy log level set to info",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4005,7 +4005,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: defaultErrorLogLevel},
 		},
 		{
-			msg: "Effective nginx proxy log level set to notice",
+			msg: "Effective NginxProxy log level set to notice",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4018,7 +4018,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "notice"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to warn",
+			msg: "Effective NginxProxy log level set to warn",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4031,7 +4031,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "warn"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to error",
+			msg: "Effective NginxProxy log level set to error",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4044,7 +4044,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "error"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to crit",
+			msg: "Effective NginxProxy log level set to crit",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4057,7 +4057,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "crit"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to alert",
+			msg: "Effective NginxProxy log level set to alert",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
@@ -4070,7 +4070,7 @@ func TestBuildLogging(t *testing.T) {
 			expLoggingSettings: Logging{ErrorLevel: "alert"},
 		},
 		{
-			msg: "Effective nginx proxy log level set to emerg",
+			msg: "Effective NginxProxy log level set to emerg",
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
