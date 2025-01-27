@@ -152,15 +152,12 @@ type RewriteClientIP struct {
 	// If a request comes from a trusted address, NGINX will rewrite the client IP information,
 	// and forward it to the backend in the X-Forwarded-For* and X-Real-IP headers.
 	// If the request does not come from a trusted address, NGINX will not rewrite the client IP information.
-	// TrustedAddresses only supports CIDR blocks: 192.33.21.1/24, fe80::1/64.
 	// To trust all addresses (not recommended for production), set to 0.0.0.0/0.
 	// If no addresses are provided, NGINX will not rewrite the client IP information.
 	// Sets NGINX directive set_real_ip_from: https://nginx.org/en/docs/http/ngx_http_realip_module.html#set_real_ip_from
 	// This field is required if mode is set.
 	//
 	// +optional
-	// +listType=map
-	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=16
 	TrustedAddresses []Address `json:"trustedAddresses,omitempty"`
 }
