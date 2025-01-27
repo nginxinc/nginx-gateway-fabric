@@ -3257,6 +3257,11 @@ func TestBuildTelemetry(t *testing.T) {
 		expTelemetry Telemetry
 	}{
 		{
+			g:            &graph.Graph{},
+			expTelemetry: Telemetry{},
+			msg:          "nil Gateway",
+		},
+		{
 			g: &graph.Graph{
 				Gateway: &graph.Gateway{
 					EffectiveNginxProxy: nil,
@@ -3273,6 +3278,52 @@ func TestBuildTelemetry(t *testing.T) {
 			},
 			expTelemetry: Telemetry{},
 			msg:          "No telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
+						Telemetry: &ngfAPIv1alpha2.Telemetry{
+							Exporter: &ngfAPIv1alpha2.TelemetryExporter{
+								Endpoint: helpers.GetPointer("my-otel.svc:4563"),
+							},
+							DisabledFeatures: []ngfAPIv1alpha2.DisableTelemetryFeature{
+								ngfAPIv1alpha2.DisableTracing,
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "Telemetry disabled explicitly",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
+						Telemetry: &ngfAPIv1alpha2.Telemetry{
+							Exporter: nil,
+						},
+					},
+				},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "Telemetry disabled implicitly (nil exporter)",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					EffectiveNginxProxy: &graph.EffectiveNginxProxy{
+						Telemetry: &ngfAPIv1alpha2.Telemetry{
+							Exporter: &ngfAPIv1alpha2.TelemetryExporter{
+								Endpoint: nil,
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "Telemetry disabled implicitly (nil exporter endpoint)",
 		},
 		{
 			g: &graph.Graph{
