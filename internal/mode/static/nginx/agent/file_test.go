@@ -31,7 +31,7 @@ func TestGetFile(t *testing.T) {
 	connTracker.GetConnectionReturns(conn)
 
 	depStore := NewDeploymentStore(connTracker)
-	dep := depStore.GetOrStore(deploymentName, nil)
+	dep := depStore.GetOrStore(context.Background(), deploymentName, nil)
 
 	fileMeta := &pb.FileMeta{
 		Name: "test.conf",
@@ -154,7 +154,7 @@ func TestGetFile_FileNotFound(t *testing.T) {
 	connTracker.GetConnectionReturns(conn)
 
 	depStore := NewDeploymentStore(connTracker)
-	depStore.GetOrStore(deploymentName, nil)
+	depStore.GetOrStore(context.Background(), deploymentName, nil)
 
 	fs := newFileService(logr.Discard(), depStore, connTracker)
 

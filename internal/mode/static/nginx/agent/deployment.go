@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -227,12 +228,16 @@ func (d *DeploymentStore) Get(nsName types.NamespacedName) *Deployment {
 
 // GetOrStore returns the existing value for the key if present.
 // Otherwise, it stores and returns the given value.
-func (d *DeploymentStore) GetOrStore(nsName types.NamespacedName, stopCh chan struct{}) *Deployment {
+func (d *DeploymentStore) GetOrStore(
+	ctx context.Context,
+	nsName types.NamespacedName,
+	stopCh chan struct{},
+) *Deployment {
 	if deployment := d.Get(nsName); deployment != nil {
 		return deployment
 	}
 
-	deployment := newDeployment(broadcast.NewDeploymentBroadcaster(stopCh))
+	deployment := newDeployment(broadcast.NewDeploymentBroadcaster(ctx, stopCh))
 	d.deployments.Store(nsName, deployment)
 
 	return deployment

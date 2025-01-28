@@ -1,6 +1,7 @@
 package broadcast_test
 
 import (
+	"context"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -15,7 +16,7 @@ func TestSubscribe(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	broadcaster := broadcast.NewDeploymentBroadcaster(stopCh)
+	broadcaster := broadcast.NewDeploymentBroadcaster(context.Background(), stopCh)
 
 	subscriber := broadcaster.Subscribe()
 	g.Expect(subscriber.ID).NotTo(BeEmpty())
@@ -40,7 +41,7 @@ func TestSubscribe_MultipleListeners(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	broadcaster := broadcast.NewDeploymentBroadcaster(stopCh)
+	broadcaster := broadcast.NewDeploymentBroadcaster(context.Background(), stopCh)
 
 	subscriber1 := broadcaster.Subscribe()
 	subscriber2 := broadcaster.Subscribe()
@@ -69,7 +70,7 @@ func TestSubscribe_NoListeners(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	broadcaster := broadcast.NewDeploymentBroadcaster(stopCh)
+	broadcaster := broadcast.NewDeploymentBroadcaster(context.Background(), stopCh)
 
 	message := broadcast.NginxAgentMessage{
 		ConfigVersion: "v1",
@@ -87,7 +88,7 @@ func TestCancelSubscription(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	broadcaster := broadcast.NewDeploymentBroadcaster(stopCh)
+	broadcaster := broadcast.NewDeploymentBroadcaster(context.Background(), stopCh)
 
 	subscriber := broadcaster.Subscribe()
 

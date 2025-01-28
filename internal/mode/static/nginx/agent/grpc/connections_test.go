@@ -81,9 +81,9 @@ func TestUntrackConnectionsForParent(t *testing.T) {
 
 	tracker := agentgrpc.NewConnectionsTracker()
 
-	parent := types.NamespacedName{Namespace: "default", Name: "parent1"}
-	conn1 := agentgrpc.Connection{PodName: "pod1", InstanceID: "instance1", Parent: parent}
-	conn2 := agentgrpc.Connection{PodName: "pod2", InstanceID: "instance2", Parent: parent}
+	parent1 := types.NamespacedName{Namespace: "default", Name: "parent1"}
+	conn1 := agentgrpc.Connection{PodName: "pod1", InstanceID: "instance1", Parent: parent1}
+	conn2 := agentgrpc.Connection{PodName: "pod2", InstanceID: "instance2", Parent: parent1}
 
 	parent2 := types.NamespacedName{Namespace: "default", Name: "parent2"}
 	conn3 := agentgrpc.Connection{PodName: "pod3", InstanceID: "instance3", Parent: parent2}
@@ -92,7 +92,7 @@ func TestUntrackConnectionsForParent(t *testing.T) {
 	tracker.Track("key2", conn2)
 	tracker.Track("key3", conn3)
 
-	tracker.UntrackConnectionsForParent(parent)
+	tracker.UntrackConnectionsForParent(parent1)
 	g.Expect(tracker.GetConnection("key1")).To(Equal(agentgrpc.Connection{}))
 	g.Expect(tracker.GetConnection("key2")).To(Equal(agentgrpc.Connection{}))
 	g.Expect(tracker.GetConnection("key3")).To(Equal(conn3))

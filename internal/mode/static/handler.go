@@ -183,7 +183,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	// and Deployment.
 	// If fully deleted, then delete the deployment from the Store and close the stopCh.
 	stopCh := make(chan struct{})
-	deployment := h.cfg.nginxDeployments.GetOrStore(deploymentName, stopCh)
+	deployment := h.cfg.nginxDeployments.GetOrStore(ctx, deploymentName, stopCh)
 	if deployment == nil {
 		panic("expected deployment, got nil")
 	}
