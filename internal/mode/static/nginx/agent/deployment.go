@@ -112,7 +112,7 @@ are locked by the caller, hence why the functions themselves do not set the lock
 */
 
 // GetFile gets the requested file for the deployment and returns its contents.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) GetFile(name, hash string) []byte {
 	for _, file := range d.files {
 		if name == file.Meta.GetName() && hash == file.Meta.GetHash() {
@@ -124,7 +124,7 @@ func (d *Deployment) GetFile(name, hash string) []byte {
 }
 
 // SetFiles updates the nginx files and fileOverviews for the deployment and returns the message to send.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) SetFiles(files []File) broadcast.NginxAgentMessage {
 	d.files = files
 
@@ -158,32 +158,32 @@ func (d *Deployment) SetFiles(files []File) broadcast.NginxAgentMessage {
 
 // SetNGINXPlusActions updates the deployment's latest NGINX Plus Actions to perform if using NGINX Plus.
 // Used by a Subscriber when it first connects.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) SetNGINXPlusActions(actions []*pb.NGINXPlusAction) {
 	d.nginxPlusActions = actions
 }
 
 // SetPodErrorStatus sets the error status of a Pod in this Deployment if applying the config failed.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) SetPodErrorStatus(pod string, err error) {
 	d.podStatuses[pod] = err
 }
 
 // SetLatestConfigError sets the latest config apply error for the deployment.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) SetLatestConfigError(err error) {
 	d.latestConfigError = err
 }
 
 // SetLatestUpstreamError sets the latest upstream update error for the deployment.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) SetLatestUpstreamError(err error) {
 	d.latestUpstreamError = err
 }
 
 // GetConfigurationStatus returns the current config status for this Deployment. It combines
 // the most recent errors (if they exist) for all Pods in the Deployment into a single error.
-// Caller MUST lock the deployment before calling this function.
+// The deployment MUST already be locked before calling this function.
 func (d *Deployment) GetConfigurationStatus() error {
 	errs := make([]error, 0, len(d.podStatuses))
 	for _, err := range d.podStatuses {

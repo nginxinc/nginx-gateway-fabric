@@ -46,6 +46,8 @@ func (fs *fileService) Register(server *grpc.Server) {
 }
 
 // GetFile is called by the agent when it needs to download a file for a ConfigApplyRequest.
+// The deployment object used to get the files is already LOCKED when this function is called,
+// before the ConfigApply transaction is started.
 func (fs *fileService) GetFile(
 	ctx context.Context,
 	req *pb.GetFileRequest,

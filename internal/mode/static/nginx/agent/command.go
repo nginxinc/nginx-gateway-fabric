@@ -154,8 +154,19 @@ func (cs *commandService) Subscribe(in pb.CommandService_SubscribeServer) error 
 	defer broadcaster.CancelSubscription(channels.ID)
 
 	for {
+		// When a message is received over the ListenCh, it is assumed and required that the
+		// deployment object is already LOCKED. This lock is acquired by the event handler before calling
+		// `updateNginxConfig`. The entire transaction (as described in above in the function comment)
+		// must be locked to prevent the deployment files from changing during the transaction.
+		// This means that the lock is held until we receive either an error or response from agent
+		// (via msgr.Errors() or msgr.Mesages()) and respond back, finally returning to the event handler
+		// which releases the lock.
 		select {
 		case <-ctx.Done():
+			select {
+			case channels.ResponseCh <- struct{}{}:
+			default:
+			}
 			return grpcStatus.Error(codes.Canceled, context.Cause(ctx).Error())
 		case msg := <-channels.ListenCh:
 			var req *pb.ManagementPlaneRequest
