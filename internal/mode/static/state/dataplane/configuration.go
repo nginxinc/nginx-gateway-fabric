@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"slices"
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -13,7 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	ngfAPIv1alpha1 "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	ngfAPIv1alpha2 "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha2"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -62,7 +64,7 @@ func BuildConfiguration(
 		Telemetry:             buildTelemetry(g),
 		BaseHTTPConfig:        baseHTTPConfig,
 		Logging:               buildLogging(g),
-		MainSnippets:          buildSnippetsForContext(g.SnippetsFilters, ngfAPI.NginxContextMain),
+		MainSnippets:          buildSnippetsForContext(g.SnippetsFilters, ngfAPIv1alpha1.NginxContextMain),
 		AuxiliarySecrets:      buildAuxiliarySecrets(g.PlusSecrets),
 	}
 
@@ -773,22 +775,42 @@ func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
 	return CertBundleID(fmt.Sprintf("cert_bundle_%s_%s", configMap.Namespace, configMap.Name))
 }
 
+func telemetryEnabled(gw *graph.Gateway) bool {
+	if gw == nil {
+		return false
+	}
+
+	if gw.EffectiveNginxProxy == nil || gw.EffectiveNginxProxy.Telemetry == nil {
+		return false
+	}
+
+	tel := gw.EffectiveNginxProxy.Telemetry
+
+	if slices.Contains(tel.DisabledFeatures, ngfAPIv1alpha2.DisableTracing) {
+		return false
+	}
+
+	if tel.Exporter == nil || tel.Exporter.Endpoint == nil {
+		return false
+	}
+
+	return true
+}
+
 // buildTelemetry generates the Otel configuration.
 func buildTelemetry(g *graph.Graph) Telemetry {
-	if g.NginxProxy == nil || !g.NginxProxy.Valid ||
-		g.NginxProxy.Source.Spec.Telemetry == nil ||
-		g.NginxProxy.Source.Spec.Telemetry.Exporter == nil {
+	if !telemetryEnabled(g.Gateway) {
 		return Telemetry{}
 	}
 
 	serviceName := fmt.Sprintf("ngf:%s:%s", g.Gateway.Source.Namespace, g.Gateway.Source.Name)
-	telemetry := g.NginxProxy.Source.Spec.Telemetry
+	telemetry := g.Gateway.EffectiveNginxProxy.Telemetry
 	if telemetry.ServiceName != nil {
 		serviceName = serviceName + ":" + *telemetry.ServiceName
 	}
 
 	tel := Telemetry{
-		Endpoint:    telemetry.Exporter.Endpoint,
+		Endpoint:    *telemetry.Exporter.Endpoint, // safe to deref here since we verified that telemetry is enabled
 		ServiceName: serviceName,
 	}
 
@@ -809,7 +831,7 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	// logic in this function
 	ratioMap := make(map[string]int32)
 	for _, pol := range g.NGFPolicies {
-		if obsPol, ok := pol.Source.(*ngfAPI.ObservabilityPolicy); ok {
+		if obsPol, ok := pol.Source.(*ngfAPIv1alpha1.ObservabilityPolicy); ok {
 			if obsPol.Spec.Tracing != nil && obsPol.Spec.Tracing.Ratio != nil && *obsPol.Spec.Tracing.Ratio > 0 {
 				ratioName := CreateRatioVarName(*obsPol.Spec.Tracing.Ratio)
 				ratioMap[ratioName] = *obsPol.Spec.Tracing.Ratio
@@ -825,7 +847,7 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	return tel
 }
 
-func setSpanAttributes(spanAttributes []ngfAPI.SpanAttribute) []SpanAttribute {
+func setSpanAttributes(spanAttributes []ngfAPIv1alpha1.SpanAttribute) []SpanAttribute {
 	spanAttrs := make([]SpanAttribute, 0, len(spanAttributes))
 	for _, spanAttr := range spanAttributes {
 		sa := SpanAttribute{
@@ -850,50 +872,53 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		// HTTP2 should be enabled by default
 		HTTP2:    true,
 		IPFamily: Dual,
-		Snippets: buildSnippetsForContext(g.SnippetsFilters, ngfAPI.NginxContextHTTP),
+		Snippets: buildSnippetsForContext(g.SnippetsFilters, ngfAPIv1alpha1.NginxContextHTTP),
 	}
-	if g.NginxProxy == nil || !g.NginxProxy.Valid {
+
+	// safe to access EffectiveNginxProxy since we only call this function when the Gateway is not nil.
+	np := g.Gateway.EffectiveNginxProxy
+	if np == nil {
 		return baseConfig
 	}
 
-	if g.NginxProxy.Source.Spec.DisableHTTP2 {
+	if np.DisableHTTP2 != nil && *np.DisableHTTP2 {
 		baseConfig.HTTP2 = false
 	}
 
-	if g.NginxProxy.Source.Spec.IPFamily != nil {
-		switch *g.NginxProxy.Source.Spec.IPFamily {
-		case ngfAPI.IPv4:
+	if np.IPFamily != nil {
+		switch *np.IPFamily {
+		case ngfAPIv1alpha2.IPv4:
 			baseConfig.IPFamily = IPv4
-		case ngfAPI.IPv6:
+		case ngfAPIv1alpha2.IPv6:
 			baseConfig.IPFamily = IPv6
 		}
 	}
 
-	if g.NginxProxy.Source.Spec.RewriteClientIP != nil {
-		if g.NginxProxy.Source.Spec.RewriteClientIP.Mode != nil {
-			switch *g.NginxProxy.Source.Spec.RewriteClientIP.Mode {
-			case ngfAPI.RewriteClientIPModeProxyProtocol:
+	if np.RewriteClientIP != nil {
+		if np.RewriteClientIP.Mode != nil {
+			switch *np.RewriteClientIP.Mode {
+			case ngfAPIv1alpha2.RewriteClientIPModeProxyProtocol:
 				baseConfig.RewriteClientIPSettings.Mode = RewriteIPModeProxyProtocol
-			case ngfAPI.RewriteClientIPModeXForwardedFor:
+			case ngfAPIv1alpha2.RewriteClientIPModeXForwardedFor:
 				baseConfig.RewriteClientIPSettings.Mode = RewriteIPModeXForwardedFor
 			}
 		}
 
-		if len(g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses) > 0 {
+		if len(np.RewriteClientIP.TrustedAddresses) > 0 {
 			baseConfig.RewriteClientIPSettings.TrustedAddresses = convertAddresses(
-				g.NginxProxy.Source.Spec.RewriteClientIP.TrustedAddresses,
+				np.RewriteClientIP.TrustedAddresses,
 			)
 		}
 
-		if g.NginxProxy.Source.Spec.RewriteClientIP.SetIPRecursively != nil {
-			baseConfig.RewriteClientIPSettings.IPRecursive = *g.NginxProxy.Source.Spec.RewriteClientIP.SetIPRecursively
+		if np.RewriteClientIP.SetIPRecursively != nil {
+			baseConfig.RewriteClientIPSettings.IPRecursive = *np.RewriteClientIP.SetIPRecursively
 		}
 	}
 
 	return baseConfig
 }
 
-func createSnippetName(nc ngfAPI.NginxContext, nsname types.NamespacedName) string {
+func createSnippetName(nc ngfAPIv1alpha1.NginxContext, nsname types.NamespacedName) string {
 	return fmt.Sprintf(
 		"SnippetsFilter_%s_%s_%s",
 		nc,
@@ -904,7 +929,7 @@ func createSnippetName(nc ngfAPI.NginxContext, nsname types.NamespacedName) stri
 
 func buildSnippetsForContext(
 	snippetFilters map[types.NamespacedName]*graph.SnippetsFilter,
-	nc ngfAPI.NginxContext,
+	nc ngfAPIv1alpha1.NginxContext,
 ) []Snippet {
 	if len(snippetFilters) == 0 {
 		return nil
@@ -950,7 +975,7 @@ func buildPolicies(graphPolicies []*graph.Policy) []policies.Policy {
 	return finalPolicies
 }
 
-func convertAddresses(addresses []ngfAPI.Address) []string {
+func convertAddresses(addresses []ngfAPIv1alpha2.Address) []string {
 	trustedAddresses := make([]string, len(addresses))
 	for i, addr := range addresses {
 		trustedAddresses[i] = addr.Value
@@ -961,10 +986,14 @@ func convertAddresses(addresses []ngfAPI.Address) []string {
 func buildLogging(g *graph.Graph) Logging {
 	logSettings := Logging{ErrorLevel: defaultErrorLogLevel}
 
-	ngfProxy := g.NginxProxy
-	if ngfProxy != nil && ngfProxy.Source.Spec.Logging != nil {
-		if ngfProxy.Source.Spec.Logging.ErrorLevel != nil {
-			logSettings.ErrorLevel = string(*ngfProxy.Source.Spec.Logging.ErrorLevel)
+	if g.Gateway == nil || g.Gateway.EffectiveNginxProxy == nil {
+		return logSettings
+	}
+
+	ngfProxy := g.Gateway.EffectiveNginxProxy
+	if ngfProxy.Logging != nil {
+		if ngfProxy.Logging.ErrorLevel != nil {
+			logSettings.ErrorLevel = string(*ngfProxy.Logging.ErrorLevel)
 		}
 	}
 

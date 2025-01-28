@@ -69,7 +69,7 @@ The following command creates a basic `NginxProxy` configuration that sets the I
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.nginx.org/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha2
 kind: NginxProxy
 metadata:
   name: ngf-proxy-config
@@ -121,7 +121,7 @@ The following command creates a basic `NginxProxy` configuration that sets the l
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.nginx.org/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha2
 kind: NginxProxy
 metadata:
   name: ngf-proxy-config
@@ -177,7 +177,7 @@ The following command creates an `NginxProxy` resource with `RewriteClientIP` se
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.nginx.org/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha2
 kind: NginxProxy
 metadata:
   name: ngf-proxy-config
