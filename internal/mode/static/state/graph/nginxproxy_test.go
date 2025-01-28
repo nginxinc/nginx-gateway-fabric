@@ -184,7 +184,7 @@ func TestBuildEffectiveNginxProxy(t *testing.T) {
 			exp:  getExpSpec(),
 		},
 		{
-			name: "nil gateway class nginx proxy source",
+			name: "nil gateway nginx proxy source",
 			gcNp: &NginxProxy{Valid: true, Source: getNginxProxy()},
 			gwNp: &NginxProxy{Valid: true, Source: nil},
 			exp:  getExpSpec(),
